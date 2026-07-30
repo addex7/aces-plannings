@@ -184,7 +184,7 @@ function creerCarteDocument(rec) {
 async function uploaderFichierDocument(file) {
     const url = 'https://upload.uploadcare.com/base/';
     const formData = new FormData();
-    formData.append('pub_key', UPLOADCARE_PUBLIC_KEY);
+    formData.append('UPLOADCARE_PUB_KEY', UPLOADCARE_PUBLIC_KEY);
     formData.append('file', file);
     const res = await fetch(url, { method: 'POST', body: formData });
     const text = await res.text();
