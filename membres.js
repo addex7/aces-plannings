@@ -1,5 +1,9 @@
 const TABLE_UTILISATEURS = 'Utilisateurs';
 
+const EMAILJS_SERVICE_ID = 'service_6cve36m';
+const EMAILJS_TEMPLATE_ID = 'template_1esjy9a';
+const EMAILJS_PUBLIC_KEY = 'V_q5vuIMURlLXAaVC';
+
 let currentUser = null;
 let idMembreEnEdition = null;
 
@@ -273,8 +277,24 @@ function afficherInvitation(record) {
             <strong>Invitation créée pour ${f['Prénom'] || ''} ${f['Nom'] || ''}.</strong><br>
             <a href="mailto:${f['Mail'] || ''}?subject=${sujet}&body=${corps}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline;">Envoyer l'email d'invitation</a>
             <div style="margin-top:6px; font-size:12px; word-break:break-all;">Lien : ${setupUrl}</div>
+            <div id="membre-email-status" style="margin-top:8px; font-weight:500;">Envoi automatique...</div>
         </div>
     `;
+    if (typeof emailjs !== 'undefined' && f['Mail']) {
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            to_name: f['Prénom'] || '',
+            to_email: f['Mail'],
+            setup_url: setupUrl
+        }).then(() => {
+            const status = document.getElementById('membre-email-status');
+            if (status) status.textContent = 'Email envoyé avec succès.';
+        }).catch(err => {
+            console.error(err);
+            const status = document.getElementById('membre-email-status');
+            if (status) status.textContent = 'Erreur envoi : ' + (err.text || err.message || 'inconnu');
+        });
+    }
 }
 
 function ouvrirModaleMembre(record) {
