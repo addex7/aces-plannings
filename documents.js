@@ -157,12 +157,12 @@ function afficherDocuments(records) {
         return acc;
     }, {});
     list.innerHTML = Object.keys(grouped).sort().map(dossier => `
-        <div style="margin-bottom:20px;">
-            <h3 style="color:#1e3d59; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:10px;">${dossier}</h3>
+        <details style="margin-bottom:20px;" open>
+            <summary style="color:#1e3d59; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:10px; cursor:pointer; font-size:1.17em; font-weight:bold;">${dossier}</summary>
             <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
                 ${grouped[dossier].map(rec => creerCarteDocument(rec)).join('')}
             </div>
-        </div>
+        </details>
     `).join('');
 }
 
