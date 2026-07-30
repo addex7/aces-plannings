@@ -13,8 +13,12 @@ function isDocumentaliste() {
     return roles.includes('Documentaliste') || roles.includes('Super admin');
 }
 
-function initDocuments() {
+function appliquerAccesDocumentaire() {
     const toolbar = document.getElementById('documents-toolbar');
+    if (toolbar) toolbar.style.display = isDocumentaliste() ? 'flex' : 'none';
+}
+
+function initDocuments() {
     const btnNewDoc = document.getElementById('btn-new-document');
     const btnNewPdf = document.getElementById('btn-new-pdf');
     const btnNewDossier = document.getElementById('btn-new-dossier');
@@ -23,7 +27,7 @@ function initDocuments() {
     const form = document.getElementById('form-document');
     const formDossier = document.getElementById('form-dossier');
 
-    if (toolbar) toolbar.style.display = isDocumentaliste() ? 'flex' : 'none';
+    appliquerAccesDocumentaire();
     if (btnNewDoc) btnNewDoc.addEventListener('click', () => ouvrirFormDocument(null, 'Lien'));
     if (btnNewPdf) btnNewPdf.addEventListener('click', () => ouvrirFormDocument(null, 'PDF'));
     if (btnNewDossier) btnNewDossier.addEventListener('click', ouvrirFormDossier);
@@ -164,8 +168,8 @@ function creerCarteDocument(rec) {
 }
 
 function ouvrirFormDocument(id = null, type = 'Lien') {
-    const formContainer = document.getElementById('documents-form');
     const form = document.getElementById('form-document');
+    const formContainer = document.getElementById('documents-form');
     const title = document.getElementById('documents-form-title');
     const inputId = document.getElementById('document-id');
     const inputType = document.getElementById('document-type');

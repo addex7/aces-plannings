@@ -61,6 +61,7 @@ function initAuth() {
             if (parsed && parsed.id) {
                 currentUser = parsed;
                 showApp();
+    if (typeof appliquerAccesDocumentaire === 'function') appliquerAccesDocumentaire();
                 return;
             }
         } catch (e) {
@@ -197,6 +198,7 @@ async function seConnecter() {
         };
         setCurrentUser(currentUser);
         showApp();
+    if (typeof appliquerAccesDocumentaire === 'function') appliquerAccesDocumentaire();
     } catch (err) {
         console.error(err);
         alert('Erreur de connexion.');
@@ -249,6 +251,7 @@ async function validerSetup() {
         url.searchParams.delete('reset');
         window.history.replaceState({}, '', url.toString());
         showApp();
+    if (typeof appliquerAccesDocumentaire === 'function') appliquerAccesDocumentaire();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'opération.');
