@@ -2,6 +2,7 @@ const TABLE_UTILISATEURS = 'Utilisateurs';
 
 const EMAILJS_SERVICE_ID = 'service_mzemfef';
 const EMAILJS_TEMPLATE_ID = 'template_1esjy9a';
+const EMAILJS_RESET_TEMPLATE_ID = ''; // ID du template EmailJS dédié au reset ; laisser vide pour utiliser le template d'invitation
 const EMAILJS_PUBLIC_KEY = 'V_q5vuIMURlLXAaVC';
 const PUBLIC_URL = 'https://addex7.github.io/aces-plannings/index.html';
 
@@ -48,6 +49,11 @@ function initAuth() {
         showSetup(token);
         return;
     }
+    const resetId = params.get('reset');
+    if (resetId) {
+        showReset(resetId);
+        return;
+    }
     const saved = localStorage.getItem('currentUser');
     if (saved) {
         try {
@@ -67,8 +73,10 @@ function initAuth() {
 function showLogin() {
     const overlay = document.getElementById('login-overlay');
     const setup = document.getElementById('setup-overlay');
+    const forgot = document.getElementById('forgot-overlay');
     if (overlay) overlay.style.display = 'flex';
     if (setup) setup.style.display = 'none';
+    if (forgot) forgot.style.display = 'none';
 }
 
 function showSetup(token) {
@@ -95,11 +103,55 @@ async function chargerInvitation(recordId) {
             return;
         }
         setup.dataset.recordId = record.id;
+        setup.dataset.mode = 'setup';
         const f = record.fields || {};
+        const h2 = setup.querySelector('h2');
+        const btn = document.getElementById('btn-setup');
+        const identifiantInput = document.getElementById('setup-identifiant');
+        if (h2) h2.textContent = 'Créer mon compte';
         if (nameEl) nameEl.textContent = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+        if (identifiantInput) { identifiantInput.value = ''; identifiantInput.disabled = false; }
+        if (btn) btn.textContent = 'Activer mon compte';
     } catch (err) {
         console.error(err);
         setupError('Erreur lors du chargement de l\'invitation.');
+    }
+}
+
+function showReset(recordId) {
+    const overlay = document.getElementById('login-overlay');
+    const setup = document.getElementById('setup-overlay');
+    if (overlay) overlay.style.display = 'none';
+    if (setup) {
+        setup.style.display = 'flex';
+        setup.dataset.recordId = '';
+        setup.dataset.mode = 'reset';
+    }
+    chargerReset(recordId);
+}
+
+async function chargerReset(recordId) {
+    const setup = document.getElementById('setup-overlay');
+    const nameEl = document.getElementById('setup-name');
+    const h2 = setup.querySelector('h2');
+    const btn = document.getElementById('btn-setup');
+    const identifiantInput = document.getElementById('setup-identifiant');
+    try {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
+        const record = await res.json();
+        if (!res.ok) throw new Error(record.error?.message || 'Erreur');
+        if (!record || !record.id) { setupError('Lien de réinitialisation invalide.'); return; }
+        if (!record.fields['Actif']) { setupError('Ce compte n\'est pas actif.'); return; }
+        setup.dataset.recordId = record.id;
+        setup.dataset.mode = 'reset';
+        const f = record.fields || {};
+        if (h2) h2.textContent = 'Réinitialiser mon mot de passe';
+        if (nameEl) nameEl.textContent = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+        if (identifiantInput) { identifiantInput.value = f['Identifiant'] || ''; identifiantInput.disabled = true; }
+        if (btn) btn.textContent = 'Réinitialiser le mot de passe';
+    } catch (err) {
+        console.error(err);
+        setupError('Erreur lors du chargement de la réinitialisation.');
     }
 }
 
@@ -158,23 +210,25 @@ function seDeconnecter() {
 async function validerSetup() {
     const setup = document.getElementById('setup-overlay');
     const recordId = setup.dataset.recordId;
-    const identifiant = document.getElementById('setup-identifiant').value.trim();
+    const mode = setup.dataset.mode || 'setup';
+    const identifiantInput = document.getElementById('setup-identifiant');
+    const identifiant = identifiantInput ? identifiantInput.value.trim() : '';
     const motDePasse = document.getElementById('setup-password').value;
     const confirmation = document.getElementById('setup-confirm').value;
     if (!recordId) { alert('Lien invalide.'); return; }
-    if (!identifiant || !motDePasse) { alert('Identifiant et mot de passe requis.'); return; }
+    if (!motDePasse) { alert('Mot de passe requis.'); return; }
+    if (mode === 'setup' && !identifiant) { alert('Identifiant requis.'); return; }
     if (motDePasse !== confirmation) { alert('Les mots de passe ne correspondent pas.'); return; }
+    const fields = { 'Mot de passe': motDePasse };
+    if (mode === 'setup') {
+        fields['Identifiant'] = identifiant;
+        fields['Actif'] = true;
+    }
     try {
         const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, {
             method: 'PATCH',
             headers,
-            body: JSON.stringify({
-                fields: {
-                    'Identifiant': identifiant,
-                    'Mot de passe': motDePasse,
-                    'Actif': true
-                }
-            })
+            body: JSON.stringify({ fields })
         });
         if (!res.ok) throw new Error(await res.text());
         const record = await res.json();
@@ -191,11 +245,56 @@ async function validerSetup() {
         setCurrentUser(currentUser);
         const url = new URL(window.location.href);
         url.searchParams.delete('token');
+        url.searchParams.delete('reset');
         window.history.replaceState({}, '', url.toString());
         showApp();
     } catch (err) {
         console.error(err);
-        alert('Erreur lors de l\'activation du compte.');
+        alert('Erreur lors de l\'opération.');
+    }
+}
+
+function showForgot() {
+    const login = document.getElementById('login-overlay');
+    const forgot = document.getElementById('forgot-overlay');
+    const status = document.getElementById('forgot-status');
+    if (login) login.style.display = 'none';
+    if (forgot) forgot.style.display = 'flex';
+    if (status) status.textContent = '';
+}
+
+async function envoyerReset() {
+    const emailInput = document.getElementById('forgot-mail');
+    const status = document.getElementById('forgot-status');
+    const email = emailInput.value.trim();
+    if (!email) { if (status) status.textContent = 'Email requis.'; return; }
+    if (status) status.textContent = 'Recherche du compte...';
+    try {
+        const formula = `AND({Mail}='${email}', {Actif}=1)`;
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        const record = (data.records || [])[0];
+        if (!record) { if (status) status.textContent = 'Aucun compte actif trouvé avec cet email.'; return; }
+        const f = record.fields || {};
+        const resetUrl = `${PUBLIC_URL}?reset=${record.id}`;
+        if (typeof emailjs !== 'undefined') {
+            const templateId = EMAILJS_RESET_TEMPLATE_ID || EMAILJS_TEMPLATE_ID;
+            if (status) status.textContent = 'Envoi de l\'email...';
+            emailjs.init(EMAILJS_PUBLIC_KEY);
+            await emailjs.send(EMAILJS_SERVICE_ID, templateId, {
+                to_name: f['Prénom'] || '',
+                to_email: email,
+                setup_url: resetUrl
+            });
+            if (status) status.textContent = 'Email envoyé. Vérifie ta boîte de réception.';
+            emailInput.value = '';
+        } else {
+            if (status) status.textContent = 'Service email non disponible.';
+        }
+    } catch (err) {
+        console.error(err);
+        if (status) status.textContent = 'Erreur : ' + (err.text || err.message || 'inconnu');
     }
 }
 
@@ -368,6 +467,12 @@ function initMembres() {
     if (editForm) editForm.addEventListener('submit', sauvegarderMembre);
     const closeMembre = document.getElementById('close-membre');
     if (closeMembre) closeMembre.addEventListener('click', fermerModaleMembre);
+    const forgotBtn = document.getElementById('btn-forgot');
+    if (forgotBtn) forgotBtn.addEventListener('click', envoyerReset);
+    const forgotLink = document.getElementById('link-forgot');
+    if (forgotLink) forgotLink.addEventListener('click', (e) => { e.preventDefault(); showForgot(); });
+    const backLogin = document.getElementById('link-back-login');
+    if (backLogin) backLogin.addEventListener('click', (e) => { e.preventDefault(); showLogin(); });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
