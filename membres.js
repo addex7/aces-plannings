@@ -257,7 +257,7 @@ async function ajouterUtilisateur(event) {
         });
         if (!res.ok) throw new Error(await res.text());
         const record = await res.json();
-        afficherInvitation(record);
+        afficherInvitation(record, mail);
         await chargerUtilisateurs();
         event.target.reset();
     } catch (err) {
@@ -266,26 +266,31 @@ async function ajouterUtilisateur(event) {
     }
 }
 
-function afficherInvitation(record) {
+function afficherInvitation(record, email) {
     const f = record.fields || {};
+    const destEmail = email || f['Mail'] || '';
     const zone = document.getElementById('membre-invitation');
     if (!zone) return;
+    if (!destEmail) {
+        zone.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; padding:12px; border-radius:6px; color:#991b1b; margin-top:10px;">Aucune adresse email pour envoyer l'invitation.</div>`;
+        return;
+    }
     const setupUrl = `${PUBLIC_URL}?token=${record.id}`;
     const sujet = encodeURIComponent('Invitation Gestion des Vols & Plannings');
     const corps = encodeURIComponent(`Bonjour ${f['Prénom'] || ''},\n\nTu es invité(e) à rejoindre la plateforme. Crée ton identifiant et mot de passe en cliquant sur le lien ci-dessous :\n\n${setupUrl}\n\nÀ bientôt.`);
     zone.innerHTML = `
         <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:6px; color:#166534; margin-top:10px;">
             <strong>Invitation créée pour ${f['Prénom'] || ''} ${f['Nom'] || ''}.</strong><br>
-            <a href="mailto:${f['Mail'] || ''}?subject=${sujet}&body=${corps}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline;">Envoyer l'email d'invitation</a>
+            <a href="mailto:${destEmail}?subject=${sujet}&body=${corps}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline;">Envoyer l'email d'invitation</a>
             <div style="margin-top:6px; font-size:12px; word-break:break-all;">Lien : ${setupUrl}</div>
             <div id="membre-email-status" style="margin-top:8px; font-weight:500;">Envoi automatique...</div>
         </div>
     `;
-    if (typeof emailjs !== 'undefined' && f['Mail']) {
+    if (typeof emailjs !== 'undefined') {
         emailjs.init(EMAILJS_PUBLIC_KEY);
         emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
             to_name: f['Prénom'] || '',
-            to_email: f['Mail'],
+            to_email: destEmail,
             setup_url: setupUrl
         }).then(() => {
             const status = document.getElementById('membre-email-status');
