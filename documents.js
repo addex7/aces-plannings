@@ -5,6 +5,7 @@
 const TABLE_DOCUMENTS = 'Documents';
 const TABLE_DOSSIERS = 'Dossiers';
 const UPLOADCARE_PUBLIC_KEY = '6877913652d895abcd04';
+const UPLOADCARE_CDN_BASE = 'https://2y553dp2sx.ucarecd.net/';
 let documentsCache = [];
 let dossiersCache = [];
 
@@ -196,7 +197,7 @@ async function uploaderFichierDocument(file) {
         uuid = data.file || data.uuid;
     }
     if (!uuid) throw new Error('Réponse Uploadcare inattendue');
-    return `https://ucarecdn.com/${uuid}/${encodeURIComponent(file.name)}`;
+    return `${UPLOADCARE_CDN_BASE}${uuid}/`;
 }
 
 function ouvrirFormDocument(id = null) {
