@@ -131,7 +131,7 @@ function afficherDocuments(records) {
         return;
     }
     const grouped = records.reduce((acc, rec) => {
-        const dossier = rec.fields['Dossier'] || 'Autre';
+        const dossier = rec.fields['Catégorie'] || 'Autre';
         if (!acc[dossier]) acc[dossier] = [];
         acc[dossier].push(rec);
         return acc;
@@ -178,7 +178,7 @@ function ouvrirFormDocument(id = null) {
             if (rec) {
                 const f = rec.fields;
                 document.getElementById('document-titre').value = f['Titre'] || '';
-                if (select) select.dataset.selected = f['Dossier'] || '';
+                if (select) select.dataset.selected = f['Catégorie'] || '';
                 populerDossiers();
                 document.getElementById('document-lien').value = f['Lien'] || '';
                 document.getElementById('document-description').value = f['Description'] || '';
@@ -214,7 +214,7 @@ async function enregistrerDocument(e) {
 
     const fields = {
         'Titre': titre,
-        'Dossier': dossier,
+        'Catégorie': dossier,
         'Lien': lien,
         'Description': description
     };
