@@ -156,14 +156,34 @@ function afficherDocuments(records) {
         acc[dossier].push(rec);
         return acc;
     }, {});
-    list.innerHTML = Object.keys(grouped).sort().map(dossier => `
-        <details style="margin-bottom:20px;" open>
-            <summary style="color:#1e3d59; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:10px; cursor:pointer; font-size:1.17em; font-weight:bold;">${dossier}</summary>
-            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
-                ${grouped[dossier].map(rec => creerCarteDocument(rec)).join('')}
-            </div>
-        </details>
-    `).join('');
+    list.innerHTML = Object.keys(grouped).sort().map(dossier => {
+        const records = grouped[dossier];
+        const subGrouped = records.reduce((acc, rec) => {
+            const sous = rec.fields['Sous-dossier'] || 'Sans sous-dossier';
+            if (!acc[sous]) acc[sous] = [];
+            acc[sous].push(rec);
+            return acc;
+        }, {});
+        const hasSub = records.some(rec => rec.fields['Sous-dossier']);
+        const content = hasSub
+            ? Object.keys(subGrouped).sort().map(sous => `
+                <details style="margin-bottom:10px;" open>
+                    <summary style="color:#334155; font-weight:600; cursor:pointer; margin-bottom:8px; font-size:1em;">${sous}</summary>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-bottom:10px;">
+                        ${subGrouped[sous].map(rec => creerCarteDocument(rec)).join('')}
+                    </div>
+                </details>
+            `).join('')
+            : `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+                ${records.map(rec => creerCarteDocument(rec)).join('')}
+            </div>`;
+        return `
+            <details style="margin-bottom:20px;" open>
+                <summary style="color:#1e3d59; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:10px; cursor:pointer; font-size:1.17em; font-weight:bold;">${dossier}</summary>
+                ${content}
+            </details>
+        `;
+    }).join('');
 }
 
 function creerCarteDocument(rec) {
@@ -218,6 +238,7 @@ function ouvrirFormDocument(id = null) {
                 document.getElementById('document-titre').value = f['Titre'] || '';
                 if (select) select.dataset.selected = f['Catégorie'] || '';
                 populerDossiers();
+                document.getElementById('document-sous-dossier').value = f['Sous-dossier'] || '';
                 document.getElementById('document-lien').value = f['Lien'] || '';
                 document.getElementById('document-description').value = f['Description'] || '';
             }
@@ -244,6 +265,7 @@ async function enregistrerDocument(e) {
     const id = document.getElementById('document-id').value;
     const titre = document.getElementById('document-titre').value.trim();
     const dossier = document.getElementById('document-dossier').value.trim();
+    const sousDossier = document.getElementById('document-sous-dossier').value.trim();
     const lien = document.getElementById('document-lien').value.trim();
     const description = document.getElementById('document-description').value.trim();
 
@@ -256,6 +278,7 @@ async function enregistrerDocument(e) {
         'Lien': lien,
         'Description': description
     };
+    if (sousDossier) fields['Sous-dossier'] = sousDossier;
     if (!id) {
         fields['Auteur'] = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
     }
