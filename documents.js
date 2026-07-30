@@ -5,7 +5,7 @@
 const TABLE_DOCUMENTS = 'Documents';
 const TABLE_DOSSIERS = 'Dossiers';
 const CLOUDINARY_CLOUD_NAME = 'wfkdyeqj';
-const CLOUDINARY_UPLOAD_PRESET = 'Glide 2000';
+const CLOUDINARY_UPLOAD_PRESET = 'glide_uploads';
 let documentsCache = [];
 let dossiersCache = [];
 
