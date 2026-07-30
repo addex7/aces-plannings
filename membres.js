@@ -1,8 +1,9 @@
 const TABLE_UTILISATEURS = 'Utilisateurs';
 
-const EMAILJS_SERVICE_ID = 'service_6cve36m';
+const EMAILJS_SERVICE_ID = 'service_mzemfef';
 const EMAILJS_TEMPLATE_ID = 'template_1esjy9a';
 const EMAILJS_PUBLIC_KEY = 'V_q5vuIMURlLXAaVC';
+const PUBLIC_URL = 'https://addex7.github.io/aces-plannings/index.html';
 
 let currentUser = null;
 let idMembreEnEdition = null;
@@ -269,7 +270,7 @@ function afficherInvitation(record) {
     const f = record.fields || {};
     const zone = document.getElementById('membre-invitation');
     if (!zone) return;
-    const setupUrl = `${window.location.origin}${window.location.pathname}?token=${record.id}`;
+    const setupUrl = `${PUBLIC_URL}?token=${record.id}`;
     const sujet = encodeURIComponent('Invitation Gestion des Vols & Plannings');
     const corps = encodeURIComponent(`Bonjour ${f['Prénom'] || ''},\n\nTu es invité(e) à rejoindre la plateforme. Crée ton identifiant et mot de passe en cliquant sur le lien ci-dessous :\n\n${setupUrl}\n\nÀ bientôt.`);
     zone.innerHTML = `
