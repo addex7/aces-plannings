@@ -19,7 +19,6 @@ function appliquerAccesDocumentaire() {
 }
 
 function initDocuments() {
-    const btnNewDoc = document.getElementById('btn-new-document');
     const btnNewPdf = document.getElementById('btn-new-pdf');
     const btnNewDossier = document.getElementById('btn-new-dossier');
     const btnCancelDoc = document.getElementById('btn-cancel-document');
@@ -28,7 +27,6 @@ function initDocuments() {
     const formDossier = document.getElementById('form-dossier');
 
     appliquerAccesDocumentaire();
-    if (btnNewDoc) btnNewDoc.addEventListener('click', () => ouvrirFormDocument(null, 'Lien'));
     if (btnNewPdf) btnNewPdf.addEventListener('click', () => ouvrirFormDocument(null, 'PDF'));
     if (btnNewDossier) btnNewDossier.addEventListener('click', ouvrirFormDossier);
     if (btnCancelDoc) btnCancelDoc.addEventListener('click', cacherFormDocument);
@@ -180,18 +178,11 @@ function ouvrirFormDocument(id = null, type = 'Lien') {
     if (!form || !formContainer) return;
     form.reset();
     inputId.value = id || '';
-    inputType.value = type;
-    if (type === 'PDF') {
-        if (labelLien) labelLien.textContent = 'Lien du PDF';
-        if (inputLien) { inputLien.placeholder = 'https://.../fichier.pdf'; inputLien.required = true; }
-        if (helpLien) helpLien.style.display = 'block';
-        if (title) title.textContent = id ? 'Modifier le PDF' : 'Importer un PDF';
-    } else {
-        if (labelLien) labelLien.textContent = 'Lien du document';
-        if (inputLien) { inputLien.placeholder = 'https://...'; inputLien.required = true; }
-        if (helpLien) helpLien.style.display = 'none';
-        if (title) title.textContent = id ? 'Modifier le document' : 'Nouveau document';
-    }
+    inputType.value = 'PDF';
+    if (labelLien) labelLien.textContent = 'Lien du PDF';
+    if (inputLien) { inputLien.placeholder = 'https://.../fichier.pdf'; inputLien.required = true; }
+    if (helpLien) helpLien.style.display = 'block';
+    if (title) title.textContent = id ? 'Modifier le PDF' : 'Ajouter un PDF';
     chargerDossiers().then(() => {
         if (id) {
             const rec = documentsCache.find(d => d.id === id);
