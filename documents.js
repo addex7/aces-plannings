@@ -4,6 +4,8 @@
 
 const TABLE_DOCUMENTS = 'Documents';
 const TABLE_DOSSIERS = 'Dossiers';
+const CLOUDINARY_CLOUD_NAME = 'wfkdyeqj';
+const CLOUDINARY_UPLOAD_PRESET = 'Glide 2000';
 let documentsCache = [];
 let dossiersCache = [];
 
@@ -25,10 +27,28 @@ function initDocuments() {
     const btnCancelDossier = document.getElementById('btn-cancel-dossier');
     const form = document.getElementById('form-document');
     const formDossier = document.getElementById('form-dossier');
+    const inputFichier = document.getElementById('document-fichier');
+    const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
 
     appliquerAccesDocumentaire();
     if (btnNewPdf) btnNewPdf.addEventListener('click', () => ouvrirFormDocument(null));
     if (btnNewDossier) btnNewDossier.addEventListener('click', ouvrirFormDossier);
+    if (inputFichier) inputFichier.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Envoi en cours...'; }
+        const inputLien = document.getElementById('document-lien');
+        try {
+            const url = await uploaderFichierDocument(file);
+            if (inputLien) inputLien.value = url;
+            inputFichier.value = '';
+        } catch (err) {
+            console.error(err);
+            alert('Erreur lors de l\'upload : ' + err.message);
+        } finally {
+            if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Enregistrer'; }
+        }
+    });
     if (btnCancelDoc) btnCancelDoc.addEventListener('click', cacherFormDocument);
     if (btnCancelDossier) btnCancelDossier.addEventListener('click', cacherFormDossier);
     if (form) form.addEventListener('submit', enregistrerDocument);
@@ -160,6 +180,17 @@ function creerCarteDocument(rec) {
             </div>` : ''}
         </div>
     `;
+}
+
+async function uploaderFichierDocument(file) {
+    const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(url, { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Erreur Cloudinary');
+    return data.secure_url;
 }
 
 function ouvrirFormDocument(id = null) {
