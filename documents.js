@@ -185,6 +185,7 @@ async function uploaderFichierDocument(file) {
     const url = 'https://upload.uploadcare.com/base/';
     const formData = new FormData();
     formData.append('UPLOADCARE_PUB_KEY', UPLOADCARE_PUBLIC_KEY);
+    formData.append('store', '1');
     formData.append('file', file);
     const res = await fetch(url, { method: 'POST', body: formData });
     const text = await res.text();
@@ -195,7 +196,7 @@ async function uploaderFichierDocument(file) {
         uuid = data.file || data.uuid;
     }
     if (!uuid) throw new Error('Réponse Uploadcare inattendue');
-    return `https://ucarecdn.com/${uuid}/`;
+    return `https://ucarecdn.com/${uuid}/${encodeURIComponent(file.name)}`;
 }
 
 function ouvrirFormDocument(id = null) {
