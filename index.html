@@ -347,24 +347,42 @@
 
             <section id="view-documents" class="view-section" style="display: none;">
                 <h2 style="margin-top:0;">Base documentaire</h2>
-                <div id="documents-toolbar" style="display:none; margin-bottom:15px;">
+                <div id="documents-toolbar" style="display:none; margin-bottom:15px; gap:10px; flex-wrap:wrap;">
+                    <button id="btn-new-dossier" class="btn-secondary" type="button">+ Nouveau dossier</button>
                     <button id="btn-new-document" class="btn-primary" type="button">+ Ajouter un document</button>
+                    <button id="btn-new-pdf" class="btn-primary" type="button">+ Importer un PDF</button>
+                </div>
+                <div id="dossier-form" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:15px; margin-bottom:20px;">
+                    <h3 id="dossier-form-title" style="margin-top:0;">Nouveau dossier</h3>
+                    <form id="form-dossier">
+                        <div class="form-group">
+                            <label for="dossier-nom">Nom du dossier</label>
+                            <input type="text" id="dossier-nom" required>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="btn-cancel-dossier" class="btn-secondary">Annuler</button>
+                            <button type="submit" class="btn-primary">Créer</button>
+                        </div>
+                    </form>
                 </div>
                 <div id="documents-form" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:15px; margin-bottom:20px;">
                     <h3 id="documents-form-title" style="margin-top:0;">Nouveau document</h3>
                     <form id="form-document">
                         <input type="hidden" id="document-id">
+                        <input type="hidden" id="document-type" value="Lien">
                         <div class="form-group">
                             <label for="document-titre">Titre</label>
                             <input type="text" id="document-titre" required>
                         </div>
                         <div class="form-group">
-                            <label for="document-categorie">Catégorie</label>
-                            <input type="text" id="document-categorie" placeholder="Ex: Réglementation, Procédures...">
+                            <label for="document-dossier">Dossier</label>
+                            <select id="document-dossier" required></select>
+                            <small style="color:#64748b; display:block; margin-top:4px;">Utilisez « Nouveau dossier » pour en créer un.</small>
                         </div>
                         <div class="form-group">
-                            <label for="document-lien">Lien du document</label>
+                            <label for="document-lien" id="document-lien-label">Lien du document</label>
                             <input type="url" id="document-lien" required placeholder="https://...">
+                            <small id="document-lien-help" style="color:#64748b; display:none; margin-top:4px;">Le lien doit pointer vers un fichier PDF.</small>
                         </div>
                         <div class="form-group">
                             <label for="document-description">Description</label>
