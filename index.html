@@ -349,7 +349,7 @@
                 <h2 style="margin-top:0;">Base documentaire</h2>
                 <div id="documents-toolbar" style="display:none; margin-bottom:15px; gap:10px; flex-wrap:wrap;">
                     <button id="btn-new-dossier" class="btn-primary" type="button">+ Nouveau dossier</button>
-                    <button id="btn-new-pdf" class="btn-primary" type="button">+ Ajouter un PDF</button>
+                    <button id="btn-new-pdf" class="btn-primary" type="button">+ Ajouter un document</button>
                 </div>
                 <div id="dossier-form" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:15px; margin-bottom:20px;">
                     <h3 id="dossier-form-title" style="margin-top:0;">Nouveau dossier</h3>
@@ -365,10 +365,9 @@
                     </form>
                 </div>
                 <div id="documents-form" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:15px; margin-bottom:20px;">
-                    <h3 id="documents-form-title" style="margin-top:0;">Nouveau document</h3>
+                    <h3 id="documents-form-title" style="margin-top:0;">Ajouter un document</h3>
                     <form id="form-document">
                         <input type="hidden" id="document-id">
-                        <input type="hidden" id="document-type" value="PDF">
                         <div class="form-group">
                             <label for="document-titre">Titre</label>
                             <input type="text" id="document-titre" required>
@@ -379,9 +378,9 @@
                             <small style="color:#64748b; display:block; margin-top:4px;">Utilisez « Nouveau dossier » pour en créer un.</small>
                         </div>
                         <div class="form-group">
-                            <label for="document-lien" id="document-lien-label">Lien du PDF</label>
-                            <input type="url" id="document-lien" required placeholder="https://.../fichier.pdf">
-                            <small id="document-lien-help" style="color:#64748b; display:block; margin-top:4px;">Le lien doit pointer vers un fichier PDF (extension .pdf).</small>
+                            <label for="document-lien" id="document-lien-label">Lien du document</label>
+                            <input type="url" id="document-lien" required placeholder="https://...">
+                            <small id="document-lien-help" style="color:#64748b; display:block; margin-top:4px;">Collez le lien public du document.</small>
                         </div>
                         <div class="form-group">
                             <label for="document-description">Description</label>

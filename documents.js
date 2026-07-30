@@ -27,7 +27,7 @@ function initDocuments() {
     const formDossier = document.getElementById('form-dossier');
 
     appliquerAccesDocumentaire();
-    if (btnNewPdf) btnNewPdf.addEventListener('click', () => ouvrirFormDocument(null, 'PDF'));
+    if (btnNewPdf) btnNewPdf.addEventListener('click', () => ouvrirFormDocument(null));
     if (btnNewDossier) btnNewDossier.addEventListener('click', ouvrirFormDossier);
     if (btnCancelDoc) btnCancelDoc.addEventListener('click', cacherFormDocument);
     if (btnCancelDossier) btnCancelDossier.addEventListener('click', cacherFormDossier);
@@ -149,40 +149,29 @@ function afficherDocuments(records) {
 function creerCarteDocument(rec) {
     const f = rec.fields || {};
     const canEdit = isDocumentaliste();
-    const isPdf = (f['Type'] || '').toLowerCase() === 'pdf';
-    const badge = isPdf ? '<span style="background:#fee2e2; color:#b91c1c; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;">PDF</span>' : '';
-    const label = isPdf ? 'Ouvrir le PDF ↗' : 'Ouvrir le document ↗';
     return `
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px;">
-            <h4 style="margin:0 0 6px; color:#0f172a;">${f['Titre'] || 'Sans titre'}${badge}</h4>
+            <h4 style="margin:0 0 6px; color:#0f172a;">${f['Titre'] || 'Sans titre'}</h4>
             <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${f['Description'] || ''}</p>
-            <a href="${f['Lien'] || '#'}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">${label}</a>
+            <a href="${f['Lien'] || '#'}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">Ouvrir le document ↗</a>
             ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
-                <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="ouvrirFormDocument('${rec.id}', '${(f['Type'] || 'Lien').replace(/'/g, "\\'")}')">Modifier</button>
+                <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="ouvrirFormDocument('${rec.id}')">Modifier</button>
                 <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocument('${rec.id}')">Supprimer</button>
             </div>` : ''}
         </div>
     `;
 }
 
-function ouvrirFormDocument(id = null, type = 'Lien') {
+function ouvrirFormDocument(id = null) {
     const form = document.getElementById('form-document');
     const formContainer = document.getElementById('documents-form');
     const title = document.getElementById('documents-form-title');
     const inputId = document.getElementById('document-id');
-    const inputType = document.getElementById('document-type');
-    const inputLien = document.getElementById('document-lien');
-    const labelLien = document.getElementById('document-lien-label');
-    const helpLien = document.getElementById('document-lien-help');
     const select = document.getElementById('document-dossier');
     if (!form || !formContainer) return;
     form.reset();
     inputId.value = id || '';
-    inputType.value = 'PDF';
-    if (labelLien) labelLien.textContent = 'Lien du PDF';
-    if (inputLien) { inputLien.placeholder = 'https://.../fichier.pdf'; inputLien.required = true; }
-    if (helpLien) helpLien.style.display = 'block';
-    if (title) title.textContent = id ? 'Modifier le PDF' : 'Ajouter un PDF';
+    if (title) title.textContent = id ? 'Modifier le document' : 'Ajouter un document';
     chargerDossiers().then(() => {
         if (id) {
             const rec = documentsCache.find(d => d.id === id);
@@ -215,7 +204,6 @@ async function enregistrerDocument(e) {
     if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
 
     const id = document.getElementById('document-id').value;
-    const type = document.getElementById('document-type').value;
     const titre = document.getElementById('document-titre').value.trim();
     const dossier = document.getElementById('document-dossier').value.trim();
     const lien = document.getElementById('document-lien').value.trim();
@@ -224,25 +212,11 @@ async function enregistrerDocument(e) {
     if (!titre || !lien) { alert('Le titre et le lien sont obligatoires.'); return; }
     if (!dossier) { alert('Veuillez choisir un dossier.'); return; }
 
-    if (type === 'PDF') {
-        try {
-            const url = new URL(lien);
-            if (!url.pathname.toLowerCase().endsWith('.pdf')) {
-                alert('Le lien doit pointer vers un fichier PDF (extension .pdf).');
-                return;
-            }
-        } catch (err) {
-            alert(`Le lien n'est pas valide.`);
-            return;
-        }
-    }
-
     const fields = {
         'Titre': titre,
         'Dossier': dossier,
         'Lien': lien,
-        'Description': description,
-        'Type': type
+        'Description': description
     };
     if (!id) {
         fields['Auteur'] = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
