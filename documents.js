@@ -4,8 +4,7 @@
 
 const TABLE_DOCUMENTS = 'Documents';
 const TABLE_DOSSIERS = 'Dossiers';
-const CLOUDINARY_CLOUD_NAME = 'wfkdyeqj';
-const CLOUDINARY_UPLOAD_PRESET = 'glide_uploads';
+const UPLOADCARE_PUBLIC_KEY = '6877913652d895abcd04';
 let documentsCache = [];
 let dossiersCache = [];
 
@@ -183,14 +182,20 @@ function creerCarteDocument(rec) {
 }
 
 async function uploaderFichierDocument(file) {
-    const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`;
+    const url = 'https://upload.uploadcare.com/base/';
     const formData = new FormData();
+    formData.append('pub_key', UPLOADCARE_PUBLIC_KEY);
     formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
     const res = await fetch(url, { method: 'POST', body: formData });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Erreur Cloudinary');
-    return data.secure_url;
+    const text = await res.text();
+    if (!res.ok) throw new Error(text || 'Erreur Uploadcare');
+    let uuid = text.trim().replace(/"/g, '');
+    if (uuid.startsWith('{')) {
+        const data = JSON.parse(text);
+        uuid = data.file || data.uuid;
+    }
+    if (!uuid) throw new Error('Réponse Uploadcare inattendue');
+    return `https://ucarecdn.com/${uuid}/`;
 }
 
 function ouvrirFormDocument(id = null) {
