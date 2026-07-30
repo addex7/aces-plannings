@@ -416,7 +416,7 @@ function ouvrirModaleMembre(record) {
     document.getElementById('edit-membre-password').value = f['Mot de passe'] || '';
     const roles = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
     document.querySelectorAll('input[name="edit-membre-roles"]').forEach(cb => { cb.checked = roles.includes(cb.value); });
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
 }
 
 function fermerModaleMembre() {
@@ -455,6 +455,20 @@ async function sauvegarderMembre(event) {
     }
 }
 
+async function supprimerMembre() {
+    if (!idMembreEnEdition) return;
+    if (!confirm('Confirmer la suppression de ce membre ?')) return;
+    try {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, { method: 'DELETE', headers });
+        if (!res.ok) throw new Error(await res.text());
+        fermerModaleMembre();
+        await chargerUtilisateurs();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la suppression.');
+    }
+}
+
 function initMembres() {
     const loginBtn = document.getElementById('btn-login');
     if (loginBtn) loginBtn.addEventListener('click', seConnecter);
@@ -468,6 +482,8 @@ function initMembres() {
     if (editForm) editForm.addEventListener('submit', sauvegarderMembre);
     const closeMembre = document.getElementById('close-membre');
     if (closeMembre) closeMembre.addEventListener('click', fermerModaleMembre);
+    const deleteMembre = document.getElementById('btn-delete-membre');
+    if (deleteMembre) deleteMembre.addEventListener('click', supprimerMembre);
     const forgotBtn = document.getElementById('btn-forgot');
     if (forgotBtn) forgotBtn.addEventListener('click', envoyerReset);
     const forgotLink = document.getElementById('link-forgot');

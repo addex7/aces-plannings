@@ -533,7 +533,7 @@ body {
 .btn-submit:hover {
     background-color: #11995d;
 }
-#btn-delete-reservation, #btn-delete-vi-planeur, #btn-delete-carnet {
+#btn-delete-reservation, #btn-delete-vi-planeur, #btn-delete-carnet, #btn-delete-membre {
     flex: 1;
     background-color: #ef4444;
     color: white;
@@ -545,7 +545,7 @@ body {
     cursor: pointer;
     transition: background 0.2s;
 }
-#btn-delete-reservation:hover, #btn-delete-vi-planeur:hover, #btn-delete-carnet:hover {
+#btn-delete-reservation:hover, #btn-delete-vi-planeur:hover, #btn-delete-carnet:hover, #btn-delete-membre:hover {
     background-color: #dc2626;
 }
 .carnet-header-controls {
