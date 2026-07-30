@@ -1,0 +1,161 @@
+/* ==========================================================================
+   BASE DOCUMENTAIRE
+   ========================================================================== */
+
+const TABLE_DOCUMENTS = 'Documents';
+let documentsCache = [];
+
+function isDocumentaliste() {
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
+    const roles = currentUser.roles || [];
+    return roles.includes('Documentaliste') || roles.includes('Super admin');
+}
+
+function initDocuments() {
+    const toolbar = document.getElementById('documents-toolbar');
+    const btnNew = document.getElementById('btn-new-document');
+    const btnCancel = document.getElementById('btn-cancel-document');
+    const form = document.getElementById('form-document');
+
+    if (toolbar) toolbar.style.display = isDocumentaliste() ? 'flex' : 'none';
+    if (btnNew) btnNew.addEventListener('click', () => ouvrirFormDocument());
+    if (btnCancel) btnCancel.addEventListener('click', cacherFormDocument);
+    if (form) form.addEventListener('submit', enregistrerDocument);
+}
+
+async function chargerDocuments() {
+    const list = document.getElementById('documents-list');
+    if (!list) return;
+    list.innerHTML = '<p>Chargement...</p>';
+    try {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?sort[0][field]=Titre&sort[0][direction]=asc`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        documentsCache = data.records || [];
+        afficherDocuments(documentsCache);
+    } catch (err) {
+        console.error(err);
+        if (list) list.innerHTML = `<p style="color:red;">Erreur de chargement : ${err.message}</p>`;
+    }
+}
+
+function afficherDocuments(records) {
+    const list = document.getElementById('documents-list');
+    if (!list) return;
+    if (!records.length) {
+        list.innerHTML = '<p>Aucun document pour le moment.</p>';
+        return;
+    }
+    const grouped = records.reduce((acc, rec) => {
+        const cat = rec.fields['Catégorie'] || 'Autre';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(rec);
+        return acc;
+    }, {});
+    list.innerHTML = Object.keys(grouped).sort().map(cat => `
+        <div style="margin-bottom:20px;">
+            <h3 style="color:#1e3d59; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:10px;">${cat}</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+                ${grouped[cat].map(rec => creerCarteDocument(rec)).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function creerCarteDocument(rec) {
+    const f = rec.fields || {};
+    const canEdit = isDocumentaliste();
+    return `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px;">
+            <h4 style="margin:0 0 6px; color:#0f172a;">${f['Titre'] || 'Sans titre'}</h4>
+            <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${f['Description'] || ''}</p>
+            <a href="${f['Lien'] || '#'}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">Ouvrir le document ↗</a>
+            ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
+                <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="ouvrirFormDocument('${rec.id}')">Modifier</button>
+                <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocument('${rec.id}')">Supprimer</button>
+            </div>` : ''}
+        </div>
+    `;
+}
+
+function ouvrirFormDocument(id = null) {
+    const formContainer = document.getElementById('documents-form');
+    const form = document.getElementById('form-document');
+    const title = document.getElementById('documents-form-title');
+    const inputId = document.getElementById('document-id');
+    if (!form || !formContainer) return;
+    form.reset();
+    inputId.value = id || '';
+    if (id) {
+        const rec = documentsCache.find(d => d.id === id);
+        if (rec) {
+            const f = rec.fields;
+            document.getElementById('document-titre').value = f['Titre'] || '';
+            document.getElementById('document-categorie').value = f['Catégorie'] || '';
+            document.getElementById('document-lien').value = f['Lien'] || '';
+            document.getElementById('document-description').value = f['Description'] || '';
+            if (title) title.textContent = 'Modifier le document';
+        }
+    } else if (title) {
+        title.textContent = 'Nouveau document';
+    }
+    formContainer.style.display = 'block';
+    const input = document.getElementById('document-titre');
+    if (input) input.focus();
+}
+
+function cacherFormDocument() {
+    const formContainer = document.getElementById('documents-form');
+    if (formContainer) formContainer.style.display = 'none';
+}
+
+async function enregistrerDocument(e) {
+    e.preventDefault();
+    if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
+
+    const id = document.getElementById('document-id').value;
+    const titre = document.getElementById('document-titre').value.trim();
+    const categorie = document.getElementById('document-categorie').value.trim();
+    const lien = document.getElementById('document-lien').value.trim();
+    const description = document.getElementById('document-description').value.trim();
+
+    if (!titre || !lien) { alert('Le titre et le lien sont obligatoires.'); return; }
+
+    const fields = {
+        'Titre': titre,
+        'Catégorie': categorie || 'Autre',
+        'Lien': lien,
+        'Description': description,
+        'Auteur': currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : ''
+    };
+
+    try {
+        const method = id ? 'PATCH' : 'POST';
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}`;
+        const payload = id ? { records: [{ id, fields }] } : { records: [{ fields }] };
+        const res = await fetch(url, { method, headers, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        cacherFormDocument();
+        await chargerDocuments();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l\'enregistrement : ' + err.message);
+    }
+}
+
+async function supprimerDocument(id) {
+    if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
+    if (!confirm('Supprimer ce document ?')) return;
+    try {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?records[]=${encodeURIComponent(id)}`, { method: 'DELETE', headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        await chargerDocuments();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la suppression : ' + err.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initDocuments);

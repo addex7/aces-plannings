@@ -681,15 +681,17 @@ function initNavigationTabs() {
     const tabInitiation = document.getElementById('tab-initiation');
     const tabCarnet = document.getElementById('tab-carnet');
     const tabMembres = document.getElementById('tab-membres');
+    const tabDocuments = document.getElementById('tab-documents');
     const viewPlanning = document.getElementById('view-planning');
     const viewAeronefs = document.getElementById('view-aeronefs');
     const viewInitiation = document.getElementById('view-initiation');
     const viewCarnet = document.getElementById('view-carnet');
     const viewMembres = document.getElementById('view-membres');
+    const viewDocuments = document.getElementById('view-documents');
 
     function activerTab(tab, vue) {
-        [tabPlanning, tabAeronefs, tabInitiation, tabCarnet, tabMembres].forEach(t => { if (t) t.classList.remove('active'); });
-        [viewPlanning, viewAeronefs, viewInitiation, viewCarnet, viewMembres].forEach(v => { if (v) v.style.display = 'none'; });
+        [tabPlanning, tabAeronefs, tabInitiation, tabCarnet, tabMembres, tabDocuments].forEach(t => { if (t) t.classList.remove('active'); });
+        [viewPlanning, viewAeronefs, viewInitiation, viewCarnet, viewMembres, viewDocuments].forEach(v => { if (v) v.style.display = 'none'; });
         if (tab) tab.classList.add('active');
         if (vue) vue.style.display = 'block';
     }
@@ -726,6 +728,13 @@ function initNavigationTabs() {
         tabMembres.addEventListener('click', () => {
             activerTab(tabMembres, viewMembres);
             if (typeof chargerUtilisateurs === 'function') chargerUtilisateurs();
+        });
+    }
+
+    if (tabDocuments) {
+        tabDocuments.addEventListener('click', () => {
+            activerTab(tabDocuments, viewDocuments);
+            if (typeof chargerDocuments === 'function') chargerDocuments();
         });
     }
 }
