@@ -175,7 +175,8 @@ async function seConnecter() {
     const motDePasse = document.getElementById('login-password').value;
     if (!identifiant || !motDePasse) { alert('Identifiant et mot de passe sont requis.'); return; }
     try {
-        const formula = `AND({Identifiant}='${identifiant}', {Actif}=1)`;
+        const champ = identifiant;
+        const formula = `AND(OR({Identifiant}='${champ}', {Mail}='${champ}'), {Actif}=1)`;
         const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
