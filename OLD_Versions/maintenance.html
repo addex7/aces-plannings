@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glide 2000 - Anticipation Maintenance</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Styles spécifiques pour le tableau de bord de maintenance */
+        .dashboard-container {
+            padding: 20px;
+            display: block;
+        }
+        .aircraft-maintenance-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #eef2f5;
+        }
+        .aircraft-header {
+            display: table;
+            width: 100%;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f4f7f9;
+            padding-bottom: 10px;
+        }
+        .aircraft-title {
+            display: table-cell;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #1a2a3a;
+        }
+        .aircraft-stats-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            display: table-cell;
+            width: 33.33%;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-right: 10px solid white; /* Espaceur */
+        }
+        .stat-box:last-child {
+            border-right: none;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        /* Barres de progression */
+        .progress-container {
+            margin-top: 15px;
+        }
+        .progress-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #334155;
+        }
+        .progress-bar-bg {
+            background: #e2e8f0;
+            border-radius: 9999px;
+            height: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease;
+        }
+        .bg-green { background-color: #10b981; }
+        .bg-orange { background-color: #f59e0b; }
+        .bg-red { background-color: #ef4444; }
+        
+        .alert-banner {
+            margin-top: 15px;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .alert-banner.red { background: #fee2e2; color: #991b1b; }
+        .alert-banner.orange { background: #fef3c7; color: #92400e; }
+        .alert-banner.green { background: #dcfce7; color: #166534; }
+    </style>
+</head>
+<body>
+
+    <div class="app-layout">
+        <!-- Barre latérale gauche -->
+        <div class="sidebar">
+            <div class="logo">Glide 2000</div>
+            <ul class="nav-links">
+                <li onclick="window.location.href='index.html'">Planning</li>
+                <li class="active" onclick="window.location.href='maintenance.html'">Anticipation Maintenance</li>
+                <li>Carnet de route</li>
+            </ul>
+            <div class="user-profile">Benjamin</div>
+        </div>
+
+        <!-- Contenu principal à droite -->
+        <div class="main-content">
+            <div class="header">
+                <h2>Anticipation & Suivi des Potentiels Machines</h2>
+                <p style="color: #64748b; margin-top: 5px;">Comparatif entre l'horamètre réel de l'avion et les heures réservées par les pilotes.</p>
+            </div>
+
+            <!-- Conteneur des cartes avions -->
+            <div id="maintenance-dashboard" class="dashboard-container">
+                <div class="loading">Calcul et analyse des potentiels en cours...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="maintenance.js"></script>
+</body>
+</html>

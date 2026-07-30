@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Vols & Plannings</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8fafc; z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 360px;">
+            <h2 style="margin-top:0; color:#1e3d59;">Connexion</h2>
+            <div class="form-group">
+                <label for="login-identifiant">Identifiant</label>
+                <input type="text" id="login-identifiant" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Mot de passe</label>
+                <input type="password" id="login-password" required>
+            </div>
+            <button id="btn-login" class="btn-primary" style="width:100%; margin-top:10px;">Se connecter</button>
+        </div>
+    </div>
+
+    <!-- SETUP OVERLAY -->
+    <div id="setup-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8fafc; z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 360px;">
+            <h2 style="margin-top:0; color:#1e3d59;">Créer mon compte</h2>
+            <p>Bienvenue <span id="setup-name">...</span></p>
+            <div class="form-group">
+                <label for="setup-identifiant">Identifiant</label>
+                <input type="text" id="setup-identifiant" required>
+            </div>
+            <div class="form-group">
+                <label for="setup-password">Mot de passe</label>
+                <input type="password" id="setup-password" required>
+            </div>
+            <div class="form-group">
+                <label for="setup-confirm">Confirmer le mot de passe</label>
+                <input type="password" id="setup-confirm" required>
+            </div>
+            <button id="btn-setup" class="btn-primary" style="width:100%; margin-top:10px;">Activer mon compte</button>
+        </div>
+    </div>
+
+    <div class="app-layout">
+        <!-- Barre latérale de navigation -->
+        <aside class="sidebar">
+            <div>
+                <div class="logo" style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:20px;">
+                    <img src="logo-aces.png" alt="ACES" style="max-height:60px; width:auto; max-width:100%; display:block; border-radius:5px;">
+                    <span style="font-size:18px; font-weight:bold; letter-spacing:0.5px;">ACES</span>
+                </div>
+                <ul class="nav-links">
+                    <li id="tab-planning" class="active">📅 Planning</li>
+                    <li id="tab-aeronefs">🛩️ Aéronefs</li>
+                    <li id="tab-initiation">🎯 Vol d'Initiation</li>
+                    <li id="tab-carnet">📖 Carnet de route</li>
+                    <li id="tab-membres" style="display:none;">👥 Membres</li>
+                    <li>⚙️ Configuration</li>
+                </ul>
+            </div>
+            <div class="user-profile" style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                <span id="user-profile-name">Pilote Connecté</span>
+                <button id="btn-logout" style="display:none; color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; border-radius:4px; padding:4px 12px; font-size:12px; cursor:pointer;">Déconnexion</button>
+            </div>
+        </aside>
+
+        <!-- Zone principale de contenu -->
+        <main class="main-content">
+            
+            <!-- ================= VUE PLANNING ================= -->
+            <section id="view-planning" class="view-section">
+                <!-- En-tête avec Navigation de Date et Bouton d'Ajout -->
+                <header class="header">
+                    <h2>Planning des Vols</h2>
+                    <div class="header-actions">
+                        <div class="date-navigation">
+                            <button id="btn-prev" class="btn-nav" title="Jour précédent">◀</button>
+                            <span id="current-date">Chargement de la date...</span>
+                            <button id="btn-next" class="btn-nav" title="Jour suivant">▶</button>
+                        </div>
+                        <button id="btn-toggle-vi-planeur" class="btn-toggle" title="Afficher/Masquer les VI Planeur">VI Planeur</button>
+                        <button id="btn-add-reservation" class="btn-primary">+ Nouvelle Réservation</button>
+                    </div>
+                </header>
+
+                <!-- Conteneur de la Frise Chronologique / Timeline -->
+                <section class="timeline-container">
+                    <!-- En-tête des heures -->
+                    <div class="timeline-header">
+                        <div class="machine-col-header">Aéronef</div>
+                        <div id="timeline-hours-wrapper">
+                            <div id="timeline-hours"></div>
+                        </div>
+                    </div>
+                    <!-- Lignes générées dynamiquement par app.js -->
+                    <div id="timeline-rows">
+                        <div class="loading">Mise à jour du planning...</div>
+                    </div>
+                </section>
+
+                <!-- Module Présences Planeur -->
+                <section class="glider-presence-section">
+                    <h3>Présences Planeur</h3>
+                    <div class="glider-presence-container">
+                        <!-- Carte Instructeurs -->
+                        <div class="presence-card">
+                            <h4>Instructeurs</h4>
+                            <ul id="list-instructeurs" class="presence-list"></ul>
+                            <button class="btn-inscription" onclick="sinscrirePlaneur('Instructeur')">+ S'inscrire</button>
+                        </div>
+                        <!-- Carte Élèves -->
+                        <div class="presence-card">
+                            <h4>Élèves</h4>
+                            <ul id="list-eleves" class="presence-list"></ul>
+                            <button class="btn-inscription" onclick="sinscrirePlaneur('Élève')">+ S'inscrire</button>
+                        </div>
+                        <!-- Carte Pilotes Autonomes -->
+                        <div class="presence-card">
+                            <h4>Pilotes</h4>
+                            <ul id="list-pilotes" class="presence-list"></ul>
+                            <button class="btn-inscription" onclick="sinscrirePlaneur('Pilote')">+ S'inscrire</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Module Présence Club -->
+                <section class="glider-presence-section">
+                    <h3>Présence Club</h3>
+                    <div class="glider-presence-container">
+                        <!-- Carte Atelier Alain Bernage -->
+                        <div class="presence-card">
+                            <h4>Atelier Alain Bernage</h4>
+                            <ul id="list-atelier" class="presence-list"></ul>
+                            <button class="btn-inscription" onclick="sinscrireClub('Atelier Alain Bernage')">+ S'inscrire</button>
+                        </div>
+                        <!-- Carte Salle Ernest Meyer -->
+                        <div class="presence-card">
+                            <h4>Salle Ernest Meyer</h4>
+                            <ul id="list-salle" class="presence-list"></ul>
+                            <button class="btn-inscription" onclick="sinscrireClub('Salle Ernest Meyer')">+ S'inscrire</button>
+                        </div>
+                    </div>
+                </section>
+            </section>
+
+            <!-- ================= VUE VOL D'INITIATION ================= -->
+            <section id="view-initiation" class="view-section" style="display: none;">
+                <header class="header">
+                    <h2>Vols d'Initiation</h2>
+                    <span id="current-date-initiation" class="date-display"></span>
+                </header>
+
+                <div class="initiation-tabs">
+                    <button type="button" id="btn-initiation-dispos" class="initiation-tab active">À pourvoir</button>
+                    <button type="button" id="btn-initiation-pris" class="initiation-tab">Déjà pris</button>
+                </div>
+
+                <div id="initiation-list" class="initiation-list">
+                    <div class="loading">Chargement des vols d'initiation...</div>
+                </div>
+            </section>
+
+            <!-- ================= VUE AÉRONEFS ================= -->
+            <section id="view-aeronefs" class="view-section" style="display: none;">
+                <header class="header">
+                    <h2>Suivi du Potentiel & Maintenance</h2>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <select id="select-machine-suivi">
+                            <!-- Populé dynamiquement -->
+                        </select>
+                        <button id="btn-maintenance" class="btn-submit" style="padding: 8px 14px; border-radius: 6px; font-size: 13px;">Renseigner un acte de maintenance</button>
+                    </div>
+                </header>
+
+                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <h3 id="aeronef-suivi-title" style="margin-top: 0; color: #1e3d59; border-bottom: 2px solid #f5f0e1; padding-bottom: 10px;">Prévisionnel de potentiel sur 14 jours</h3>
+                    
+                    <!-- LÉGENDE DES COULEURS -->
+                    <div style="display: flex; gap: 20px; margin: 15px 0; font-size: 12px; color: #475569; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; align-items: center;">
+                        <span style="font-weight: bold; color: #1e3d59;">Légende :</span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="width: 14px; height: 14px; background-color: #10b981; border-radius: 3px; display: inline-block;"></span>
+                            <span>Potentiel OK (&gt; 10h)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="width: 14px; height: 14px; background-color: #eab308; border-radius: 3px; display: inline-block;"></span>
+                            <span>Alerte révision (&le; 10h)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="width: 14px; height: 14px; background-color: #dc2626; border-radius: 3px; display: inline-block;"></span>
+                            <span>Potentiel épuisé / Dépassement (&le; 0h)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="width: 14px; height: 14px; background-color: rgba(124, 58, 237, 0.7); border-radius: 3px; display: inline-block;"></span>
+                            <span>Maintenance</span>
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; margin-top: 15px;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e2e8f0; color: #475569; font-size: 14px;">
+                                <th style="padding: 12px 10px; width: 130px;">Date</th>
+                                <th style="padding: 12px 10px;">
+                                    <div style="position: relative; height: 20px;">
+                                        <div id="timeline-hours-suivi" style="display: flex; width: 100%; height: 100%;"></div>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="suivi-table-body">
+                            <!-- Lignes générées par JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================= VUE CARNET DE ROUTE ================= -->
+            <section id="view-carnet" class="view-section" style="display: none;">
+                <header class="header">
+                    <h2>Carnet de route</h2>
+                    <div class="carnet-header-controls">
+                        <label for="carnet-machine-filtre">Carnet de :</label>
+                        <select id="carnet-machine-filtre" class="machine-selector">
+                            <option value="F-GASB">F-GASB</option>
+                            <option value="F-BLIO">F-BLIO</option>
+                            <option value="F-JVIO">F-JVIO</option>
+                        </select>
+                        <button id="btn-ouvrir-carnet" class="btn-primary">+ Saisir un vol</button>
+                    </div>
+                </header>
+
+                <div id="carnet-observation-alarme" style="display: none;"></div>
+
+                <div class="carnet-table-container">
+                    <table class="carnet-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">Date</th>
+                                <th rowspan="2">Équipage</th>
+                                <th rowspan="2">Fonction</th>
+                                <th colspan="2" class="sub-header">Lieu</th>
+                                <th colspan="2" class="sub-header">Heures</th>
+                                <th rowspan="2">Temps</th>
+                                <th rowspan="2">Nature</th>
+                                <th colspan="2" class="sub-header">Carburant</th>
+                                <th colspan="2" class="sub-header">Huile</th>
+                                <th rowspan="2">Observations</th>
+                                <th rowspan="2">Horamètre</th>
+                            </tr>
+                            <tr>
+                                <th>départ</th>
+                                <th>arrivée</th>
+                                <th>départ</th>
+                                <th>arrivée</th>
+                                <th>Départ</th>
+                                <th>Arr.</th>
+                                <th>Départ</th>
+                                <th>Arr.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="carnet-body">
+                            <tr><td colspan="15" class="carnet-empty">Chargement du carnet de route...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================= VUE MEMBRES ================= -->
+            <section id="view-membres" class="view-section" style="display: none;">
+                <header class="header">
+                    <h2>Gestion des membres</h2>
+                </header>
+                <form id="membres-form" style="background:#f8fafc; padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid #e2e8f0;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
+                        <div class="form-group">
+                            <label for="membre-prenom">Prénom</label>
+                            <input type="text" id="membre-prenom" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="membre-nom">Nom</label>
+                            <input type="text" id="membre-nom" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="membre-mail">Mail</label>
+                            <input type="email" id="membre-mail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="membre-telephone">Téléphone</label>
+                            <input type="text" id="membre-telephone">
+                        </div>
+                    </div>
+                    <div style="margin:10px 0;">
+                        <label style="margin-right:15px; font-weight:500;">Rôles :</label>
+                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Mécanicien"> Mécanicien</label>
+                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Gestion VI"> Gestion VI</label>
+                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Pilote VI"> Pilote VI</label>
+                    </div>
+                    <button type="submit" class="btn-primary">Créer l'utilisateur</button>
+                </form>
+                <div id="membre-invitation"></div>
+                <div class="carnet-table-container">
+                    <table class="carnet-table">
+                        <thead>
+                            <tr>
+                                <th>Prénom</th>
+                                <th>Nom</th>
+                                <th>Mail</th>
+                                <th>Téléphone</th>
+                                <th>Rôles</th>
+                                <th>Identifiant</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membres-list">
+                            <tr><td colspan="6" class="carnet-empty">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Fenêtre Modale : Création & Modification de Réservation -->
+    <div id="reservation-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 id="modal-title">Nouvelle Réservation</h3>
+            
+            <form id="reservation-form">
+                <div id="group-type-vol" class="form-group">
+                    <label>Type de vol :</label>
+                    <div class="checkbox-group" id="form-type-vol-group">
+                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="Local" checked> Local</label>
+                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="Navigation"> Navigation</label>
+                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="Vol de nuit"> Vol de nuit</label>
+                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="Instruction"> Instruction</label>
+                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="VI Moteur"> VI Moteur</label>
+                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="VI Planeur"> VI Planeur</label>
+                    </div>
+                </div>
+                <div id="group-machine" class="form-group">
+                    <label>Machine / Aéronef :</label>
+                    <div class="checkbox-group" id="form-machine-group">
+                        <!-- Populé dynamiquement -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label id="label-pilote" for="form-pilote">Nom du Pilote :</label>
+                    <input type="text" id="form-pilote" placeholder="Ex: Jean Dupont">
+                </div>
+                <div class="form-group">
+                    <label for="form-debut">Date & Heure de début :</label>
+                    <input type="datetime-local" id="form-debut" required>
+                </div>
+                <div class="form-group">
+                    <label for="form-fin">Date & Heure de fin :</label>
+                    <input type="datetime-local" id="form-fin" required>
+                </div>
+                <div id="group-estimation" class="form-group">
+                    <label for="form-estimation">Temps de vol estimé (heures) :</label>
+                    <input type="number" id="form-estimation" step="0.1" min="0" placeholder="Ex: 1.5" required>
+                </div>
+                <div id="group-commentaires" class="form-group">
+                    <label id="label-commentaires" for="form-commentaires">Commentaires & Contacts VI :</label>
+                    <textarea id="form-commentaires" rows="3" placeholder="Coordonnées du passager, remarques..."></textarea>
+                </div>
+                <div id="group-passager" class="form-group" style="display:none">
+                    <label for="form-passager">Nom du passager :</label>
+                    <input type="text" id="form-passager" placeholder="Ex: Marie Dupont">
+                </div>
+                <div id="group-telephone" class="form-group" style="display:none">
+                    <label for="form-telephone">Téléphone du passager :</label>
+                    <input type="tel" id="form-telephone" placeholder="Ex: 06 12 34 56 78">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                    <button type="button" id="btn-delete-reservation" style="display: none;">Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Fenêtre Modale : Création VI Planeur -->
+    <div id="vi-planeur-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal-vi">&times;</span>
+            <h3>Nouveau VI Planeur</h3>
+            <form id="vi-planeur-form">
+                <div class="form-group">
+                    <label for="form-vi-nom">Nom :</label>
+                    <input type="text" id="form-vi-nom" placeholder="Ex: Jean Dupont" required>
+                </div>
+                <div class="form-group">
+                    <label for="form-vi-debut">Date & Heure de début :</label>
+                    <input type="datetime-local" id="form-vi-debut" required>
+                </div>
+                <div class="form-group">
+                    <label for="form-vi-fin">Date & Heure de fin :</label>
+                    <input type="datetime-local" id="form-vi-fin" required>
+                </div>
+                <div class="form-group">
+                    <label for="form-vi-pilote">Pilote (optionnel) :</label>
+                    <input type="text" id="form-vi-pilote" placeholder="Ex: Pierre Martin">
+                </div>
+                <div class="form-group">
+                    <label for="form-vi-commentaire">Commentaire :</label>
+                    <textarea id="form-vi-commentaire" rows="2" placeholder="Coordonnées, remarques..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                    <button type="button" id="btn-delete-vi-planeur" style="display: none;">Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Fenêtre Modale : Saisie Carnet de Route -->
+    <div id="carnet-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal-carnet">&times;</span>
+            <h3>Saisir un vol</h3>
+            <form id="carnet-form">
+                <input type="hidden" id="carnet-id">
+                <div class="form-group">
+                    <label for="carnet-date">Date du vol :</label>
+                    <input type="date" id="carnet-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="carnet-pilote">Nom du pilote :</label>
+                    <input type="text" id="carnet-pilote" placeholder="Ex: Jean Dupont" required>
+                </div>
+                <div class="form-group">
+                    <label for="carnet-instructeur">Nom de l'instructeur (si instruction) :</label>
+                    <input type="text" id="carnet-instructeur" placeholder="Ex: Pierre Martin">
+                </div>
+                <div class="form-group">
+                    <label>Fonction(s) à bord :</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="P"> P - Pilote</label>
+                        <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="EP"> EP - Élève pilote</label>
+                        <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="FI"> FI - Instructeur</label>
+                        <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="FE"> FE - Examinateur</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="carnet-machine">Machine :</label>
+                    <select id="carnet-machine" required>
+                        <option value="F-GASB">F-GASB</option>
+                        <option value="F-BLIO">F-BLIO</option>
+                        <option value="F-JVIO">F-JVIO</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="carnet-depart">Terrain de départ :</label>
+                        <input type="text" id="carnet-depart" value="LFOY" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="carnet-arrivee">Terrain d'arrivée :</label>
+                        <input type="text" id="carnet-arrivee" value="LFOY" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="carnet-heure-depart">Heure de départ (UTC) :</label>
+                        <input type="time" id="carnet-heure-depart" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="carnet-heure-arrivee">Heure d'arrivée (UTC) :</label>
+                        <input type="time" id="carnet-heure-arrivee" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="carnet-nature">Nature du vol :</label>
+                    <select id="carnet-nature" required>
+                        <option value="Autre">Autre</option>
+                        <option value="Instruction">Instruction</option>
+                        <option value="Examen">Examen</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="carnet-carburant-depart">Carburant ajouté au départ (L) :</label>
+                        <input type="text" id="carnet-carburant-depart" inputmode="decimal" placeholder="Ex: 130 ou 130 + PC">
+                    </div>
+                    <div class="form-group">
+                        <label for="carnet-carburant-arrivee">Carburant ajouté à l'arrivée (L) :</label>
+                        <input type="text" id="carnet-carburant-arrivee" inputmode="decimal" placeholder="Ex: 130 ou 130 + PC">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="carnet-huile-depart">Huile ajoutée au départ (L) :</label>
+                        <input type="number" id="carnet-huile-depart" step="0.1" min="0" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="carnet-huile-arrivee">Huile ajoutée à l'arrivée (L) :</label>
+                        <input type="number" id="carnet-huile-arrivee" step="0.1" min="0" placeholder="0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="carnet-horametre-depart">Horamètre au départ :</label>
+                        <input type="number" id="carnet-horametre-depart" step="0.01" min="0" placeholder="Ex: 5523.45">
+                    </div>
+                    <div class="form-group">
+                        <label for="carnet-horametre-arrivee">Horamètre à l'arrivée :</label>
+                        <input type="number" id="carnet-horametre-arrivee" step="0.01" min="0" placeholder="Ex: 5523.77">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="carnet-observations">Observations :</label>
+                    <textarea id="carnet-observations" rows="2" placeholder="Remarques éventuelles..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="btn-delete-carnet" style="display:none;">Supprimer</button>
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Fenêtre Modale : Saisie d'un Acte de Maintenance -->
+    <div id="maintenance-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal" id="close-maintenance">&times;</span>
+            <h3>Renseigner un acte de maintenance</h3>
+            <form id="maintenance-form">
+                <input type="hidden" id="maintenance-id">
+                <input type="hidden" id="maintenance-machine-immat">
+                <input type="hidden" id="maintenance-machine-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="maintenance-date">Date de fin de l'intervention :</label>
+                        <input type="date" id="maintenance-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenance-heure">Heure (HH:MM) :</label>
+                        <input type="time" id="maintenance-heure" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenance-duree">Durée (h) :</label>
+                        <input type="number" id="maintenance-duree" step="0.1" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenance-ancienne-butee">Ancienne butée :</label>
+                        <input type="number" id="maintenance-ancienne-butee" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenance-nouvelle-butee">Nouvelle butée :</label>
+                        <input type="number" id="maintenance-nouvelle-butee" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">Enregistrer l'acte</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale Membre -->
+    <div id="membre-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:500px;">
+            <span id="close-membre" class="close-modal">&times;</span>
+            <h3>Modifier le membre</h3>
+            <form id="membre-edit-form">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+                    <div class="form-group">
+                        <label for="edit-membre-prenom">Prénom</label>
+                        <input type="text" id="edit-membre-prenom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-membre-nom">Nom</label>
+                        <input type="text" id="edit-membre-nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-membre-mail">Mail</label>
+                        <input type="email" id="edit-membre-mail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-membre-telephone">Téléphone</label>
+                        <input type="text" id="edit-membre-telephone">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-membre-identifiant">Identifiant</label>
+                        <input type="text" id="edit-membre-identifiant" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-membre-password">Mot de passe</label>
+                        <input type="text" id="edit-membre-password">
+                    </div>
+                </div>
+                <div style="margin:15px 0;">
+                    <label style="margin-right:15px; font-weight:500;">Rôles :</label>
+                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Mécanicien"> Mécanicien</label>
+                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Gestion VI"> Gestion VI</label>
+                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Pilote VI"> Pilote VI</label>
+                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Super admin"> Super admin</label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Chargement des Scripts Applicatifs -->
+    <script src="app.js"></script>
+    <script src="utils.js"></script>
+    <script src="presences.js"></script>
+    <script src="planning.js"></script>
+    <script src="aeronefs.js"></script>
+    <script src="carnet.js"></script>
+    <script src="membres.js"></script>
+</body>
+</html>

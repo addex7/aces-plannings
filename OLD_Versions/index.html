@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Vols & Plannings</title>
+    <style>
+        /* --- STICES DE BASE & RESET --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f8fafc; color: #1e293b; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* --- HEADER & NAVIGATION --- */
+        header { background-color: #1e3d59; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10; }
+        .header-title { font-size: 20px; font-weight: bold; display: flex; align-items: center; gap: 12px; }
+        
+        .nav-tabs { display: flex; gap: 8px; background: rgba(255,255,255,0.1); padding: 4px; border-radius: 8px; }
+        .tab-btn { background: transparent; border: none; color: white; padding: 6px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .tab-btn.active { background: white; color: #1e3d59; }
+
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .btn-primary { background-color: #17b978; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-primary:hover { background-color: #119964; }
+
+        /* --- CONTENEUR PRINCIPAL & VUES --- */
+        .main-container { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; }
+        .view-section { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; background: #f8fafc; overflow-y: auto; }
+
+        /* --- BARRE DE CONTRÔLE DATE (PLANNING) --- */
+        .date-control-bar { background: white; padding: 12px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .date-navigator { display: flex; align-items: center; gap: 15px; }
+        .date-navigator button { background: #f1f3f5; border: 1px solid #ced4da; border-radius: 6px; width: 32px; height: 32px; cursor: pointer; font-weight: bold; color: #1e3d59; }
+        .date-navigator button:hover { background: #e2e8f0; }
+        #current-date { font-size: 16px; font-weight: bold; color: #1e3d59; min-width: 220px; text-align: center; }
+
+        /* --- FRISE HORAIRE --- */
+        .timeline-header-row { display: flex; background: #e2e8f0; border-bottom: 2px solid #cbd5e1; position: sticky; top: 0; z-index: 5; }
+        .machine-header-cell { width: 180px; min-width: 180px; padding: 10px 15px; font-weight: bold; font-size: 13px; color: #1e3d59; border-right: 1px solid #cbd5e1; display: flex; align-items: center; }
+        .timeline-hours-container { flex: 1; display: flex; }
+        .hour-cell-header { flex: 1; text-align: center; font-size: 11px; font-weight: 600; color: #475569; padding: 8px 0; border-right: 1px solid rgba(203, 213, 225, 0.6); }
+
+        /* --- LIGNES PLANNING AVIONS --- */
+        .timeline-rows-wrapper { flex: 1; overflow-y: auto; }
+        .timeline-row { display: flex; border-bottom: 1px solid #e2e8f0; min-height: 55px; background: white; position: relative; }
+        .machine-cell { width: 180px; min-width: 180px; padding: 10px 15px; font-weight: 600; font-size: 13px; color: #1e3d59; border-right: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; background: #fff; }
+        
+        .hours-grid-background { flex: 1; display: flex; position: relative; background: #ffffff; }
+        .grid-hour-block { flex: 1; border-right: 1px solid #f1f5f9; height: 100%; cursor: pointer; }
+        .grid-hour-block:hover { background-color: rgba(23, 185, 120, 0.04); }
+
+        /* --- ZONES DE NUIT --- */
+        .night-zone { position: absolute; top: 0; bottom: 0; pointer-events: none; z-index: 1; }
+        .night-aero { background: repeating-linear-gradient(-45deg, rgba(30, 61, 89, 0.08), rgba(30, 61, 89, 0.08) 6px, rgba(240, 244, 248, 0.3) 6px, rgba(240, 244, 248, 0.3) 12px); }
+        .night-civil { background: repeating-linear-gradient(-45deg, rgba(30, 61, 89, 0.15), rgba(30, 61, 89, 0.15) 6px, rgba(186, 215, 233, 0.35) 6px, rgba(186, 215, 233, 0.35) 12px); border-left: 1px dashed #1e3d59; border-right: 1px dashed #1e3d59; }
+
+        /* --- BARRES DE RÉSERVATION --- */
+        .reservation-bar {
+            position: absolute; top: 6px; bottom: 6px; z-index: 3;
+            background-color: #3b82f6; color: white; border-radius: 4px;
+            padding: 0 6px; display: flex; align-items: center; overflow: hidden;
+            font-size: 11px; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            cursor: pointer; user-select: none; transition: filter 0.2s;
+        }
+        .reservation-bar:hover { filter: brightness(0.9); }
+        .reservation-bar strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Styles spécifiques types de vol */
+        .vi-sans-pilote { background-color: #eab308 !important; color: #1e293b !important; border-left-color: #ca8a04 !important; }
+        .vi-avec-pilote { background-color: #f97316 !important; color: white !important; border-left-color: #c2410c !important; }
+
+        /* Poignées de redimensionnement */
+        .resize-handle { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; z-index: 4; }
+        .resize-handle-left { left: 0; }
+        .resize-handle-right { right: 0; }
+
+        /* Aperçu fantôme lors du déplacement */
+        .ghost-bar-preview {
+            position: absolute; top: 6px; bottom: 6px; z-index: 2;
+            background: rgba(59, 130, 246, 0.25); border: 2px dashed #1e3d59;
+            border-radius: 4px; pointer-events: none;
+        }
+
+        /* --- BADGES DE MAINTENANCE --- */
+        .maintenance-status { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; cursor: help; }
+        .status-green { background-color: #10b981; }
+        .status-orange { background-color: #f59e0b; }
+        .status-red { background-color: #ef4444; }
+
+        /* --- VUE SUIVI AÉRONEFS --- */
+        .aeronef-view-container { padding: 24px; max-width: 1200px; margin: 0 auto; width: 100%; }
+        .aeronef-card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
+        .suivi-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+
+        /* --- SECTION PLANEURS / PRÉSENCES --- */
+        .planeur-section { background: white; border-top: 1px solid #e2e8f0; padding: 15px 24px; display: flex; gap: 30px; align-items: center; }
+        .planeur-group { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: #1e3d59; }
+        .planeur-list { display: flex; gap: 8px; list-style: none; flex-wrap: wrap; }
+        .planeur-list li { background: #f1f5f9; padding: 4px 10px; border-radius: 4px; display: flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1; }
+        .btn-remove-presence { background: none; border: none; cursor: pointer; font-size: 11px; }
+
+        /* --- MODALE --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: white; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden; }
+        .modal-header { background: #1e3d59; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .close-modal { background: none; border: none; color: white; font-size: 18px; cursor: pointer; }
+        .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #475569; }
+        .form-group input, .form-group select, .form-group textarea { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; font-weight: normal; }
+        .modal-footer { padding: 15px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .btn-danger { background-color: #ef4444; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .loading { padding: 20px; text-align: center; color: #64748b; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-title">
+            <span>✈️ Aéroclub - Gestion des Vols</span>
+        </div>
+        <div class="nav-tabs">
+            <button id="tab-planning" class="tab-btn active">Planning du Jour</button>
+            <button id="tab-aeronefs" class="tab-btn">Suivi & Potentiels</button>
+        </div>
+        <div class="header-actions">
+            <button id="btn-add-reservation" class="btn-primary">+ Nouvelle Réservation</button>
+        </div>
+    </header>
+
+    <!-- CONTENEUR DES VUES -->
+    <div class="main-container">
+
+        <!-- VUE 1 : PLANNING -->
+        <div id="view-planning" class="view-section">
+            <div class="date-control-bar">
+                <div class="date-navigator">
+                    <button id="btn-prev">◀</button>
+                    <span id="current-date">Chargement...</span>
+                    <button id="btn-next">▶</button>
+                </div>
+            </div>
+
+            <div class="timeline-header-row">
+                <div class="machine-header-cell">Machines</div>
+                <div class="timeline-hours-container" id="timeline-hours"></div>
+            </div>
+
+            <div class="timeline-rows-wrapper" id="timeline-rows">
+                <div class="loading">Chargement du planning...</div>
+            </div>
+
+            <!-- SECTION PRÉSENCES PLANEUR -->
+            <div class="planeur-section">
+                <div class="planeur-group">
+                    <span>Instructeurs :</span>
+                    <ul id="list-instructeurs" class="planeur-list"></ul>
+                    <button class="btn-primary" style="padding: 2px 8px; font-size:12px;" onclick="sinscrirePlaneur('Instructeur')">+</button>
+                </div>
+                <div class="planeur-group">
+                    <span>Élèves :</span>
+                    <ul id="list-eleves" class="planeur-list"></ul>
+                    <button class="btn-primary" style="padding: 2px 8px; font-size:12px;" onclick="sinscrirePlaneur('Élève')">+</button>
+                </div>
+                <div class="planeur-group">
+                    <span>Pilotes :</span>
+                    <ul id="list-pilotes" class="planeur-list"></ul>
+                    <button class="btn-primary" style="padding: 2px 8px; font-size:12px;" onclick="sinscrirePlaneur('Pilote')">+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VUE 2 : SUIVI AÉRONEFS -->
+        <div id="view-aeronefs" class="view-section" style="display: none;">
+            <div class="aeronef-view-container">
+                <div class="aeronef-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="color: #1e3d59; font-size: 18px;">Suivi Prévisionnel de la Flotte</h2>
+                        <select id="select-machine-suivi"></select>
+                    </div>
+                    <div id="aeronef-suivi-title" style="font-weight: 600; color: #475569; margin-bottom: 10px;">Sélectionnez un aéronef</div>
+                    <div style="overflow-x: auto;">
+                        <table class="suivi-table">
+                            <tbody id="suivi-table-body">
+                                <tr><td colspan="2" class="loading">Sélectionnez une machine pour voir le prévisionnel.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODALE DE CRÉATION / ÉDITION -->
+    <div id="reservation-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modal-title">Nouvelle Réservation</span>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="reservation-form">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Type de vol</label>
+                        <select id="form-type-vol">
+                            <option value="Vol Classique">Vol Classique</option>
+                            <option value="Vol d'Initiation">Vol d'Initiation (VI)</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Aéronef</label>
+                        <select id="form-machine"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nom du pilote</label>
+                        <input type="text" id="form-pilote" placeholder="Nom Prénom">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Début</label>
+                            <input type="datetime-local" id="form-debut">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Fin</label>
+                            <input type="datetime-local" id="form-fin">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Temps estimé (heures)</label>
+                        <input type="number" step="0.25" id="form-estimation" value="1.0">
+                    </div>
+                    <div class="form-group" id="group-commentaires-vi" style="display: none;">
+                        <label>Commentaires / Détails VI</label>
+                        <textarea id="form-commentaires" rows="2" placeholder="Informations complémentaires..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btn-delete-reservation" class="btn-danger" style="display: none;">Supprimer</button>
+                    <div style="display: flex; gap: 10px; margin-left: auto;">
+                        <button type="submit" class="btn-primary">Enregistrer</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LIAISON AVEC LE SCRIPT MODULAIRE -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>

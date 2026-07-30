@@ -1,0 +1,151 @@
+/* css/planning.css */
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+}
+
+.view-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.date-navigator {
+    display: flex;
+    align-items: center;
+    background: #f1f5f9;
+    border-radius: 6px;
+    padding: 4px;
+    gap: 10px;
+    font-weight: bold;
+}
+
+.date-navigator button {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: #1e293b;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.planning-card, .presences-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.timeline-header {
+    display: grid;
+    grid-template-columns: 140px repeat(24, 1fr);
+    background: #f8fafc;
+    padding: 10px 0;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+    font-weight: bold;
+}
+
+.planning-row-item {
+    display: grid;
+    grid-template-columns: 140px repeat(24, 1fr);
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.plane-info {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 10px;
+}
+
+.dot-green { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; display: inline-block; }
+.dot-red { width: 10px; height: 10px; background: #ef4444; border-radius: 50%; display: inline-block; }
+
+.slots-grid-track {
+    grid-column: span 24;
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    background: #f8fafc;
+    height: 38px;
+    position: relative;
+    border-radius: 4px;
+}
+
+/* Style des barres de réservation (Design d'origine : Orange avec texte en blanc) */
+.reservation-pill {
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding: 2px 6px;
+    background-color: #f97316;
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+}
+
+.reservation-pill:hover {
+    background-color: #ea580c;
+    cursor: pointer;
+}
+
+/* Présences Planeur boxes */
+.presences-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.presence-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.presence-box h3 {
+    text-align: center;
+    background: #e2e8f0;
+    margin: -15px -15px 15px -15px;
+    padding: 10px;
+    font-size: 0.95rem;
+    border-radius: 6px 6px 0 0;
+}
+
+.presence-item {
+    padding: 4px 0;
+    font-size: 0.9rem;
+    color: #1e293b;
+}
+
+.empty-presence {
+    font-size: 0.85rem;
+    color: #64748b;
+}

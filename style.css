@@ -1,0 +1,831 @@
+/* --- DESIGN GLOBAL & LAYOUT --- */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f0e1;
+    color: #1e3d59;
+}
+.app-layout {
+    display: flex;
+    height: 100vh;
+}
+/* Barre latérale (RÉDUITE POUR GAGNER DE LA PLACE) */
+.sidebar {
+    width: 170px;
+    min-width: 170px;
+    background-color: #1e3d59;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 15px 12px;
+    box-sizing: border-box;
+}
+.logo {
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    margin-bottom: 30px;
+    white-space: nowrap;
+}
+.nav-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+.nav-links li {
+    padding: 10px 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 13.5px;
+    white-space: nowrap;
+}
+.nav-links li.active, .nav-links li:hover {
+    background-color: #17b978;
+}
+.user-profile {
+    font-size: 13px;
+    font-weight: bold;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 15px;
+    white-space: nowrap;
+}
+/* Zone principale */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding: 20px;
+    gap: 15px;
+}
+.view-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+/* En-tête de la page */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.header h2 {
+    margin: 0;
+    font-size: 22px;
+}
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.btn-primary {
+    background-color: #1e3d59;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13.5px;
+    cursor: pointer;
+}
+.btn-primary:hover {
+    background-color: #17b978;
+}
+.btn-toggle {
+    background-color: #e2e8f0;
+    color: #475569;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.btn-toggle.active {
+    background-color: #1e3d59;
+    color: white;
+}
+.date-navigation {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f5f0e1;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 14px;
+}
+.btn-nav {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    color: #1e3d59;
+}
+/* --- DESIGN DU PLANNING (TIMELINE ELARGIE) --- */
+.timeline-container {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+}
+.timeline-header {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #f5f0e1;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+.machine-col-header {
+    width: 90px;
+    min-width: 90px;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+#timeline-hours-wrapper {
+    flex: 1;
+    position: relative;
+    height: 20px;
+}
+#timeline-hours {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+.hour-cell-header {
+    flex: 1;
+    position: relative;
+    font-size: 11px;
+    color: #64748b;
+}
+.hour-cell-header span {
+    position: absolute;
+    left: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+.timeline-row {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 12px 0;
+    border-bottom: 1px solid #f5f0e1;
+}
+.machine-cell {
+    width: 90px;
+    min-width: 90px;
+    font-weight: bold;
+    font-size: 13.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 10;
+    flex-shrink: 0;
+}
+/* Statuts de maintenance */
+.maintenance-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+    cursor: help;
+    flex-shrink: 0;
+}
+.status-green { background-color: #2ecc71; }
+.status-orange { background-color: #f39c12; }
+.status-red { background-color: #e74c3c; }
+
+.maintenance-status[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 50%;
+    left: 18px;
+    transform: translateY(-50%);
+    background-color: #1e3d59;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: normal;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    pointer-events: none;
+}
+.hours-grid-background {
+    position: relative !important;
+    flex: 1;
+    display: flex;
+    height: 40px;
+    overflow: hidden;
+}
+.grid-hour-block {
+    flex: 1;
+    border-right: 1px solid #f1f5f9;
+    height: 100%;
+    cursor: pointer;
+    background-color: transparent !important;
+    position: relative;
+    z-index: 2;
+}
+.grid-hour-block:last-child {
+    border-right: none;
+}
+.reservation-bar {
+    position: absolute;
+    top: 5px;
+    height: 25px;
+    background-color: #ff6e40;
+    color: white;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 8px;
+    box-sizing: border-box;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+    z-index: 10 !important;
+    border-left: 4px solid #1e3d59;
+}
+.reservation-bar.vi-sans-pilote {
+    background-color: #00adb5;
+    border-left: 4px solid #112d4e;
+}
+.reservation-bar.vi-avec-pilote {
+    background-color: #3f51b5;
+    border-left: 4px solid #1a237e;
+}
+.reservation-bar.vi-planeur {
+    background-color: #8e44ad;
+    border-left: 4px solid #5b2c6f;
+}
+.timeline-row.vi-planeur-row {
+    background-color: #f8f0fc;
+}
+.reservation-bar:hover {
+    filter: brightness(1.05);
+}
+.reservation-bar strong {
+    font-size: 12.5px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+.reservation-bar span {
+    font-size: 10.5px;
+    opacity: 0.9;
+}
+.ghost-bar-preview {
+    position: absolute;
+    top: 4px !important;
+    bottom: 4px !important;
+    height: auto !important;
+    background-color: rgba(234, 179, 8, 0.25) !important;
+    border: 2px dashed #d97706 !important;
+    border-radius: 6px !important;
+    z-index: 10 !important;
+    box-sizing: border-box;
+    display: flex;                  /* Permet d'aligner le contenu */
+    align-items: center;            /* Centre verticalement */
+    justify-content: center;        /* Centre horizontalement */
+}
+.resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: ew-resize;
+    z-index: 12;
+}
+.resize-handle-left { left: 0; }
+.resize-handle-right { right: 0; }
+.resize-handle:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #64748b;
+    font-style: italic;
+}
+.reservation-bar.short-reservation {
+    padding: 0 4px; 
+    justify-content: center;
+}
+.reservation-bar.short-reservation strong {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+.reservation-bar.short-reservation span {
+    font-size: 9px;
+    text-align: center;
+    display: block;
+    white-space: nowrap;
+}
+/* --- SECTIONS INSCRIPTIONS PLANEUR --- */
+.glider-presence-section {
+    padding: 20px;
+    background-color: #ffffff;
+    margin: 5px 0 0 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.glider-presence-section h3 {
+    margin-top: 0;
+    color: #1e3d59;
+    border-bottom: 2px solid #f5f0e1;
+    padding-bottom: 10px;
+    font-size: 18px;
+}
+.glider-presence-container {
+    display: flex;
+    gap: 20px;
+    justify-content: space-between;
+}
+.presence-card {
+    flex: 1;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+.presence-card h4 {
+    margin-top: 0;
+    text-align: center;
+    color: #334155;
+    background: #e2e8f0;
+    padding: 8px;
+    border-radius: 6px;
+}
+.presence-list {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+    flex-grow: 1;
+}
+.presence-list li {
+    padding: 8px 10px;
+    background: white;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    border-left: 4px solid #ff6e40;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.btn-remove-presence {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 14px;
+}
+.btn-inscription {
+    background: none;
+    border: none;
+    color: #1e3d59;
+    text-decoration: underline;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 5px;
+    text-align: left;
+}
+.btn-inscription:hover {
+    color: #ff6e40;
+}
+.btn-comment {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    margin: 0;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+.btn-comment:hover {
+    opacity: 1;
+}
+.comment-text {
+    font-size: 13px;
+    color: #64748b;
+    font-style: italic;
+}
+/* --- POP-UP MODALE --- */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 400px;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+.close-modal, .close-modal-vi, .close-modal-carnet {
+    position: absolute;
+    top: 15px; right: 20px;
+    font-size: 24px; cursor: pointer;
+    color: #64748b;
+}
+#carnet-modal .modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+#carnet-modal {
+    align-items: flex-start;
+    padding-top: 5vh;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+/* --- GROUPES DE CASES À COCHER --- */
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 5px;
+    justify-content: center;
+}
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    background: #f8fafc;
+    transition: background 0.2s, border-color 0.2s;
+}
+.checkbox-option:hover {
+    background: #e2e8f0;
+}
+.checkbox-option input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+    margin: 0;
+}
+/* --- BOUTONS D'ACTION DU FORMULAIRE --- */
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+.btn-submit {
+    flex: 2;
+    background-color: #17b978;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-submit:hover {
+    background-color: #11995d;
+}
+#btn-delete-reservation, #btn-delete-vi-planeur, #btn-delete-carnet {
+    flex: 1;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#btn-delete-reservation:hover, #btn-delete-vi-planeur:hover, #btn-delete-carnet:hover {
+    background-color: #dc2626;
+}
+.carnet-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.carnet-header-controls label {
+    margin: 0;
+    color: #1e3d59;
+    font-weight: 600;
+}
+.carnet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.carnet-table th, .carnet-table td {
+    padding: 6px 4px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.carnet-table th {
+    font-size: 0.8rem;
+    background-color: #1e3d59;
+    color: #fff;
+}
+.carnet-table thead .sub-header {
+    background-color: #31577c;
+}
+.carnet-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.carnet-table tbody tr:hover {
+    background-color: #f1f5f9;
+}
+/* --- BORDURES & ZONES DE NUIT / CRÉPUSCULE --- */
+.night-zone {
+    position: absolute !important;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.night-aero {
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(30, 61, 89, 0.18),
+        rgba(30, 61, 89, 0.18) 10px,
+        rgba(20, 45, 68, 0.28) 10px,
+        rgba(20, 45, 68, 0.28) 20px
+    ) !important;
+    border-right: 1px dashed rgba(30, 61, 89, 0.4);
+    border-left: 1px dashed rgba(30, 61, 89, 0.4);
+}
+.night-civil {
+    background-color: rgba(135, 175, 215, 0.25) !important;
+}
+
+#suivi-table-body .reservation-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.1;
+    cursor: pointer;
+    z-index: 5;
+}
+
+#select-machine-suivi {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e3d59;
+    background-color: #f1f5f9;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+#select-machine-suivi:hover {
+    background-color: #e2e8f0;
+    border-color: #2563eb;
+}
+
+#select-machine-suivi:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Réduction de la taille de la police pour les dates à gauche */
+.col-date {
+  font-size: 0.85rem; /* Ajustez la taille selon vos préférences */
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: center;
+  padding: 8px 10px;
+}
+
+/* Style pour la colonne du potentiel restant en fin de journée à droite */
+.col-potentiel-fin {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 12px;
+  background-color: #f8f9fa; /* Légère distinction visuelle optionnelle */
+  border-left: 1px solid #dee2e6;
+}
+
+.drag-ghost-preview {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    background-color: rgba(30, 61, 89, 0.15);
+    border: 2px dashed #1e3d59;
+    border-radius: 4px;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #1e3d59;
+    font-weight: bold;
+    z-index: 50;
+    box-sizing: border-box;
+}
+
+/* --- VUE VOL D'INITIATION --- */
+.initiation-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.initiation-tab {
+    background-color: #e2e8f0;
+    color: #475569;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.initiation-tab.active {
+    background-color: #1e3d59;
+    color: white;
+}
+.initiation-list {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    min-height: 150px;
+}
+.initiation-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    transition: box-shadow 0.15s;
+}
+.initiation-card:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.initiation-card.disponible {
+    border-left: 5px solid #00adb5;
+    background: #f4fdfe;
+}
+.initiation-card.pris {
+    border-left: 5px solid #3f51b5;
+    background: #f4f5ff;
+}
+.initiation-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 15px;
+    color: #1e3d59;
+}
+.initiation-info p {
+    margin: 0;
+    font-size: 13px;
+    color: #475569;
+}
+.initiation-meta {
+    text-align: right;
+    font-size: 12px;
+    color: #64748b;
+}
+.initiation-empty {
+    text-align: center;
+    color: #64748b;
+    padding: 30px;
+    font-style: italic;
+}
+.btn-reserver-initiation {
+    background-color: #00adb5;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background-color 0.2s;
+}
+.btn-reserver-initiation:hover {
+    background-color: #007f86;
+}
+
+/* --- CARNET DE ROUTE --- */
+.carnet-table-container {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    overflow-x: auto;
+}
+.carnet-table {
+    width: 100%;
+    min-width: 1100px;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+.carnet-table thead th {
+    background: #1e3d59;
+    color: white;
+    padding: 12px 10px;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+.carnet-table tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+}
+.carnet-table tbody tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+.carnet-table tbody tr:hover {
+    background-color: #f1f5f9;
+}
+.carnet-table td {
+    padding: 10px;
+    vertical-align: top;
+    color: #334155;
+}
+.carnet-table td:first-child {
+    white-space: nowrap;
+    font-weight: 600;
+}
+.carnet-empty {
+    text-align: center;
+    color: #64748b;
+    padding: 30px;
+    font-style: italic;
+}
+#carnet-modal .form-row {
+    display: flex;
+    gap: 15px;
+}
+#carnet-modal .form-row .form-group {
+    flex: 1;
+    min-width: 0;
+}

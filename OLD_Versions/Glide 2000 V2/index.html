@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AéroClub - Gestion des Vols</title>
+    
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/planning.css">
+    <link rel="stylesheet" href="css/aeronefs.css">
+</head>
+<body>
+
+    <div class="app-layout">
+        <!-- Barre latérale d'origine -->
+        <aside class="sidebar">
+            <div>
+                <h2>AéroClub</h2>
+                <nav>
+                    <button id="nav-planning" class="active" onclick="switchTab('planning')">📅 Planning</button>
+                    <button id="nav-aeronefs" onclick="switchTab('aeronefs')">✈️ Aéronefs</button>
+                    <button onclick="alert('Module Membres')">👥 Membres</button>
+                    <button onclick="alert('Module Configuration')">⚙️ Configuration</button>
+                </nav>
+            </div>
+            <div class="user-status">Pilote Connecté</div>
+        </aside>
+
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <div id="planning-view-content"></div>
+            <div id="aeronefs-view-content" style="display:none;"></div>
+        </main>
+    </div>
+
+    <!-- Scripts modulaires -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/planning.js"></script>
+    <script src="js/aeronefs.js"></script>
+
+    <script>
+        function switchTab(tab) {
+            const isPlanning = tab === 'planning';
+            document.getElementById('planning-view-content').style.display = isPlanning ? 'block' : 'none';
+            document.getElementById('aeronefs-view-content').style.display = isPlanning ? 'none' : 'block';
+            
+            document.getElementById('nav-planning').classList.toggle('active', isPlanning);
+            document.getElementById('nav-aeronefs').classList.toggle('active', !isPlanning);
+
+            if (isPlanning) {
+                initPlanningView();
+            } else {
+                initAeronefsView();
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initPlanningView();
+        });
+    </script>
+</body>
+</html>

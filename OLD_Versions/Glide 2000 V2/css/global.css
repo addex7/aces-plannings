@@ -1,0 +1,62 @@
+/* css/global.css */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f8f4ec;
+    color: #1e293b;
+}
+
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 240px;
+    background-color: #1e293b;
+    color: #fff;
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.sidebar h2 {
+    color: #fff;
+    font-size: 1.4rem;
+    padding-left: 10px;
+    margin-bottom: 30px;
+}
+
+.sidebar nav button, .sidebar .nav-btn {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #cbd5e1;
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar nav button.active, .sidebar nav button:hover {
+    background-color: #22c55e;
+    color: #fff;
+}
+
+.main-content {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.user-status {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    padding-left: 10px;
+}
