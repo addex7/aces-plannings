@@ -1168,6 +1168,10 @@ function initGestionnaireModale() {
             if (document.getElementById('form-debut')) document.getElementById('form-debut').value = `${annee}-${mois}-${jour}T09:00`;
             if (document.getElementById('form-fin')) document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T11:00`;
             if (document.getElementById('form-estimation')) document.getElementById('form-estimation').value = '1.0';
+            const affichage = document.getElementById('affichage-pilote');
+            const pilote = nomPiloteCourant();
+            if (document.getElementById('form-pilote')) document.getElementById('form-pilote').value = pilote;
+            if (affichage) affichage.textContent = pilote;
             appliquerEtatFormulaire();
             modal.style.display = 'flex';
         });
@@ -1347,6 +1351,10 @@ function ouvrirModaleCreationDepuisGrille(avionId, heureDebutClic) {
     document.getElementById('form-debut').value = `${annee}-${mois}-${jour}T${heureDebutClic.toString().padStart(2, '0')}:00`;
     document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T${((heureDebutClic + 2) % 24).toString().padStart(2, '0')}:00`;
     document.getElementById('form-estimation').value = '1.0';
+    const affichage = document.getElementById('affichage-pilote');
+    const pilote = nomPiloteCourant();
+    if (document.getElementById('form-pilote')) document.getElementById('form-pilote').value = pilote;
+    if (affichage) affichage.textContent = pilote;
     modal.style.display = 'flex';
 }
 
@@ -1360,7 +1368,10 @@ function ouvrirModaleEdition(vol, avionIdOuImmat) {
     }
     const typeVol = vol.fields['Type de vol'] || 'Vol Classique';
     cocherTypeVol(typeVol);
-    document.getElementById('form-pilote').value = vol.fields['Pilote'] || '';
+    const affichage = document.getElementById('affichage-pilote');
+    const pilote = vol.fields['Pilote'] || nomPiloteCourant();
+    document.getElementById('form-pilote').value = pilote;
+    if (affichage) affichage.textContent = pilote;
     let idTargetMachine = null;
     if (vol.fields && vol.fields['Machine'] && vol.fields['Machine'].length > 0) {
         const rawMachine = vol.fields['Machine'][0];
@@ -1409,6 +1420,10 @@ function ouvrirModaleCreationDepuisGrilleDate(avionId, heureDebutClic, dateCible
     document.getElementById('form-debut').value = `${annee}-${mois}-${jour}T${heureDebutClic.toString().padStart(2, '0')}:00`;
     document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T${((heureDebutClic + 2) % 24).toString().padStart(2, '0')}:00`;
     document.getElementById('form-estimation').value = '1.0';
+    const affichage = document.getElementById('affichage-pilote');
+    const pilote = nomPiloteCourant();
+    if (document.getElementById('form-pilote')) document.getElementById('form-pilote').value = pilote;
+    if (affichage) affichage.textContent = pilote;
     modal.style.display = 'flex';
 }
 
@@ -1615,8 +1630,8 @@ function initGestionnaireVolsInitiation() {
 }
 
 async function reserverVolInitiation(id, source) {
-    const nomPilote = prompt('Votre nom (pilote) :');
-    if (!nomPilote || !nomPilote.trim()) return;
+    const nomPilote = nomPiloteCourant();
+    if (!nomPilote) { alert('Connecte-toi pour réserver ce vol.'); return; }
     const tableName = source === 'planeur' ? 'VI Planeur' : 'Réservations';
     try {
         const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {

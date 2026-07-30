@@ -36,6 +36,13 @@ function formaterNomPilote(nomComplet) {
     return `${prenom} ${initialeNom}.`;
 }
 
+function nomPiloteCourant() {
+    if (typeof currentUser === 'undefined' || !currentUser) return '';
+    const prenom = currentUser.prenom || '';
+    const nom = currentUser.nom || '';
+    return formaterNomPilote(`${prenom} ${nom}`.trim());
+}
+
 // --- CALCUL ASTRONOMIQUE DES HEURES SOLAIRES (LFOY) ---
 function calculerSoleilLFOY(date) {
     const lat = LFOY_LAT;

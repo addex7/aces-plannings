@@ -65,8 +65,8 @@ async function chargerPresencesClub() {
 }
 
 async function sinscrireClub(lieu) {
-    const nomPilote = prompt(`Entrez le nom du pilote à inscrire au ${lieu} :`);
-    if (!nomPilote || nomPilote.trim() === "") return;
+    const nomPilote = nomPiloteCourant();
+    if (!nomPilote) { alert('Connecte-toi pour t\'inscrire.'); return; }
     try {
         const dateStr = dateAffichee.toISOString().split('T')[0];
         const payload = { records: [{ fields: { "Nom du pilote": nomPilote.trim(), "Lieu": lieu, "Date": dateStr } }] };
@@ -128,8 +128,8 @@ async function chargerPresencesPlaneur() {
 }
 
 async function sinscrirePlaneur(role) {
-    const nomPilote = prompt(`Entrez le nom du ${role.toLowerCase()} à inscrire :`);
-    if (!nomPilote || nomPilote.trim() === "") return;
+    const nomPilote = nomPiloteCourant();
+    if (!nomPilote) { alert('Connecte-toi pour t\'inscrire.'); return; }
     try {
         const dateStr = dateAffichee.toISOString().split('T')[0];
         const payload = { records: [{ fields: { "Nom du pilote": nomPilote.trim(), "Rôle": role, "Date": dateStr } }] };

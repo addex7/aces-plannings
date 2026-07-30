@@ -368,9 +368,10 @@
                         <!-- Populé dynamiquement -->
                     </div>
                 </div>
-                <div class="form-group">
-                    <label id="label-pilote" for="form-pilote">Nom du Pilote :</label>
-                    <input type="text" id="form-pilote" placeholder="Ex: Jean Dupont">
+                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                    <label style="font-weight:bold;">Pilote :</label>
+                    <strong id="affichage-pilote" style="color:#1e3d59; font-size:15px;"></strong>
+                    <input type="hidden" id="form-pilote">
                 </div>
                 <div class="form-group">
                     <label for="form-debut">Date & Heure de début :</label>
