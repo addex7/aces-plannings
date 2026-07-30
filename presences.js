@@ -128,6 +128,12 @@ async function chargerPresencesPlaneur() {
 }
 
 async function sinscrirePlaneur(role) {
+    const roles = (currentUser && currentUser.roles) || [];
+    const roleRequis = { 'Instructeur': 'Instructeur planeur', 'Élève': 'Élève planeur', 'Pilote': 'Pilote planeur' }[role];
+    if (roleRequis && !roles.includes(roleRequis) && !roles.includes('Super admin')) {
+        alert(`Tu dois avoir le rôle "${roleRequis}" pour t'inscrire en tant que ${role}.`);
+        return;
+    }
     const nomPilote = nomPiloteCourant();
     if (!nomPilote) { alert('Connecte-toi pour t\'inscrire.'); return; }
     try {
