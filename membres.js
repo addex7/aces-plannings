@@ -376,13 +376,9 @@ function afficherInvitation(record, email) {
         return;
     }
     const setupUrl = `${PUBLIC_URL}?token=${record.id}`;
-    const sujet = encodeURIComponent('Invitation Gestion des Vols & Plannings');
-    const corps = encodeURIComponent(`Bonjour ${f['Prénom'] || ''},\n\nTu es invité(e) à rejoindre la plateforme. Crée ton identifiant et mot de passe en cliquant sur le lien ci-dessous :\n\n${setupUrl}\n\nÀ bientôt.`);
     zone.innerHTML = `
         <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:6px; color:#166534; margin-top:10px;">
             <strong>Invitation créée pour ${f['Prénom'] || ''} ${f['Nom'] || ''}.</strong><br>
-            <a href="mailto:${destEmail}?subject=${sujet}&body=${corps}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline;">Envoyer l'email d'invitation</a>
-            <div style="margin-top:6px; font-size:12px; word-break:break-all;">Lien : ${setupUrl}</div>
             <div id="membre-email-status" style="margin-top:8px; font-weight:500;">Envoi automatique...</div>
         </div>
     `;
