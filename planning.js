@@ -330,37 +330,41 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
             let duree = heureFin - heureDebut;
             if (duree > 0) {
                 const barresDiv = document.createElement('div');
+                const type = (vol.fields['Type'] || 'VI');
+                const isCreneau = vol._table === 'VI Créneaux';
                 const classePilote = pilote ? 'vi-avec-pilote' : 'vi-sans-pilote';
                 barresDiv.className = `reservation-bar ${classePilote}`;
                 barresDiv.style.left = `${(heureDebut / 24) * 100}%`;
                 barresDiv.style.width = `${(duree / 24) * 100}%`;
-                const libelle = pilote ? `🎯 VIP (${formaterNomPilote(pilote)})` : '🎯 VI DISPONIBLE';
+                const libelle = pilote ? `🎯 ${type} (${formaterNomPilote(pilote)})` : `🎯 ${type} DISPONIBLE`;
                 barresDiv.innerHTML = `<strong>${libelle}</strong>`;
                 barresDiv.title = vol.fields['Commentaire'] || '';
-                const handleLeft = document.createElement('div');
-                handleLeft.className = 'resize-handle resize-handle-left';
-                const handleRight = document.createElement('div');
-                handleRight.className = 'resize-handle resize-handle-right';
-                barresDiv.appendChild(handleLeft);
-                barresDiv.appendChild(handleRight);
-                handleLeft.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    initierResize(e, vol.id, gridBg, barresDiv, 'gauche', heureDebut, heureFin, null, 'VI Planeur');
-                });
-                handleRight.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    initierResize(e, vol.id, gridBg, barresDiv, 'droite', heureDebut, heureFin, null, 'VI Planeur');
-                });
-                barresDiv.addEventListener('mousedown', (e) => {
-                    if (e.target.classList.contains('resize-handle')) return;
-                    e.stopPropagation();
-                    initierDeplacementBarre(e, vol.id, null, gridBg, barresDiv, heureDebut, duree, null, 'VI Planeur');
-                });
-                barresDiv.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (isResizing || isDraggingBar) return;
-                    ouvrirModaleEditionVIPlaneur(vol);
-                });
+                if (!isCreneau) {
+                    const handleLeft = document.createElement('div');
+                    handleLeft.className = 'resize-handle resize-handle-left';
+                    const handleRight = document.createElement('div');
+                    handleRight.className = 'resize-handle resize-handle-right';
+                    barresDiv.appendChild(handleLeft);
+                    barresDiv.appendChild(handleRight);
+                    handleLeft.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                        initierResize(e, vol.id, gridBg, barresDiv, 'gauche', heureDebut, heureFin, null, 'VI Planeur');
+                    });
+                    handleRight.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                        initierResize(e, vol.id, gridBg, barresDiv, 'droite', heureDebut, heureFin, null, 'VI Planeur');
+                    });
+                    barresDiv.addEventListener('mousedown', (e) => {
+                        if (e.target.classList.contains('resize-handle')) return;
+                        e.stopPropagation();
+                        initierDeplacementBarre(e, vol.id, null, gridBg, barresDiv, heureDebut, duree, null, 'VI Planeur');
+                    });
+                    barresDiv.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (isResizing || isDraggingBar) return;
+                        ouvrirModaleEditionVIPlaneur(vol);
+                    });
+                }
                 barresDiv.addEventListener('mouseenter', () => { barresDiv.style.zIndex = '100'; });
                 barresDiv.addEventListener('mouseleave', () => { barresDiv.style.zIndex = '5'; });
                 gridBg.appendChild(barresDiv);
@@ -402,6 +406,35 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                    dateVol.getMonth() === dateAffichee.getMonth() &&
                    dateVol.getDate() === dateAffichee.getDate();
         });
+        const urlVICreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${debutJour}'`;
+        const resVICreneaux = await fetch(urlVICreneaux, { headers });
+        const dataVICreneaux = await resVICreneaux.json();
+        const creneauxVIP = (dataVICreneaux.records || []).map(vol => {
+            if (!vol.fields) return null;
+            const f = vol.fields;
+            const dateRaw = f['Date'];
+            if (!dateRaw) return null;
+            const dateVol = new Date(dateRaw + 'T00:00:00');
+            if (dateVol.getFullYear() !== dateAffichee.getFullYear() ||
+                dateVol.getMonth() !== dateAffichee.getMonth() ||
+                dateVol.getDate() !== dateAffichee.getDate()) return null;
+            const passager = f['Prénom'] && f['Nom'] ? `${f['Prénom']} ${f['Nom']}`.trim() : '';
+            const pilote = f['Statut'] === 'Réservé' ? 'Réservé' : '';
+            const nom = passager || 'DISPONIBLE';
+            return {
+                id: vol.id,
+                _table: 'VI Créneaux',
+                fields: {
+                    'Type': f['Type'] || 'VI',
+                    'Nom': nom,
+                    'Date de début': dateRaw + 'T' + (f['Heure début'] || '00:00') + ':00',
+                    'Date de fin': dateRaw + 'T' + (f['Heure fin'] || '00:00') + ':00',
+                    'Pilote': pilote,
+                    'Commentaire': f['Commentaire'] || ''
+                }
+            };
+        }).filter(Boolean);
+        volsVIP.push(...creneauxVIP);
         const urlCarnetPilotes = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route Pilotes')}`;
         const resCarnetPilotes = await fetch(urlCarnetPilotes, { headers });
         const dataCarnetPilotes = await resCarnetPilotes.json();
@@ -1490,7 +1523,7 @@ function normaliserVolsInitiation() {
         const heureDebut = `${String(debut.getHours()).padStart(2, '0')}:${String(debut.getMinutes()).padStart(2, '0')}`;
         const heureFin = `${String(fin.getHours()).padStart(2, '0')}:${String(fin.getMinutes()).padStart(2, '0')}`;
         const pilote = (record.pilote || '').toString().trim();
-        const isDisponible = !pilote;
+        const isDisponible = record.statut ? record.statut === 'Disponible' : !pilote;
         const dateStr = debut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
         vols.push({
             ...record,
@@ -1515,15 +1548,16 @@ function afficherVolsInitiation() {
     }
     container.innerHTML = '';
     vols.forEach(vol => {
-        const piloteText = vol.isDisponible ? '👤 À pourvoir' : `👤 Pilote : ${formaterNomPilote(vol.pilote)}`;
+        const piloteText = vol.isDisponible ? '👤 À pourvoir' : (vol.source === 'creneau' ? '👤 Réservé' : `👤 Pilote : ${formaterNomPilote(vol.pilote)}`);
         const machineText = vol.source === 'moteur' && vol.machineName ? `🛩️ ${vol.machineName}<br>` : '';
-        const typeText = vol.source === 'planeur' ? 'Planeur' : 'Moteur';
-        const boutonReserver = vol.isDisponible ? `<button class="btn-reserver-initiation" data-id="${vol.id}" data-source="${vol.source}">Réserver</button>` : '';
+        const typeText = vol.type || (vol.source === 'planeur' ? 'Planeur' : (vol.source === 'moteur' ? 'Moteur' : 'VI'));
+        const boutonReserver = vol.isDisponible && vol.source !== 'creneau' ? `<button class="btn-reserver-initiation" data-id="${vol.id}" data-source="${vol.source}">Réserver</button>` : '';
+        const nomClient = vol.passager || (vol.isDisponible ? 'Créneau disponible' : 'Passager non renseigné');
         const card = document.createElement('div');
         card.className = `initiation-card ${vol.classe}`;
         card.innerHTML = `
             <div class="initiation-info">
-                <h4>🎯 Vol d'Initiation ${typeText} — ${vol.passager || 'Passager non renseigné'}</h4>
+                <h4>🎯 Vol d'Initiation ${typeText} — ${nomClient}</h4>
                 <p>📅 ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}</p>
                 <p>${machineText}📞 ${vol.telephone || 'Non renseigné'}</p>
                 ${vol.commentaire ? `<p style="margin-top:6px; font-style:italic;">💬 ${vol.commentaire}</p>` : ''}
@@ -1554,6 +1588,9 @@ async function chargerVolsInitiation() {
         const urlReservations = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')='${debutJour}'`;
         const resResa = await fetch(urlReservations, { headers });
         const dataResa = await resResa.json();
+        const urlCreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${debutJour}'`;
+        const resCreneaux = await fetch(urlCreneaux, { headers });
+        const dataCreneaux = await resCreneaux.json();
         listeVolsInitiationCache = [];
         (dataVI.records || []).forEach(vol => {
             if (!vol.fields) return;
@@ -1597,6 +1634,30 @@ async function chargerVolsInitiation() {
                 fin: vol.fields['Date de fin'],
                 commentaire: vol.fields['Commentaires VI'],
                 machineName: machineName
+            });
+        });
+        (dataCreneaux.records || []).forEach(vol => {
+            if (!vol.fields) return;
+            const dateRaw = vol.fields['Date'];
+            if (!dateRaw) return;
+            const dateVol = new Date(dateRaw + 'T00:00:00');
+            if (dateVol.getFullYear() !== dateAffichee.getFullYear() ||
+                dateVol.getMonth() !== dateAffichee.getMonth() ||
+                dateVol.getDate() !== dateAffichee.getDate()) return;
+            const statut = vol.fields['Statut'] || 'Disponible';
+            const passager = statut === 'Réservé' ? `${vol.fields['Prénom'] || ''} ${vol.fields['Nom'] || ''}`.trim() : null;
+            listeVolsInitiationCache.push({
+                id: vol.id,
+                source: 'creneau',
+                type: vol.fields['Type'] || 'VI',
+                statut: statut,
+                passager: passager,
+                pilote: statut === 'Réservé' ? 'Réservé' : null,
+                telephone: vol.fields['Téléphone'] || '',
+                debut: dateRaw + 'T' + (vol.fields['Heure début'] || '00:00') + ':00',
+                fin: dateRaw + 'T' + (vol.fields['Heure fin'] || '00:00') + ':00',
+                commentaire: vol.fields['Commentaire'] || '',
+                machineName: ''
             });
         });
         afficherVolsInitiation();
@@ -1648,5 +1709,89 @@ async function reserverVolInitiation(id, source) {
     } catch (error) {
         console.error(error);
         alert('Erreur lors de la réservation du vol.');
+    }
+}
+
+function timeToMinutes(hhmm) {
+    if (!hhmm) return 0;
+    const [h, m] = hhmm.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return 0;
+    return h * 60 + m;
+}
+
+function hasRoleGestionVI() {
+    if (!currentUser) return false;
+    const roles = currentUser.roles || [];
+    return roles.includes('Gestion VI') || roles.includes('Super admin');
+}
+
+function updateGestionVI() {
+    const toolbar = document.getElementById('gestion-vi-toolbar');
+    if (toolbar) toolbar.style.display = hasRoleGestionVI() ? 'block' : 'none';
+}
+
+function initGestionCreneauxVI() {
+    updateGestionVI();
+    const form = document.getElementById('form-creneaux-vi');
+    if (form) {
+        form.addEventListener('submit', creerCreneauxVI);
+    }
+}
+
+async function creerCreneauxVI(e) {
+    e.preventDefault();
+    const type = document.getElementById('gv-type').value;
+    const date = document.getElementById('gv-date').value;
+    const debut = document.getElementById('gv-debut').value;
+    const fin = document.getElementById('gv-fin').value;
+    const dureeMin = parseInt(document.getElementById('gv-duree').value, 10);
+    const nombre = parseInt(document.getElementById('gv-nombre').value, 10);
+    if (!type || !date || !debut || !fin || !dureeMin || !nombre) {
+        alert('Tous les champs sont requis.');
+        return;
+    }
+    const debutMin = timeToMinutes(debut);
+    const finMin = timeToMinutes(fin);
+    if (finMin <= debutMin) {
+        alert('L\'heure de fin doit être après l\'heure de début.');
+        return;
+    }
+    const maxSlots = Math.floor((finMin - debutMin) / dureeMin);
+    const slots = Math.min(nombre, maxSlots);
+    if (slots <= 0) {
+        alert('Aucun créneau ne tient dans l\'intervalle.');
+        return;
+    }
+    const records = [];
+    for (let i = 0; i < slots; i++) {
+        const start = debutMin + i * dureeMin;
+        const end = start + dureeMin;
+        records.push({
+            fields: {
+                'Date': date,
+                'Heure début': minutesToTimeString(start),
+                'Heure fin': minutesToTimeString(end),
+                'Type': type,
+                'Statut': 'Disponible'
+            }
+        });
+    }
+    try {
+        for (let i = 0; i < records.length; i += 10) {
+            const batch = records.slice(i, i + 10);
+            const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ records: batch })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        }
+        alert(`${records.length} créneau(x) créé(s).`);
+        document.getElementById('form-creneaux-vi').reset();
+        if (typeof chargerVolsInitiation === 'function') chargerVolsInitiation();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la création : ' + err.message);
     }
 }

@@ -25,6 +25,7 @@ function setCurrentUser(user) {
         localStorage.removeItem('currentUser');
     }
     updateUIRoles();
+    if (typeof updateGestionVI === 'function') updateGestionVI();
 }
 
 function updateUIRoles() {

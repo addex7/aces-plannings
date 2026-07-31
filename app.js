@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initGestionnaireModale();
     initNavigationTabs();
     initGestionnaireVolsInitiation();
+    initGestionCreneauxVI();
     initCarnetRoute();
     chargerDonneesPlanning();
     chargerPresencesClub();

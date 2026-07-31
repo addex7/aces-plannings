@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réserver mon baptême de l'air - ACES</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div style="min-height: 100vh; background: #f8fafc;">
+    <header style="background: #1e3d59; color: white; padding: 20px; text-align: center;">
+        <img src="logo-aces.png" alt="ACES" style="max-height: 50px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;">
+        <h1 style="margin: 0; font-size: 22px;">Réserver mon baptême de l'air</h1>
+        <p style="margin: 5px 0 0; font-size: 13px; opacity: 0.9;">Aéroclub ACES — Vols d'initiation planeur</p>
+    </header>
+
+    <main class="main-content" style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        <div id="message"></div>
+
+        <section id="list-section">
+            <div class="initiation-tabs" style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <label for="filtre-type" style="font-weight: 500;">Type de baptême :</label>
+                <select id="filtre-type" class="machine-selector">
+                    <option value="">Tous</option>
+                    <option value="VIP">VIP</option>
+                    <option value="VIULM">VIULM</option>
+                    <option value="VIA">VIA</option>
+                </select>
+            </div>
+            <h2 style="color: #1e3d59; margin-top: 0;">Créneaux disponibles</h2>
+            <div id="creneaux-list" class="initiation-list">
+                <div class="loading">Chargement des créneaux...</div>
+            </div>
+        </section>
+
+        <section id="form-section" style="display: none;">
+            <h2 style="color: #1e3d59; margin-top: 0;">Réserver mon créneau</h2>
+            <div id="selected-creneau-info" class="initiation-card disponible" style="margin-bottom: 15px;"></div>
+            <form id="reservation-form">
+                <input type="hidden" id="selected-record-id">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label for="client-prenom">Prénom *</label>
+                        <input type="text" id="client-prenom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="client-nom">Nom *</label>
+                        <input type="text" id="client-nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="client-email">Email *</label>
+                        <input type="email" id="client-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="client-telephone">Téléphone *</label>
+                        <input type="tel" id="client-telephone" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="client-bon">Numéro de bon cadeau (si applicable)</label>
+                    <input type="text" id="client-bon" placeholder="Ex : 2026-0001">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="btn-retour-liste" class="btn-secondary">Retour</button>
+                    <button type="submit" class="btn-submit">Confirmer ma réservation</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="manage-section" style="display: none;">
+            <h2 style="color: #1e3d59; margin-top: 0;">Ma réservation</h2>
+            <div id="manage-info"></div>
+            <h3 style="color: #1e3d59; margin-top: 25px;">Modifier mes coordonnées</h3>
+            <form id="manage-form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label for="manage-prenom">Prénom *</label>
+                        <input type="text" id="manage-prenom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="manage-nom">Nom *</label>
+                        <input type="text" id="manage-nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="manage-email">Email *</label>
+                        <input type="email" id="manage-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="manage-telephone">Téléphone *</label>
+                        <input type="tel" id="manage-telephone" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="manage-bon">Numéro de bon cadeau</label>
+                    <input type="text" id="manage-bon">
+                </div>
+                <div class="form-actions" style="flex-wrap: wrap;">
+                    <button type="button" id="btn-manage-annuler" class="btn-delete" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;">Annuler ma réservation</button>
+                    <button type="button" id="btn-manage-changer" class="btn-secondary">Changer de créneau</button>
+                    <button type="submit" class="btn-submit">Enregistrer les modifications</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="confirmation-section" style="display: none; text-align: center; padding: 40px 20px;">
+            <h2 style="color: #1e3d59;">Votre réservation est enregistrée</h2>
+            <p id="confirmation-text"></p>
+            <p style="margin: 20px 0;">
+                <a id="confirmation-lien" href="#" class="btn-primary" style="display: inline-block; text-decoration: none;">Gérer ma réservation</a>
+            </p>
+            <p style="font-size: 13px; color: #64748b;">
+                Un email de confirmation vient de vous être envoyé. Pensez à vérifier vos spams.
+            </p>
+        </section>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+const AIRTABLE_PAT = 'patbX51fRBLO4v35h.e116a6e20d699408c3a49d07137099bbaf3fe23e734767dea63fa5d890508fff';
+const BASE_ID = 'appufjvD3gYG6H44n';
+const headers = {
+    Authorization: `Bearer ${AIRTABLE_PAT}`,
+    'Content-Type': 'application/json'
+};
+const TABLE_CRENEAUX = 'VI Créneaux';
+const EMAILJS_SERVICE_ID = 'service_mzemfef';
+const EMAILJS_VI_TEMPLATE_ID = 'template_zol8z2e';
+const EMAILJS_PUBLIC_KEY = 'V_q5vuIMURlLXAaVC';
+const PUBLIC_URL = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
+
+let creneauxDisponibles = [];
+let currentToken = null;
+let currentRecord = null;
+
+function genererToken() {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return text.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function showMessage(type, msg) {
+    const el = document.getElementById('message');
+    if (!el) return;
+    const color = type === 'error' ? '#dc2626' : (type === 'success' ? '#10b981' : '#1e3d59');
+    const bg = type === 'error' ? '#fee2e2' : (type === 'success' ? '#d1fae5' : '#f8fafc');
+    el.innerHTML = `<div style="background:${bg}; color:${color}; padding:12px 15px; border-radius:6px; margin-bottom:15px; border:1px solid #e2e8f0;">${escapeHtml(msg)}</div>`;
+}
+
+function clearMessage() {
+    const el = document.getElementById('message');
+    if (el) el.innerHTML = '';
+}
+
+function showSection(id) {
+    ['list-section', 'form-section', 'manage-section', 'confirmation-section'].forEach(sid => {
+        const s = document.getElementById(sid);
+        if (s) s.style.display = 'none';
+    });
+    const target = document.getElementById(id);
+    if (target) target.style.display = 'block';
+}
+
+async function loadCreneaux() {
+    const container = document.getElementById('creneaux-list');
+    if (container) container.innerHTML = '<div class="loading">Chargement des créneaux...</div>';
+    try {
+        const formula = `AND({Statut}='Disponible', IS_SAME_OR_AFTER({Date}, TODAY()))`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
+        const res = await fetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        creneauxDisponibles = data.records || [];
+        renderCreneaux();
+    } catch (err) {
+        console.error(err);
+        if (container) container.innerHTML = '<div class="initiation-empty">Impossible de charger les créneaux.</div>';
+        showMessage('error', 'Erreur lors du chargement des créneaux.');
+    }
+}
+
+function renderCreneaux() {
+    const container = document.getElementById('creneaux-list');
+    if (!container) return;
+    const typeFiltre = document.getElementById('filtre-type')?.value || '';
+    const filtered = creneauxDisponibles.filter(r => !typeFiltre || (r.fields['Type'] || '') === typeFiltre);
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="initiation-empty">Aucun créneau disponible.</div>';
+        return;
+    }
+
+    const groups = {};
+    filtered.forEach(r => {
+        const d = r.fields['Date'];
+        if (!groups[d]) groups[d] = [];
+        groups[d].push(r);
+    });
+    const sortedDates = Object.keys(groups).sort();
+
+    container.innerHTML = '';
+    sortedDates.forEach(date => {
+        const h3 = document.createElement('h3');
+        h3.textContent = formatDate(date);
+        h3.style.cssText = 'color:#1e3d59; margin:20px 0 10px; text-transform:capitalize;';
+        container.appendChild(h3);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'initiation-list';
+        groups[date].forEach(r => {
+            const card = document.createElement('div');
+            card.className = 'initiation-card disponible';
+            const type = escapeHtml(r.fields['Type'] || 'VI');
+            const heure = `${escapeHtml(r.fields['Heure début'])} - ${escapeHtml(r.fields['Heure fin'])}`;
+            card.innerHTML = `
+                <div class="initiation-info">
+                    <h4>${type}</h4>
+                    <p>🕐 ${heure}</p>
+                </div>
+                <div class="initiation-meta">
+                    <button class="btn-reserver-initiation" data-id="${r.id}">Réserver</button>
+                </div>
+            `;
+            wrapper.appendChild(card);
+        });
+        container.appendChild(wrapper);
+    });
+
+    container.querySelectorAll('.btn-reserver-initiation').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const rec = creneauxDisponibles.find(c => c.id === btn.dataset.id);
+            if (rec) selectCreneau(rec);
+        });
+    });
+}
+
+function selectCreneau(record) {
+    currentRecord = record;
+    clearMessage();
+    showSection('form-section');
+    const type = escapeHtml(record.fields['Type'] || 'VI');
+    const date = formatDate(record.fields['Date']);
+    const heure = `${record.fields['Heure début']} - ${record.fields['Heure fin']}`;
+    document.getElementById('selected-creneau-info').innerHTML = `
+        <div class="initiation-info">
+            <h4>${type}</h4>
+            <p>📅 ${date} • 🕐 ${heure}</p>
+        </div>
+    `;
+    document.getElementById('selected-record-id').value = record.id;
+    document.getElementById('reservation-form').reset();
+}
+
+async function onSubmitReservation(e) {
+    e.preventDefault();
+    clearMessage();
+    const recordId = document.getElementById('selected-record-id').value;
+    const prenom = document.getElementById('client-prenom').value.trim();
+    const nom = document.getElementById('client-nom').value.trim();
+    const email = document.getElementById('client-email').value.trim();
+    const telephone = document.getElementById('client-telephone').value.trim();
+    const bon = document.getElementById('client-bon').value.trim();
+
+    if (!prenom || !nom || !email || !telephone) {
+        showMessage('error', 'Tous les champs obligatoires doivent être remplis.');
+        return;
+    }
+
+    const token = currentToken || genererToken();
+    const fields = {
+        'Statut': 'Réservé',
+        'Prénom': prenom,
+        'Nom': nom,
+        'Email': email,
+        'Téléphone': telephone,
+        'Bon cadeau': bon,
+        'Date réservation': new Date().toISOString(),
+        'Token': token
+    };
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+        if (currentToken && currentRecord && currentRecord.id !== recordId) {
+            await cancelByToken(currentToken, recordId);
+        }
+
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ records: [{ id: recordId, fields }] })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur lors de l\'enregistrement');
+        const record = (data.records || [])[0];
+        if (!record) throw new Error('Aucune réponse Airtable');
+
+        currentToken = token;
+        currentRecord = record;
+        await sendConfirmationEmail(record, token);
+        showConfirmation(record, token);
+    } catch (err) {
+        console.error(err);
+        showMessage('error', err.message || 'Erreur lors de la réservation.');
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+async function cancelByToken(token, excludeRecordId) {
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(`{Token}='${token}'`)}`;
+    const res = await fetch(url, { headers });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message);
+    const records = (data.records || []).filter(r => r.id !== excludeRecordId);
+    if (records.length === 0) return;
+    const updates = records.map(r => ({
+        id: r.id,
+        fields: {
+            'Statut': 'Disponible',
+            'Prénom': null,
+            'Nom': null,
+            'Email': null,
+            'Téléphone': null,
+            'Bon cadeau': null,
+            'Token': null,
+            'Date réservation': null
+        }
+    }));
+    const patch = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ records: updates })
+    });
+    const patchData = await patch.json();
+    if (!patch.ok) throw new Error(patchData.error?.message || 'Erreur lors de l\'annulation de l\'ancien créneau');
+}
+
+async function sendConfirmationEmail(record, token) {
+    const f = record.fields || {};
+    const prenom = f['Prénom'] || '';
+    const nom = f['Nom'] || '';
+    const email = f['Email'] || '';
+    const date = f['Date'] ? formatDate(f['Date']) : '';
+    const heure = `${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`;
+    const type = f['Type'] || 'VI';
+    const lien = `${PUBLIC_URL}?token=${token}`;
+    try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_VI_TEMPLATE_ID, {
+            to_email: email,
+            to_name: `${prenom} ${nom}`.trim(),
+            type: type,
+            date: date,
+            heure: heure,
+            lieu: 'ACES',
+            lien: lien
+        });
+    } catch (err) {
+        console.error('EmailJS error:', err);
+    }
+}
+
+function showConfirmation(record, token) {
+    showSection('confirmation-section');
+    const f = record.fields || {};
+    const type = escapeHtml(f['Type'] || 'VI');
+    const date = formatDate(f['Date']);
+    const heure = `${f['Heure début']} - ${f['Heure fin']}`;
+    document.getElementById('confirmation-text').innerHTML = `
+        <strong style="font-size: 18px;">${type}</strong><br><br>
+        📅 ${date}<br>
+        🕐 ${heure}<br><br>
+        👤 ${escapeHtml((f['Prénom'] || '') + ' ' + (f['Nom'] || ''))}<br>
+        ✉️ ${escapeHtml(f['Email'] || '')}
+    `;
+    document.getElementById('confirmation-lien').href = `${PUBLIC_URL}?token=${token}`;
+}
+
+async function loadByToken(token) {
+    try {
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(`{Token}='${token}'`)}&maxRecords=1`;
+        const res = await fetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        const records = data.records || [];
+        if (records.length === 0) {
+            showMessage('error', 'Lien de réservation introuvable.');
+            loadCreneaux();
+            return;
+        }
+        const record = records[0];
+        if (record.fields['Statut'] !== 'Réservé') {
+            showMessage('info', 'Cette réservation a été annulée ou n\'est plus valide.');
+            loadCreneaux();
+            return;
+        }
+        currentToken = token;
+        currentRecord = record;
+        showManageView(record);
+    } catch (err) {
+        console.error(err);
+        showMessage('error', 'Erreur lors du chargement de la réservation.');
+        loadCreneaux();
+    }
+}
+
+function showManageView(record) {
+    clearMessage();
+    showSection('manage-section');
+    const f = record.fields || {};
+    const type = escapeHtml(f['Type'] || 'VI');
+    const date = formatDate(f['Date']);
+    const heure = `${f['Heure début']} - ${f['Heure fin']}`;
+    document.getElementById('manage-info').innerHTML = `
+        <div class="initiation-card pris" style="margin-bottom: 15px;">
+            <div class="initiation-info">
+                <h4>${type}</h4>
+                <p>📅 ${date} • 🕐 ${heure}</p>
+                <p>👤 ${escapeHtml((f['Prénom'] || '') + ' ' + (f['Nom'] || ''))}</p>
+                <p>✉️ ${escapeHtml(f['Email'] || '')}</p>
+                <p>📞 ${escapeHtml(f['Téléphone'] || '')}</p>
+                ${f['Bon cadeau'] ? `<p>🎫 Bon cadeau : ${escapeHtml(f['Bon cadeau'])}</p>` : ''}
+            </div>
+        </div>
+    `;
+    document.getElementById('manage-prenom').value = f['Prénom'] || '';
+    document.getElementById('manage-nom').value = f['Nom'] || '';
+    document.getElementById('manage-email').value = f['Email'] || '';
+    document.getElementById('manage-telephone').value = f['Téléphone'] || '';
+    document.getElementById('manage-bon').value = f['Bon cadeau'] || '';
+}
+
+async function onManageUpdate(e) {
+    e.preventDefault();
+    clearMessage();
+    if (!currentRecord) return;
+    const fields = {
+        'Prénom': document.getElementById('manage-prenom').value.trim(),
+        'Nom': document.getElementById('manage-nom').value.trim(),
+        'Email': document.getElementById('manage-email').value.trim(),
+        'Téléphone': document.getElementById('manage-telephone').value.trim(),
+        'Bon cadeau': document.getElementById('manage-bon').value.trim()
+    };
+    try {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ records: [{ id: currentRecord.id, fields }] })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur lors de la mise à jour');
+        const record = (data.records || [])[0];
+        currentRecord = record;
+        showManageView(record);
+        showMessage('success', 'Informations mises à jour.');
+        await sendConfirmationEmail(record, currentToken);
+    } catch (err) {
+        console.error(err);
+        showMessage('error', err.message || 'Erreur lors de la mise à jour.');
+    }
+}
+
+async function onManageCancel() {
+    clearMessage();
+    if (!currentRecord) return;
+    if (!confirm('Es-tu sûr de vouloir annuler cette réservation ?')) return;
+    try {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ records: [{ id: currentRecord.id, fields: {
+                'Statut': 'Disponible',
+                'Prénom': null,
+                'Nom': null,
+                'Email': null,
+                'Téléphone': null,
+                'Bon cadeau': null,
+                'Token': null,
+                'Date réservation': null
+            }}] })
+        });
+        if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur');
+        currentToken = null;
+        currentRecord = null;
+        showMessage('info', 'Réservation annulée. Le créneau est de nouveau disponible.');
+        loadCreneaux();
+    } catch (err) {
+        console.error(err);
+        showMessage('error', err.message || 'Erreur lors de l\'annulation.');
+    }
+}
+
+function onManageChanger() {
+    clearMessage();
+    showSection('list-section');
+    document.getElementById('client-prenom').value = document.getElementById('manage-prenom').value;
+    document.getElementById('client-nom').value = document.getElementById('manage-nom').value;
+    document.getElementById('client-email').value = document.getElementById('manage-email').value;
+    document.getElementById('client-telephone').value = document.getElementById('manage-telephone').value;
+    document.getElementById('client-bon').value = document.getElementById('manage-bon').value;
+    loadCreneaux();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+        loadByToken(token);
+    } else {
+        loadCreneaux();
+    }
+
+    document.getElementById('filtre-type').addEventListener('change', renderCreneaux);
+    document.getElementById('reservation-form').addEventListener('submit', onSubmitReservation);
+    document.getElementById('btn-retour-liste').addEventListener('click', () => {
+        showSection('list-section');
+        currentRecord = null;
+    });
+    document.getElementById('manage-form').addEventListener('submit', onManageUpdate);
+    document.getElementById('btn-manage-annuler').addEventListener('click', onManageCancel);
+    document.getElementById('btn-manage-changer').addEventListener('click', onManageChanger);
+});
+</script>
+
+</body>
+</html>
