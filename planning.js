@@ -1727,6 +1727,7 @@ function initBoutonsNavigation() {
             listeReservationsCache = [];
             mettreAJourDateAffichee();
             chargerDonneesPlanning();
+            if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
         });
     }
     if (document.getElementById('btn-next')) {
@@ -1735,6 +1736,7 @@ function initBoutonsNavigation() {
             listeReservationsCache = [];
             mettreAJourDateAffichee();
             chargerDonneesPlanning();
+            if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
         });
     }
     const currentDateEl = document.getElementById('current-date');
