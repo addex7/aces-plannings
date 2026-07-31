@@ -6,6 +6,8 @@
 let afficherVIPPlaneur = false;
 let idVIModale = null;
 let tableVIModale = null;
+let volChoixCreneau = null;
+const URL_RESERVER_VI = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
 let listeVolsInitiationCache = [];
 let filtreInitiationActif = 'apourvoir';
 
@@ -16,6 +18,16 @@ function parseTempsDeVol(tempsStr) {
     const h = parseInt(match[1], 10);
     const m = parseInt(match[2], 10);
     return h + m / 60;
+}
+
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return text.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 // --- FONCTION POUR METTRE À JOUR L'HORAMÈTRE ---
@@ -1777,6 +1789,9 @@ async function chargerVolsInitiation() {
                 passager: passager,
                 pilote: (vol.fields['Pilote'] || '').toString().trim() || null,
                 telephone: vol.fields['Téléphone'] || '',
+                email: vol.fields['Email'] || '',
+                bonCadeau: vol.fields['Bon cadeau'] || '',
+                token: vol.fields['Token'] || '',
                 debut: dateRaw + 'T' + (vol.fields['Heure début'] || '00:00') + ':00',
                 fin: dateRaw + 'T' + (vol.fields['Heure fin'] || '00:00') + ':00',
                 commentaire: vol.fields['Commentaire'] || '',
@@ -1818,6 +1833,7 @@ function initGestionnaireVolsInitiation() {
             }
         });
     }
+    initGestionnaireChoixModifier();
 }
 
 function editerVolInitiation(vol) {
@@ -1852,7 +1868,41 @@ function editerVolInitiation(vol) {
         };
         ouvrirModaleEdition(volEdit, vol.machine);
     } else if (vol.source === 'creneau') {
-        ouvrirModaleEditionVICreneau(vol);
+        ouvrirModaleChoixModifierCreneau(vol);
+    }
+}
+
+function ouvrirModaleChoixModifierCreneau(vol) {
+    const modal = document.getElementById('vi-choix-modifier');
+    if (!modal) return;
+    volChoixCreneau = vol;
+    const info = document.getElementById('vi-choix-info');
+    if (info) info.innerHTML = `Modifier le créneau de <strong>${escapeHtml(vol.passager || '')}</strong> ?`;
+    modal.style.display = 'flex';
+}
+
+function initGestionnaireChoixModifier() {
+    const modal = document.getElementById('vi-choix-modifier');
+    const btnPassager = document.getElementById('btn-modifier-comme-passager');
+    const btnException = document.getElementById('btn-modifier-exception');
+    const btnClose = document.querySelector('.close-modal-vi-choix');
+    if (btnClose && modal) btnClose.addEventListener('click', () => modal.style.display = 'none');
+    if (window && modal) window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+    if (btnPassager) {
+        btnPassager.addEventListener('click', () => {
+            if (!volChoixCreneau || !volChoixCreneau.token) {
+                alert('Aucun token passager trouvé pour ce créneau. Utilisez la modification exceptionnelle.');
+                return;
+            }
+            window.open(`${URL_RESERVER_VI}?token=${encodeURIComponent(volChoixCreneau.token)}`, '_blank');
+            if (modal) modal.style.display = 'none';
+        });
+    }
+    if (btnException) {
+        btnException.addEventListener('click', () => {
+            if (modal) modal.style.display = 'none';
+            if (volChoixCreneau) ouvrirModaleEditionVICreneau(volChoixCreneau);
+        });
     }
 }
 
