@@ -321,8 +321,8 @@ async function onSubmitReservation(e) {
 
         currentToken = token;
         currentRecord = record;
-        await sendConfirmationEmail(record, token);
-        showConfirmation(record, token);
+        await sendConfirmationEmail(record, token, { prenom, nom, email });
+        showConfirmation(record, token, { prenom, nom, email });
     } catch (err) {
         console.error(err);
         showMessage('error', err.message || 'Erreur lors de la réservation.');
@@ -360,15 +360,19 @@ async function cancelByToken(token, excludeRecordId) {
     if (!patch.ok) throw new Error(patchData.error?.message || 'Erreur lors de l\'annulation de l\'ancien créneau');
 }
 
-async function sendConfirmationEmail(record, token) {
+async function sendConfirmationEmail(record, token, contact) {
     const f = record.fields || {};
-    const prenom = f['Prénom'] || '';
-    const nom = f['Nom'] || '';
-    const email = f['Email'] || '';
+    const prenom = (contact && contact.prenom) || f['Prénom'] || '';
+    const nom = (contact && contact.nom) || f['Nom'] || '';
+    const email = (contact && contact.email) || f['Email'] || '';
     const date = f['Date'] ? formatDate(f['Date']) : '';
     const heure = `${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`;
     const type = f['Type'] || 'VI';
     const lien = `${PUBLIC_URL}?token=${token}`;
+    if (!email) {
+        console.warn('Aucun email fourni pour la confirmation');
+        return;
+    }
     try {
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_VI_TEMPLATE_ID, {
             to_email: email,
@@ -384,18 +388,21 @@ async function sendConfirmationEmail(record, token) {
     }
 }
 
-function showConfirmation(record, token) {
+function showConfirmation(record, token, contact) {
     showSection('confirmation-section');
     const f = record.fields || {};
     const type = escapeHtml(f['Type'] || 'VI');
     const date = formatDate(f['Date']);
     const heure = `${f['Heure début']} - ${f['Heure fin']}`;
+    const prenom = (contact && contact.prenom) || f['Prénom'] || '';
+    const nom = (contact && contact.nom) || f['Nom'] || '';
+    const email = (contact && contact.email) || f['Email'] || '';
     document.getElementById('confirmation-text').innerHTML = `
         <strong style="font-size: 18px;">${type}</strong><br><br>
         📅 ${date}<br>
         🕐 ${heure}<br><br>
-        👤 ${escapeHtml((f['Prénom'] || '') + ' ' + (f['Nom'] || ''))}<br>
-        ✉️ ${escapeHtml(f['Email'] || '')}
+        👤 ${escapeHtml(`${prenom} ${nom}`.trim())}<br>
+        ✉️ ${escapeHtml(email)}
     `;
     document.getElementById('confirmation-lien').href = `${PUBLIC_URL}?token=${token}`;
 }
@@ -477,7 +484,7 @@ async function onManageUpdate(e) {
         currentRecord = record;
         showManageView(record);
         showMessage('success', 'Informations mises à jour.');
-        await sendConfirmationEmail(record, currentToken);
+        await sendConfirmationEmail(record, currentToken, { prenom: fields['Prénom'], nom: fields['Nom'], email: fields['Email'] });
     } catch (err) {
         console.error(err);
         showMessage('error', err.message || 'Erreur lors de la mise à jour.');
