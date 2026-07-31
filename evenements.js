@@ -126,6 +126,7 @@ function estDansIntervalle(date, debut, fin) {
 async function chargerEvenementsJour() {
     const container = document.getElementById('evenements-jour');
     if (!container) return;
+    const section = container.closest('.evenements-section');
     const dateIso = dateAffichee.toISOString().split('T')[0];
     container.innerHTML = '<div class="loading">Chargement des événements...</div>';
 
@@ -138,10 +139,12 @@ async function chargerEvenementsJour() {
 
         const evenements = (data.records || []).filter(r => estDansIntervalle(dateIso, r.fields[FIELDS.DATE_DEBUT], r.fields[FIELDS.DATE_FIN]));
         if (!evenements.length) {
-            container.innerHTML = '<div class="evenement-empty">Aucun événement à cette date.</div>';
+            container.innerHTML = '';
+            if (section) section.style.display = 'none';
             return;
         }
 
+        if (section) section.style.display = '';
         container.innerHTML = evenements.map(r => renderEvenement(r)).join('');
     } catch (err) {
         console.error(err);
@@ -182,6 +185,8 @@ function renderEvenement(record) {
     const btnInscription = estInscrit
         ? `<button class="btn-inscription" disabled style="opacity:0.6;">Déjà inscrit</button>`
         : `<button class="btn-inscription" onclick="sinscrireEvenement('${record.id}')">M'inscrire</button>`;
+    const peutSupprimer = createur === nomConnecte || (currentUser && currentUser.roles && currentUser.roles.includes('Super admin'));
+    const btnSupprimer = peutSupprimer ? `<button class="btn-delete" onclick="supprimerEvenement('${record.id}')">Supprimer l'évènement</button>` : '';
 
     return `
         <div class="evenement-card" data-record-id="${record.id}">
@@ -193,8 +198,9 @@ function renderEvenement(record) {
             <div class="evenement-inscrits">
                 ${listeInscrits || '<div class="evenement-empty">Aucun inscrit pour le moment.</div>'}
             </div>
-            <div class="evenement-actions">
+            <div class="evenement-actions" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 ${btnInscription}
+                ${btnSupprimer}
             </div>
         </div>
     `;
@@ -248,6 +254,24 @@ async function desinscrireEvenement(recordId, nom) {
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la désinscription.');
+    }
+}
+
+async function supprimerEvenement(recordId) {
+    if (!confirm('Supprimer définitivement cet évènement ?')) return;
+    try {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
+        if (res.ok) {
+            chargerEvenementsJour();
+            chargerProchainsEvenements();
+        } else {
+            const err = await res.json();
+            console.error(err);
+            alert('Erreur lors de la suppression.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la suppression.');
     }
 }
 
