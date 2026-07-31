@@ -1613,22 +1613,18 @@ function afficherVolsInitiation() {
 
 async function chargerVolsInitiation() {
     const dateEl = document.getElementById('current-date-initiation');
-    if (dateEl) {
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const dateStr = dateAffichee.toLocaleDateString('fr-FR', options);
-        dateEl.textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-    }
+    if (dateEl) dateEl.textContent = 'Vue globale';
     const container = document.getElementById('initiation-list');
     if (container) container.innerHTML = "<div class='loading'>Chargement des vols d'initiation...</div>";
-    const debutJour = dateAffichee.toISOString().split('T')[0];
     try {
-        const urlVIPlaneur = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?filterByFormula=DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')='${debutJour}'`;
+        const urlVIPlaneur = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?pageSize=100&sort[0][field]=${encodeURIComponent('Date de début')}&sort[0][direction]=asc`;
         const resVI = await fetch(urlVIPlaneur, { headers });
         const dataVI = await resVI.json();
-        const urlReservations = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')='${debutJour}'`;
+        const typeFormula = `OR(FIND('VI Moteur', {Type de vol}), FIND("Vol d'Initiation", {Type de vol}), FIND("Vol d'Initiation (VI)", {Type de vol}))`;
+        const urlReservations = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(typeFormula)}&pageSize=100&sort[0][field]=${encodeURIComponent('Date de début')}&sort[0][direction]=asc`;
         const resResa = await fetch(urlReservations, { headers });
         const dataResa = await resResa.json();
-        const urlCreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${debutJour}'`;
+        const urlCreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?pageSize=100&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
         const resCreneaux = await fetch(urlCreneaux, { headers });
         const dataCreneaux = await resCreneaux.json();
         listeVolsInitiationCache = [];
@@ -1636,10 +1632,6 @@ async function chargerVolsInitiation() {
             if (!vol.fields) return;
             const debutRaw = vol.fields['Date de début'];
             if (!debutRaw) return;
-            const dateVol = new Date(debutRaw);
-            if (dateVol.getFullYear() !== dateAffichee.getFullYear() ||
-                dateVol.getMonth() !== dateAffichee.getMonth() ||
-                dateVol.getDate() !== dateAffichee.getDate()) return;
             listeVolsInitiationCache.push({
                 id: vol.id,
                 source: 'planeur',
@@ -1658,10 +1650,6 @@ async function chargerVolsInitiation() {
             if (!types.includes('VI Moteur') && !types.includes("Vol d'Initiation") && !types.includes("Vol d'Initiation (VI)")) return;
             const debutRaw = vol.fields['Date de début'];
             if (!debutRaw) return;
-            const dateVol = new Date(debutRaw);
-            if (dateVol.getFullYear() !== dateAffichee.getFullYear() ||
-                dateVol.getMonth() !== dateAffichee.getMonth() ||
-                dateVol.getDate() !== dateAffichee.getDate()) return;
             const machineIds = vol.fields['Machine'] || [];
             const machineName = getNomMachine(machineIds[0]);
             listeVolsInitiationCache.push({
@@ -1680,10 +1668,6 @@ async function chargerVolsInitiation() {
             if (!vol.fields) return;
             const dateRaw = vol.fields['Date'];
             if (!dateRaw) return;
-            const dateVol = new Date(dateRaw + 'T00:00:00');
-            if (dateVol.getFullYear() !== dateAffichee.getFullYear() ||
-                dateVol.getMonth() !== dateAffichee.getMonth() ||
-                dateVol.getDate() !== dateAffichee.getDate()) return;
             const statut = vol.fields['Statut'] || 'Disponible';
             if (statut === 'Annulé') return;
             const passager = statut === 'Réservé' ? `${vol.fields['Prénom'] || ''} ${vol.fields['Nom'] || ''}`.trim() : null;
