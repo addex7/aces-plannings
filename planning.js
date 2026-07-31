@@ -7,6 +7,7 @@ let afficherVIPPlaneur = false;
 let idVIModale = null;
 let tableVIModale = null;
 let volChoixCreneau = null;
+let volVIModale = null;
 const URL_RESERVER_VI = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
 let listeVolsInitiationCache = [];
 let filtreInitiationActif = 'apourvoir';
@@ -282,6 +283,7 @@ function ouvrirModaleEditionVIPlaneur(vol) {
     if (groupStatut) groupStatut.style.display = 'none';
     if (!modal) return;
     tableVIModale = 'VI Planeur';
+    volVIModale = vol;
     idVIModale = vol.id;
     document.getElementById('form-vi-nom').value = (vol.fields['Nom'] || '').toString().trim();
     document.getElementById('form-vi-telephone').value = (vol.fields['Téléphone'] || '').toString().trim();
@@ -305,6 +307,7 @@ function ouvrirModaleEditionVICreneau(vol) {
     if (groupStatut) groupStatut.style.display = 'block';
     if (!modal) return;
     tableVIModale = 'VI Créneaux';
+    volVIModale = vol;
     idVIModale = vol.id;
     document.getElementById('form-vi-nom').value = (vol.passager || '').toString().trim();
     document.getElementById('form-vi-telephone').value = (vol.telephone || '').toString().trim();
@@ -1168,38 +1171,106 @@ function initGestionnaireModaleVIPlaneur() {
             const date = debutInput ? debutInput.split('T')[0] : null;
             const heureDebut = `${String(debutDate.getHours()).padStart(2, '0')}:${String(debutDate.getMinutes()).padStart(2, '0')}`;
             const heureFin = `${String(finDate.getHours()).padStart(2, '0')}:${String(finDate.getMinutes()).padStart(2, '0')}`;
-            let recordData;
-            if (table === 'VI Créneaux') {
-                const parts = nomComplet.split(/\s+/);
-                const prenom = parts.shift() || '';
-                const nom = parts.join(' ') || '';
-                const telephone = document.getElementById('form-vi-telephone').value.trim();
-                const statut = document.getElementById('form-vi-statut').value;
-                recordData = { fields: { 'Prénom': prenom, 'Nom': nom, 'Téléphone': telephone, 'Pilote': pilote, 'Commentaire': commentaire, 'Date': date, 'Heure début': heureDebut, 'Heure fin': heureFin, 'Statut': statut } };
-            } else {
-                recordData = { fields: { "Nom": nomComplet, "Date de début": dateDebut, "Date de fin": dateFin, "Pilote": pilote, "Commentaire": commentaire } };
-            }
-            let methode = 'POST';
-            if (idVIModale) {
-                recordData.id = idVIModale;
-                methode = 'PATCH';
-            }
             try {
-                const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
-                    method: methode,
-                    headers: headers,
-                    body: JSON.stringify({ records: [recordData] })
-                });
-                if (response.ok) {
-                    modal.style.display = 'none';
-                    form.reset();
-                    idVIModale = null;
-                    tableVIModale = null;
+                if (table === 'VI Créneaux') {
+                    const parts = nomComplet.split(/\s+/);
+                    const prenom = parts.shift() || '';
+                    const nom = parts.join(' ') || '';
+                    const telephone = document.getElementById('form-vi-telephone').value.trim();
+                    const statut = document.getElementById('form-vi-statut').value;
+                    const oldDate = volVIModale && volVIModale.debut ? volVIModale.debut.split('T')[0] : null;
+                    const oldHeureDebut = volVIModale && volVIModale.debut ? volVIModale.debut.split('T')[1].slice(0, 5) : null;
+                    const oldHeureFin = volVIModale && volVIModale.fin ? volVIModale.fin.split('T')[1].slice(0, 5) : null;
+                    const moved = !(date === oldDate && heureDebut === oldHeureDebut && heureFin === oldHeureFin);
+                    if (!moved) {
+                        const recordData = {
+                            id: idVIModale,
+                            fields: {
+                                'Prénom': prenom,
+                                'Nom': nom,
+                                'Téléphone': telephone,
+                                'Pilote': pilote,
+                                'Commentaire': commentaire,
+                                'Date': date,
+                                'Heure début': heureDebut,
+                                'Heure fin': heureFin,
+                                'Statut': statut
+                            }
+                        };
+                        await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+                            method: 'PATCH',
+                            headers: headers,
+                            body: JSON.stringify({ records: [recordData] })
+                        });
+                    } else {
+                        const newRecord = {
+                            fields: {
+                                'Prénom': prenom,
+                                'Nom': nom,
+                                'Téléphone': telephone,
+                                'Email': volVIModale ? (volVIModale.email || '') : '',
+                                'Pilote': pilote,
+                                'Commentaire': commentaire,
+                                'Bon cadeau': volVIModale ? (volVIModale.bonCadeau || '') : '',
+                                'Token': volVIModale ? (volVIModale.token || '') : '',
+                                'Date': date,
+                                'Heure début': heureDebut,
+                                'Heure fin': heureFin,
+                                'Type': volVIModale ? (volVIModale.type || 'VI') : 'VI',
+                                'Statut': 'Réservé'
+                            }
+                        };
+                        const oldRecord = {
+                            id: idVIModale,
+                            fields: {
+                                'Statut': 'Disponible',
+                                'Prénom': null,
+                                'Nom': null,
+                                'Email': null,
+                                'Téléphone': null,
+                                'Pilote': null,
+                                'Commentaire': null,
+                                'Bon cadeau': null,
+                                'Token': null
+                            }
+                        };
+                        await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+                            method: 'POST',
+                            headers: headers,
+                            body: JSON.stringify({ fields: newRecord.fields })
+                        });
+                        await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+                            method: 'PATCH',
+                            headers: headers,
+                            body: JSON.stringify({ records: [oldRecord] })
+                        });
+                    }
+                } else {
+                    const recordData = {
+                        fields: { "Nom": nomComplet, "Date de début": dateDebut, "Date de fin": dateFin, "Pilote": pilote, "Commentaire": commentaire }
+                    };
+                    let methode = 'POST';
+                    if (idVIModale) {
+                        recordData.id = idVIModale;
+                        methode = 'PATCH';
+                    }
+                    await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+                        method: methode,
+                        headers: headers,
+                        body: JSON.stringify({ records: [recordData] })
+                    });
+                }
+                modal.style.display = 'none';
+                form.reset();
+                idVIModale = null;
+                tableVIModale = null;
+                volVIModale = null;
+                if (table === 'VI Planeur') {
                     afficherVIPPlaneur = true;
                     mettreAJourBoutonVIPPlaneur();
-                    chargerDonneesPlanning(true);
-                    if (typeof chargerVolsInitiation === 'function') chargerVolsInitiation();
                 }
+                chargerDonneesPlanning(true);
+                if (typeof chargerVolsInitiation === 'function') chargerVolsInitiation();
             } catch (error) {
                 console.error(error);
             }
