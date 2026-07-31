@@ -869,3 +869,110 @@ body {
     flex: 1;
     min-width: 0;
 }
+
+/* --- MINI CALENDRIER --- */
+#mini-calendrier {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    font-size: 12px;
+    color: #1e3d59;
+}
+.cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+.cal-header button {
+    background: #e2e8f0;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #1e3d59;
+    font-size: 12px;
+}
+.cal-header button:hover {
+    background: #cbd5e1;
+}
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    text-align: center;
+}
+.cal-weekday {
+    font-weight: 600;
+    color: #64748b;
+    font-size: 11px;
+    padding-bottom: 4px;
+}
+.cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    padding: 2px;
+    transition: background 0.15s;
+}
+.cal-day:hover {
+    background: #e2e8f0;
+}
+.cal-day.empty {
+    cursor: default;
+}
+.cal-day-number {
+    line-height: 1;
+}
+.cal-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #93c5fd;
+    margin-top: 2px;
+    display: inline-block;
+}
+.cal-day.has-activity .cal-dot {
+    background: #93c5fd;
+}
+.cal-day.user-activity .cal-dot {
+    background: #1e3d59;
+}
+.cal-day.today {
+    background: #fee2e2;
+    color: #b91c1c;
+    font-weight: 700;
+}
+.cal-day.selected {
+    background: #1e3d59;
+    color: white;
+}
+.cal-day.selected .cal-dot {
+    background: white;
+}
+.cal-footer {
+    margin-top: 10px;
+    text-align: center;
+}
+.cal-btn-today {
+    background: #1e3d59;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.cal-btn-today:hover {
+    background: #2c4f6f;
+}
