@@ -11,6 +11,7 @@ let volVIModale = null;
 const URL_RESERVER_VI = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
 let listeVolsInitiationCache = [];
 let filtreInitiationActif = 'apourvoir';
+let filtreTypesInitiation = ['VIP', 'VIULM', 'VIA'];
 
 function parseTempsDeVol(tempsStr) {
     if (!tempsStr) return NaN;
@@ -1733,7 +1734,7 @@ function normaliserVolsInitiation() {
 function afficherVolsInitiation() {
     const container = document.getElementById('initiation-list');
     if (!container) return;
-    const vols = normaliserVolsInitiation().filter(v => v.categorie === filtreInitiationActif);
+    const vols = normaliserVolsInitiation().filter(v => v.categorie === filtreInitiationActif && filtreTypesInitiation.includes(v.type));
     if (vols.length === 0) {
         const messages = {
             apourvoir: 'Aucun vol d\'initiation à pourvoir.',
@@ -1815,6 +1816,7 @@ async function chargerVolsInitiation() {
             listeVolsInitiationCache.push({
                 id: vol.id,
                 source: 'planeur',
+                type: 'VIP',
                 passager: vol.fields['Nom'],
                 pilote: vol.fields['Pilote'],
                 telephone: vol.fields['Téléphone'],
@@ -1832,9 +1834,11 @@ async function chargerVolsInitiation() {
             if (!debutRaw) return;
             const machineIds = vol.fields['Machine'] || [];
             const machineName = getNomMachine(machineIds[0]);
+            const typeMoteur = machineName === 'F-JVIO' ? 'VIULM' : (machineName === 'F-GASB' ? 'VIA' : 'Moteur');
             listeVolsInitiationCache.push({
                 id: vol.id,
                 source: 'moteur',
+                type: typeMoteur,
                 passager: vol.fields['Passager'],
                 pilote: vol.fields['Pilote'],
                 telephone: vol.fields['Téléphone'],
@@ -1894,6 +1898,16 @@ function initGestionnaireVolsInitiation() {
     if (btnDispos) btnDispos.addEventListener('click', () => setFiltre('apourvoir'));
     if (btnPris) btnPris.addEventListener('click', () => setFiltre('pris'));
     if (btnCreneaux) btnCreneaux.addEventListener('click', () => setFiltre('creneaux'));
+
+    function setFiltreTypes() {
+        filtreTypesInitiation = Array.from(document.querySelectorAll('input[name="initiation-type-filtre"]:checked')).map(cb => cb.value);
+        afficherVolsInitiation();
+    }
+    const typeCheckboxes = document.querySelectorAll('input[name="initiation-type-filtre"]');
+    if (typeCheckboxes.length) {
+        typeCheckboxes.forEach(cb => cb.addEventListener('change', setFiltreTypes));
+        setFiltreTypes();
+    }
 
     if (list) {
         list.addEventListener('click', (e) => {
