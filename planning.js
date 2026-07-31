@@ -10,6 +10,7 @@ let volChoixCreneau = null;
 let volVIModale = null;
 const URL_RESERVER_VI = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
 let listeVolsInitiationCache = [];
+let listeReservationsConflits = [];
 let filtreInitiationActif = 'apourvoir';
 let filtreTypesInitiation = ['VIP', 'VIULM', 'VIA'];
 
@@ -1784,10 +1785,27 @@ function normaliserVolsInitiation() {
         const heureFin = `${String(fin.getHours()).padStart(2, '0')}:${String(fin.getMinutes()).padStart(2, '0')}`;
         const pilote = (record.pilote || '').toString().trim();
         const statut = record.statut;
+        let conflit = false;
         let categorie;
         if (source === 'creneau') {
             if (statut === 'Disponible' || statut === 'Bloqué') {
                 categorie = 'creneaux';
+                if (statut === 'Disponible') {
+                    if (record.type === 'VIP') {
+                        conflit = (listeVolsInitiationCache || []).some(other => other.source === 'planeur' && new Date(other.debut) < fin && new Date(other.fin) > debut);
+                    } else if (record.type === 'VIULM' || record.type === 'VIA') {
+                        const expectedImmat = record.type === 'VIULM' ? 'F-JVIO' : 'F-GASB';
+                        conflit = (listeReservationsConflits || []).some(r => {
+                            const machineId = (r.fields['Machine'] || [])[0];
+                            const avion = (listeAvionsCache || []).find(a => a.id === machineId);
+                            const immat = (avion ? (avion.fields['Immatriculation'] || '') : '').toString().trim().toUpperCase();
+                            if (immat !== expectedImmat) return false;
+                            const resDebut = new Date(r.fields['Date de début']);
+                            const resFin = new Date(r.fields['Date de fin']);
+                            return resDebut < fin && resFin > debut;
+                        });
+                    }
+                }
             } else if (statut === 'Réservé') {
                 categorie = pilote ? 'pris' : 'apourvoir';
             } else {
@@ -1798,7 +1816,7 @@ function normaliserVolsInitiation() {
         }
         const dateStr = debut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
         let classe = categorie;
-        if (categorie === 'creneaux') classe = (statut === 'Bloqué' ? 'bloque' : 'disponible');
+        if (categorie === 'creneaux') classe = (statut === 'Bloqué' || conflit) ? 'bloque' : 'disponible';
         vols.push({
             ...record,
             heureDebut,
@@ -1956,6 +1974,22 @@ async function chargerVolsInitiation() {
                 machineName: ''
             });
         });
+        const creneauxDates = listeVolsInitiationCache.filter(r => r.source === 'creneau' && r.statut === 'Disponible').map(r => r.debut.split('T')[0]);
+        if (creneauxDates.length) {
+            creneauxDates.sort();
+            const dateMin = creneauxDates[0];
+            const dateMax = creneauxDates[creneauxDates.length - 1];
+            const formulaConflit = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateMax}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateMin}', OR(FIND('F-JVIO', ARRAYJOIN({Machine},',')), FIND('F-GASB', ARRAYJOIN({Machine},','))))`;
+            const urlConflit = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formulaConflit)}&pageSize=100`;
+            try {
+                const resConflit = await fetch(urlConflit, { headers });
+                const dataConflit = await resConflit.json();
+                if (!resConflit.ok) throw new Error(dataConflit.error?.message || 'Erreur Airtable');
+                listeReservationsConflits = dataConflit.records || [];
+            } catch (err) { console.error('Erreur chargement réservations conflit:', err); listeReservationsConflits = []; }
+        } else {
+            listeReservationsConflits = [];
+        }
         afficherVolsInitiation();
     } catch (error) {
         console.error(error);

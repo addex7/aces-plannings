@@ -235,6 +235,38 @@ async function loadCreneaux(type) {
             const date = new Date(d + 'T00:00:00');
             return date.getTime() >= today.getTime();
         });
+        try {
+            const dates = creneauxDisponibles.map(r => r.fields['Date']).filter(Boolean).sort();
+            if (dates.length) {
+                const dateMin = dates[0];
+                const dateMax = dates[dates.length - 1];
+                const aeronefsRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}`, { headers });
+                const aeronefsData = await aeronefsRes.json();
+                const avionsMap = {};
+                (aeronefsData.records || []).forEach(a => { avionsMap[a.id] = a.fields; });
+                const conflitFormula = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateMax}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateMin}', OR(FIND('F-JVIO', ARRAYJOIN({Machine},',')), FIND('F-GASB', ARRAYJOIN({Machine},','))))`;
+                const resaRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(conflitFormula)}&pageSize=100`, { headers });
+                const resaData = await resaRes.json();
+                if (!resaRes.ok) throw new Error(resaData.error?.message || 'Erreur Airtable');
+                const reservations = resaData.records || [];
+                creneauxDisponibles = creneauxDisponibles.filter(c => {
+                    const type = c.fields['Type'];
+                    const expectedImmat = type === 'VIULM' ? 'F-JVIO' : (type === 'VIA' ? 'F-GASB' : null);
+                    if (!expectedImmat) return true;
+                    const cDebut = new Date(`${c.fields['Date']}T${c.fields['Heure début']}`);
+                    const cFin = new Date(`${c.fields['Date']}T${c.fields['Heure fin']}`);
+                    return !reservations.some(r => {
+                        const machineId = (r.fields['Machine'] || [])[0];
+                        const avion = avionsMap[machineId];
+                        const immat = (avion ? avion['Immatriculation'] : '').toString().trim().toUpperCase();
+                        if (immat !== expectedImmat) return false;
+                        const rDebut = new Date(r.fields['Date de début']);
+                        const rFin = new Date(r.fields['Date de fin']);
+                        return rDebut < cFin && rFin > cDebut;
+                    });
+                });
+            }
+        } catch (err) { console.error('Erreur filtre conflit public:', err); }
         renderCreneaux();
     } catch (err) {
         console.error(err);
