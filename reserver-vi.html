@@ -182,12 +182,19 @@ async function loadCreneaux() {
     const container = document.getElementById('creneaux-list');
     if (container) container.innerHTML = '<div class="loading">Chargement des créneaux...</div>';
     try {
-        const formula = `AND({Statut}='Disponible', IS_SAME_OR_AFTER({Date}, TODAY()))`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
+        const formula = `{Statut}='Disponible'`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc&pageSize=100`;
         const res = await fetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        creneauxDisponibles = data.records || [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        creneauxDisponibles = (data.records || []).filter(r => {
+            const d = r.fields['Date'];
+            if (!d) return false;
+            const date = new Date(d + 'T00:00:00');
+            return date.getTime() >= today.getTime();
+        });
         renderCreneaux();
     } catch (err) {
         console.error(err);
