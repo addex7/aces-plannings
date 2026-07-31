@@ -545,6 +545,16 @@ async function loadByToken(token) {
     }
 }
 
+function creneauModifiable(record) {
+    const f = record.fields || {};
+    const recordDate = f['Date'] ? new Date(f['Date'] + 'T00:00:00') : null;
+    if (!recordDate) return false;
+    const limit = new Date();
+    limit.setHours(0, 0, 0, 0);
+    limit.setDate(limit.getDate() + 5);
+    return recordDate.getTime() >= limit.getTime();
+}
+
 function showManageView(record) {
     clearMessage();
     showSection('manage-section');
@@ -552,6 +562,7 @@ function showManageView(record) {
     const type = escapeHtml(f['Type'] || 'VI');
     const date = formatDate(f['Date']);
     const heure = `${f['Heure début']} - ${f['Heure fin']}`;
+    const modifiable = creneauModifiable(record);
     document.getElementById('manage-info').innerHTML = `
         <div class="initiation-card pris" style="margin-bottom: 15px;">
             <div class="initiation-info">
@@ -563,12 +574,17 @@ function showManageView(record) {
                 ${f['Bon cadeau'] ? `<p>🎫 Bon cadeau : ${escapeHtml(f['Bon cadeau'])}</p>` : ''}
             </div>
         </div>
+        ${modifiable ? '' : `<div class="initiation-card bloque" style="margin-bottom: 15px;"><div class="initiation-info"><h4>Modification non autorisée</h4><p>Ce créneau a lieu dans moins de 5 jours. Pour toute modification ou annulation, veuillez nous appeler ou nous écrire.</p></div></div>`}
     `;
     document.getElementById('manage-prenom').value = f['Prénom'] || '';
     document.getElementById('manage-nom').value = f['Nom'] || '';
     document.getElementById('manage-email').value = f['Email'] || '';
     document.getElementById('manage-telephone').value = f['Téléphone'] || '';
     document.getElementById('manage-bon').value = f['Bon cadeau'] || '';
+    const btnAnnuler = document.getElementById('btn-manage-annuler');
+    const btnChanger = document.getElementById('btn-manage-changer');
+    if (btnAnnuler) btnAnnuler.style.display = modifiable ? '' : 'none';
+    if (btnChanger) btnChanger.style.display = modifiable ? '' : 'none';
 }
 
 async function onManageUpdate(e) {
@@ -604,6 +620,10 @@ async function onManageUpdate(e) {
 async function onManageCancel() {
     clearMessage();
     if (!currentRecord) return;
+    if (!creneauModifiable(currentRecord)) {
+        showMessage('error', 'Ce créneau a lieu dans moins de 5 jours. Pour toute annulation, veuillez nous appeler ou nous écrire.');
+        return;
+    }
     if (!confirm('Es-tu sûr de vouloir annuler cette réservation ?')) return;
     try {
         const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
@@ -633,6 +653,10 @@ async function onManageCancel() {
 
 function onManageChanger() {
     clearMessage();
+    if (!currentRecord || !creneauModifiable(currentRecord)) {
+        showMessage('error', 'Ce créneau a lieu dans moins de 5 jours. Pour toute modification, veuillez nous appeler ou nous écrire.');
+        return;
+    }
     recordIdOrigine = currentRecord ? currentRecord.id : null;
     typeSelectionne = currentRecord && currentRecord.fields ? (currentRecord.fields['Type'] || null) : null;
     showSection('list-section');
