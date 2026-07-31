@@ -60,9 +60,9 @@ function initAuth() {
         try {
             const parsed = JSON.parse(saved);
             if (parsed && parsed.id) {
-                currentUser = parsed;
+                setCurrentUser(parsed);
                 showApp();
-    if (typeof appliquerAccesDocumentaire === 'function') appliquerAccesDocumentaire();
+                if (typeof appliquerAccesDocumentaire === 'function') appliquerAccesDocumentaire();
                 return;
             }
         } catch (e) {
