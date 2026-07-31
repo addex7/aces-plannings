@@ -178,4 +178,10 @@ async function chargerDonneesCalendrier(annee, mois) {
     } catch (err) { console.error('Erreur calendrier Présences Club:', err); }
 }
 
+function rafraichirMiniCalendrier() {
+    if (typeof dateAffichee === 'undefined') return;
+    miniCalendrierDate = new Date(dateAffichee.getFullYear(), dateAffichee.getMonth(), 1);
+    renderMiniCalendrier();
+}
+
 initMiniCalendrier();

@@ -1753,6 +1753,7 @@ function initBoutonsNavigation() {
                     listeReservationsCache = [];
                     mettreAJourDateAffichee();
                     chargerDonneesPlanning();
+                    if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
                 }
             }
         });

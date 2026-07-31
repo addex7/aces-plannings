@@ -1035,7 +1035,10 @@ body {
     background: #93c5fd;
 }
 .cal-day.user-activity .cal-dot {
-    background: #ffffff;
+    background: #f59e0b;
+}
+.cal-day.selected.user-activity .cal-dot {
+    background: #f59e0b;
 }
 .cal-footer {
     margin-top: 8px;
