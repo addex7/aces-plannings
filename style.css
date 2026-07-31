@@ -33,22 +33,29 @@ body {
     font-size: 20px;
     font-weight: bold;
     letter-spacing: 0.5px;
-    margin-bottom: 30px;
+    margin-bottom: 15px;
     white-space: nowrap;
 }
+.sidebar > div:first-child {
+    display: flex;
+    flex-direction: column;
+}
+
 .nav-links {
     list-style: none;
     padding: 0;
     margin: 0;
-    flex-grow: 1;
+    flex-grow: 0;
+    margin-top: auto;
+    width: 100%;
 }
 .nav-links li {
-    padding: 10px 10px;
+    padding: 8px 10px;
     border-radius: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     cursor: pointer;
     transition: background 0.2s;
-    font-size: 13.5px;
+    font-size: 13px;
     white-space: nowrap;
 }
 .nav-links li.active, .nav-links li:hover {
@@ -68,8 +75,8 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     overflow-y: auto;
-    padding: 20px;
-    gap: 15px;
+    padding: 10px;
+    gap: 10px;
     transition: padding 0.3s ease;
 }
 #sidebar-toggle {
@@ -107,7 +114,7 @@ body {
 .view-section {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
 }
 /* En-tête de la page */
 .header {
@@ -115,7 +122,7 @@ body {
     justify-content: space-between;
     align-items: center;
     background: white;
-    padding: 15px 20px;
+    padding: 10px 15px;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
@@ -177,7 +184,7 @@ body {
 .timeline-container {
     background: white;
     border-radius: 12px;
-    padding: 20px;
+    padding: 15px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
@@ -186,8 +193,8 @@ body {
     display: flex;
     align-items: center;
     border-bottom: 2px solid #f5f0e1;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
 }
 .machine-col-header {
     width: 90px;
@@ -222,7 +229,7 @@ body {
     display: flex;
     align-items: center;
     position: relative;
-    padding: 12px 0;
+    padding: 8px 0;
     border-bottom: 1px solid #f5f0e1;
 }
 .machine-cell {
@@ -271,7 +278,7 @@ body {
     position: relative !important;
     flex: 1;
     display: flex;
-    height: 40px;
+    height: 32px;
     overflow: hidden;
 }
 .grid-hour-block {
@@ -386,9 +393,9 @@ body {
 }
 /* --- SECTIONS INSCRIPTIONS PLANEUR --- */
 .glider-presence-section {
-    padding: 20px;
+    padding: 15px;
     background-color: #ffffff;
-    margin: 5px 0 0 0;
+    margin: 0;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
@@ -396,12 +403,12 @@ body {
     margin-top: 0;
     color: #1e3d59;
     border-bottom: 2px solid #f5f0e1;
-    padding-bottom: 10px;
-    font-size: 18px;
+    padding-bottom: 6px;
+    font-size: 16px;
 }
 .glider-presence-container {
     display: flex;
-    gap: 20px;
+    gap: 12px;
     justify-content: space-between;
 }
 .presence-card {
@@ -409,7 +416,7 @@ body {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 15px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
 }
@@ -418,22 +425,23 @@ body {
     text-align: center;
     color: #334155;
     background: #e2e8f0;
-    padding: 8px;
+    padding: 6px;
     border-radius: 6px;
+    font-size: 12px;
 }
 .presence-list {
     list-style: none;
     padding: 0;
-    margin: 10px 0;
+    margin: 6px 0;
     flex-grow: 1;
 }
 .presence-list li {
-    padding: 8px 10px;
+    padding: 5px 8px;
     background: white;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     border-radius: 4px;
     border-left: 4px solid #ff6e40;
-    font-size: 14px;
+    font-size: 13px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1027,7 +1035,7 @@ body {
     box-shadow: none;
     padding: 0;
     margin-top: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 .cal-header {
     color: #ffffff;
@@ -1133,27 +1141,27 @@ body {
 .evenements-section {
     background: #1e3d59;
     color: white;
-    padding: 15px;
+    padding: 10px;
     border-radius: 12px;
-    margin-top: 15px;
+    margin: 0;
 }
 .evenements-section h3 {
-    margin: 0 0 10px;
+    margin: 0 0 6px;
     color: #ffffff;
     font-size: 16px;
 }
 .evenements-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 10px;
 }
 .evenement-card {
     background: #f8fafc;
     color: #1e3d59;
     border-radius: 12px;
-    padding: 15px;
-    flex: 1 1 260px;
-    min-width: 260px;
+    padding: 10px;
+    flex: 1 1 220px;
+    min-width: 220px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 .evenement-titre {
