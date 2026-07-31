@@ -1728,6 +1728,7 @@ function initBoutonsNavigation() {
             mettreAJourDateAffichee();
             chargerDonneesPlanning();
             if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
+            if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
         });
     }
     if (document.getElementById('btn-next')) {
@@ -1737,6 +1738,7 @@ function initBoutonsNavigation() {
             mettreAJourDateAffichee();
             chargerDonneesPlanning();
             if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
+            if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
         });
     }
     const currentDateEl = document.getElementById('current-date');
@@ -1756,6 +1758,7 @@ function initBoutonsNavigation() {
                     mettreAJourDateAffichee();
                     chargerDonneesPlanning();
                     if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
+                    if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
                 }
             }
         });

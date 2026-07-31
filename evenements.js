@@ -127,6 +127,7 @@ async function chargerEvenementsJour() {
     const container = document.getElementById('evenements-jour');
     if (!container) return;
     const section = container.closest('.evenements-section');
+    const row = container.closest('.club-evenements-row');
     const dateIso = dateAffichee.toISOString().split('T')[0];
     container.innerHTML = '<div class="loading">Chargement des événements...</div>';
 
@@ -141,10 +142,12 @@ async function chargerEvenementsJour() {
         if (!evenements.length) {
             container.innerHTML = '';
             if (section) section.style.display = 'none';
+            if (row) row.style.gridTemplateColumns = '1fr';
             return;
         }
 
         if (section) section.style.display = '';
+        if (row) row.style.gridTemplateColumns = '1fr 1fr';
         container.innerHTML = evenements.map(r => renderEvenement(r)).join('');
     } catch (err) {
         console.error(err);
