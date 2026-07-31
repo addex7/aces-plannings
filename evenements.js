@@ -9,7 +9,7 @@ const FIELDS = {
     DESCRIPTION: 'Description',
     DATE_DEBUT: 'Date début',
     HEURE_DEBUT: 'Heure début',
-    DATE_FIN: 'Date fin',
+    DATE_FIN: 'Date de fin',
     HEURE_FIN: 'Heure fin',
     INSCRITS: 'Inscrits',
     AJOUTE_PAR: 'Ajouté par'
