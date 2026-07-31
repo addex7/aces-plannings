@@ -47,6 +47,7 @@ function allerADateAffichee() {
     if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning();
     if (typeof chargerPresencesPlaneur === 'function') chargerPresencesPlaneur();
     if (typeof chargerPresencesClub === 'function') chargerPresencesClub();
+    if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
     miniCalendrierDate = new Date(dateAffichee.getFullYear(), dateAffichee.getMonth(), 1);
     renderMiniCalendrier();
 }
