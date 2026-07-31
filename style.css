@@ -979,6 +979,8 @@ body {
 
 /* --- MINI CALENDRIER INTEGRATION SIDEBAR --- */
 #mini-calendrier {
+    width: 100%;
+    box-sizing: border-box;
     background: transparent;
     color: #ffffff;
     box-shadow: none;
@@ -988,19 +990,29 @@ body {
 }
 .cal-header {
     color: #ffffff;
+    font-size: 13px;
+    padding: 0 4px;
 }
 .cal-header button {
     background: rgba(255, 255, 255, 0.15);
     color: #ffffff;
+    padding: 2px 5px;
+    font-size: 11px;
 }
 .cal-header button:hover {
     background: rgba(255, 255, 255, 0.25);
 }
+.cal-grid {
+    gap: 2px;
+}
 .cal-weekday {
     color: rgba(255, 255, 255, 0.7);
+    font-size: 9px;
 }
 .cal-day {
     color: rgba(255, 255, 255, 0.9);
+    font-size: 10px;
+    padding: 1px;
 }
 .cal-day:hover {
     background: rgba(255, 255, 255, 0.1);
@@ -1018,6 +1030,8 @@ body {
     background: #1e3d59;
 }
 .cal-dot {
+    width: 4px;
+    height: 4px;
     background: #93c5fd;
 }
 .cal-day.user-activity .cal-dot {
@@ -1029,8 +1043,8 @@ body {
 .cal-btn-today {
     background: rgba(255, 255, 255, 0.15);
     color: #ffffff;
-    padding: 4px 10px;
-    font-size: 11px;
+    padding: 3px 8px;
+    font-size: 10px;
 }
 .cal-btn-today:hover {
     background: rgba(255, 255, 255, 0.25);
