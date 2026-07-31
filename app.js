@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initGestionCreneauxVI();
     initCarnetRoute();
     initSidebarToggle();
+    initEvenements();
     chargerDonneesPlanning();
     chargerPresencesClub();
 });

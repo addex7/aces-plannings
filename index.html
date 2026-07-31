@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -81,6 +81,10 @@
                     <span style="font-size:18px; font-weight:bold; letter-spacing:0.5px;">ACES</span>
                 </div>
                 <div id="mini-calendrier"></div>
+                <div id="section-evenements" style="margin: 10px 0;">
+                    <button id="btn-creer-evenement" style="width:100%; padding:8px 10px; background:rgba(255,255,255,0.15); color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; gap:6px;">➕ Créer un évènement</button>
+                    <div id="prochains-evenements" style="margin-top:8px;"></div>
+                </div>
                 <ul class="nav-links">
                     <li id="tab-planning" class="active">📅 Planning</li>
                     <li id="tab-aeronefs">🛩️ Aéronefs</li>
@@ -173,6 +177,12 @@
                             <button class="btn-inscription" onclick="sinscrireClub('Salle Ernest Meyer')">+ S'inscrire</button>
                         </div>
                     </div>
+                </section>
+
+                <!-- Module Événements du jour -->
+                <section class="evenements-section">
+                    <h3>Événements du jour</h3>
+                    <div id="evenements-jour" class="evenements-container"></div>
                 </section>
             </section>
 
@@ -784,8 +794,48 @@
         </div>
     </div>
 
+    <!-- Modale de création d'événement -->
+    <div id="modale-evenement" class="modal-overlay" style="display:none;">
+        <div class="modal" style="max-width:420px;">
+            <h3>Créer un évènement</h3>
+            <form id="form-evenement">
+                <div class="form-group">
+                    <label for="ev-titre">Titre *</label>
+                    <input type="text" id="ev-titre" required>
+                </div>
+                <div class="form-group">
+                    <label for="ev-description">Description</label>
+                    <textarea id="ev-description" rows="2"></textarea>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label for="ev-date-debut">Date début *</label>
+                        <input type="date" id="ev-date-debut" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ev-heure-debut">Heure début *</label>
+                        <input type="time" id="ev-heure-debut" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ev-date-fin">Date fin *</label>
+                        <input type="date" id="ev-date-fin" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ev-heure-fin">Heure fin *</label>
+                        <input type="time" id="ev-heure-fin" required>
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top:15px;">
+                    <button type="button" id="btn-close-evenement" class="btn-cancel">Annuler</button>
+                    <button type="submit" class="btn-submit">Créer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="app.js?v=20"></script>
+    <script src="evenements.js?v=21"></script>
+    <script src="app.js?v=21"></script>
     <script src="utils.js?v=15"></script>
     <script src="presences.js?v=15"></script>
     <script src="planning.js?v=19"></script>

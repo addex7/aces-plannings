@@ -1093,3 +1093,123 @@ body {
 .cal-btn-today:hover {
     background: rgba(255, 255, 255, 0.25);
 }
+
+/* --- ÉVÉNEMENTS --- */
+#section-evenements {
+    margin: 10px 0;
+}
+#prochains-evenements {
+    font-size: 11px;
+    color: #cbd5e1;
+}
+#prochains-evenements h4 {
+    margin: 0 0 6px;
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.prochain-evenement {
+    cursor: pointer;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.2s;
+}
+.prochain-evenement:hover {
+    color: #ffffff;
+}
+.prochain-evenement:last-child {
+    border-bottom: none;
+}
+.prochains-evenements-empty,
+.evenement-empty {
+    font-size: 11px;
+    color: #94a3b8;
+    padding: 6px 0;
+}
+.evenements-section {
+    background: #1e3d59;
+    color: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin-top: 15px;
+}
+.evenements-section h3 {
+    margin: 0 0 10px;
+    color: #ffffff;
+    font-size: 16px;
+}
+.evenements-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.evenement-card {
+    background: #f8fafc;
+    color: #1e3d59;
+    border-radius: 12px;
+    padding: 15px;
+    flex: 1 1 260px;
+    min-width: 260px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.evenement-titre {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e3d59;
+    margin-bottom: 4px;
+}
+.evenement-sous-titre {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+.evenement-description {
+    font-size: 13px;
+    color: #475569;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+.evenement-inscrits {
+    font-size: 14px;
+    color: #334155;
+    margin: 10px 0;
+    padding: 10px 0;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    min-height: 30px;
+}
+.inscrit-ligne {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 0;
+}
+.btn-remove-inscrit {
+    background: transparent;
+    border: none;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 4px;
+    margin-left: 8px;
+}
+.btn-remove-inscrit:hover {
+    color: #b91c1c;
+}
+.evenement-actions .btn-inscription {
+    background: #17b978;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.evenement-actions .btn-inscription:hover {
+    background: #059669;
+}
