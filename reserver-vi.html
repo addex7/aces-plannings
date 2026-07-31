@@ -18,17 +18,43 @@
     <main class="main-content" style="max-width: 800px; margin: 0 auto; padding: 20px;">
         <div id="message"></div>
 
-        <section id="list-section">
-            <div class="initiation-tabs" style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <label for="filtre-type" style="font-weight: 500;">Type de baptême :</label>
-                <select id="filtre-type" class="machine-selector">
-                    <option value="">Tous</option>
-                    <option value="VIP">VIP</option>
-                    <option value="VIULM">VIULM</option>
-                    <option value="VIA">VIA</option>
-                </select>
+        <section id="type-section">
+            <h2 style="color: #1e3d59; margin-top: 0;">Quel type de vol d'initiation ?</h2>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px;">
+                <button type="button" class="type-choice btn-primary" data-choix="planeur" style="text-align: left; padding: 20px; font-size: 16px; display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 28px;">🪂</span>
+                    <div>
+                        <strong>Planeur</strong>
+                        <p style="margin: 5px 0 0; font-size: 14px; opacity: 0.9; font-weight: normal;">Vol en planeur, baptême de l'air classique.</p>
+                    </div>
+                </button>
+                <button type="button" class="type-choice btn-primary" data-choix="moteur" style="text-align: left; padding: 20px; font-size: 16px; display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 28px;">✈️</span>
+                    <div>
+                        <strong>Moteur</strong>
+                        <p style="margin: 5px 0 0; font-size: 14px; opacity: 0.9; font-weight: normal;">Vol en avion motorisé (1 à 3 personnes max).</p>
+                    </div>
+                </button>
             </div>
-            <h2 style="color: #1e3d59; margin-top: 0;">Créneaux disponibles</h2>
+        </section>
+
+        <section id="persons-section" style="display: none;">
+            <button type="button" id="btn-retour-type" class="btn-secondary" style="margin-bottom: 15px;">← Retour</button>
+            <h2 style="color: #1e3d59; margin-top: 0;">Moteur — combien de personnes ?</h2>
+            <p style="color: #475569; font-size: 14px;">1 personne → F-JVIO &nbsp;|&nbsp; 2 à 3 personnes → F-GASB</p>
+            <div class="form-group" style="max-width: 200px;">
+                <label for="nb-personnes">Nombre de personnes *</label>
+                <input type="number" id="nb-personnes" min="1" max="3" value="1" required>
+            </div>
+            <button type="button" id="btn-valider-persons" class="btn-submit" style="margin-top: 10px;">Voir les créneaux</button>
+        </section>
+
+        <section id="list-section" style="display: none;">
+            <div style="margin-bottom: 15px;">
+                <button type="button" id="btn-retour-type2" class="btn-secondary" style="margin-bottom: 10px;">← Changer de type</button>
+                <h2 style="color: #1e3d59; margin-top: 0; margin-bottom: 5px;">Créneaux disponibles</h2>
+                <p id="type-selectionne-label" style="color: #64748b; font-size: 14px; margin: 0;"></p>
+            </div>
             <div id="creneaux-list" class="initiation-list">
                 <div class="loading">Chargement des créneaux...</div>
             </div>
@@ -127,13 +153,26 @@ const headers = {
 const TABLE_CRENEAUX = 'VI Créneaux';
 const EMAILJS_SERVICE_ID = 'service_mzemfef';
 const EMAILJS_VI_TEMPLATE_ID = 'template_zol8z2e';
+const EMAILJS_VI_MODIF_TEMPLATE_ID = ''; // Remplacer par l'ID du template EmailJS de modification
 const EMAILJS_PUBLIC_KEY = 'V_q5vuIMURlLXAaVC';
 const PUBLIC_URL = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
+
+const TYPE_PAR_CHOIX = {
+    planeur: 'VIP',
+    moteur_1: 'VIULM', // F-JVIO
+    moteur_2_3: 'VIA'  // F-GASB
+};
+const TYPE_LABELS = {
+    VIP: 'Planeur',
+    VIULM: 'Moteur — 1 personne (F-JVIO)',
+    VIA: 'Moteur — 2 à 3 personnes (F-GASB)'
+};
 
 let creneauxDisponibles = [];
 let currentToken = null;
 let currentRecord = null;
 let recordIdOrigine = null;
+let typeSelectionne = null;
 
 function genererToken() {
     const arr = new Uint8Array(16);
@@ -171,7 +210,7 @@ function clearMessage() {
 }
 
 function showSection(id) {
-    ['list-section', 'form-section', 'manage-section', 'confirmation-section'].forEach(sid => {
+    ['type-section', 'persons-section', 'list-section', 'form-section', 'manage-section', 'confirmation-section'].forEach(sid => {
         const s = document.getElementById(sid);
         if (s) s.style.display = 'none';
     });
@@ -179,11 +218,11 @@ function showSection(id) {
     if (target) target.style.display = 'block';
 }
 
-async function loadCreneaux() {
+async function loadCreneaux(type) {
     const container = document.getElementById('creneaux-list');
     if (container) container.innerHTML = '<div class="loading">Chargement des créneaux...</div>';
     try {
-        const formula = `{Statut}='Disponible'`;
+        const formula = type ? `AND({Statut}='Disponible', {Type}='${type}')` : `{Statut}='Disponible'`;
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc&pageSize=100`;
         const res = await fetch(url, { headers });
         const data = await res.json();
@@ -207,15 +246,14 @@ async function loadCreneaux() {
 function renderCreneaux() {
     const container = document.getElementById('creneaux-list');
     if (!container) return;
-    const typeFiltre = document.getElementById('filtre-type')?.value || '';
-    const filtered = creneauxDisponibles.filter(r => !typeFiltre || (r.fields['Type'] || '') === typeFiltre);
-    if (filtered.length === 0) {
-        container.innerHTML = '<div class="initiation-empty">Aucun créneau disponible.</div>';
+    if (creneauxDisponibles.length === 0) {
+        const label = TYPE_LABELS[typeSelectionne] || typeSelectionne || '';
+        container.innerHTML = `<div class="initiation-empty">Aucun créneau disponible${label ? ' pour ' + escapeHtml(label) : ''}.</div>`;
         return;
     }
 
     const groups = {};
-    filtered.forEach(r => {
+    creneauxDisponibles.forEach(r => {
         const d = r.fields['Date'];
         if (!groups[d]) groups[d] = [];
         groups[d].push(r);
@@ -234,7 +272,8 @@ function renderCreneaux() {
         groups[date].forEach(r => {
             const card = document.createElement('div');
             card.className = 'initiation-card disponible';
-            const type = escapeHtml(r.fields['Type'] || 'VI');
+            const typeValue = r.fields['Type'] || 'VI';
+            const type = escapeHtml(TYPE_LABELS[typeValue] || typeValue);
             const heure = `${escapeHtml(r.fields['Heure début'])} - ${escapeHtml(r.fields['Heure fin'])}`;
             card.innerHTML = `
                 <div class="initiation-info">
@@ -262,7 +301,8 @@ function selectCreneau(record) {
     currentRecord = record;
     clearMessage();
     showSection('form-section');
-    const type = escapeHtml(record.fields['Type'] || 'VI');
+    const typeValue = record.fields['Type'] || 'VI';
+    const type = escapeHtml(TYPE_LABELS[typeValue] || typeValue);
     const date = formatDate(record.fields['Date']);
     const heure = `${record.fields['Heure début']} - ${record.fields['Heure fin']}`;
     document.getElementById('selected-creneau-info').innerHTML = `
@@ -272,7 +312,6 @@ function selectCreneau(record) {
         </div>
     `;
     document.getElementById('selected-record-id').value = record.id;
-    document.getElementById('reservation-form').reset();
 }
 
 async function onSubmitReservation(e) {
@@ -320,10 +359,15 @@ async function onSubmitReservation(e) {
         const record = (data.records || [])[0];
         if (!record) throw new Error('Aucune réponse Airtable');
 
+        const isModification = !!recordIdOrigine && recordIdOrigine !== recordId;
         currentToken = token;
         currentRecord = record;
         recordIdOrigine = record.id;
-        await sendConfirmationEmail(record, token, { prenom, nom, email });
+        if (isModification) {
+            await sendModificationEmail(record, token, { prenom, nom, email });
+        } else {
+            await sendConfirmationEmail(record, token, { prenom, nom, email });
+        }
         showConfirmation(record, token, { prenom, nom, email });
     } catch (err) {
         console.error(err);
@@ -377,6 +421,37 @@ async function sendConfirmationEmail(record, token, contact) {
     }
     try {
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_VI_TEMPLATE_ID, {
+            to_email: email,
+            to_name: `${prenom} ${nom}`.trim(),
+            type: type,
+            date: date,
+            heure: heure,
+            lieu: 'ACES',
+            lien: lien
+        });
+    } catch (err) {
+        console.error('EmailJS error:', err);
+    }
+}
+
+async function sendModificationEmail(record, token, contact) {
+    if (!EMAILJS_VI_MODIF_TEMPLATE_ID) {
+        return sendConfirmationEmail(record, token, contact);
+    }
+    const f = record.fields || {};
+    const prenom = (contact && contact.prenom) || f['Prénom'] || '';
+    const nom = (contact && contact.nom) || f['Nom'] || '';
+    const email = (contact && contact.email) || f['Email'] || '';
+    const date = f['Date'] ? formatDate(f['Date']) : '';
+    const heure = `${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`;
+    const type = f['Type'] || 'VI';
+    const lien = `${PUBLIC_URL}?token=${token}`;
+    if (!email) {
+        console.warn('Aucun email fourni pour la confirmation');
+        return;
+    }
+    try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_VI_MODIF_TEMPLATE_ID, {
             to_email: email,
             to_name: `${prenom} ${nom}`.trim(),
             type: type,
@@ -527,13 +602,17 @@ async function onManageCancel() {
 function onManageChanger() {
     clearMessage();
     recordIdOrigine = currentRecord ? currentRecord.id : null;
+    typeSelectionne = currentRecord && currentRecord.fields ? (currentRecord.fields['Type'] || null) : null;
     showSection('list-section');
+    const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
+    const labelEl = document.getElementById('type-selectionne-label');
+    if (labelEl) labelEl.textContent = label || '';
     document.getElementById('client-prenom').value = document.getElementById('manage-prenom').value;
     document.getElementById('client-nom').value = document.getElementById('manage-nom').value;
     document.getElementById('client-email').value = document.getElementById('manage-email').value;
     document.getElementById('client-telephone').value = document.getElementById('manage-telephone').value;
     document.getElementById('client-bon').value = document.getElementById('manage-bon').value;
-    loadCreneaux();
+    loadCreneaux(typeSelectionne);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -543,10 +622,39 @@ document.addEventListener('DOMContentLoaded', () => {
     if (token) {
         loadByToken(token);
     } else {
-        loadCreneaux();
+        showSection('type-section');
     }
 
-    document.getElementById('filtre-type').addEventListener('change', renderCreneaux);
+    document.querySelectorAll('.type-choice').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const choix = btn.dataset.choix;
+            if (choix === 'planeur') {
+                typeSelectionne = TYPE_PAR_CHOIX.planeur;
+                const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
+                const labelEl = document.getElementById('type-selectionne-label');
+                if (labelEl) labelEl.textContent = label;
+                showSection('list-section');
+                loadCreneaux(typeSelectionne);
+            } else if (choix === 'moteur') {
+                showSection('persons-section');
+            }
+        });
+    });
+    document.getElementById('btn-valider-persons').addEventListener('click', () => {
+        const nb = parseInt(document.getElementById('nb-personnes').value, 10);
+        if (!nb || nb < 1 || nb > 3) {
+            showMessage('error', 'Le nombre de personnes doit être entre 1 et 3.');
+            return;
+        }
+        typeSelectionne = nb === 1 ? TYPE_PAR_CHOIX.moteur_1 : TYPE_PAR_CHOIX.moteur_2_3;
+        const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
+        const labelEl = document.getElementById('type-selectionne-label');
+        if (labelEl) labelEl.textContent = `${label} — ${nb} personne${nb > 1 ? 's' : ''}`;
+        showSection('list-section');
+        loadCreneaux(typeSelectionne);
+    });
+    document.getElementById('btn-retour-type').addEventListener('click', () => showSection('type-section'));
+    document.getElementById('btn-retour-type2').addEventListener('click', () => showSection('type-section'));
     document.getElementById('reservation-form').addEventListener('submit', onSubmitReservation);
     document.getElementById('btn-retour-liste').addEventListener('click', () => {
         showSection('list-section');
