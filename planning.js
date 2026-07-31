@@ -388,6 +388,12 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             const dataAvions = await resAvions.json();
             if (dataAvions.records) listeAvionsCache = dataAvions.records;
         }
+        const trouverAvionParImmat = (immat) => (listeAvionsCache || []).find(a => (a.fields['Immatriculation'] || a.fields['Nom'] || '').toString().trim().toUpperCase() === immat.toUpperCase());
+        const avionJVIO = trouverAvionParImmat('F-JVIO');
+        const avionGASB = trouverAvionParImmat('F-GASB');
+        const avionIdJVIO = avionJVIO ? avionJVIO.id : null;
+        const avionIdGASB = avionGASB ? avionGASB.id : null;
+        let creneauxVIMotor = [];
         if (forceRefresh || listeReservationsCache.length === 0) {
             const urlReservations = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')<='${debutJour}', DATETIME_FORMAT({Date de fin}, 'YYYY-MM-DD')>='${debutJour}')`)}`;
             const resReservations = await fetch(urlReservations, { headers });
@@ -409,7 +415,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         const urlVICreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${debutJour}'`;
         const resVICreneaux = await fetch(urlVICreneaux, { headers });
         const dataVICreneaux = await resVICreneaux.json();
-        const creneauxVIP = (dataVICreneaux.records || []).map(vol => {
+        const creneauxVI = (dataVICreneaux.records || []).map(vol => {
             if (!vol.fields) return null;
             const f = vol.fields;
             const statut = f['Statut'] || 'Disponible';
@@ -423,20 +429,41 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             const passager = f['Prénom'] && f['Nom'] ? `${f['Prénom']} ${f['Nom']}`.trim() : '';
             const pilote = (f['Pilote'] || '').toString().trim();
             const nom = passager || 'DISPONIBLE';
-            return {
+            const type = f['Type'] || 'VI';
+            if (type === 'VIP') {
+                return {
+                    id: vol.id,
+                    _table: 'VI Créneaux',
+                    fields: {
+                        'Type': 'VIP',
+                        'Nom': nom,
+                        'Date de début': dateRaw + 'T' + (f['Heure début'] || '00:00') + ':00',
+                        'Date de fin': dateRaw + 'T' + (f['Heure fin'] || '00:00') + ':00',
+                        'Pilote': pilote,
+                        'Commentaire': f['Commentaire'] || ''
+                    }
+                };
+            }
+            const avionId = type === 'VIULM' ? avionIdJVIO : (type === 'VIA' ? avionIdGASB : null);
+            if (!avionId || nom === 'DISPONIBLE') return null;
+            creneauxVIMotor.push({
                 id: vol.id,
                 _table: 'VI Créneaux',
                 fields: {
-                    'Type': f['Type'] || 'VI',
-                    'Nom': nom,
+                    'Type de vol': ['VI Moteur'],
+                    'Passager': nom,
+                    'Pilote': pilote,
+                    'Téléphone': f['Téléphone'] || '',
+                    'Machine': [avionId],
                     'Date de début': dateRaw + 'T' + (f['Heure début'] || '00:00') + ':00',
                     'Date de fin': dateRaw + 'T' + (f['Heure fin'] || '00:00') + ':00',
-                    'Pilote': pilote,
-                    'Commentaire': f['Commentaire'] || ''
+                    'Commentaires VI': f['Commentaire'] || '',
+                    'Temps estimé': 1
                 }
-            };
+            });
+            return null;
         }).filter(Boolean);
-        volsVIP.push(...creneauxVIP);
+        volsVIP.push(...creneauxVI);
         volsVIP = volsVIP.filter(vol => {
             const nom = (vol.fields['Nom'] || '').toString().trim();
             return nom && nom !== 'DISPONIBLE';
@@ -470,7 +497,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             rowDiv.className = 'timeline-row';
             const dayStart = new Date(dateAffichee.getFullYear(), dateAffichee.getMonth(), dateAffichee.getDate());
             const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-            const volsAvion = listeReservationsCache.filter(res => {
+            let volsAvion = listeReservationsCache.filter(res => {
                 if (!res.fields) return false;
                 const linkAvion = res.fields['Machine'] || [];
                 const debutRaw = res.fields['Date de début'];
@@ -480,6 +507,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                 const dateFin = new Date(finRaw);
                 return dateVol < dayEnd && dateFin > dayStart;
             });
+            const creneauxMotorAvion = creneauxVIMotor.filter(c => (c.fields['Machine'] || []).includes(avionId));
+            volsAvion = volsAvion.concat(creneauxMotorAvion);
             let potentielInitial = avion.fields['Potentiel restant'] !== undefined ? parseFloat(avion.fields['Potentiel restant']) : 0;
             const totalHeuresEstimees = listeReservationsCache
                 .filter(res => res.fields && res.fields['Machine'] && res.fields['Machine'].includes(avionId))
@@ -577,44 +606,52 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         if (duree <= 2) {
                             barresDiv.classList.add('short-reservation');
                         }
-                        let libelleEntete = piloteFormate || 'Pilote non défini';
+                        const passagerNom = (vol.fields['Passager'] || '').toString().trim();
                         const typesVol = Array.isArray(typeVol) ? typeVol : [typeVol];
                         const isVIMoteur = typesVol.includes('VI Moteur');
                         const isAncienVI = typesVol.includes("Vol d'Initiation") || typesVol.includes("Vol d'Initiation (VI)");
+                        const isCreneau = vol._table === 'VI Créneaux';
+                        let libelleEntete = piloteFormate || 'Pilote non défini';
                         if (isVIMoteur || isAncienVI) {
                             if (!piloteNom || piloteNom.trim() === "") {
                                 barresDiv.classList.add('vi-sans-pilote');
-                                libelleEntete = isVIMoteur ? "🎯 VI Moteur dispo" : "🎯 VI DISPONIBLE";
+                                const suffix = passagerNom || 'dispo';
+                                libelleEntete = isVIMoteur ? `🎯 VI Moteur — ${suffix}` : `🎯 VI — ${suffix}`;
                             } else {
                                 barresDiv.classList.add('vi-avec-pilote');
                                 libelleEntete = isVIMoteur ? `🎯 VI Moteur (${piloteFormate})` : `🎯 VI (${piloteFormate})`;
                             }
                         }
+                        if (isCreneau) {
+                            barresDiv.title = (vol.fields['Commentaires VI'] || '') + (passagerNom ? '\nPassager : ' + passagerNom : '');
+                        }
                         barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
-                        const handleLeft = document.createElement('div');
-                        handleLeft.className = 'resize-handle resize-handle-left';
-                        const handleRight = document.createElement('div');
-                        handleRight.className = 'resize-handle resize-handle-right';
-                        barresDiv.appendChild(handleLeft);
-                        barresDiv.appendChild(handleRight);
-                        handleLeft.addEventListener('mousedown', (e) => {
-                            e.stopPropagation();
-                            initierResize(e, vol.id, gridBg, barresDiv, 'gauche', heureDebut, heureFin, null);
-                        });
-                        handleRight.addEventListener('mousedown', (e) => {
-                            e.stopPropagation();
-                            initierResize(e, vol.id, gridBg, barresDiv, 'droite', heureDebut, heureFin, null);
-                        });
-                        barresDiv.addEventListener('mousedown', (e) => {
-                            if (e.target.classList.contains('resize-handle')) return;
-                            e.stopPropagation();
-                            initierDeplacementBarre(e, vol.id, avionId, gridBg, barresDiv, heureDebut, duree, null);
-                        });
-                        barresDiv.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            if (isResizing || isDraggingBar) return;
-                            ouvrirModaleEdition(vol, avionId);
-                        });
+                        if (!isCreneau) {
+                            const handleLeft = document.createElement('div');
+                            handleLeft.className = 'resize-handle resize-handle-left';
+                            const handleRight = document.createElement('div');
+                            handleRight.className = 'resize-handle resize-handle-right';
+                            barresDiv.appendChild(handleLeft);
+                            barresDiv.appendChild(handleRight);
+                            handleLeft.addEventListener('mousedown', (e) => {
+                                e.stopPropagation();
+                                initierResize(e, vol.id, gridBg, barresDiv, 'gauche', heureDebut, heureFin, null);
+                            });
+                            handleRight.addEventListener('mousedown', (e) => {
+                                e.stopPropagation();
+                                initierResize(e, vol.id, gridBg, barresDiv, 'droite', heureDebut, heureFin, null);
+                            });
+                            barresDiv.addEventListener('mousedown', (e) => {
+                                if (e.target.classList.contains('resize-handle')) return;
+                                e.stopPropagation();
+                                initierDeplacementBarre(e, vol.id, avionId, gridBg, barresDiv, heureDebut, duree, null);
+                            });
+                            barresDiv.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                if (isResizing || isDraggingBar) return;
+                                ouvrirModaleEdition(vol, avionId);
+                            });
+                        }
                         barresDiv.addEventListener('mouseenter', () => { barresDiv.style.zIndex = '100'; });
                         barresDiv.addEventListener('mouseleave', () => { barresDiv.style.zIndex = '5'; });
                         gridBg.appendChild(barresDiv);
