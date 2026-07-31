@@ -976,3 +976,62 @@ body {
 .cal-btn-today:hover {
     background: #2c4f6f;
 }
+
+/* --- MINI CALENDRIER INTEGRATION SIDEBAR --- */
+#mini-calendrier {
+    background: transparent;
+    color: #ffffff;
+    box-shadow: none;
+    padding: 0;
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+.cal-header {
+    color: #ffffff;
+}
+.cal-header button {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+.cal-header button:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+.cal-weekday {
+    color: rgba(255, 255, 255, 0.7);
+}
+.cal-day {
+    color: rgba(255, 255, 255, 0.9);
+}
+.cal-day:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.cal-day.today {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+.cal-day.selected {
+    background: #ffffff;
+    color: #1e3d59;
+    font-weight: 700;
+}
+.cal-day.selected .cal-dot {
+    background: #1e3d59;
+}
+.cal-dot {
+    background: #93c5fd;
+}
+.cal-day.user-activity .cal-dot {
+    background: #ffffff;
+}
+.cal-footer {
+    margin-top: 8px;
+}
+.cal-btn-today {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    padding: 4px 10px;
+    font-size: 11px;
+}
+.cal-btn-today:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
