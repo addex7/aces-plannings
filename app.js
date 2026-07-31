@@ -32,6 +32,18 @@ document.addEventListener('DOMContentLoaded', () => {
     initGestionnaireVolsInitiation();
     initGestionCreneauxVI();
     initCarnetRoute();
+    initSidebarToggle();
     chargerDonneesPlanning();
     chargerPresencesClub();
 });
+
+function initSidebarToggle() {
+    const toggle = document.getElementById('sidebar-toggle');
+    const layout = document.querySelector('.app-layout');
+    if (!toggle || !layout) return;
+    toggle.addEventListener('click', () => {
+        const collapsed = layout.classList.toggle('sidebar-collapsed');
+        toggle.textContent = collapsed ? '❯' : '❮';
+        toggle.title = collapsed ? 'Afficher le menu' : 'Masquer le menu';
+    });
+}
