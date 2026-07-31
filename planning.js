@@ -110,7 +110,7 @@ async function mettreAJourStatutCreneauxConflit(dateJour, avionId) {
         const urlCreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateJour}'&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
         const resCreneaux = await fetch(urlCreneaux, { headers });
         const dataCreneaux = await resCreneaux.json();
-        const urlResa = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateJour}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateJour}', FIND('${avionId}', ARRAYJOIN({Machine},',')))`)}&pageSize=100`;
+        const urlResa = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateJour}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateJour}', FIND('${immat}', ARRAYJOIN({Machine},',')))`)}&pageSize=100`;
         const resResa = await fetch(urlResa, { headers });
         const dataResa = await resResa.json();
         const reservations = dataResa.records || [];
@@ -1529,7 +1529,10 @@ function initGestionnaireModale() {
                         modal.style.display = 'none';
                         formReservation.reset();
                         idReservationEnEdition = null;
-                        chargerDonneesPlanning(true);
+                        const dateJour = document.getElementById('form-debut').value.split('T')[0];
+                        await chargerDonneesPlanning(true);
+                        await mettreAJourStatutCreneauxConflit(dateJour, machineId);
+                        await chargerVolsInitiation();
                         const viewAeronefs = document.getElementById('view-aeronefs');
                         if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                             chargerSuiviAeronef();
@@ -1575,7 +1578,10 @@ function initGestionnaireModale() {
                     modal.style.display = 'none';
                     formReservation.reset();
                     idReservationEnEdition = null;
-                    chargerDonneesPlanning(true);
+                    const dateJour = document.getElementById('form-debut').value.split('T')[0];
+                    await chargerDonneesPlanning(true);
+                    await mettreAJourStatutCreneauxConflit(dateJour, machineId);
+                    await chargerVolsInitiation();
                     const viewAeronefs = document.getElementById('view-aeronefs');
                     if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                         chargerSuiviAeronef();
@@ -1589,6 +1595,10 @@ function initGestionnaireModale() {
     if (btnDelete) {
         btnDelete.addEventListener('click', async () => {
             if (!idReservationEnEdition) return;
+            const cache = Array.isArray(listeReservationsCache) ? listeReservationsCache : ((listeReservationsCache && listeReservationsCache.records) || []);
+            const resa = cache.find(r => r.id === idReservationEnEdition);
+            const resaMachine = (resa && resa.fields && resa.fields['Machine'] || [])[0];
+            const resaDate = resa && resa.fields && resa.fields['Date de début'] ? formaterDateISO(new Date(resa.fields['Date de début'])) : null;
             if (!confirm("Es-tu sûr de vouloir supprimer cette réservation ?")) return;
             try {
                 const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?records[]=${idReservationEnEdition}`, {
@@ -1599,7 +1609,11 @@ function initGestionnaireModale() {
                     modal.style.display = 'none';
                     formReservation.reset();
                     idReservationEnEdition = null;
-                    chargerDonneesPlanning(true);
+                    await chargerDonneesPlanning(true);
+                    if (resaDate && resaMachine) {
+                        await mettreAJourStatutCreneauxConflit(resaDate, resaMachine);
+                        await chargerVolsInitiation();
+                    }
                     const viewAeronefs = document.getElementById('view-aeronefs');
                     if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                         chargerSuiviAeronef();
