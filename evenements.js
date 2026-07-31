@@ -15,6 +15,20 @@ const FIELDS = {
     AJOUTE_PAR: 'Ajouté par'
 };
 
+function parseInscrits(text) {
+    if (!text) return [];
+    return text.split('\n').map(line => {
+        const parts = line.split('|');
+        const nom = parts[0].trim();
+        const commentaire = parts.slice(1).join('|').trim();
+        return { nom, commentaire };
+    }).filter(i => i.nom);
+}
+
+function formatInscrits(list) {
+    return list.map(i => `${i.nom}|${i.commentaire || ''}`).join('\n');
+}
+
 function initEvenements() {
     const btn = document.getElementById('btn-creer-evenement');
     const overlay = document.getElementById('modale-evenement');
@@ -75,7 +89,7 @@ async function enregistrerEvenement(e) {
                 [FIELDS.HEURE_DEBUT]: heureDebut,
                 [FIELDS.DATE_FIN]: dateFin,
                 [FIELDS.HEURE_FIN]: heureFin,
-                [FIELDS.INSCRITS]: nom,
+                [FIELDS.INSCRITS]: nom + '|',
                 [FIELDS.AJOUTE_PAR]: nom
             }
         }]
@@ -143,18 +157,26 @@ function renderEvenement(record) {
     const fin = formatDateEvenement(f[FIELDS.DATE_FIN]);
     const hDebut = escapeHtml(f[FIELDS.HEURE_DEBUT] || '');
     const hFin = escapeHtml(f[FIELDS.HEURE_FIN] || '');
-    const inscrits = (f[FIELDS.INSCRITS] || '').split('\n').filter(n => n.trim());
+    const inscrits = parseInscrits(f[FIELDS.INSCRITS] || '');
     const dateTexte = debut === fin ? debut : `${debut} › ${fin}`;
     const horaireTexte = `${hDebut} - ${hFin}`;
     const createur = f[FIELDS.AJOUTE_PAR] || '';
     const nomConnecte = nomPiloteCourant() || '';
-    const estInscrit = inscrits.some(n => n.trim() === nomConnecte);
+    const estInscrit = inscrits.some(i => i.nom === nomConnecte);
 
-    const listeInscrits = inscrits.map(n => {
-        const nom = escapeHtml(n.trim());
-        const removable = nom === nomConnecte || createur === nomConnecte || currentUser && currentUser.roles && currentUser.roles.includes('Super admin');
+    const listeInscrits = inscrits.map(i => {
+        const nom = escapeHtml(i.nom);
+        const commentaire = escapeHtml(i.commentaire || '');
+        const removable = i.nom === nomConnecte || createur === nomConnecte || (currentUser && currentUser.roles && currentUser.roles.includes('Super admin'));
         const btnSup = removable ? `<button class="btn-remove-inscrit" onclick="desinscrireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}')" title="Supprimer">×</button>` : '';
-        return `<div class="inscrit-ligne">- ${nom} ${btnSup}</div>`;
+        const btnComment = `<button class="btn-comment" onclick="modifierCommentaireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}', '${commentaire.replace(/'/g, "\\'")}')" title="Ajouter/Modifier un commentaire">💬</button>`;
+        const commentText = i.commentaire ? `<span class="comment-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${commentaire}</span>` : '';
+        return `<div class="inscrit-ligne" style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow:hidden;">
+            <span style="white-space:nowrap;">- ${nom}</span>
+            ${btnComment}
+            ${commentText}
+            ${btnSup}
+        </div>`;
     }).join('');
 
     const btnInscription = estInscrit
@@ -187,14 +209,14 @@ async function sinscrireEvenement(recordId) {
         const record = await getRes.json();
         if (!getRes.ok) throw new Error(record.error ? record.error.message : 'Erreur Airtable');
 
-        const inscrits = (record.fields[FIELDS.INSCRITS] || '').split('\n').map(n => n.trim()).filter(n => n);
-        if (inscrits.includes(nom)) { alert('Tu es déjà inscrit.'); return; }
-        inscrits.push(nom);
+        const inscrits = parseInscrits(record.fields[FIELDS.INSCRITS] || '');
+        if (inscrits.some(i => i.nom === nom)) { alert('Tu es déjà inscrit.'); return; }
+        inscrits.push({ nom, commentaire: '' });
 
         const patchRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
             method: 'PATCH',
             headers: headers,
-            body: JSON.stringify({ records: [{ id: recordId, fields: { [FIELDS.INSCRITS]: inscrits.join('\n') } }] })
+            body: JSON.stringify({ records: [{ id: recordId, fields: { [FIELDS.INSCRITS]: formatInscrits(inscrits) } }] })
         });
         if (!patchRes.ok) throw new Error(await patchRes.text());
         chargerEvenementsJour();
@@ -212,13 +234,13 @@ async function desinscrireEvenement(recordId, nom) {
         const record = await getRes.json();
         if (!getRes.ok) throw new Error(record.error ? record.error.message : 'Erreur Airtable');
 
-        let inscrits = (record.fields[FIELDS.INSCRITS] || '').split('\n').map(n => n.trim()).filter(n => n);
-        inscrits = inscrits.filter(n => n !== nom);
+        let inscrits = parseInscrits(record.fields[FIELDS.INSCRITS] || '');
+        inscrits = inscrits.filter(i => i.nom !== nom);
 
         const patchRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
             method: 'PATCH',
             headers: headers,
-            body: JSON.stringify({ records: [{ id: recordId, fields: { [FIELDS.INSCRITS]: inscrits.join('\n') } }] })
+            body: JSON.stringify({ records: [{ id: recordId, fields: { [FIELDS.INSCRITS]: formatInscrits(inscrits) } }] })
         });
         if (!patchRes.ok) throw new Error(await patchRes.text());
         chargerEvenementsJour();
@@ -226,6 +248,32 @@ async function desinscrireEvenement(recordId, nom) {
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la désinscription.');
+    }
+}
+
+async function modifierCommentaireEvenement(recordId, nom, commentaireActuel) {
+    const nouveauCommentaire = prompt("Commentaire :", commentaireActuel || "");
+    if (nouveauCommentaire === null) return;
+    try {
+        const getRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
+        const record = await getRes.json();
+        if (!getRes.ok) throw new Error(record.error ? record.error.message : 'Erreur Airtable');
+
+        const inscrits = parseInscrits(record.fields[FIELDS.INSCRITS] || '');
+        const inscrit = inscrits.find(i => i.nom === nom);
+        if (!inscrit) return;
+        inscrit.commentaire = nouveauCommentaire.trim();
+
+        const patchRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
+            method: 'PATCH',
+            headers: headers,
+            body: JSON.stringify({ records: [{ id: recordId, fields: { [FIELDS.INSCRITS]: formatInscrits(inscrits) } }] })
+        });
+        if (!patchRes.ok) throw new Error(await patchRes.text());
+        chargerEvenementsJour();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la sauvegarde du commentaire.');
     }
 }
 
