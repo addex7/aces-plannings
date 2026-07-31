@@ -6,7 +6,7 @@
 let afficherVIPPlaneur = false;
 let idVIEPlaneurEnEdition = null;
 let listeVolsInitiationCache = [];
-let filtreInitiationActif = 'dispos';
+let filtreInitiationActif = 'apourvoir';
 
 function parseTempsDeVol(tempsStr) {
     if (!tempsStr) return NaN;
@@ -397,7 +397,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         const urlVIPlaneur = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?filterByFormula=DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')='${debutJour}'`;
         const resVIPlaneur = await fetch(urlVIPlaneur, { headers });
         const dataVIPlaneur = await resVIPlaneur.json();
-        const volsVIP = (dataVIPlaneur.records || []).filter(vol => {
+        let volsVIP = (dataVIPlaneur.records || []).filter(vol => {
             if (!vol.fields) return false;
             const debutRaw = vol.fields['Date de début'];
             if (!debutRaw) return false;
@@ -412,6 +412,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         const creneauxVIP = (dataVICreneaux.records || []).map(vol => {
             if (!vol.fields) return null;
             const f = vol.fields;
+            const statut = f['Statut'] || 'Disponible';
+            if (statut === 'Annulé') return null;
             const dateRaw = f['Date'];
             if (!dateRaw) return null;
             const dateVol = new Date(dateRaw + 'T00:00:00');
@@ -419,7 +421,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                 dateVol.getMonth() !== dateAffichee.getMonth() ||
                 dateVol.getDate() !== dateAffichee.getDate()) return null;
             const passager = f['Prénom'] && f['Nom'] ? `${f['Prénom']} ${f['Nom']}`.trim() : '';
-            const pilote = f['Statut'] === 'Réservé' ? 'Réservé' : '';
+            const pilote = (f['Pilote'] || '').toString().trim();
             const nom = passager || 'DISPONIBLE';
             return {
                 id: vol.id,
@@ -435,6 +437,10 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             };
         }).filter(Boolean);
         volsVIP.push(...creneauxVIP);
+        volsVIP = volsVIP.filter(vol => {
+            const nom = (vol.fields['Nom'] || '').toString().trim();
+            return nom && nom !== 'DISPONIBLE';
+        });
         const urlCarnetPilotes = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route Pilotes')}`;
         const resCarnetPilotes = await fetch(urlCarnetPilotes, { headers });
         const dataCarnetPilotes = await resCarnetPilotes.json();
@@ -1520,18 +1526,33 @@ function normaliserVolsInitiation() {
         const source = record.source;
         const debut = new Date(record.debut);
         const fin = new Date(record.fin);
+        if (isNaN(debut) || isNaN(fin)) return;
         const heureDebut = `${String(debut.getHours()).padStart(2, '0')}:${String(debut.getMinutes()).padStart(2, '0')}`;
         const heureFin = `${String(fin.getHours()).padStart(2, '0')}:${String(fin.getMinutes()).padStart(2, '0')}`;
         const pilote = (record.pilote || '').toString().trim();
-        const isDisponible = record.statut ? record.statut === 'Disponible' : !pilote;
+        const statut = record.statut;
+        let categorie;
+        if (source === 'creneau') {
+            if (statut === 'Disponible') {
+                categorie = 'creneaux';
+            } else if (statut === 'Réservé') {
+                categorie = pilote ? 'pris' : 'apourvoir';
+            } else {
+                return; // Annulé
+            }
+        } else {
+            categorie = pilote ? 'pris' : 'apourvoir';
+        }
         const dateStr = debut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+        let classe = categorie;
+        if (categorie === 'creneaux') classe = 'disponible';
         vols.push({
             ...record,
             heureDebut,
             heureFin,
             dateStr,
-            isDisponible,
-            classe: isDisponible ? 'disponible' : 'pris'
+            categorie,
+            classe
         });
     });
     return vols.sort((a, b) => new Date(a.debut) - new Date(b.debut));
@@ -1540,19 +1561,38 @@ function normaliserVolsInitiation() {
 function afficherVolsInitiation() {
     const container = document.getElementById('initiation-list');
     if (!container) return;
-    const vols = normaliserVolsInitiation().filter(v => filtreInitiationActif === 'dispos' ? v.isDisponible : !v.isDisponible);
+    const vols = normaliserVolsInitiation().filter(v => v.categorie === filtreInitiationActif);
     if (vols.length === 0) {
-        const message = filtreInitiationActif === 'dispos' ? 'Aucun vol d\'initiation à pourvoir.' : 'Aucun vol d\'initiation pris.';
+        const messages = {
+            apourvoir: 'Aucun vol d\'initiation à pourvoir.',
+            pris: 'Aucun vol d\'initiation déjà pris.',
+            creneaux: 'Aucun créneau disponible.'
+        };
+        const message = messages[filtreInitiationActif] || 'Aucun vol.';
         container.innerHTML = `<div class="initiation-empty">${message}</div>`;
         return;
     }
     container.innerHTML = '';
     vols.forEach(vol => {
-        const piloteText = vol.isDisponible ? '👤 À pourvoir' : (vol.source === 'creneau' ? '👤 Réservé' : `👤 Pilote : ${formaterNomPilote(vol.pilote)}`);
-        const machineText = vol.source === 'moteur' && vol.machineName ? `🛩️ ${vol.machineName}<br>` : '';
+        const isAdminCreneaux = vol.categorie === 'creneaux';
+        const isAPourvoir = vol.categorie === 'apourvoir';
+        const isPris = vol.categorie === 'pris';
         const typeText = vol.type || (vol.source === 'planeur' ? 'Planeur' : (vol.source === 'moteur' ? 'Moteur' : 'VI'));
-        const boutonReserver = vol.isDisponible && vol.source !== 'creneau' ? `<button class="btn-reserver-initiation" data-id="${vol.id}" data-source="${vol.source}">Réserver</button>` : '';
-        const nomClient = vol.passager || (vol.isDisponible ? 'Créneau disponible' : 'Passager non renseigné');
+        let piloteText;
+        let nomClient;
+        if (isAdminCreneaux) {
+            piloteText = '🕓 Créneau disponible';
+            nomClient = `Créneau ${typeText}`;
+        } else if (isAPourvoir) {
+            piloteText = '👤 À pourvoir';
+            nomClient = vol.passager || 'Passager non renseigné';
+        } else {
+            piloteText = `👤 Pilote : ${formaterNomPilote(vol.pilote)}`;
+            nomClient = vol.passager || 'Passager non renseigné';
+        }
+        const machineText = vol.source === 'moteur' && vol.machineName ? `🛩️ ${vol.machineName}<br>` : '';
+        const peutSInscrire = isAPourvoir && (vol.source === 'creneau' ? hasRolePiloteVI() : !!nomPiloteCourant());
+        const boutonSInscrire = peutSInscrire ? `<button class="btn-reserver-initiation" data-id="${vol.id}" data-source="${vol.source}">S'inscrire</button>` : '';
         const card = document.createElement('div');
         card.className = `initiation-card ${vol.classe}`;
         card.innerHTML = `
@@ -1564,7 +1604,7 @@ function afficherVolsInitiation() {
             </div>
             <div class="initiation-meta">
                 <strong>${piloteText}</strong>
-                ${boutonReserver}
+                ${boutonSInscrire}
             </div>
         `;
         container.appendChild(card);
@@ -1645,6 +1685,7 @@ async function chargerVolsInitiation() {
                 dateVol.getMonth() !== dateAffichee.getMonth() ||
                 dateVol.getDate() !== dateAffichee.getDate()) return;
             const statut = vol.fields['Statut'] || 'Disponible';
+            if (statut === 'Annulé') return;
             const passager = statut === 'Réservé' ? `${vol.fields['Prénom'] || ''} ${vol.fields['Nom'] || ''}`.trim() : null;
             listeVolsInitiationCache.push({
                 id: vol.id,
@@ -1652,7 +1693,7 @@ async function chargerVolsInitiation() {
                 type: vol.fields['Type'] || 'VI',
                 statut: statut,
                 passager: passager,
-                pilote: statut === 'Réservé' ? 'Réservé' : null,
+                pilote: (vol.fields['Pilote'] || '').toString().trim() || null,
                 telephone: vol.fields['Téléphone'] || '',
                 debut: dateRaw + 'T' + (vol.fields['Heure début'] || '00:00') + ':00',
                 fin: dateRaw + 'T' + (vol.fields['Heure fin'] || '00:00') + ':00',
@@ -1670,17 +1711,21 @@ async function chargerVolsInitiation() {
 function initGestionnaireVolsInitiation() {
     const btnDispos = document.getElementById('btn-initiation-dispos');
     const btnPris = document.getElementById('btn-initiation-pris');
+    const btnCreneaux = document.getElementById('btn-initiation-creneaux');
     const list = document.getElementById('initiation-list');
 
     function setFiltre(valeur) {
         filtreInitiationActif = valeur;
-        if (btnDispos) btnDispos.classList.toggle('active', valeur === 'dispos');
-        if (btnPris) btnPris.classList.toggle('active', valeur === 'pris');
+        document.querySelectorAll('.initiation-tab').forEach(b => b.classList.remove('active'));
+        const map = { apourvoir: 'btn-initiation-dispos', pris: 'btn-initiation-pris', creneaux: 'btn-initiation-creneaux' };
+        const activeBtn = document.getElementById(map[valeur] || '');
+        if (activeBtn) activeBtn.classList.add('active');
         afficherVolsInitiation();
     }
 
-    if (btnDispos) btnDispos.addEventListener('click', () => setFiltre('dispos'));
+    if (btnDispos) btnDispos.addEventListener('click', () => setFiltre('apourvoir'));
     if (btnPris) btnPris.addEventListener('click', () => setFiltre('pris'));
+    if (btnCreneaux) btnCreneaux.addEventListener('click', () => setFiltre('creneaux'));
 
     if (list) {
         list.addEventListener('click', (e) => {
@@ -1693,7 +1738,11 @@ function initGestionnaireVolsInitiation() {
 async function reserverVolInitiation(id, source) {
     const nomPilote = nomPiloteCourant();
     if (!nomPilote) { alert('Connecte-toi pour réserver ce vol.'); return; }
-    const tableName = source === 'planeur' ? 'VI Planeur' : 'Réservations';
+    if (source === 'creneau' && !hasRolePiloteVI()) {
+        alert('Seuls les pilotes VI peuvent s\'inscrire sur un créneau réservé.');
+        return;
+    }
+    const tableName = source === 'planeur' ? 'VI Planeur' : (source === 'creneau' ? 'VI Créneaux' : 'Réservations');
     try {
         const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
             method: 'PATCH',
@@ -1725,9 +1774,17 @@ function hasRoleGestionVI() {
     return roles.includes('Gestion VI') || roles.includes('Super admin');
 }
 
+function hasRolePiloteVI() {
+    if (!currentUser) return false;
+    const roles = currentUser.roles || [];
+    return roles.includes('Pilote VI') || roles.includes('Super admin') || roles.includes('Gestion VI');
+}
+
 function updateGestionVI() {
     const toolbar = document.getElementById('gestion-vi-toolbar');
     if (toolbar) toolbar.style.display = hasRoleGestionVI() ? 'block' : 'none';
+    const tabCreneaux = document.getElementById('btn-initiation-creneaux');
+    if (tabCreneaux) tabCreneaux.style.display = hasRoleGestionVI() ? 'inline-block' : 'none';
 }
 
 function initGestionCreneauxVI() {

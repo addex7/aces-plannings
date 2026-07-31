@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -174,13 +174,13 @@
                     <span id="current-date-initiation" class="date-display"></span>
                 </header>
 
-                <div id="gestion-vi-toolbar" style="display:none; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;">
-                    <h3 style="margin-top:0; color:#1e3d59;">Gérer les créneaux VI</h3>
+                <div id="gestion-vi-toolbar" style="display:none; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px;">
+                    <h3 style="margin-top:0; margin-bottom:8px; color:#1e3d59; font-size:16px;">Gérer les créneaux VI</h3>
                     <form id="form-creneaux-vi">
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:10px;">
                             <div class="form-group">
                                 <label for="gv-type">Type</label>
-                                <select id="gv-type" class="machine-selector" required>
+                                <select id="gv-type" style="width:100%" required>
                                     <option value="VIP">VIP</option>
                                     <option value="VIULM">VIULM</option>
                                     <option value="VIA">VIA</option>
@@ -216,6 +216,7 @@
                 <div class="initiation-tabs">
                     <button type="button" id="btn-initiation-dispos" class="initiation-tab active">À pourvoir</button>
                     <button type="button" id="btn-initiation-pris" class="initiation-tab">Déjà pris</button>
+                    <button type="button" id="btn-initiation-creneaux" class="initiation-tab" style="display:none;">Créneaux dispos</button>
                 </div>
 
                 <div id="initiation-list" class="initiation-list">
@@ -738,14 +739,14 @@
     </div>
 
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="app.js?v=3"></script>
-    <script src="utils.js?v=3"></script>
-    <script src="presences.js?v=3"></script>
-    <script src="planning.js?v=3"></script>
-    <script src="aeronefs.js?v=3"></script>
-    <script src="carnet.js?v=3"></script>
-    <script src="documents.js?v=3"></script>
+    <script src="app.js?v=4"></script>
+    <script src="utils.js?v=4"></script>
+    <script src="presences.js?v=4"></script>
+    <script src="planning.js?v=4"></script>
+    <script src="aeronefs.js?v=4"></script>
+    <script src="carnet.js?v=4"></script>
+    <script src="documents.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="membres.js?v=3"></script>
+    <script src="membres.js?v=4"></script>
 </body>
 </html>

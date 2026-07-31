@@ -774,6 +774,40 @@ body {
     background-color: #007f86;
 }
 
+/* --- GESTION CRÉNEAUX VI --- */
+#gestion-vi-toolbar {
+    padding: 10px;
+    margin-bottom: 10px;
+}
+#gestion-vi-toolbar h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 16px;
+    color: #1e3d59;
+}
+#gestion-vi-toolbar .form-group {
+    margin-bottom: 0;
+}
+#gestion-vi-toolbar .form-group input,
+#gestion-vi-toolbar .form-group select,
+#gestion-vi-toolbar .form-group textarea {
+    padding: 6px;
+    font-size: 13px;
+}
+#gv-type {
+    width: 100%;
+}
+
+/* --- ONGLET À POURVOIR --- */
+.initiation-card.apourvoir {
+    border-left: 5px solid #f97316;
+    background: #fff7ed;
+}
+.initiation-card.creneaux {
+    border-left: 5px solid #00adb5;
+    background: #f4fdfe;
+}
+
 /* --- CARNET DE ROUTE --- */
 .carnet-table-container {
     background: white;
