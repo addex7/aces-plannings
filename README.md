@@ -15,6 +15,7 @@ Application web pour la gestion des plannings, réservations, présences, membre
 ## Fichiers principaux
 
 - `index.html` : structure de l'application
+- `reserver-vi.html` : page publique de réservation des baptêmes de l'air
 - `app.js` : point d'entrée et navigation
 - `membres.js` : authentification et gestion des membres
 - `planning.js` : réservations et planning
@@ -40,12 +41,40 @@ Les tables utilisées comprennent notamment :
 - `Présences Planeur` / `Présences Club` : inscriptions aux présences
 - `Documents` : fiches documentaires
 - `Dossiers` : catégories de documents
+- `VI Créneaux` : créneaux de vols d'initiation (baptêmes de l'air)
 
 Les noms exacts de champs et de tables sont ajustables dans les constantes au début de chaque fichier `.js`.
+
+## Réservation de baptêmes de l'air
+
+La table `VI Créneaux` gère les créneaux de baptêmes de l'air.
+
+### Créneaux et réservations
+
+- Les bénévoles avec le rôle `Gestion VI` créent les créneaux dans l'onglet `Vol d'Initiation`.
+- La page publique `reserver-vi.html` permet aux détenteurs d'un bon cadeau de réserver sans compte.
+- L'email de confirmation est envoyé avec EmailJS (`template_zol8z2e`).
+- Un lien avec un token permet au client de modifier ou d'annuler sa réservation.
+
+### Tables / champs
+
+Table `VI Créneaux` :
+- `Date`, `Heure début`, `Heure fin`
+- `Type` (VIP, VIULM, VIA)
+- `Statut` (Disponible, Réservé, Annulé)
+- `Prénom`, `Nom`, `Email`, `Téléphone`
+- `Bon cadeau`, `Token`, `Date réservation`
+- `Rappel envoyé`, `Commentaire`
+
+### URL
+
+Page publique : https://addex7.github.io/aces-plannings/reserver-vi.html
 
 ## Rôles
 
 - `Super admin` : accès complet
+- `Gestion VI` : gestion des créneaux de vols d'initiation
+- `Pilote VI` : pilote de baptêmes de l'air
 - `Documentaliste` : accès à la base documentaire (créer, modifier, supprimer)
 
 ## Déploiement
