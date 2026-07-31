@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -519,6 +519,18 @@
                     <label for="form-vi-nom">Nom :</label>
                     <input type="text" id="form-vi-nom" placeholder="Ex: Jean Dupont" required>
                 </div>
+                <div class="form-group" id="group-vi-telephone" style="display:none;">
+                    <label for="form-vi-telephone">Téléphone :</label>
+                    <input type="tel" id="form-vi-telephone" placeholder="Ex: 06 12 34 56 78">
+                </div>
+                <div class="form-group" id="group-vi-statut" style="display:none;">
+                    <label for="form-vi-statut">Statut :</label>
+                    <select id="form-vi-statut">
+                        <option value="Disponible">Disponible</option>
+                        <option value="Réservé">Réservé</option>
+                        <option value="Annulé">Annulé</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label for="form-vi-debut">Date & Heure de début :</label>
                     <input type="datetime-local" id="form-vi-debut" required>
@@ -739,14 +751,14 @@
     </div>
 
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="app.js?v=6"></script>
-    <script src="utils.js?v=6"></script>
-    <script src="presences.js?v=6"></script>
-    <script src="planning.js?v=6"></script>
-    <script src="aeronefs.js?v=6"></script>
-    <script src="carnet.js?v=6"></script>
-    <script src="documents.js?v=6"></script>
+    <script src="app.js?v=7"></script>
+    <script src="utils.js?v=7"></script>
+    <script src="presences.js?v=7"></script>
+    <script src="planning.js?v=7"></script>
+    <script src="aeronefs.js?v=7"></script>
+    <script src="carnet.js?v=7"></script>
+    <script src="documents.js?v=7"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="membres.js?v=6"></script>
+    <script src="membres.js?v=7"></script>
 </body>
 </html>

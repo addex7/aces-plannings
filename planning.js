@@ -4,7 +4,8 @@
 
 // Les variables globales sont définies dans app.js
 let afficherVIPPlaneur = false;
-let idVIEPlaneurEnEdition = null;
+let idVIModale = null;
+let tableVIModale = null;
 let listeVolsInitiationCache = [];
 let filtreInitiationActif = 'apourvoir';
 
@@ -261,15 +262,45 @@ function ouvrirModaleEditionVIPlaneur(vol) {
     const modal = document.getElementById('vi-planeur-modal');
     const modalTitle = modal ? modal.querySelector('h3') : null;
     const btnDeleteVI = document.getElementById('btn-delete-vi-planeur');
+    const groupTelephone = document.getElementById('group-vi-telephone');
+    const groupStatut = document.getElementById('group-vi-statut');
     if (modalTitle) modalTitle.textContent = "Modifier VI Planeur";
     if (btnDeleteVI) btnDeleteVI.style.display = 'block';
+    if (groupTelephone) groupTelephone.style.display = 'none';
+    if (groupStatut) groupStatut.style.display = 'none';
     if (!modal) return;
-    idVIEPlaneurEnEdition = vol.id;
+    tableVIModale = 'VI Planeur';
+    idVIModale = vol.id;
     document.getElementById('form-vi-nom').value = (vol.fields['Nom'] || '').toString().trim();
+    document.getElementById('form-vi-telephone').value = (vol.fields['Téléphone'] || '').toString().trim();
+    document.getElementById('form-vi-statut').value = 'Réservé';
     document.getElementById('form-vi-debut').value = formaterPourInput(new Date(vol.fields['Date de début']));
     document.getElementById('form-vi-fin').value = formaterPourInput(new Date(vol.fields['Date de fin']));
     document.getElementById('form-vi-pilote').value = (vol.fields['Pilote'] || '').toString().trim();
     document.getElementById('form-vi-commentaire').value = (vol.fields['Commentaire'] || '').toString().trim();
+    modal.style.display = 'flex';
+}
+
+function ouvrirModaleEditionVICreneau(vol) {
+    const modal = document.getElementById('vi-planeur-modal');
+    const modalTitle = modal ? modal.querySelector('h3') : null;
+    const btnDeleteVI = document.getElementById('btn-delete-vi-planeur');
+    const groupTelephone = document.getElementById('group-vi-telephone');
+    const groupStatut = document.getElementById('group-vi-statut');
+    if (modalTitle) modalTitle.textContent = "Modifier Créneau VI";
+    if (btnDeleteVI) btnDeleteVI.style.display = 'none';
+    if (groupTelephone) groupTelephone.style.display = 'block';
+    if (groupStatut) groupStatut.style.display = 'block';
+    if (!modal) return;
+    tableVIModale = 'VI Créneaux';
+    idVIModale = vol.id;
+    document.getElementById('form-vi-nom').value = (vol.passager || '').toString().trim();
+    document.getElementById('form-vi-telephone').value = (vol.telephone || '').toString().trim();
+    document.getElementById('form-vi-statut').value = (vol.statut || 'Disponible');
+    document.getElementById('form-vi-debut').value = formaterPourInput(new Date(vol.debut));
+    document.getElementById('form-vi-fin').value = formaterPourInput(new Date(vol.fin));
+    document.getElementById('form-vi-pilote').value = (vol.pilote || '').toString().trim();
+    document.getElementById('form-vi-commentaire').value = (vol.commentaire || '').toString().trim();
     modal.style.display = 'flex';
 }
 
@@ -1087,17 +1118,18 @@ function initGestionnaireModaleVIPlaneur() {
     window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
     if (btnDeleteVI) {
         btnDeleteVI.addEventListener('click', async () => {
-            if (!idVIEPlaneurEnEdition) return;
+            if (!idVIModale || tableVIModale !== 'VI Planeur') return;
             if (!confirm("Es-tu sûr de vouloir supprimer ce VI Planeur ?")) return;
             try {
-                const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?records[]=${idVIEPlaneurEnEdition}`, {
+                const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?records[]=${idVIModale}`, {
                     method: 'DELETE',
                     headers: headers
                 });
                 if (response.ok) {
                     modal.style.display = 'none';
                     form.reset();
-                    idVIEPlaneurEnEdition = null;
+                    idVIModale = null;
+                    tableVIModale = null;
                     afficherVIPPlaneur = false;
                     mettreAJourBoutonVIPPlaneur();
                     chargerDonneesPlanning(true);
@@ -1110,20 +1142,38 @@ function initGestionnaireModaleVIPlaneur() {
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const nom = document.getElementById('form-vi-nom').value.trim();
-            const dateDebut = new Date(document.getElementById('form-vi-debut').value).toISOString();
-            const dateFin = new Date(document.getElementById('form-vi-fin').value).toISOString();
+            const table = tableVIModale || 'VI Planeur';
+            const nomComplet = document.getElementById('form-vi-nom').value.trim();
+            if (!nomComplet) return;
+            const debutInput = document.getElementById('form-vi-debut').value;
+            const finInput = document.getElementById('form-vi-fin').value;
+            const dateDebut = new Date(debutInput).toISOString();
+            const dateFin = new Date(finInput).toISOString();
             const pilote = document.getElementById('form-vi-pilote').value.trim();
             const commentaire = document.getElementById('form-vi-commentaire').value.trim();
-            if (!nom) return;
-            const recordData = { fields: { "Nom": nom, "Date de début": dateDebut, "Date de fin": dateFin, "Pilote": pilote, "Commentaire": commentaire } };
+            const debutDate = new Date(debutInput);
+            const finDate = new Date(finInput);
+            const date = debutInput ? debutInput.split('T')[0] : null;
+            const heureDebut = `${String(debutDate.getHours()).padStart(2, '0')}:${String(debutDate.getMinutes()).padStart(2, '0')}`;
+            const heureFin = `${String(finDate.getHours()).padStart(2, '0')}:${String(finDate.getMinutes()).padStart(2, '0')}`;
+            let recordData;
+            if (table === 'VI Créneaux') {
+                const parts = nomComplet.split(/\s+/);
+                const prenom = parts.shift() || '';
+                const nom = parts.join(' ') || '';
+                const telephone = document.getElementById('form-vi-telephone').value.trim();
+                const statut = document.getElementById('form-vi-statut').value;
+                recordData = { fields: { 'Prénom': prenom, 'Nom': nom, 'Téléphone': telephone, 'Pilote': pilote, 'Commentaire': commentaire, 'Date': date, 'Heure début': heureDebut, 'Heure fin': heureFin, 'Statut': statut } };
+            } else {
+                recordData = { fields: { "Nom": nomComplet, "Date de début": dateDebut, "Date de fin": dateFin, "Pilote": pilote, "Commentaire": commentaire } };
+            }
             let methode = 'POST';
-            if (idVIEPlaneurEnEdition) {
-                recordData.id = idVIEPlaneurEnEdition;
+            if (idVIModale) {
+                recordData.id = idVIModale;
                 methode = 'PATCH';
             }
             try {
-                const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}`, {
+                const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
                     method: methode,
                     headers: headers,
                     body: JSON.stringify({ records: [recordData] })
@@ -1131,10 +1181,12 @@ function initGestionnaireModaleVIPlaneur() {
                 if (response.ok) {
                     modal.style.display = 'none';
                     form.reset();
-                    idVIEPlaneurEnEdition = null;
+                    idVIModale = null;
+                    tableVIModale = null;
                     afficherVIPPlaneur = true;
                     mettreAJourBoutonVIPPlaneur();
                     chargerDonneesPlanning(true);
+                    if (typeof chargerVolsInitiation === 'function') chargerVolsInitiation();
                 }
             } catch (error) {
                 console.error(error);
@@ -1644,6 +1696,14 @@ function afficherVolsInitiation() {
                 ${boutonSInscrire}
             </div>
         `;
+        if (hasRoleGestionVI()) {
+            card.style.cursor = 'pointer';
+            card.title = 'Cliquer pour modifier';
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-reserver-initiation')) return;
+                editerVolInitiation(vol);
+            });
+        }
         container.appendChild(card);
     });
 }
@@ -1698,6 +1758,7 @@ async function chargerVolsInitiation() {
                 debut: debutRaw,
                 fin: vol.fields['Date de fin'],
                 commentaire: vol.fields['Commentaires VI'],
+                machine: machineIds[0],
                 machineName: machineName
             });
         });
@@ -1751,8 +1812,47 @@ function initGestionnaireVolsInitiation() {
     if (list) {
         list.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-reserver-initiation');
-            if (btn) reserverVolInitiation(btn.dataset.id, btn.dataset.source);
+            if (btn) {
+                e.stopPropagation();
+                reserverVolInitiation(btn.dataset.id, btn.dataset.source);
+            }
         });
+    }
+}
+
+function editerVolInitiation(vol) {
+    if (!hasRoleGestionVI()) return;
+    if (vol.source === 'planeur') {
+        const volEdit = {
+            id: vol.id,
+            fields: {
+                'Nom': vol.passager,
+                'Pilote': vol.pilote,
+                'Téléphone': vol.telephone,
+                'Date de début': vol.debut,
+                'Date de fin': vol.fin,
+                'Commentaire': vol.commentaire
+            }
+        };
+        ouvrirModaleEditionVIPlaneur(volEdit);
+    } else if (vol.source === 'moteur') {
+        const volEdit = {
+            id: vol.id,
+            fields: {
+                'Type de vol': ['VI Moteur'],
+                'Machine': [vol.machine],
+                'Pilote': vol.pilote,
+                'Passager': vol.passager,
+                'Téléphone': vol.telephone,
+                'Date de début': vol.debut,
+                'Date de fin': vol.fin,
+                'Commentaires VI': vol.commentaire,
+                'Temps estimé': 1
+            }
+        };
+        ouvrirModaleEdition(volEdit, vol.machine);
+    } else if (vol.source === 'creneau') {
+        ouvrirModaleEditionVICreneau(vol);
     }
 }
 
