@@ -737,6 +737,12 @@ body {
     border-left: 5px solid #3f51b5;
     background: #f4f5ff;
 }
+.initiation-card.bloque {
+    border-left: 5px solid #cbd5e1;
+    background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 10px, #e2e8f0 10px, #e2e8f0 20px);
+    color: #64748b;
+    opacity: 0.9;
+}
 .initiation-info h4 {
     margin: 0 0 4px 0;
     font-size: 15px;

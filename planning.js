@@ -32,6 +32,13 @@ function escapeHtml(text) {
         .replace(/'/g, '&#039;');
 }
 
+function formaterDateISO(date) {
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 // --- FONCTION POUR METTRE À JOUR L'HORAMÈTRE ---
 async function mettreAJourHorametreAeronef(avionId, heuresAjoutees) {
     try {
@@ -91,6 +98,54 @@ async function ajouterAuCarnetDeRoute(avionId, piloteId, heuresVol) {
         }
     } catch (error) {
         console.error("Erreur dans ajouterAuCarnetDeRoute:", error);
+    }
+}
+
+async function mettreAJourStatutCreneauxConflit(dateJour, avionId) {
+    const avion = (listeAvionsCache || []).find(a => a.id === avionId);
+    const immat = avion ? (avion.fields['Immatriculation'] || '').toString().trim().toUpperCase() : '';
+    const typeAttendu = immat === 'F-JVIO' ? 'VIULM' : (immat === 'F-GASB' ? 'VIA' : null);
+    if (!typeAttendu) return;
+    try {
+        const urlCreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateJour}'&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
+        const resCreneaux = await fetch(urlCreneaux, { headers });
+        const dataCreneaux = await resCreneaux.json();
+        const urlResa = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateJour}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateJour}', FIND('${avionId}', ARRAYJOIN({Machine},',')))`)}&pageSize=100`;
+        const resResa = await fetch(urlResa, { headers });
+        const dataResa = await resResa.json();
+        const reservations = dataResa.records || [];
+        const updates = [];
+        (dataCreneaux.records || []).forEach(r => {
+            const f = r.fields || {};
+            if ((f['Type'] || '') !== typeAttendu) return;
+            const heureDebut = f['Heure début'] || '00:00';
+            const heureFin = f['Heure fin'] || '00:00';
+            const creneauDebut = new Date(`${f['Date']}T${heureDebut}`);
+            const creneauFin = new Date(`${f['Date']}T${heureFin}`);
+            const conflit = reservations.some(res => {
+                const rf = res.fields || {};
+                const resDebut = new Date(rf['Date de début']);
+                const resFin = new Date(rf['Date de fin']);
+                return resDebut < creneauFin && resFin > creneauDebut;
+            });
+            const statut = f['Statut'] || 'Disponible';
+            if (conflit && statut === 'Disponible') {
+                updates.push({ id: r.id, fields: { 'Statut': 'Bloqué' } });
+            } else if (!conflit && statut === 'Bloqué') {
+                updates.push({ id: r.id, fields: { 'Statut': 'Disponible' } });
+            }
+        });
+        if (updates.length) {
+            for (let i = 0; i < updates.length; i += 10) {
+                await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}`, {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({ records: updates.slice(i, i + 10) })
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Erreur mise à jour créneaux conflit:', error);
     }
 }
 
@@ -221,7 +276,10 @@ async function sauvegarderReservation() {
         }
 
         // Rafraîchir les données
-        chargerDonneesPlanning();
+        const dateJour = formaterDateISO(heureDebut);
+        await chargerDonneesPlanning();
+        await mettreAJourStatutCreneauxConflit(dateJour, avionId);
+        await chargerVolsInitiation();
 
         // Fermer la modale
         const modal = document.getElementById('modal-reservation');
@@ -240,6 +298,10 @@ async function sauvegarderReservation() {
 // --- FONCTION POUR SUPPRIMER UNE RÉSERVATION ---
 async function supprimerReservation() {
     if (!idReservationEnEdition) return;
+    const cache = Array.isArray(listeReservationsCache) ? listeReservationsCache : (listeReservationsCache.records || []);
+    const resa = cache.find(r => r.id === idReservationEnEdition);
+    const resaMachine = (resa && resa.fields && resa.fields['Machine'] || [])[0];
+    const resaDate = resa && resa.fields && resa.fields['Date de début'] ? formaterDateISO(new Date(resa.fields['Date de début'])) : null;
     if (!confirm("Es-tu sûr de vouloir supprimer cette réservation ?")) return;
 
     try {
@@ -252,7 +314,11 @@ async function supprimerReservation() {
             // TODO: Annuler la mise à jour de l'horamètre
 
             // Rafraîchir les données
-            chargerDonneesPlanning();
+            await chargerDonneesPlanning();
+            if (resaDate && resaMachine) {
+                await mettreAJourStatutCreneauxConflit(resaDate, resaMachine);
+                await chargerVolsInitiation();
+            }
 
             // Fermer la modale
             const modal = document.getElementById('modal-reservation');
@@ -1706,7 +1772,7 @@ function normaliserVolsInitiation() {
         const statut = record.statut;
         let categorie;
         if (source === 'creneau') {
-            if (statut === 'Disponible') {
+            if (statut === 'Disponible' || statut === 'Bloqué') {
                 categorie = 'creneaux';
             } else if (statut === 'Réservé') {
                 categorie = pilote ? 'pris' : 'apourvoir';
@@ -1718,7 +1784,7 @@ function normaliserVolsInitiation() {
         }
         const dateStr = debut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
         let classe = categorie;
-        if (categorie === 'creneaux') classe = 'disponible';
+        if (categorie === 'creneaux') classe = (statut === 'Bloqué' ? 'bloque' : 'disponible');
         vols.push({
             ...record,
             heureDebut,
@@ -1753,7 +1819,10 @@ function afficherVolsInitiation() {
         const typeText = vol.type || (vol.source === 'planeur' ? 'Planeur' : (vol.source === 'moteur' ? 'Moteur' : 'VI'));
         let piloteText;
         let nomClient;
-        if (isAdminCreneaux) {
+        if (vol.classe === 'bloque') {
+            piloteText = '🔒 Créneau bloqué';
+            nomClient = `Créneau ${typeText} — conflit machine`;
+        } else if (isAdminCreneaux) {
             piloteText = '🕓 Créneau disponible';
             nomClient = `Créneau ${typeText}`;
         } else if (isAPourvoir) {
@@ -1885,6 +1954,7 @@ function initGestionnaireVolsInitiation() {
     const btnPris = document.getElementById('btn-initiation-pris');
     const btnCreneaux = document.getElementById('btn-initiation-creneaux');
     const list = document.getElementById('initiation-list');
+    if (btnCreneaux && hasRoleGestionVI()) btnCreneaux.style.display = 'inline-block';
 
     function setFiltre(valeur) {
         filtreInitiationActif = valeur;
