@@ -133,6 +133,7 @@ const PUBLIC_URL = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
 let creneauxDisponibles = [];
 let currentToken = null;
 let currentRecord = null;
+let recordIdOrigine = null;
 
 function genererToken() {
     const arr = new Uint8Array(16);
@@ -305,7 +306,7 @@ async function onSubmitReservation(e) {
     if (submitBtn) submitBtn.disabled = true;
 
     try {
-        if (currentToken && currentRecord && currentRecord.id !== recordId) {
+        if (currentToken && recordIdOrigine && recordIdOrigine !== recordId) {
             await cancelByToken(currentToken, recordId);
         }
 
@@ -321,6 +322,7 @@ async function onSubmitReservation(e) {
 
         currentToken = token;
         currentRecord = record;
+        recordIdOrigine = record.id;
         await sendConfirmationEmail(record, token, { prenom, nom, email });
         showConfirmation(record, token, { prenom, nom, email });
     } catch (err) {
@@ -427,6 +429,7 @@ async function loadByToken(token) {
         }
         currentToken = token;
         currentRecord = record;
+        recordIdOrigine = record.id;
         showManageView(record);
     } catch (err) {
         console.error(err);
@@ -523,6 +526,7 @@ async function onManageCancel() {
 
 function onManageChanger() {
     clearMessage();
+    recordIdOrigine = currentRecord ? currentRecord.id : null;
     showSection('list-section');
     document.getElementById('client-prenom').value = document.getElementById('manage-prenom').value;
     document.getElementById('client-nom').value = document.getElementById('manage-nom').value;
