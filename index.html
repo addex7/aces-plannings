@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=21">
+    <link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 
@@ -160,30 +160,32 @@
                     </div>
                 </section>
 
-                <!-- Module Présence Club -->
-                <section class="glider-presence-section">
-                    <h3>Présence Club</h3>
-                    <div class="glider-presence-container">
-                        <!-- Carte Atelier Alain Bernage -->
-                        <div class="presence-card">
-                            <h4>Atelier Alain Bernage</h4>
-                            <ul id="list-atelier" class="presence-list"></ul>
-                            <button class="btn-inscription" onclick="sinscrireClub('Atelier Alain Bernage')">+ S'inscrire</button>
+                <div class="club-evenements-row">
+                    <!-- Module Présence Club -->
+                    <section class="glider-presence-section">
+                        <h3>Présence Club</h3>
+                        <div class="glider-presence-container">
+                            <!-- Carte Atelier Alain Bernage -->
+                            <div class="presence-card">
+                                <h4>Atelier Alain Bernage</h4>
+                                <ul id="list-atelier" class="presence-list"></ul>
+                                <button class="btn-inscription" onclick="sinscrireClub('Atelier Alain Bernage')">+ S'inscrire</button>
+                            </div>
+                            <!-- Carte Salle Ernest Meyer -->
+                            <div class="presence-card">
+                                <h4>Salle Ernest Meyer</h4>
+                                <ul id="list-salle" class="presence-list"></ul>
+                                <button class="btn-inscription" onclick="sinscrireClub('Salle Ernest Meyer')">+ S'inscrire</button>
+                            </div>
                         </div>
-                        <!-- Carte Salle Ernest Meyer -->
-                        <div class="presence-card">
-                            <h4>Salle Ernest Meyer</h4>
-                            <ul id="list-salle" class="presence-list"></ul>
-                            <button class="btn-inscription" onclick="sinscrireClub('Salle Ernest Meyer')">+ S'inscrire</button>
-                        </div>
-                    </div>
-                </section>
+                    </section>
 
-                <!-- Module Événements du jour -->
-                <section class="evenements-section">
-                    <h3>Événements du jour</h3>
-                    <div id="evenements-jour" class="evenements-container"></div>
-                </section>
+                    <!-- Module Événements du jour -->
+                    <section class="evenements-section">
+                        <h3>Événements du jour</h3>
+                        <div id="evenements-jour" class="evenements-container"></div>
+                    </section>
+                </div>
             </section>
 
             <!-- ================= VUE VOL D'INITIATION ================= -->

@@ -1213,3 +1213,25 @@ body {
 .evenement-actions .btn-inscription:hover {
     background: #059669;
 }
+
+/* --- LIGNE PRÉSENCE CLUB + ÉVÉNEMENTS --- */
+.club-evenements-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    align-items: stretch;
+    margin-top: 15px;
+}
+.club-evenements-row .glider-presence-section,
+.club-evenements-row .evenements-section {
+    margin: 0;
+    min-width: 0;
+}
+.club-evenements-row .glider-presence-container {
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.club-evenements-row .presence-card {
+    min-width: 100px;
+    padding: 10px;
+}
