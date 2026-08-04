@@ -283,7 +283,7 @@ async function mettreAJourStatutObservation(recordId, statut) {
         if (statut === 'Observation traitée') {
             fields['Observations'] = '';
         }
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}/${recordId}`, {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}/${recordId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields })
@@ -301,7 +301,7 @@ async function chargerCarnetRoute() {
     if (tbody) tbody.innerHTML = '<tr><td colspan="15" class="carnet-empty">Chargement du carnet de route...</td></tr>';
     try {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc`;
-        const response = await fetch(url, { headers });
+        const response = await cachedFetch(url, { headers });
         const data = await response.json();
         if (response.ok) {
             listeVolsCarnetCache = data.records || [];
@@ -329,7 +329,7 @@ async function synchroniserVolMaintenance(machine, date, pilote, horametreArrive
     try {
         const urlBaseAeronefs = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}`;
         const filter = `?filterByFormula=${encodeURIComponent(`{Immatriculation}='${machine}'`)}`;
-        const resA = await fetch(urlBaseAeronefs + filter, { headers });
+        const resA = await cachedFetch(urlBaseAeronefs + filter, { headers });
         const dataA = await resA.json();
         if (!dataA.records || dataA.records.length === 0) return;
         const avionId = dataA.records[0].id;
@@ -338,7 +338,7 @@ async function synchroniserVolMaintenance(machine, date, pilote, horametreArrive
         const dateISO = isNaN(dateObj.getTime()) ? date : dateObj.toISOString();
 
         const urlCarnet = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route')}`;
-        await fetch(urlCarnet, {
+        await cachedFetch(urlCarnet, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -415,7 +415,7 @@ async function soumettreCarnetRoute(event) {
 
     try {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}${idCarnetEnEdition ? '/' + idCarnetEnEdition : ''}`;
-        const response = await fetch(url, {
+        const response = await cachedFetch(url, {
             method: idCarnetEnEdition ? 'PATCH' : 'POST',
             headers: headers,
             body: JSON.stringify({ fields })
@@ -454,7 +454,7 @@ async function supprimerCarnetRoute() {
         if (machine && date && horArr !== undefined && horArr !== null && horArr !== '') {
             await supprimerVolMaintenance(machine, date, horArr);
         }
-        const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}/${idCarnetEnEdition}`, {
+        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}/${idCarnetEnEdition}`, {
             method: 'DELETE',
             headers: headers
         });
@@ -475,7 +475,7 @@ async function supprimerCarnetRoute() {
 async function getAvionId(machineImmat) {
     try {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}?filterByFormula=${encodeURIComponent(`{Immatriculation}='${machineImmat}'`)}`;
-        const res = await fetch(url, { headers });
+        const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (data.records && data.records.length > 0) return data.records[0].id;
     } catch (e) { console.error(e); }
@@ -489,7 +489,7 @@ async function supprimerVolMaintenance(machineImmat, date, horametreArrivee) {
     if (isNaN(h)) return;
     try {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route')}?filterByFormula=${encodeURIComponent(`{Nouvel Horamètre}=${h}`)}`;
-        const res = await fetch(url, { headers });
+        const res = await cachedFetch(url, { headers });
         const data = await res.json();
         const records = (data.records || []).filter(r => {
             const f = r.fields || {};
@@ -514,7 +514,7 @@ async function synchroniserHorametreAeronef(machineImmat, carnets) {
     if (!records) {
         try {
             const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?filterByFormula=${encodeURIComponent(`{Machine}='${machineImmat}'`)}`;
-            const res = await fetch(url, { headers });
+            const res = await cachedFetch(url, { headers });
             const data = await res.json();
             records = data.records || [];
         } catch (e) { console.error(e); return; }
@@ -526,7 +526,7 @@ async function synchroniserHorametreAeronef(machineImmat, carnets) {
     }, 0);
     if (maxH <= 0) return;
     try {
-        await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
+        await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { 'Horamètre actuel': maxH } })
@@ -539,7 +539,7 @@ async function nettoyerCarnetRouteMaintenance(machineImmat) {
     if (!avionId) return;
     try {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route')}`;
-        const res = await fetch(url, { headers });
+        const res = await cachedFetch(url, { headers });
         const data = await res.json();
         const records = (data.records || []).filter(r => {
             const f = r.fields || {};
@@ -560,7 +560,7 @@ async function nettoyerCarnetRouteMaintenance(machineImmat) {
                 return !isNaN(ph) && Math.abs(ph - h) < 0.001;
             });
             if (!correspond) {
-                await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route')}/${rec.id}`, {
+                await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route')}/${rec.id}`, {
                     method: 'DELETE',
                     headers
                 });

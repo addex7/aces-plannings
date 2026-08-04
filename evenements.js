@@ -96,7 +96,7 @@ async function enregistrerEvenement(e) {
     };
 
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(payload)
@@ -134,7 +134,7 @@ async function chargerEvenementsJour() {
     try {
         const formula = encodeURIComponent(`NOT(IS_BEFORE({${FIELDS.DATE_FIN}}, DATETIME_PARSE('${dateIso}', 'YYYY-MM-DD')))`);
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}?filterByFormula=${formula}&sort[0][field]=${encodeURIComponent(FIELDS.DATE_DEBUT)}&sort[0][direction]=asc&pageSize=100`;
-        const res = await fetch(url, { headers });
+        const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ? data.error.message : 'Erreur Airtable');
 
@@ -214,7 +214,7 @@ async function sinscrireEvenement(recordId) {
     if (!nom) { alert('Connecte-toi pour t\'inscrire.'); return; }
 
     try {
-        const getRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
+        const getRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
         const record = await getRes.json();
         if (!getRes.ok) throw new Error(record.error ? record.error.message : 'Erreur Airtable');
 
@@ -222,7 +222,7 @@ async function sinscrireEvenement(recordId) {
         if (inscrits.some(i => i.nom === nom)) { alert('Tu es déjà inscrit.'); return; }
         inscrits.push({ nom, commentaire: '' });
 
-        const patchRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
+        const patchRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
             method: 'PATCH',
             headers: headers,
             body: JSON.stringify({ records: [{ id: recordId, fields: { [FIELDS.INSCRITS]: formatInscrits(inscrits) } }] })
@@ -239,14 +239,14 @@ async function sinscrireEvenement(recordId) {
 async function desinscrireEvenement(recordId, nom) {
     if (!confirm(`Retirer ${nom} de l'événement ?`)) return;
     try {
-        const getRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
+        const getRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
         const record = await getRes.json();
         if (!getRes.ok) throw new Error(record.error ? record.error.message : 'Erreur Airtable');
 
         let inscrits = parseInscrits(record.fields[FIELDS.INSCRITS] || '');
         inscrits = inscrits.filter(i => i.nom !== nom);
 
-        const patchRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
+        const patchRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
             method: 'PATCH',
             headers: headers,
             body: JSON.stringify({ records: [{ id: recordId, fields: { [FIELDS.INSCRITS]: formatInscrits(inscrits) } }] })
@@ -263,7 +263,7 @@ async function desinscrireEvenement(recordId, nom) {
 async function supprimerEvenement(recordId) {
     if (!confirm('Supprimer définitivement cet évènement ?')) return;
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
         if (res.ok) {
             chargerEvenementsJour();
             chargerProchainsEvenements();
@@ -282,7 +282,7 @@ async function modifierCommentaireEvenement(recordId, nom, commentaireActuel) {
     const nouveauCommentaire = prompt("Commentaire :", commentaireActuel || "");
     if (nouveauCommentaire === null) return;
     try {
-        const getRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
+        const getRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
         const record = await getRes.json();
         if (!getRes.ok) throw new Error(record.error ? record.error.message : 'Erreur Airtable');
 
@@ -291,7 +291,7 @@ async function modifierCommentaireEvenement(recordId, nom, commentaireActuel) {
         if (!inscrit) return;
         inscrit.commentaire = nouveauCommentaire.trim();
 
-        const patchRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
+        const patchRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
             method: 'PATCH',
             headers: headers,
             body: JSON.stringify({ records: [{ id: recordId, fields: { [FIELDS.INSCRITS]: formatInscrits(inscrits) } }] })
@@ -313,7 +313,7 @@ async function chargerProchainsEvenements() {
         const today = new Date().toISOString().split('T')[0];
         const formula = encodeURIComponent(`NOT(IS_BEFORE({${FIELDS.DATE_FIN}}, DATETIME_PARSE('${today}', 'YYYY-MM-DD')))`);
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}?filterByFormula=${formula}&sort[0][field]=${encodeURIComponent(FIELDS.DATE_DEBUT)}&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent(FIELDS.HEURE_DEBUT)}&sort[1][direction]=asc&pageSize=10`;
-        const res = await fetch(url, { headers });
+        const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ? data.error.message : 'Erreur Airtable');
 

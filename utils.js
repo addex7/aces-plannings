@@ -120,3 +120,31 @@ function convertirHeureEnHHMM(decimalHeure) {
     const minutes = Math.round((decimalHeure - heures) * 60);
     return `${String(heures).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
+
+// --- CACHE POUR REQUÊTES AIRTABLE (GET) ---
+const API_CACHE = {};
+const API_CACHE_TTL = 30000; // 30 secondes
+
+function viderApiCache() {
+    Object.keys(API_CACHE).forEach(k => delete API_CACHE[k]);
+}
+
+async function cachedFetch(url, options = {}, ttl = API_CACHE_TTL, force = false) {
+    const method = (options.method || 'GET').toUpperCase();
+    if (method === 'GET' && !force) {
+        const now = Date.now();
+        const entry = API_CACHE[url];
+        if (entry && (now - entry.ts) < ttl) {
+            return {
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve(entry.data)
+            };
+        }
+    }
+    if (method !== 'GET') viderApiCache();
+    const res = await fetch(url, options);
+    const data = await res.json();
+    if (method === 'GET' && res.ok) API_CACHE[url] = { data, ts: Date.now() };
+    return { ok: res.ok, status: res.status, json: () => Promise.resolve(data) };
+}

@@ -18,7 +18,7 @@ async function modifierCommentaire(recordId, tableName, commentaireActuel) {
     const nouveauCommentaire = prompt("Ajouter un commentaire :", commentaireActuel || "");
     if (nouveauCommentaire === null) return;
     try {
-        const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}/${recordId}`, {
+        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}/${recordId}`, {
             method: 'PATCH',
             headers: headers,
             body: JSON.stringify({ fields: { "Commentaire": nouveauCommentaire.trim() } })
@@ -46,7 +46,7 @@ async function chargerPresencesClub() {
     const dateIsoStr = dateAffichee.toISOString().split('T')[0];
     try {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
-        const response = await fetch(url, { headers });
+        const response = await cachedFetch(url, { headers });
         const data = await response.json();
         if (data.records) {
             data.records.forEach(rec => {
@@ -70,7 +70,7 @@ async function sinscrireClub(lieu) {
     try {
         const dateStr = dateAffichee.toISOString().split('T')[0];
         const payload = { records: [{ fields: { "Nom du pilote": nomPilote.trim(), "Lieu": lieu, "Date": dateStr } }] };
-        const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}`, {
+        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(payload)
@@ -92,7 +92,7 @@ async function sinscrireClub(lieu) {
 async function desinscrireClub(recordId) {
     if (!confirm("Voulez-vous supprimer cette inscription ?")) return;
     try {
-        const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
+        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
         if (response.ok) await chargerPresencesClub();
     } catch (error) {
         console.error(error);
@@ -108,7 +108,7 @@ async function chargerPresencesPlaneur() {
     const dateIsoStr = dateAffichee.toISOString().split('T')[0];
     try {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
-        const response = await fetch(url, { headers });
+        const response = await cachedFetch(url, { headers });
         const data = await response.json();
         if (data.records) {
             data.records.forEach(rec => {
@@ -139,7 +139,7 @@ async function sinscrirePlaneur(role) {
     try {
         const dateStr = dateAffichee.toISOString().split('T')[0];
         const payload = { records: [{ fields: { "Nom du pilote": nomPilote.trim(), "Rôle": role, "Date": dateStr } }] };
-        const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}`, {
+        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(payload)
@@ -161,7 +161,7 @@ async function sinscrirePlaneur(role) {
 async function desinscrirePlaneur(recordId) {
     if (!confirm("Voulez-vous supprimer cette inscription ?")) return;
     try {
-        const response = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
+        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
         if (response.ok) await chargerPresencesPlaneur();
     } catch (error) {
         console.error(error);

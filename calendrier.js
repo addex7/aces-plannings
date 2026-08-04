@@ -42,14 +42,16 @@ function gererClicMiniCalendrier(e) {
     }
 }
 
-function allerADateAffichee() {
+async function allerADateAffichee() {
     if (typeof mettreAJourDateAffichee === 'function') mettreAJourDateAffichee();
-    if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning();
-    if (typeof chargerPresencesPlaneur === 'function') chargerPresencesPlaneur();
-    if (typeof chargerPresencesClub === 'function') chargerPresencesClub();
-    if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
+    await Promise.all([
+        (typeof chargerDonneesPlanning === 'function' ? chargerDonneesPlanning() : Promise.resolve()),
+        (typeof chargerPresencesPlaneur === 'function' ? chargerPresencesPlaneur() : Promise.resolve()),
+        (typeof chargerPresencesClub === 'function' ? chargerPresencesClub() : Promise.resolve()),
+        (typeof chargerEvenementsJour === 'function' ? chargerEvenementsJour() : Promise.resolve())
+    ]);
     miniCalendrierDate = new Date(dateAffichee.getFullYear(), dateAffichee.getMonth(), 1);
-    renderMiniCalendrier();
+    await renderMiniCalendrier();
 }
 
 async function renderMiniCalendrier() {
@@ -117,7 +119,7 @@ async function chargerDonneesCalendrier(annee, mois) {
     try {
         const formulaResa = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${finStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${debutStr}')`;
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formulaResa)}&pageSize=100`;
-        const res = await fetch(url, { headers });
+        const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         (data.records || []).forEach(r => {
@@ -142,7 +144,7 @@ async function chargerDonneesCalendrier(annee, mois) {
     try {
         const formulaPlaneur = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${debutStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${finStr}')`;
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formulaPlaneur)}&pageSize=100`;
-        const res = await fetch(url, { headers });
+        const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         (data.records || []).forEach(r => {
@@ -162,7 +164,7 @@ async function chargerDonneesCalendrier(annee, mois) {
     try {
         const formulaClub = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${debutStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${finStr}')`;
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}?filterByFormula=${encodeURIComponent(formulaClub)}&pageSize=100`;
-        const res = await fetch(url, { headers });
+        const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         (data.records || []).forEach(r => {

@@ -188,18 +188,18 @@ async function enregistrerMaintenance(e) {
         const url = maintenanceId
             ? `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}/${maintenanceId}`
             : `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}`;
-        const resMaint = await fetch(url, { method, headers, body: JSON.stringify({ fields: fieldsObj }) });
+        const resMaint = await cachedFetch(url, { method, headers, body: JSON.stringify({ fields: fieldsObj }) });
         if (!resMaint.ok) {
             throw new Error(await resMaint.text());
         }
 
-        const maintenancesRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(`{Machine}='${immat}'`)}`, { headers });
+        const maintenancesRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(`{Machine}='${immat}'`)}`, { headers });
         const maintenancesData = await maintenancesRes.json();
         const maintenancesMachine = (maintenancesData.records || []).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
         const derniereMaintenance = maintenancesMachine[maintenancesMachine.length - 1];
         const nouvelleButeeAvion = derniereMaintenance ? parseFloat(String(derniereMaintenance.fields['Nouvelle Butée'] || '').replace(',', '.')) : nouvelleButee;
 
-        const resAvion = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
+        const resAvion = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({
@@ -282,7 +282,7 @@ async function chargerSuiviAeronef() {
 
         let maintenanceRecords = [];
         try {
-            const resMaintenance = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}`, { headers });
+            const resMaintenance = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}`, { headers });
             const dataMaintenance = await resMaintenance.json();
             maintenanceRecords = dataMaintenance.records || [];
         } catch (err) {

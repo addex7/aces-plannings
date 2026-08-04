@@ -97,7 +97,7 @@ async function chargerInvitation(recordId) {
     const setup = document.getElementById('setup-overlay');
     const nameEl = document.getElementById('setup-name');
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
         const record = await res.json();
         if (!res.ok) throw new Error(record.error?.message || 'Erreur');
         if (!record || !record.id || record.fields['Actif']) {
@@ -139,7 +139,7 @@ async function chargerReset(recordId) {
     const btn = document.getElementById('btn-setup');
     const identifiantInput = document.getElementById('setup-identifiant');
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
         const record = await res.json();
         if (!res.ok) throw new Error(record.error?.message || 'Erreur');
         if (!record || !record.id) { setupError('Lien de réinitialisation invalide.'); return; }
@@ -179,7 +179,7 @@ async function seConnecter() {
     try {
         const champ = identifiant;
         const formula = `AND(OR({Identifiant}='${champ}', {Mail}='${champ}'), {Actif}=1)`;
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const record = (data.records || [])[0];
@@ -229,7 +229,7 @@ async function validerSetup() {
         fields['Actif'] = true;
     }
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields })
@@ -276,7 +276,7 @@ async function envoyerReset() {
     if (status) status.textContent = 'Recherche du compte...';
     try {
         const formula = `AND({Mail}='${email}', {Actif}=1)`;
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const record = (data.records || [])[0];
@@ -308,7 +308,7 @@ async function chargerUtilisateurs() {
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Chargement...</td></tr>';
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const records = data.records || [];
@@ -354,7 +354,7 @@ async function ajouterUtilisateur(event) {
     };
     console.log('POST Utilisateurs', fields);
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}`, {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ fields })
@@ -441,7 +441,7 @@ async function sauvegarderMembre(event) {
     const fields = { 'Prénom': prenom, 'Nom': nom, 'Mail': mail, 'Téléphone': telephone, 'Identifiant': identifiant, 'Rôles': roles };
     if (motDePasse) fields['Mot de passe'] = motDePasse;
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields })
@@ -459,7 +459,7 @@ async function supprimerMembre() {
     if (!idMembreEnEdition) return;
     if (!confirm('Confirmer la suppression de ce membre ?')) return;
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, { method: 'DELETE', headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, { method: 'DELETE', headers });
         if (!res.ok) throw new Error(await res.text());
         fermerModaleMembre();
         await chargerUtilisateurs();

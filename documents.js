@@ -57,7 +57,7 @@ function initDocuments() {
 
 async function chargerDossiers() {
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOSSIERS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOSSIERS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         dossiersCache = data.records || [];
@@ -111,7 +111,7 @@ async function enregistrerDossier(e) {
     const nom = input ? input.value.trim() : '';
     if (!nom) { alert('Nom du dossier requis.'); return; }
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOSSIERS)}`, {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOSSIERS)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ records: [{ fields: { 'Nom': nom } }] })
@@ -132,7 +132,7 @@ async function chargerDocuments() {
     if (!list) return;
     list.innerHTML = '<p>Chargement...</p>';
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?sort[0][field]=Titre&sort[0][direction]=asc`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?sort[0][field]=Titre&sort[0][direction]=asc`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         documentsCache = data.records || [];
@@ -208,7 +208,7 @@ async function uploaderFichierDocument(file) {
     formData.append('UPLOADCARE_PUB_KEY', UPLOADCARE_PUBLIC_KEY);
     formData.append('store', '1');
     formData.append('file', file);
-    const res = await fetch(url, { method: 'POST', body: formData });
+    const res = await cachedFetch(url, { method: 'POST', body: formData });
     const text = await res.text();
     if (!res.ok) throw new Error(text || 'Erreur Uploadcare');
     let uuid = text.trim().replace(/"/g, '');
@@ -287,7 +287,7 @@ async function enregistrerDocument(e) {
         const method = id ? 'PATCH' : 'POST';
         const urlApi = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}`;
         const payload = id ? { records: [{ id, fields }] } : { records: [{ fields }] };
-        const res = await fetch(urlApi, { method, headers, body: JSON.stringify(payload) });
+        const res = await cachedFetch(urlApi, { method, headers, body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         cacherFormDocument();
@@ -302,7 +302,7 @@ async function supprimerDocument(id) {
     if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
     if (!confirm('Supprimer ce document ?')) return;
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?records[]=${encodeURIComponent(id)}`, { method: 'DELETE', headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?records[]=${encodeURIComponent(id)}`, { method: 'DELETE', headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         await chargerDocuments();

@@ -34,8 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initCarnetRoute();
     initSidebarToggle();
     initEvenements();
-    chargerDonneesPlanning();
-    chargerPresencesClub();
+    Promise.all([
+        chargerDonneesPlanning(),
+        chargerPresencesClub()
+    ]).catch(err => console.error('Erreur chargement initial:', err));
 });
 
 function initSidebarToggle() {
