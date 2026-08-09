@@ -136,22 +136,20 @@ async function chargerExperienceRecente() {
             return;
         }
         const dateVol = new Date(vol.fields['Date']);
+        const debutAuj = debutJour(new Date());
+        const debutVol = debutJour(dateVol);
+        const nbJours = Math.floor((debutAuj - debutVol) / (1000 * 60 * 60 * 24));
         const limite = new Date(dateVol);
         limite.setMonth(limite.getMonth() + 3);
-        const sixMois = new Date(dateVol);
-        sixMois.setMonth(sixMois.getMonth() + 6);
-        const aujDebut = debutJour(new Date());
-        const debutLimite = debutJour(limite);
-        const debut6Mois = debutJour(sixMois);
         let couleur, icone, texte;
-        if (debutLimite >= aujDebut) {
+        if (nbJours < 30) {
+            couleur = 'pastille-orange';
+            icone = '!';
+            texte = 'Récent';
+        } else if (nbJours < 90) {
             couleur = 'pastille-verte';
             icone = '✓';
             texte = 'À jour';
-        } else if (aujDebut <= debut6Mois) {
-            couleur = 'pastille-orange';
-            icone = '!';
-            texte = 'À contrôler';
         } else {
             couleur = 'pastille-rouge';
             icone = '✕';
