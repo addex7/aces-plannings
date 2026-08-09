@@ -353,19 +353,48 @@ async function sauvegarderValidites() {
         fields[SUIVIS_ACTIFS] = Array.from(activerCbs).filter(cb => cb.checked).map(cb => cb.dataset.label);
     }
     if (Object.keys(fields).length === 0) return;
-    try {
+
+    async function patchMembre(fieldsToSend) {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreSelectionne.id}`, {
             method: 'PATCH',
             headers,
-            body: JSON.stringify({ fields })
+            body: JSON.stringify({ fields: fieldsToSend })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        if (!res.ok) {
+            const msg = data.error?.message || 'Erreur';
+            const err = new Error(msg);
+            err.data = data;
+            throw err;
+        }
+        return data;
+    }
+
+    try {
+        const data = await patchMembre(fields);
         alert('Informations enregistrées.');
         renderAccueilMembre(data.fields || {});
     } catch (err) {
-        console.error('Erreur sauvegarde validités:', err);
-        alert('Erreur lors de la sauvegarde.');
+        const missingField = Object.keys(fields).find(f => err.message && err.message.includes(f));
+        if (missingField) {
+            delete fields[missingField];
+            if (Object.keys(fields).length === 0) {
+                alert(`Le champ "${missingField}" n'existe pas dans Airtable.\n\n${err.message}`);
+                console.error('Erreur sauvegarde (tous les champs manquants):', err);
+                return;
+            }
+            try {
+                const data = await patchMembre(fields);
+                alert(`Le champ "${missingField}" n'existe pas dans Airtable. Les autres informations ont été enregistrées.`);
+                renderAccueilMembre(data.fields || {});
+            } catch (err2) {
+                console.error('Erreur sauvegarde validités (retry):', err2);
+                alert('Erreur lors de la sauvegarde : ' + (err2.message || ''));
+            }
+        } else {
+            console.error('Erreur sauvegarde validités:', err);
+            alert('Erreur lors de la sauvegarde : ' + (err.message || ''));
+        }
     }
 }
 
