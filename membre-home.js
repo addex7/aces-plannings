@@ -24,7 +24,8 @@ const VALIDITES = [
     { label: 'Licence SEP', field: MEMBRE_FIELDS.LICENCE_SEP }
 ];
 
-const TYPES_DOCUMENTS = ['Cotisation', 'Licence FFVP', 'Licence FFA', 'Licence FFPLUM', 'Médical', 'Licence SEP', 'Autre'];
+const TYPES_DOCUMENTS = ['Médical', 'SEP', 'Autorisation parentale', 'Brevet ULM'];
+const SUIVIS_ACTIFS = 'Suivis actifs';
 let membreSelectionne = null;
 
 function formaterDateFr(str) {
@@ -140,14 +141,21 @@ function renderAccueilMembre(fields) {
             'Mon espace membre';
     }
     const peutEditer = isSuperAdmin();
+    const actifList = Array.isArray(fields[SUIVIS_ACTIFS]) ? fields[SUIVIS_ACTIFS] : (fields[SUIVIS_ACTIFS] ? [fields[SUIVIS_ACTIFS]] : []);
+    const estActif = (label) => actifList.length ? actifList.includes(label) : true;
     const grid = VALIDITES.map(item => {
         const val = fields[item.field];
         const ok = estValideJusqua(val);
         const iso = val ? new Date(val).toISOString().split('T')[0] : '';
+        const actif = estActif(item.label);
+        if (!peutEditer && !actif) return '';
         const input = peutEditer ? `<input type="date" class="validite-input" data-field="${item.field}" value="${iso}">` : '';
+        const activer = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="${item.label}" ${actif ? 'checked' : ''}> Actif</label>` : '';
+        const disabledClass = actif ? '' : 'suivi-inactif';
         return `
-            <div class="validite-card">
+            <div class="validite-card ${disabledClass}" data-label="${item.label}">
                 <div class="validite-label">${item.label}</div>
+                ${activer}
                 <div class="validite-pill">${pastille(ok, val)}</div>
                 ${input}
             </div>
@@ -293,6 +301,10 @@ async function sauvegarderValidites() {
         const val = input.value;
         if (field) fields[field] = val || null;
     });
+    const activerCbs = document.querySelectorAll('.activer-suivi-cb');
+    if (activerCbs.length && SUIVIS_ACTIFS in (membreSelectionne.fields || {})) {
+        fields[SUIVIS_ACTIFS] = Array.from(activerCbs).filter(cb => cb.checked).map(cb => cb.dataset.label);
+    }
     if (Object.keys(fields).length === 0) return;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreSelectionne.id}`, {

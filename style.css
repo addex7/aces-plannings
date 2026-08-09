@@ -1533,6 +1533,19 @@ body {
     font-weight: 600;
     cursor: pointer;
 }
+.activer-suivi {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 6px;
+    cursor: pointer;
+}
+.suivi-inactif {
+    opacity: 0.6;
+    background: #f1f5f9 !important;
+}
 #membres-list tr {
     cursor: pointer;
 }
