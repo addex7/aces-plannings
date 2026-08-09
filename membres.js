@@ -34,7 +34,7 @@ function updateUIRoles() {
     const tabMembres = document.getElementById('tab-membres');
     if (profile) profile.textContent = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : 'Pilote Connecté';
     if (logoutBtn) logoutBtn.style.display = currentUser ? 'inline-block' : 'none';
-    if (tabMembres) tabMembres.style.display = isSuperAdmin() ? 'block' : 'none';
+    if (tabMembres) tabMembres.style.display = currentUser ? 'block' : 'none';
 }
 
 function genererToken() {
@@ -303,37 +303,73 @@ async function envoyerReset() {
     }
 }
 
+const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Élève planeur', 'Pilote planeur', 'Documentaliste', 'Super admin'];
+
 async function chargerUtilisateurs() {
     const tbody = document.getElementById('membres-list');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Chargement...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Chargement...</td></tr>';
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const records = data.records || [];
-        if (records.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Aucun utilisateur.</td></tr>'; return; }
+        if (records.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Aucun utilisateur.</td></tr>'; return; }
         tbody.innerHTML = '';
         records.forEach(r => {
             const f = r.fields || {};
-            const roles = (Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean)).join(', ') || '-';
+            const prenom = f['Prénom'] || '';
+            const nom = f['Nom'] || '';
+            const rolesActuels = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
+            const rolesCases = ROLES_MEMBRES.map(role => {
+                const checked = rolesActuels.includes(role) ? 'checked' : '';
+                const abr = role.split(' ').map(w => w[0]).join('').toUpperCase();
+                return `<label class="role-tag" title="${role}"><input type="checkbox" data-role="${role}" ${checked}> ${abr}</label>`;
+            }).join(' ');
             const tr = document.createElement('tr');
-            tr.style.cursor = 'pointer';
             tr.innerHTML = `
-                <td>${f['Prénom'] || ''}</td>
-                <td>${f['Nom'] || ''}</td>
+                <td><a class="membre-nom" data-id="${r.id}" style="color:#1e3d59; text-decoration:underline; cursor:pointer;">${prenom} ${nom}</a></td>
                 <td>${f['Mail'] || ''}</td>
                 <td>${f['Téléphone'] || ''}</td>
-                <td>${roles}</td>
+                <td class="roles-cell">${rolesCases}</td>
                 <td>${f['Identifiant'] || ''}</td>
             `;
-            tr.addEventListener('click', () => ouvrirModaleMembre(r));
+            const nomEl = tr.querySelector('.membre-nom');
+            if (nomEl) nomEl.addEventListener('click', (e) => { e.preventDefault(); ouvrirSuiviMembre(r.id); });
+            tr.querySelectorAll('.roles-cell input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', () => mettreAJourRolesMembre(r.id, tr.querySelectorAll('.roles-cell input[type="checkbox"]:checked')));
+            });
             tbody.appendChild(tr);
         });
     } catch (err) {
         console.error(err);
         tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Erreur de chargement.</td></tr>';
     }
+}
+
+async function mettreAJourRolesMembre(recordId, checkboxes) {
+    const roles = Array.from(checkboxes).map(cb => cb.dataset.role);
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ fields: { 'Rôles': roles } })
+        });
+        if (!res.ok) throw new Error(await res.text());
+    } catch (err) {
+        console.error('Erreur mise à jour des rôles :', err);
+        alert('Erreur lors de la mise à jour des rôles.');
+    }
+}
+
+function ouvrirSuiviMembre(id) {
+    const viewMembres = document.getElementById('view-membres');
+    const viewAccueilMembre = document.getElementById('view-accueil-membre');
+    const tabMembres = document.getElementById('tab-membres');
+    if (viewMembres) viewMembres.style.display = 'none';
+    if (viewAccueilMembre) viewAccueilMembre.style.display = 'block';
+    if (tabMembres) tabMembres.classList.add('active');
+    if (typeof chargerAccueilMembre === 'function') chargerAccueilMembre(id);
 }
 
 async function ajouterUtilisateur(event) {
