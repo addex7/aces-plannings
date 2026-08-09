@@ -146,7 +146,7 @@ async function chargerExperienceRecente() {
             texte = 'Non à jour';
         } else if (joursRestants < 30) {
             couleur = 'pastille-orange';
-            icone = '!';
+            icone = '';
             texte = 'Bientôt à renouveler';
         } else {
             couleur = 'pastille-verte';
@@ -154,7 +154,7 @@ async function chargerExperienceRecente() {
             texte = 'À jour';
         }
         target.innerHTML = `
-            <span class="pastille ${couleur}">${icone} ${texte}</span>
+            <span class="pastille ${couleur}">${icone ? icone + ' ' : ''}${texte}</span>
             <span class="validite-date">Dernier vol : ${formaterDateFr(dateVol.toISOString())}</span>
             <span class="validite-date">Valide jusqu'au : ${formaterDateFr(limite.toISOString())}</span>
         `;
