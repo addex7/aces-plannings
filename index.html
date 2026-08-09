@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=28">
+    <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 
@@ -92,6 +92,7 @@
                     <li id="tab-carnet">📖 Carnet de route</li>
                     <li id="tab-documents">📄 Base documentaire</li>
                     <li id="tab-membres" style="display:none;">👥 Membres</li>
+                    <li id="tab-accueil-membre">👤 Accueil membre</li>
                 </ul>
             </div>
             <div class="user-profile" style="display:flex; flex-direction:column; align-items:center; gap:6px;">
@@ -478,6 +479,25 @@
                 <div id="documents-list"></div>
             </section>
 
+            <!-- ================= VUE ACCUEIL MEMBRE ================= -->
+            <section id="view-accueil-membre" class="view-section" style="display: none;">
+                <header class="header">
+                    <h2>Mon espace membre</h2>
+                </header>
+                <div class="accueil-profil">
+                    <div class="accueil-photo-wrap">
+                        <img id="accueil-photo" class="accueil-photo" src="" alt="Photo de profil">
+                        <input type="file" id="accueil-photo-input" class="accueil-photo-input" accept="image/*">
+                        <label for="accueil-photo-input" class="accueil-photo-label">📷 Changer</label>
+                    </div>
+                    <div>
+                        <p class="accueil-nom" id="accueil-nom"></p>
+                        <p class="accueil-roles" id="accueil-roles"></p>
+                    </div>
+                </div>
+                <div id="accueil-membre-container"></div>
+            </section>
+
         </main>
     </div>
 
@@ -836,16 +856,17 @@
     </div>
 
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="evenements.js?v=28"></script>
-    <script src="app.js?v=28"></script>
-    <script src="utils.js?v=28"></script>
-    <script src="presences.js?v=28"></script>
-    <script src="planning.js?v=28"></script>
-    <script src="calendrier.js?v=28"></script>
-    <script src="aeronefs.js?v=28"></script>
-    <script src="carnet.js?v=28"></script>
-    <script src="documents.js?v=28"></script>
+    <script src="evenements.js?v=29"></script>
+    <script src="app.js?v=29"></script>
+    <script src="utils.js?v=29"></script>
+    <script src="presences.js?v=29"></script>
+    <script src="planning.js?v=29"></script>
+    <script src="calendrier.js?v=29"></script>
+    <script src="aeronefs.js?v=29"></script>
+    <script src="carnet.js?v=29"></script>
+    <script src="documents.js?v=29"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="membres.js?v=28"></script>
+    <script src="membres.js?v=29"></script>
+    <script src="membre-home.js?v=29"></script>
 </body>
 </html>

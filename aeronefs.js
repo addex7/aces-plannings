@@ -682,16 +682,18 @@ function initNavigationTabs() {
     const tabCarnet = document.getElementById('tab-carnet');
     const tabMembres = document.getElementById('tab-membres');
     const tabDocuments = document.getElementById('tab-documents');
+    const tabAccueilMembre = document.getElementById('tab-accueil-membre');
     const viewPlanning = document.getElementById('view-planning');
     const viewAeronefs = document.getElementById('view-aeronefs');
     const viewInitiation = document.getElementById('view-initiation');
     const viewCarnet = document.getElementById('view-carnet');
     const viewMembres = document.getElementById('view-membres');
     const viewDocuments = document.getElementById('view-documents');
+    const viewAccueilMembre = document.getElementById('view-accueil-membre');
 
     function activerTab(tab, vue) {
-        [tabPlanning, tabAeronefs, tabInitiation, tabCarnet, tabMembres, tabDocuments].forEach(t => { if (t) t.classList.remove('active'); });
-        [viewPlanning, viewAeronefs, viewInitiation, viewCarnet, viewMembres, viewDocuments].forEach(v => { if (v) v.style.display = 'none'; });
+        [tabPlanning, tabAeronefs, tabInitiation, tabCarnet, tabMembres, tabDocuments, tabAccueilMembre].forEach(t => { if (t) t.classList.remove('active'); });
+        [viewPlanning, viewAeronefs, viewInitiation, viewCarnet, viewMembres, viewDocuments, viewAccueilMembre].forEach(v => { if (v) v.style.display = 'none'; });
         if (tab) tab.classList.add('active');
         if (vue) vue.style.display = 'block';
     }
@@ -735,6 +737,13 @@ function initNavigationTabs() {
         tabDocuments.addEventListener('click', () => {
             activerTab(tabDocuments, viewDocuments);
             if (typeof chargerDocuments === 'function') chargerDocuments();
+        });
+    }
+
+    if (tabAccueilMembre) {
+        tabAccueilMembre.addEventListener('click', () => {
+            activerTab(tabAccueilMembre, viewAccueilMembre);
+            if (typeof chargerAccueilMembre === 'function') chargerAccueilMembre();
         });
     }
 }
