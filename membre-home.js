@@ -322,7 +322,7 @@ async function chargerDocumentsMembre() {
     try {
         const nomComplet = `${(membreSelectionne.prenom || '').replace(/"/g, '\\"')} ${(membreSelectionne.nom || '').replace(/"/g, '\\"')}`.trim();
         const formula = `FIND(UPPER("${nomComplet}"), UPPER({Sous-dossier})) > 0`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Created Time&sort[0][direction]=desc`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?filterByFormula=${encodeURIComponent(formula)}`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');

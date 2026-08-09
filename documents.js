@@ -208,7 +208,7 @@ async function uploaderFichierDocument(file) {
     formData.append('UPLOADCARE_PUB_KEY', UPLOADCARE_PUBLIC_KEY);
     formData.append('store', '1');
     formData.append('file', file);
-    const res = await cachedFetch(url, { method: 'POST', body: formData });
+    const res = await fetch(url, { method: 'POST', body: formData });
     const text = await res.text();
     if (!res.ok) throw new Error(text || 'Erreur Uploadcare');
     let uuid = text.trim().replace(/"/g, '');
