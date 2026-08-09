@@ -12,7 +12,9 @@ const MEMBRE_FIELDS = {
     LICENCE_FFPLUM: 'Licence FFPLUM',
     MEDICAL: 'Médical',
     LICENCE_SEP: 'Licence SEP',
-    PHOTO: 'Photo'
+    PHOTO: 'Photo',
+    DATE_NAISSANCE: 'Date de naissance',
+    AUTORISATION_PARENTALE: 'Autorisation parentale'
 };
 
 const VALIDITES = [
@@ -39,6 +41,25 @@ function debutJour(d) {
     const j = new Date(d);
     j.setHours(0, 0, 0, 0);
     return j;
+}
+
+function ageEnAnnees(dob) {
+    if (!dob) return null;
+    const naissance = new Date(dob);
+    if (isNaN(naissance.getTime())) return null;
+    const auj = new Date();
+    let age = auj.getFullYear() - naissance.getFullYear();
+    if (auj.getMonth() < naissance.getMonth() || (auj.getMonth() === naissance.getMonth() && auj.getDate() < naissance.getDate())) age--;
+    return age;
+}
+
+function calcAutorisationParentale(dob, saved) {
+    if (saved === true || saved === false) return saved;
+    if (dob) {
+        const age = ageEnAnnees(dob);
+        return age !== null && age < 18;
+    }
+    return false;
 }
 
 function estValideJusqua(str) {
@@ -161,7 +182,7 @@ function renderAccueilMembre(fields) {
             </div>
         `;
     }).join('');
-    const saveBtn = peutEditer ? '<button type="button" id="accueil-save-validites" class="btn-enregistrer-validites">Enregistrer les dates</button>' : '';
+    const saveBtn = peutEditer ? '<button type="button" id="accueil-save-validites" class="btn-enregistrer-validites">Enregistrer les informations</button>' : '';
     const docTypeOptions = TYPES_DOCUMENTS.map(t => `<option value="${t}">${t}</option>`).join('');
     const docForm = peutEditer ? `
         <div class="accueil-documents" id="accueil-documents">
@@ -185,8 +206,33 @@ function renderAccueilMembre(fields) {
             <div class="accueil-doc-list" id="accueil-doc-list"><p>Chargement...</p></div>
         </div>
     `;
+    const dateNaissance = fields[MEMBRE_FIELDS.DATE_NAISSANCE] || '';
+    const isoDate = dateNaissance ? new Date(dateNaissance).toISOString().split('T')[0] : '';
+    const age = ageEnAnnees(dateNaissance);
+    const ageText = age !== null ? ` (${age} ans)` : '';
+    const autorisation = calcAutorisationParentale(dateNaissance, fields[MEMBRE_FIELDS.AUTORISATION_PARENTALE]);
+    const infosMembre = peutEditer ? `
+        <div class="validite-card infos-membre" id="accueil-infos-membre">
+            <div class="validite-label">Informations personnelles</div>
+            <div class="form-group">
+                <label for="accueil-date-naissance">Date de naissance${ageText}</label>
+                <input type="date" id="accueil-date-naissance" class="membre-info-input" data-field="${MEMBRE_FIELDS.DATE_NAISSANCE}" value="${isoDate}">
+            </div>
+            <label class="activer-suivi" for="accueil-autorisation-parentale">
+                <input type="checkbox" id="accueil-autorisation-parentale" class="membre-info-input" data-field="${MEMBRE_FIELDS.AUTORISATION_PARENTALE}" ${autorisation ? 'checked' : ''}>
+                Autorisation parentale
+            </label>
+        </div>
+    ` : (autorisation || dateNaissance ? `
+        <div class="validite-card infos-membre">
+            <div class="validite-label">Informations personnelles</div>
+            <p>Date de naissance : ${formaterDateFr(dateNaissance) || '-'}</p>
+            <p>Autorisation parentale : ${autorisation ? 'Oui' : 'Non'}</p>
+        </div>
+    ` : '');
     container.innerHTML = `
         <form id="accueil-validites-form">
+            ${infosMembre}
             <div class="validite-grid">${grid}</div>
             ${saveBtn}
         </form>
@@ -294,12 +340,13 @@ async function chargerListeMembres() {
 
 async function sauvegarderValidites() {
     if (!membreSelectionne || !isSuperAdmin()) return;
-    const inputs = document.querySelectorAll('.validite-input');
+    const inputs = document.querySelectorAll('.validite-input, .membre-info-input');
     const fields = {};
     inputs.forEach(input => {
         const field = input.dataset.field;
-        const val = input.value;
-        if (field) fields[field] = val || null;
+        if (!field) return;
+        if (input.type === 'checkbox') fields[field] = input.checked;
+        else fields[field] = input.value || null;
     });
     const activerCbs = document.querySelectorAll('.activer-suivi-cb');
     if (activerCbs.length) {
@@ -314,7 +361,7 @@ async function sauvegarderValidites() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        alert('Dates enregistrées.');
+        alert('Informations enregistrées.');
         renderAccueilMembre(data.fields || {});
     } catch (err) {
         console.error('Erreur sauvegarde validités:', err);
@@ -444,6 +491,14 @@ function attacherListenersAccueil() {
     if (btnValidites) btnValidites.addEventListener('click', sauvegarderValidites);
     const formDoc = document.getElementById('accueil-doc-form');
     if (formDoc) formDoc.addEventListener('submit', uploaderDocumentMembre);
+    const dateNaissance = document.getElementById('accueil-date-naissance');
+    const autorisationParentale = document.getElementById('accueil-autorisation-parentale');
+    if (dateNaissance && autorisationParentale) {
+        dateNaissance.addEventListener('change', () => {
+            const age = ageEnAnnees(dateNaissance.value);
+            autorisationParentale.checked = age !== null && age < 18;
+        });
+    }
 }
 
 function initAccueilMembre() {
