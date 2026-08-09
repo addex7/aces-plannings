@@ -696,6 +696,10 @@ function initNavigationTabs() {
         [viewPlanning, viewAeronefs, viewInitiation, viewCarnet, viewMembres, viewDocuments, viewAccueilMembre].forEach(v => { if (v) v.style.display = 'none'; });
         if (tab) tab.classList.add('active');
         if (vue) vue.style.display = 'block';
+        // Ouvrir le groupe contenant l'onglet actif, fermer les autres groupes déroulants
+        document.querySelectorAll('.nav-group:not(.nav-group-standalone)').forEach(g => g.classList.remove('open'));
+        const groupe = tab ? tab.closest('.nav-group') : null;
+        if (groupe) groupe.classList.add('open');
     }
 
     if (tabPlanning) {
@@ -745,6 +749,21 @@ function initNavigationTabs() {
             activerTab(tabAccueilMembre, viewAccueilMembre);
             if (typeof chargerAccueilMembre === 'function') chargerAccueilMembre();
         });
+    }
+
+    // Menus déroulants
+    document.querySelectorAll('.nav-group-title').forEach(titre => {
+        titre.addEventListener('click', () => {
+            const groupe = titre.closest('.nav-group');
+            if (groupe) groupe.classList.toggle('open');
+        });
+    });
+
+    // Ouvrir le groupe contenant l'onglet actif au démarrage
+    const ongletActif = document.querySelector('.nav-sub li.active');
+    if (ongletActif) {
+        const groupeActif = ongletActif.closest('.nav-group');
+        if (groupeActif) groupeActif.classList.add('open');
     }
 }
 
