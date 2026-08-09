@@ -321,27 +321,17 @@ async function chargerUtilisateurs() {
             const prenom = f['Prénom'] || '';
             const nom = f['Nom'] || '';
             const rolesActuels = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
-            const rolesCases = ROLES_MEMBRES.map(role => {
-                const checked = rolesActuels.includes(role) ? 'checked' : '';
-                const abr = role.split(' ').map(w => w[0]).join('').toUpperCase();
-                return `<label class="role-tag" title="${role}"><input type="checkbox" data-role="${role}" ${checked}> ${abr}</label>`;
-            }).join(' ');
+            const rolesText = rolesActuels.join(', ') || '-';
             const tr = document.createElement('tr');
             tr.className = 'ligne-membre';
             tr.innerHTML = `
                 <td><span class="membre-nom">${prenom} ${nom}</span></td>
                 <td>${f['Mail'] || ''}</td>
                 <td>${f['Téléphone'] || ''}</td>
-                <td class="roles-cell">${rolesCases}</td>
+                <td class="roles-cell">${rolesText}</td>
                 <td>${f['Identifiant'] || ''}</td>
             `;
-            tr.addEventListener('click', (e) => {
-                if (e.target.closest('.roles-cell')) return;
-                ouvrirSuiviMembre(r.id);
-            });
-            tr.querySelectorAll('.roles-cell input[type="checkbox"]').forEach(cb => {
-                cb.addEventListener('change', () => mettreAJourRolesMembre(r.id, tr.querySelectorAll('.roles-cell input[type="checkbox"]:checked')));
-            });
+            tr.addEventListener('click', () => ouvrirSuiviMembre(r.id));
             tbody.appendChild(tr);
         });
     } catch (err) {

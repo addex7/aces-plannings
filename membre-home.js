@@ -114,7 +114,26 @@ function renderAccueilMembre(fields) {
     const rolesEl = document.getElementById('accueil-roles');
     const titre = document.getElementById('accueil-titre');
     if (nomEl) nomEl.textContent = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
-    if (rolesEl) rolesEl.textContent = (membreSelectionne.roles || []).join(' · ') || 'Membre';
+    if (rolesEl) {
+        const roles = membreSelectionne.roles || [];
+        if (isSuperAdmin()) {
+            const liste = (typeof ROLES_MEMBRES !== 'undefined' ? ROLES_MEMBRES : ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Élève planeur', 'Pilote planeur', 'Documentaliste', 'Super admin']);
+            const cases = liste.map(role => {
+                const checked = roles.includes(role) ? 'checked' : '';
+                return `<label class="role-tag" title="${role}"><input type="checkbox" data-role="${role}" ${checked}> ${role}</label>`;
+            }).join('');
+            rolesEl.innerHTML = cases;
+            rolesEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (typeof mettreAJourRolesMembre === 'function') {
+                        mettreAJourRolesMembre(membreSelectionne.id, rolesEl.querySelectorAll('input[type="checkbox"]:checked'));
+                    }
+                });
+            });
+        } else {
+            rolesEl.textContent = roles.join(' · ') || 'Membre';
+        }
+    }
     if (titre) {
         titre.textContent = isSuperAdmin() && membreSelectionne.id !== currentUser.id ?
             `Espace membre : ${(membreSelectionne.prenom || '')} ${(membreSelectionne.nom || '')}`.trim() :

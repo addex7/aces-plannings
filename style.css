@@ -1323,13 +1323,23 @@ body {
     font-size: 12px;
     cursor: pointer;
 }
+#view-accueil-membre .accueil-profil-texte {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
 #view-accueil-membre .accueil-nom {
     font-size: 18px;
     font-weight: 600;
     color: #1e293b;
-    margin: 0 0 4px;
+    margin: 0;
 }
 #view-accueil-membre .accueil-roles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
     font-size: 13px;
     color: #64748b;
 }
