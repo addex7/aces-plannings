@@ -209,30 +209,58 @@ function renderAccueilMembre(fields) {
     const dateNaissance = fields[MEMBRE_FIELDS.DATE_NAISSANCE] || '';
     const isoDate = dateNaissance ? new Date(dateNaissance).toISOString().split('T')[0] : '';
     const age = ageEnAnnees(dateNaissance);
-    const ageText = age !== null ? ` (${age} ans)` : '';
     const autorisation = calcAutorisationParentale(dateNaissance, fields[MEMBRE_FIELDS.AUTORISATION_PARENTALE]);
-    const infosMembre = peutEditer ? `
-        <div class="validite-card infos-membre" id="accueil-infos-membre">
-            <div class="validite-label">Informations personnelles</div>
-            <div class="form-group">
-                <label for="accueil-date-naissance">Date de naissance${ageText}</label>
-                <input type="date" id="accueil-date-naissance" class="membre-info-input" data-field="${MEMBRE_FIELDS.DATE_NAISSANCE}" value="${isoDate}">
+    const infosCards = [];
+    const dateActif = estActif('Date de naissance');
+    if (peutEditer || dateActif || dateNaissance) {
+        const datePill = age !== null ? `<span class="pastille pastille-verte">✓ ${age} ans</span>` : `<span class="pastille pastille-rouge">✕ -</span>`;
+        const dateInput = peutEditer ? `<input type="date" class="validite-input" id="accueil-date-naissance" data-field="${MEMBRE_FIELDS.DATE_NAISSANCE}" value="${isoDate}">` : '';
+        const dateActiver = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="Date de naissance" ${dateActif ? 'checked' : ''}> Actif</label>` : '';
+        const disabledClass = dateActif ? '' : 'suivi-inactif';
+        infosCards.push(`
+            <div class="validite-card ${disabledClass}" data-label="Date de naissance">
+                <div class="validite-label">Date de naissance</div>
+                ${dateActiver}
+                <div class="validite-pill">${datePill}</div>
+                ${dateInput}
             </div>
-            <label class="activer-suivi" for="accueil-autorisation-parentale">
-                <input type="checkbox" id="accueil-autorisation-parentale" class="membre-info-input" data-field="${MEMBRE_FIELDS.AUTORISATION_PARENTALE}" ${autorisation ? 'checked' : ''}>
-                Autorisation parentale
-            </label>
-        </div>
-    ` : (autorisation || dateNaissance ? `
-        <div class="validite-card infos-membre">
-            <div class="validite-label">Informations personnelles</div>
-            <p>Date de naissance : ${formaterDateFr(dateNaissance) || '-'}</p>
-            <p>Autorisation parentale : ${autorisation ? 'Oui' : 'Non'}</p>
-        </div>
-    ` : '');
+        `);
+    }
+    const autoActif = estActif('Autorisation parentale');
+    if (peutEditer || autoActif || autorisation) {
+        const autoPill = autorisation ? `<span class="pastille pastille-verte">✓ Oui</span>` : `<span class="pastille pastille-rouge">✕ Non</span>`;
+        const autoInput = peutEditer ? `<label class="activer-suivi" for="accueil-autorisation-parentale"><input type="checkbox" class="validite-input" id="accueil-autorisation-parentale" data-field="${MEMBRE_FIELDS.AUTORISATION_PARENTALE}" ${autorisation ? 'checked' : ''}> Autorisation parentale</label>` : `<p>Autorisation parentale : ${autorisation ? 'Oui' : 'Non'}</p>`;
+        const autoActiver = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="Autorisation parentale" ${autoActif ? 'checked' : ''}> Actif</label>` : '';
+        const disabledClass = autoActif ? '' : 'suivi-inactif';
+        infosCards.push(`
+            <div class="validite-card ${disabledClass}" data-label="Autorisation parentale">
+                <div class="validite-label">Autorisation parentale</div>
+                ${autoActiver}
+                <div class="validite-pill">${autoPill}</div>
+                ${autoInput}
+            </div>
+        `);
+    }
+    const grid = VALIDITES.map(item => {
+        const val = fields[item.field];
+        const ok = estValideJusqua(val);
+        const iso = val ? new Date(val).toISOString().split('T')[0] : '';
+        const actif = estActif(item.label);
+        if (!peutEditer && !actif) return '';
+        const input = peutEditer ? `<input type="date" class="validite-input" data-field="${item.field}" value="${iso}">` : '';
+        const activer = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="${item.label}" ${actif ? 'checked' : ''}> Actif</label>` : '';
+        const disabledClass = actif ? '' : 'suivi-inactif';
+        return `
+            <div class="validite-card ${disabledClass}" data-label="${item.label}">
+                <div class="validite-label">${item.label}</div>
+                ${activer}
+                <div class="validite-pill">${pastille(ok, val)}</div>
+                ${input}
+            </div>
+        `;
+    }).join('') + infosCards.join('');
     container.innerHTML = `
         <form id="accueil-validites-form">
-            ${infosMembre}
             <div class="validite-grid">${grid}</div>
             ${saveBtn}
         </form>
@@ -338,9 +366,25 @@ async function chargerListeMembres() {
     }
 }
 
+async function patchMembre(membreId, fieldsToSend) {
+    const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ fields: fieldsToSend })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const msg = data.error?.message || 'Erreur';
+        const err = new Error(msg);
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+
 async function sauvegarderValidites() {
     if (!membreSelectionne || !isSuperAdmin()) return;
-    const inputs = document.querySelectorAll('.validite-input, .membre-info-input');
+    const inputs = document.querySelectorAll('.validite-input');
     const fields = {};
     inputs.forEach(input => {
         const field = input.dataset.field;
@@ -349,48 +393,25 @@ async function sauvegarderValidites() {
         else fields[field] = input.value || null;
     });
     const activerCbs = document.querySelectorAll('.activer-suivi-cb');
-    if (activerCbs.length) {
-        fields[SUIVIS_ACTIFS] = Array.from(activerCbs).filter(cb => cb.checked).map(cb => cb.dataset.label);
-    }
-    if (Object.keys(fields).length === 0) return;
-
-    async function patchMembre(fieldsToSend) {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreSelectionne.id}`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ fields: fieldsToSend })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            const msg = data.error?.message || 'Erreur';
-            const err = new Error(msg);
-            err.data = data;
-            throw err;
-        }
-        return data;
-    }
+    const suivisActifs = activerCbs.length ? Array.from(activerCbs).filter(cb => cb.checked).map(cb => cb.dataset.label) : null;
+    let updatedFields = membreSelectionne.fields || {};
 
     try {
-        const data = await patchMembre(fields);
+        if (Object.keys(fields).length > 0) {
+            const data = await patchMembre(membreSelectionne.id, fields);
+            updatedFields = { ...updatedFields, ...(data.fields || {}) };
+        }
+        if (suivisActifs) {
+            const data = await patchMembre(membreSelectionne.id, { [SUIVIS_ACTIFS]: suivisActifs });
+            updatedFields = { ...updatedFields, ...(data.fields || {}) };
+        }
         alert('Informations enregistrées.');
-        renderAccueilMembre(data.fields || {});
+        renderAccueilMembre(updatedFields);
     } catch (err) {
-        const missingField = Object.keys(fields).find(f => err.message && err.message.includes(f));
+        const missingField = Object.keys(fields).concat([SUIVIS_ACTIFS]).find(f => err.message && err.message.includes(f));
         if (missingField) {
-            delete fields[missingField];
-            if (Object.keys(fields).length === 0) {
-                alert(`Le champ "${missingField}" n'existe pas dans Airtable.\n\n${err.message}`);
-                console.error('Erreur sauvegarde (tous les champs manquants):', err);
-                return;
-            }
-            try {
-                const data = await patchMembre(fields);
-                alert(`Le champ "${missingField}" n'existe pas dans Airtable. Les autres informations ont été enregistrées.`);
-                renderAccueilMembre(data.fields || {});
-            } catch (err2) {
-                console.error('Erreur sauvegarde validités (retry):', err2);
-                alert('Erreur lors de la sauvegarde : ' + (err2.message || ''));
-            }
+            console.warn(`Champ manquant : ${missingField}`, err);
+            alert(`Le champ "${missingField}" n'existe pas ou a une option inconnue dans Airtable. Les autres informations ont peut-être été enregistrées.`);
         } else {
             console.error('Erreur sauvegarde validités:', err);
             alert('Erreur lors de la sauvegarde : ' + (err.message || ''));

@@ -1434,6 +1434,11 @@ body {
     width: 100%;
     box-sizing: border-box;
 }
+.validite-input[type="checkbox"] {
+    width: auto;
+    margin-top: 0;
+    vertical-align: middle;
+}
 .btn-enregistrer-validites {
     margin-top: 12px;
     padding: 6px 12px;
