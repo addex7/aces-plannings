@@ -122,25 +122,46 @@ async function chargerExperienceRecente() {
     const target = document.getElementById('accueil-experience');
     if (!target || !currentUser) return;
     try {
-        const auj = new Date();
-        const d3 = new Date(auj.getFullYear(), auj.getMonth() - 3, auj.getDate());
-        const d3str = d3.toISOString().split('T')[0];
-        const fullName = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
-        const formula = `AND(FIND(UPPER("${fullName.replace(/"/g, '\\"')}"), UPPER({Pilote})) > 0, DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD') >= '${d3str}')`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date de début&sort[0][direction]=desc&pageSize=1`;
+        const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
+        const prenom = (currentUser.prenom || '').replace(/"/g, '\\"');
+        const nom = (currentUser.nom || '').replace(/"/g, '\\"');
+        const formula = `OR(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0)`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=1`;
         const res = await cachedFetch(url, { headers }, 0, true);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const vol = (data.records || [])[0];
-        if (!vol || !vol.fields['Date de début']) {
+        if (!vol || !vol.fields['Date']) {
             target.innerHTML = pastille(false, null, 'Aucun vol dans les 3 derniers mois');
             return;
         }
-        const dateVol = new Date(vol.fields['Date de début']);
+        const dateVol = new Date(vol.fields['Date']);
         const limite = new Date(dateVol);
         limite.setMonth(limite.getMonth() + 3);
-        const ok = debutJour(limite) >= debutJour(auj);
-        target.innerHTML = pastille(ok, limite.toISOString(), ok ? 'Expérience récente' : 'Expérience à renouveler');
+        const sixMois = new Date(dateVol);
+        sixMois.setMonth(sixMois.getMonth() + 6);
+        const aujDebut = debutJour(new Date());
+        const debutLimite = debutJour(limite);
+        const debut6Mois = debutJour(sixMois);
+        let couleur, icone, texte;
+        if (debutLimite >= aujDebut) {
+            couleur = 'pastille-verte';
+            icone = '✓';
+            texte = 'À jour';
+        } else if (aujDebut <= debut6Mois) {
+            couleur = 'pastille-orange';
+            icone = '!';
+            texte = 'À contrôler';
+        } else {
+            couleur = 'pastille-rouge';
+            icone = '✕';
+            texte = 'Non à jour';
+        }
+        target.innerHTML = `
+            <span class="pastille ${couleur}">${icone} ${texte}</span>
+            <span class="validite-date">Dernier vol : ${formaterDateFr(dateVol.toISOString())}</span>
+            <span class="validite-date">Valide jusqu'au : ${formaterDateFr(limite.toISOString())}</span>
+        `;
     } catch (err) {
         console.error('Erreur expérience récente:', err);
         target.innerHTML = pastille(false, null, 'Erreur de chargement');
