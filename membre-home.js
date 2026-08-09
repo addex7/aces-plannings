@@ -14,7 +14,8 @@ const MEMBRE_FIELDS = {
     LICENCE_SEP: 'Licence SEP',
     PHOTO: 'Photo',
     DATE_NAISSANCE: 'Date de naissance',
-    AUTORISATION_PARENTALE: 'Autorisation parentale'
+    AUTORISATION_PARENTALE: 'Autorisation parentale',
+    AUTORISATION_PARENTALE_DATE: 'Date de validité autorisation parentale'
 };
 
 const VALIDITES = [
@@ -23,7 +24,8 @@ const VALIDITES = [
     { label: 'Licence assurance FFA', field: MEMBRE_FIELDS.LICENCE_FFA },
     { label: 'Licence assurance FFPLUM', field: MEMBRE_FIELDS.LICENCE_FFPLUM },
     { label: 'Médical', field: MEMBRE_FIELDS.MEDICAL },
-    { label: 'Licence SEP', field: MEMBRE_FIELDS.LICENCE_SEP }
+    { label: 'Licence SEP', field: MEMBRE_FIELDS.LICENCE_SEP },
+    { label: 'Autorisation parentale', field: MEMBRE_FIELDS.AUTORISATION_PARENTALE_DATE }
 ];
 
 const TYPES_DOCUMENTS = ['Médical', 'SEP', 'Autorisation parentale', 'Brevet ULM'];
@@ -164,11 +166,14 @@ function renderAccueilMembre(fields) {
     const peutEditer = isSuperAdmin();
     const actifList = Array.isArray(fields[SUIVIS_ACTIFS]) ? fields[SUIVIS_ACTIFS] : (fields[SUIVIS_ACTIFS] ? [fields[SUIVIS_ACTIFS]] : []);
     const estActif = (label) => actifList.length ? actifList.includes(label) : true;
+    const dateNaissance = fields[MEMBRE_FIELDS.DATE_NAISSANCE] || '';
+    const autorisation = calcAutorisationParentale(dateNaissance, fields[MEMBRE_FIELDS.AUTORISATION_PARENTALE]);
     let grid = VALIDITES.map(item => {
         const val = fields[item.field];
         const ok = estValideJusqua(val);
         const iso = val ? new Date(val).toISOString().split('T')[0] : '';
-        const actif = estActif(item.label);
+        const actif = item.label === 'Autorisation parentale' ? (autorisation && estActif(item.label)) : estActif(item.label);
+        if (item.label === 'Autorisation parentale' && !autorisation) return '';
         if (!peutEditer && !actif) return '';
         const input = peutEditer ? `<input type="date" class="validite-input" data-field="${item.field}" value="${iso}">` : '';
         const activer = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="${item.label}" ${actif ? 'checked' : ''}> Actif</label>` : '';
@@ -206,42 +211,6 @@ function renderAccueilMembre(fields) {
             <div class="accueil-doc-list" id="accueil-doc-list"><p>Chargement...</p></div>
         </div>
     `;
-    const dateNaissance = fields[MEMBRE_FIELDS.DATE_NAISSANCE] || '';
-    const isoDate = dateNaissance ? new Date(dateNaissance).toISOString().split('T')[0] : '';
-    const age = ageEnAnnees(dateNaissance);
-    const autorisation = calcAutorisationParentale(dateNaissance, fields[MEMBRE_FIELDS.AUTORISATION_PARENTALE]);
-    const infosCards = [];
-    const dateActif = estActif('Date de naissance');
-    if (peutEditer || dateActif || dateNaissance) {
-        const datePill = age !== null ? `<span class="pastille pastille-verte">✓ ${age} ans</span>` : `<span class="pastille pastille-rouge">✕ -</span>`;
-        const dateInput = peutEditer ? `<input type="date" class="validite-input" id="accueil-date-naissance" data-field="${MEMBRE_FIELDS.DATE_NAISSANCE}" value="${isoDate}">` : '';
-        const dateActiver = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="Date de naissance" ${dateActif ? 'checked' : ''}> Actif</label>` : '';
-        const disabledClass = dateActif ? '' : 'suivi-inactif';
-        infosCards.push(`
-            <div class="validite-card ${disabledClass}" data-label="Date de naissance">
-                <div class="validite-label">Date de naissance</div>
-                ${dateActiver}
-                <div class="validite-pill">${datePill}</div>
-                ${dateInput}
-            </div>
-        `);
-    }
-    const autoActif = estActif('Autorisation parentale');
-    if (peutEditer || autoActif || autorisation) {
-        const autoPill = autorisation ? `<span class="pastille pastille-verte">✓ Oui</span>` : `<span class="pastille pastille-rouge">✕ Non</span>`;
-        const autoInput = peutEditer ? `<label class="activer-suivi" for="accueil-autorisation-parentale"><input type="checkbox" class="validite-input" id="accueil-autorisation-parentale" data-field="${MEMBRE_FIELDS.AUTORISATION_PARENTALE}" ${autorisation ? 'checked' : ''}> Autorisation parentale</label>` : `<p>Autorisation parentale : ${autorisation ? 'Oui' : 'Non'}</p>`;
-        const autoActiver = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="Autorisation parentale" ${autoActif ? 'checked' : ''}> Actif</label>` : '';
-        const disabledClass = autoActif ? '' : 'suivi-inactif';
-        infosCards.push(`
-            <div class="validite-card ${disabledClass}" data-label="Autorisation parentale">
-                <div class="validite-label">Autorisation parentale</div>
-                ${autoActiver}
-                <div class="validite-pill">${autoPill}</div>
-                ${autoInput}
-            </div>
-        `);
-    }
-    grid += infosCards.join('');
     container.innerHTML = `
         <form id="accueil-validites-form">
             <div class="validite-grid">${grid}</div>
@@ -375,6 +344,9 @@ async function sauvegarderValidites() {
         if (input.type === 'checkbox') fields[field] = input.checked;
         else fields[field] = input.value || null;
     });
+    const dob = membreSelectionne.fields[MEMBRE_FIELDS.DATE_NAISSANCE];
+    const age = ageEnAnnees(dob);
+    fields[MEMBRE_FIELDS.AUTORISATION_PARENTALE] = age !== null && age < 18;
     const activerCbs = document.querySelectorAll('.activer-suivi-cb');
     const suivisActifs = activerCbs.length ? Array.from(activerCbs).filter(cb => cb.checked).map(cb => cb.dataset.label) : null;
     let updatedFields = membreSelectionne.fields || {};
@@ -524,14 +496,6 @@ function attacherListenersAccueil() {
     if (btnValidites) btnValidites.addEventListener('click', sauvegarderValidites);
     const formDoc = document.getElementById('accueil-doc-form');
     if (formDoc) formDoc.addEventListener('submit', uploaderDocumentMembre);
-    const dateNaissance = document.getElementById('accueil-date-naissance');
-    const autorisationParentale = document.getElementById('accueil-autorisation-parentale');
-    if (dateNaissance && autorisationParentale) {
-        dateNaissance.addEventListener('change', () => {
-            const age = ageEnAnnees(dateNaissance.value);
-            autorisationParentale.checked = age !== null && age < 18;
-        });
-    }
 }
 
 function initAccueilMembre() {

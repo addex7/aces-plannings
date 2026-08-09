@@ -446,8 +446,6 @@ function ouvrirModaleMembre(record) {
     const dateNaissance = f['Date de naissance'];
     const dateInput = document.getElementById('edit-membre-date-naissance');
     if (dateInput) dateInput.value = dateNaissance ? new Date(dateNaissance).toISOString().split('T')[0] : '';
-    const autoInput = document.getElementById('edit-membre-autorisation-parentale');
-    if (autoInput) autoInput.checked = f['Autorisation parentale'] === true;
     const roles = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
     document.querySelectorAll('input[name="edit-membre-roles"]').forEach(cb => { cb.checked = roles.includes(cb.value); });
     modal.style.display = 'flex';
@@ -471,13 +469,19 @@ async function sauvegarderMembre(event) {
     const identifiant = document.getElementById('edit-membre-identifiant').value.trim();
     const motDePasse = document.getElementById('edit-membre-password').value;
     const dateNaissance = document.getElementById('edit-membre-date-naissance').value || null;
-    const autorisationParentale = document.getElementById('edit-membre-autorisation-parentale').checked;
+    const d = dateNaissance ? new Date(dateNaissance) : null;
+    const auj = new Date();
+    let age = null;
+    if (d && !isNaN(d.getTime())) {
+        age = auj.getFullYear() - d.getFullYear();
+        if (auj.getMonth() < d.getMonth() || (auj.getMonth() === d.getMonth() && auj.getDate() < d.getDate())) age--;
+    }
     const roles = Array.from(document.querySelectorAll('input[name="edit-membre-roles"]:checked')).map(cb => cb.value);
     if (!prenom || !nom || !mail || !identifiant) { alert('Prénom, Nom, Mail et Identifiant sont requis.'); return; }
     const fields = { 'Prénom': prenom, 'Nom': nom, 'Mail': mail, 'Téléphone': telephone, 'Identifiant': identifiant, 'Rôles': roles };
     if (motDePasse) fields['Mot de passe'] = motDePasse;
     if (dateNaissance) fields['Date de naissance'] = dateNaissance;
-    fields['Autorisation parentale'] = autorisationParentale;
+    fields['Autorisation parentale'] = age !== null && age < 18;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, {
             method: 'PATCH',
