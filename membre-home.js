@@ -136,24 +136,22 @@ async function chargerExperienceRecente() {
             return;
         }
         const dateVol = new Date(vol.fields['Date']);
-        const debutAuj = debutJour(new Date());
-        const debutVol = debutJour(dateVol);
-        const nbJours = Math.floor((debutAuj - debutVol) / (1000 * 60 * 60 * 24));
         const limite = new Date(dateVol);
         limite.setMonth(limite.getMonth() + 3);
+        const joursRestants = Math.floor((debutJour(limite) - debutJour(new Date())) / (1000 * 60 * 60 * 24));
         let couleur, icone, texte;
-        if (nbJours < 30) {
-            couleur = 'pastille-orange';
-            icone = '!';
-            texte = 'Récent';
-        } else if (nbJours < 90) {
-            couleur = 'pastille-verte';
-            icone = '✓';
-            texte = 'À jour';
-        } else {
+        if (joursRestants < 0) {
             couleur = 'pastille-rouge';
             icone = '✕';
             texte = 'Non à jour';
+        } else if (joursRestants < 30) {
+            couleur = 'pastille-orange';
+            icone = '!';
+            texte = 'Bientôt à renouveler';
+        } else {
+            couleur = 'pastille-verte';
+            icone = '✓';
+            texte = 'À jour';
         }
         target.innerHTML = `
             <span class="pastille ${couleur}">${icone} ${texte}</span>
