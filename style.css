@@ -1523,3 +1523,13 @@ body {
     font-weight: 600;
     cursor: pointer;
 }
+#membres-list tr {
+    cursor: pointer;
+}
+#membres-list tr:hover {
+    background-color: #f8fafc;
+}
+#membres-list tr .roles-cell,
+#membres-list tr .roles-cell * {
+    cursor: default;
+}

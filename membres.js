@@ -327,15 +327,18 @@ async function chargerUtilisateurs() {
                 return `<label class="role-tag" title="${role}"><input type="checkbox" data-role="${role}" ${checked}> ${abr}</label>`;
             }).join(' ');
             const tr = document.createElement('tr');
+            tr.className = 'ligne-membre';
             tr.innerHTML = `
-                <td><a class="membre-nom" data-id="${r.id}" style="color:#1e3d59; text-decoration:underline; cursor:pointer;">${prenom} ${nom}</a></td>
+                <td><span class="membre-nom">${prenom} ${nom}</span></td>
                 <td>${f['Mail'] || ''}</td>
                 <td>${f['Téléphone'] || ''}</td>
                 <td class="roles-cell">${rolesCases}</td>
                 <td>${f['Identifiant'] || ''}</td>
             `;
-            const nomEl = tr.querySelector('.membre-nom');
-            if (nomEl) nomEl.addEventListener('click', (e) => { e.preventDefault(); ouvrirSuiviMembre(r.id); });
+            tr.addEventListener('click', (e) => {
+                if (e.target.closest('.roles-cell')) return;
+                ouvrirSuiviMembre(r.id);
+            });
             tr.querySelectorAll('.roles-cell input[type="checkbox"]').forEach(cb => {
                 cb.addEventListener('change', () => mettreAJourRolesMembre(r.id, tr.querySelectorAll('.roles-cell input[type="checkbox"]:checked')));
             });
@@ -343,7 +346,7 @@ async function chargerUtilisateurs() {
         });
     } catch (err) {
         console.error(err);
-        tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Erreur de chargement.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Erreur de chargement.</td></tr>';
     }
 }
 
