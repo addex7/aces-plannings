@@ -24,6 +24,9 @@ const VALIDITES = [
     { label: 'Licence SEP', field: MEMBRE_FIELDS.LICENCE_SEP }
 ];
 
+const TYPES_DOCUMENTS = ['Cotisation', 'Licence FFVP', 'Licence FFA', 'Licence FFPLUM', 'Médical', 'Licence SEP', 'Autre'];
+let membreSelectionne = null;
+
 function formaterDateFr(str) {
     if (!str) return null;
     const d = new Date(str);
@@ -51,20 +54,33 @@ function pastille(ok, dateStr, texteRouge) {
     return `<span class="pastille ${couleur}">${ok ? '✓' : '✕'} ${texte}</span><span class="validite-date">Valide jusqu'au : ${date}</span>`;
 }
 
-async function chargerAccueilMembre() {
+async function chargerAccueilMembre(id) {
     const container = document.getElementById('accueil-membre-container');
     if (!container) return;
     if (!currentUser) {
         container.innerHTML = '<p class="carnet-empty">Veuillez vous connecter pour voir votre profil.</p>';
         return;
     }
+    const membreId = id || currentUser.id;
     container.innerHTML = '<p class="carnet-empty">Chargement du profil...</p>';
     try {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${currentUser.id}`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreId}`;
         const res = await cachedFetch(url, { headers }, 0, true);
         const record = await res.json();
         if (!res.ok) throw new Error(record.error?.message || 'Erreur');
-        renderAccueilMembre(record.fields || {});
+        const f = record.fields || {};
+        membreSelectionne = {
+            id: record.id,
+            prenom: f['Prénom'],
+            nom: f['Nom'],
+            mail: f['Mail'],
+            telephone: f['Téléphone'],
+            identifiant: f['Identifiant'],
+            roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean),
+            fields: f
+        };
+        if (isSuperAdmin()) await chargerListeMembres();
+        renderAccueilMembre(membreSelectionne.fields);
     } catch (err) {
         console.error('Erreur chargement accueil membre:', err);
         container.innerHTML = '<p class="carnet-empty">Impossible de charger le profil.</p>';
@@ -83,7 +99,8 @@ function renderPhoto(fields) {
         src = photoField;
     }
     if (!src) {
-        const initiales = `${(currentUser.prenom || '').charAt(0)}${(currentUser.nom || '').charAt(0)}`.toUpperCase();
+        const membre = membreSelectionne || currentUser;
+        const initiales = `${(membre.prenom || '').charAt(0)}${(membre.nom || '').charAt(0)}`.toUpperCase();
         img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(initiales || 'User')}&background=random&size=128`;
         return;
     }
@@ -92,39 +109,79 @@ function renderPhoto(fields) {
 
 function renderAccueilMembre(fields) {
     const container = document.getElementById('accueil-membre-container');
-    if (!container) return;
+    if (!container || !membreSelectionne) return;
     const nomEl = document.getElementById('accueil-nom');
     const rolesEl = document.getElementById('accueil-roles');
-    if (nomEl) nomEl.textContent = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
-    if (rolesEl) rolesEl.textContent = (currentUser.roles || []).join(' · ') || 'Membre';
+    const titre = document.getElementById('accueil-titre');
+    if (nomEl) nomEl.textContent = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
+    if (rolesEl) rolesEl.textContent = (membreSelectionne.roles || []).join(' · ') || 'Membre';
+    if (titre) {
+        titre.textContent = isSuperAdmin() && membreSelectionne.id !== currentUser.id ?
+            `Espace membre : ${(membreSelectionne.prenom || '')} ${(membreSelectionne.nom || '')}`.trim() :
+            'Mon espace membre';
+    }
+    const peutEditer = isSuperAdmin();
     const grid = VALIDITES.map(item => {
         const val = fields[item.field];
         const ok = estValideJusqua(val);
+        const iso = val ? new Date(val).toISOString().split('T')[0] : '';
+        const input = peutEditer ? `<input type="date" class="validite-input" data-field="${item.field}" value="${iso}">` : '';
         return `
             <div class="validite-card">
                 <div class="validite-label">${item.label}</div>
                 <div class="validite-pill">${pastille(ok, val)}</div>
+                ${input}
             </div>
         `;
     }).join('');
+    const saveBtn = peutEditer ? '<button type="button" id="accueil-save-validites" class="btn-enregistrer-validites">Enregistrer les dates</button>' : '';
+    const docTypeOptions = TYPES_DOCUMENTS.map(t => `<option value="${t}">${t}</option>`).join('');
+    const docForm = peutEditer ? `
+        <div class="accueil-documents" id="accueil-documents">
+            <h3>Documents du membre</h3>
+            <form id="accueil-doc-form" class="accueil-doc-form">
+                <div class="form-group">
+                    <label for="accueil-doc-type">Type</label>
+                    <select id="accueil-doc-type">${docTypeOptions}</select>
+                </div>
+                <div class="form-group">
+                    <label for="accueil-doc-fichier">Fichier</label>
+                    <input type="file" id="accueil-doc-fichier" accept="*">
+                </div>
+                <button type="submit" class="btn-primary">Ajouter</button>
+            </form>
+            <div class="accueil-doc-list" id="accueil-doc-list"><p>Chargement...</p></div>
+        </div>
+    ` : `
+        <div class="accueil-documents" id="accueil-documents">
+            <h3>Documents du membre</h3>
+            <div class="accueil-doc-list" id="accueil-doc-list"><p>Chargement...</p></div>
+        </div>
+    `;
     container.innerHTML = `
-        <div class="validite-grid">${grid}</div>
+        <form id="accueil-validites-form">
+            <div class="validite-grid">${grid}</div>
+            ${saveBtn}
+        </form>
         <div class="validite-card validite-experience">
             <div class="validite-label">Expérience récente (1 vol dans les 3 derniers mois)</div>
             <div class="validite-pill" id="accueil-experience">${pastille(false, null, 'Chargement...')}</div>
         </div>
+        ${docForm}
     `;
     renderPhoto(fields);
     chargerExperienceRecente();
+    chargerDocumentsMembre();
+    attacherListenersAccueil();
 }
 
 async function chargerExperienceRecente() {
     const target = document.getElementById('accueil-experience');
-    if (!target || !currentUser) return;
+    if (!target || !membreSelectionne) return;
     try {
         const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
-        const prenom = (currentUser.prenom || '').replace(/"/g, '\\"');
-        const nom = (currentUser.nom || '').replace(/"/g, '\\"');
+        const prenom = (membreSelectionne.prenom || '').replace(/"/g, '\\"');
+        const nom = (membreSelectionne.nom || '').replace(/"/g, '\\"');
         const formula = `OR(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0)`;
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=1`;
         const res = await cachedFetch(url, { headers }, 0, true);
@@ -165,9 +222,10 @@ async function chargerExperienceRecente() {
 }
 
 async function mettreAJourPhoto(dataURL) {
-    if (!currentUser) return;
+    const membre = membreSelectionne || currentUser;
+    if (!membre) return;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${currentUser.id}`, {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membre.id}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { [MEMBRE_FIELDS.PHOTO]: dataURL } })
@@ -178,6 +236,131 @@ async function mettreAJourPhoto(dataURL) {
     } catch (err) {
         console.error('Erreur upload photo:', err);
         alert('Erreur lors de la sauvegarde de la photo. Vérifiez que le champ "Photo" est un champ Texte dans Airtable.');
+    }
+}
+
+async function chargerListeMembres() {
+    const select = document.getElementById('accueil-select-membre');
+    const bar = document.getElementById('accueil-admin-bar');
+    if (!select || !bar || !isSuperAdmin()) return;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        const previous = select.value;
+        select.innerHTML = '';
+        (data.records || []).forEach(r => {
+            const f = r.fields || {};
+            const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Membre';
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = nomComplet;
+            opt.dataset.record = JSON.stringify({ id: r.id, fields: f });
+            select.appendChild(opt);
+        });
+        select.value = previous || (membreSelectionne ? membreSelectionne.id : '') || currentUser.id;
+        bar.style.display = 'flex';
+    } catch (err) {
+        console.error('Erreur chargement liste membres:', err);
+    }
+}
+
+async function sauvegarderValidites() {
+    if (!membreSelectionne || !isSuperAdmin()) return;
+    const inputs = document.querySelectorAll('.validite-input');
+    const fields = {};
+    inputs.forEach(input => {
+        const field = input.dataset.field;
+        const val = input.value;
+        if (field) fields[field] = val || null;
+    });
+    if (Object.keys(fields).length === 0) return;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreSelectionne.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ fields })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        alert('Dates enregistrées.');
+        renderAccueilMembre(data.fields || {});
+    } catch (err) {
+        console.error('Erreur sauvegarde validités:', err);
+        alert('Erreur lors de la sauvegarde.');
+    }
+}
+
+async function ouvrirModaleMembreSelectionne() {
+    if (!membreSelectionne) return;
+    ouvrirModaleMembre({ id: membreSelectionne.id, fields: membreSelectionne.fields });
+}
+
+async function chargerDocumentsMembre() {
+    const list = document.getElementById('accueil-doc-list');
+    if (!list || !membreSelectionne) return;
+    list.innerHTML = '<p>Chargement...</p>';
+    try {
+        const nomComplet = `${(membreSelectionne.prenom || '').replace(/"/g, '\\"')} ${(membreSelectionne.nom || '').replace(/"/g, '\\"')}`.trim();
+        const formula = `FIND(UPPER("${nomComplet}"), UPPER({Sous-dossier})) > 0`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Created Time&sort[0][direction]=desc`;
+        const res = await cachedFetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        const records = data.records || [];
+        if (!records.length) { list.innerHTML = '<p>Aucun document pour ce membre.</p>'; return; }
+        list.innerHTML = records.map(r => {
+            const f = r.fields || {};
+            const titre = f['Titre'] || 'Document';
+            const lien = f['Lien'] || '#';
+            return `
+                <div class="accueil-doc-item">
+                    <span>${titre}</span>
+                    <a href="${lien}" target="_blank" rel="noopener">Ouvrir ↗</a>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error('Erreur chargement documents membre:', err);
+        list.innerHTML = '<p>Erreur de chargement.</p>';
+    }
+}
+
+async function uploaderDocumentMembre(e) {
+    e.preventDefault();
+    if (!membreSelectionne || !isSuperAdmin()) return;
+    const selectType = document.getElementById('accueil-doc-type');
+    const inputFichier = document.getElementById('accueil-doc-fichier');
+    const btn = e.target.querySelector('button[type="submit"]');
+    const type = selectType ? selectType.value : 'Autre';
+    const file = inputFichier ? inputFichier.files[0] : null;
+    if (!file) { alert('Veuillez choisir un fichier.'); return; }
+    if (typeof uploaderFichierDocument !== 'function') { alert('Uploader non disponible.'); return; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours...'; }
+    try {
+        const lien = await uploaderFichierDocument(file);
+        const nomComplet = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
+        const fields = {
+            'Titre': type,
+            'Lien': lien,
+            'Sous-dossier': nomComplet,
+            'Description': 'Justificatif membre',
+            'Auteur': currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : ''
+        };
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ records: [{ fields }] })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        e.target.reset();
+        await chargerDocumentsMembre();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l\'upload : ' + (err.message || err));
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Ajouter'; }
     }
 }
 
@@ -225,9 +408,20 @@ async function uploaderPhoto(event) {
     input.value = '';
 }
 
+function attacherListenersAccueil() {
+    const btnValidites = document.getElementById('accueil-save-validites');
+    if (btnValidites) btnValidites.addEventListener('click', sauvegarderValidites);
+    const formDoc = document.getElementById('accueil-doc-form');
+    if (formDoc) formDoc.addEventListener('submit', uploaderDocumentMembre);
+}
+
 function initAccueilMembre() {
     const input = document.getElementById('accueil-photo-input');
     if (input) input.addEventListener('change', uploaderPhoto);
+    const select = document.getElementById('accueil-select-membre');
+    if (select) select.addEventListener('change', () => chargerAccueilMembre(select.value));
+    const btnModifier = document.getElementById('accueil-btn-modifier');
+    if (btnModifier) btnModifier.addEventListener('click', ouvrirModaleMembreSelectionne);
 }
 
 document.addEventListener('DOMContentLoaded', initAccueilMembre);

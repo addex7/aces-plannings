@@ -1392,3 +1392,107 @@ body {
     font-size: 12px;
     color: #64748b;
 }
+
+/* --- ADMIN & EDITION MEMBRE --- */
+.accueil-admin-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+.accueil-admin-bar label {
+    font-weight: 600;
+    color: #475569;
+}
+.accueil-admin-bar select {
+    min-width: 180px;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+}
+.validite-input {
+    margin-top: 8px;
+    padding: 4px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.btn-enregistrer-validites {
+    margin-top: 12px;
+    padding: 6px 12px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.btn-enregistrer-validites:hover {
+    background: #2563eb;
+}
+
+/* --- DOCUMENTS MEMBRE --- */
+.accueil-documents {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+}
+.accueil-documents h3 {
+    margin: 0 0 12px;
+    color: #1e293b;
+    font-size: 16px;
+}
+.accueil-doc-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 15px;
+}
+.accueil-doc-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 140px;
+}
+.accueil-doc-form label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+.accueil-doc-form select,
+.accueil-doc-form input[type="file"] {
+    padding: 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 13px;
+}
+.accueil-doc-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+}
+.accueil-doc-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 13px;
+}
+.accueil-doc-item a {
+    color: #166534;
+    text-decoration: underline;
+    word-break: break-all;
+}

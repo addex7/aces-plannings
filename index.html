@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=35">
+    <link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 
@@ -496,8 +496,13 @@
             <!-- ================= VUE ACCUEIL MEMBRE ================= -->
             <section id="view-accueil-membre" class="view-section" style="display: none;">
                 <header class="header">
-                    <h2>Mon espace membre</h2>
+                    <h2 id="accueil-titre">Mon espace membre</h2>
                 </header>
+                <div id="accueil-admin-bar" class="accueil-admin-bar" style="display: none;">
+                    <label for="accueil-select-membre">Membre :</label>
+                    <select id="accueil-select-membre"></select>
+                    <button type="button" id="accueil-btn-modifier" class="btn-secondary">Modifier les infos</button>
+                </div>
                 <div class="accueil-profil">
                     <div class="accueil-photo-wrap">
                         <img id="accueil-photo" class="accueil-photo" src="" alt="Photo de profil">
@@ -870,17 +875,17 @@
     </div>
 
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="evenements.js?v=35"></script>
-    <script src="app.js?v=35"></script>
-    <script src="utils.js?v=35"></script>
-    <script src="presences.js?v=35"></script>
-    <script src="planning.js?v=35"></script>
-    <script src="calendrier.js?v=35"></script>
-    <script src="aeronefs.js?v=35"></script>
-    <script src="carnet.js?v=35"></script>
-    <script src="documents.js?v=35"></script>
+    <script src="evenements.js?v=36"></script>
+    <script src="app.js?v=36"></script>
+    <script src="utils.js?v=36"></script>
+    <script src="presences.js?v=36"></script>
+    <script src="planning.js?v=36"></script>
+    <script src="calendrier.js?v=36"></script>
+    <script src="aeronefs.js?v=36"></script>
+    <script src="carnet.js?v=36"></script>
+    <script src="documents.js?v=36"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="membres.js?v=35"></script>
-    <script src="membre-home.js?v=35"></script>
+    <script src="membres.js?v=36"></script>
+    <script src="membre-home.js?v=36"></script>
 </body>
 </html>
