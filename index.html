@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=29">
+    <link rel="stylesheet" href="style.css?v=30">
 </head>
 <body>
 
@@ -85,15 +85,29 @@
                     <button id="btn-creer-evenement" style="width:100%; padding:8px 10px; background:rgba(255,255,255,0.15); color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; gap:6px;">➕ Créer un évènement</button>
                     <div id="prochains-evenements" style="margin-top:8px;"></div>
                 </div>
-                <ul class="nav-links">
-                    <li id="tab-planning" class="active">📅 Planning</li>
-                    <li id="tab-aeronefs">🛩️ Aéronefs</li>
-                    <li id="tab-initiation">🎯 Vol d'Initiation</li>
-                    <li id="tab-carnet">📖 Carnet de route</li>
-                    <li id="tab-documents">📄 Base documentaire</li>
-                    <li id="tab-membres" style="display:none;">👥 Membres</li>
-                    <li id="tab-accueil-membre">👤 Accueil membre</li>
-                </ul>
+                <div class="nav-links">
+                    <div class="nav-group">
+                        <div class="nav-group-title">📅 Planning</div>
+                        <ul class="nav-sub">
+                            <li id="tab-planning" class="active">📅 Planning</li>
+                            <li id="tab-initiation">🎯 Vol d'Initiation</li>
+                            <li id="tab-aeronefs">🛩️ Aéronefs</li>
+                        </ul>
+                    </div>
+                    <div class="nav-group nav-group-standalone">
+                        <ul class="nav-sub">
+                            <li id="tab-carnet">📖 Carnet de route</li>
+                            <li id="tab-documents">📄 Base documentaire</li>
+                        </ul>
+                    </div>
+                    <div class="nav-group">
+                        <div class="nav-group-title">👥 Membres</div>
+                        <ul class="nav-sub">
+                            <li id="tab-membres" style="display:none;">👥 Membres</li>
+                            <li id="tab-accueil-membre">👤 Accueil membre</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <div class="user-profile" style="display:flex; flex-direction:column; align-items:center; gap:6px;">
                 <span id="user-profile-name">Pilote Connecté</span>
@@ -856,17 +870,17 @@
     </div>
 
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="evenements.js?v=29"></script>
-    <script src="app.js?v=29"></script>
-    <script src="utils.js?v=29"></script>
-    <script src="presences.js?v=29"></script>
-    <script src="planning.js?v=29"></script>
-    <script src="calendrier.js?v=29"></script>
-    <script src="aeronefs.js?v=29"></script>
-    <script src="carnet.js?v=29"></script>
-    <script src="documents.js?v=29"></script>
+    <script src="evenements.js?v=30"></script>
+    <script src="app.js?v=30"></script>
+    <script src="utils.js?v=30"></script>
+    <script src="presences.js?v=30"></script>
+    <script src="planning.js?v=30"></script>
+    <script src="calendrier.js?v=30"></script>
+    <script src="aeronefs.js?v=30"></script>
+    <script src="carnet.js?v=30"></script>
+    <script src="documents.js?v=30"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="membres.js?v=29"></script>
-    <script src="membre-home.js?v=29"></script>
+    <script src="membres.js?v=30"></script>
+    <script src="membre-home.js?v=30"></script>
 </body>
 </html>

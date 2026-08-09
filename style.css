@@ -42,24 +42,42 @@ body {
 }
 
 .nav-links {
-    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     padding: 0;
     margin: 0;
     flex-grow: 0;
     margin-top: auto;
     width: 100%;
 }
-.nav-links li {
-    padding: 8px 10px;
+.nav-group-title {
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.85;
+    cursor: default;
+    user-select: none;
+}
+.nav-sub {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.nav-sub li {
+    padding: 6px 10px 6px 24px;
     border-radius: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     cursor: pointer;
     transition: background 0.2s;
     font-size: 13px;
     white-space: nowrap;
 }
-.nav-links li.active, .nav-links li:hover {
+.nav-sub li.active, .nav-sub li:hover {
     background-color: #17b978;
+}
+.nav-group-standalone .nav-sub li {
+    padding: 8px 10px;
 }
 .user-profile {
     font-size: 13px;
