@@ -164,7 +164,7 @@ function renderAccueilMembre(fields) {
     const peutEditer = isSuperAdmin();
     const actifList = Array.isArray(fields[SUIVIS_ACTIFS]) ? fields[SUIVIS_ACTIFS] : (fields[SUIVIS_ACTIFS] ? [fields[SUIVIS_ACTIFS]] : []);
     const estActif = (label) => actifList.length ? actifList.includes(label) : true;
-    const grid = VALIDITES.map(item => {
+    let grid = VALIDITES.map(item => {
         const val = fields[item.field];
         const ok = estValideJusqua(val);
         const iso = val ? new Date(val).toISOString().split('T')[0] : '';
@@ -241,24 +241,7 @@ function renderAccueilMembre(fields) {
             </div>
         `);
     }
-    const grid = VALIDITES.map(item => {
-        const val = fields[item.field];
-        const ok = estValideJusqua(val);
-        const iso = val ? new Date(val).toISOString().split('T')[0] : '';
-        const actif = estActif(item.label);
-        if (!peutEditer && !actif) return '';
-        const input = peutEditer ? `<input type="date" class="validite-input" data-field="${item.field}" value="${iso}">` : '';
-        const activer = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="${item.label}" ${actif ? 'checked' : ''}> Actif</label>` : '';
-        const disabledClass = actif ? '' : 'suivi-inactif';
-        return `
-            <div class="validite-card ${disabledClass}" data-label="${item.label}">
-                <div class="validite-label">${item.label}</div>
-                ${activer}
-                <div class="validite-pill">${pastille(ok, val)}</div>
-                ${input}
-            </div>
-        `;
-    }).join('') + infosCards.join('');
+    grid += infosCards.join('');
     container.innerHTML = `
         <form id="accueil-validites-form">
             <div class="validite-grid">${grid}</div>
