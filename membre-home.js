@@ -302,7 +302,7 @@ async function sauvegarderValidites() {
         if (field) fields[field] = val || null;
     });
     const activerCbs = document.querySelectorAll('.activer-suivi-cb');
-    if (activerCbs.length && SUIVIS_ACTIFS in (membreSelectionne.fields || {})) {
+    if (activerCbs.length) {
         fields[SUIVIS_ACTIFS] = Array.from(activerCbs).filter(cb => cb.checked).map(cb => cb.dataset.label);
     }
     if (Object.keys(fields).length === 0) return;
