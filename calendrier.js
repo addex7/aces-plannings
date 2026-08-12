@@ -28,6 +28,14 @@ function gererClicMiniCalendrier(e) {
         } else {
             renderMiniCalendrier();
         }
+    } else if (e.target.closest('.cal-btn-add-event')) {
+        const btn = e.target.closest('.cal-btn-add-event');
+        if (btn && btn.dataset.year && typeof ouvrirModaleEvenement === 'function') {
+            const y = Number(btn.dataset.year);
+            const m = Number(btn.dataset.month);
+            const d = Number(btn.dataset.day);
+            ouvrirModaleEvenement(new Date(y, m, d, 12, 0, 0));
+        }
     } else {
         const dayEl = e.target.closest('.cal-day');
         if (dayEl && dayEl.dataset.year) {
@@ -93,6 +101,7 @@ async function renderMiniCalendrier() {
         if (selected && selected.getTime() === d.getTime()) cls += ' selected';
         html += `<div class="${cls}" data-year="${annee}" data-month="${mois}" data-day="${j}">`;
         html += `<span class="cal-day-number">${j}</span>`;
+        html += `<button class="cal-btn-add-event" type="button" data-year="${annee}" data-month="${mois}" data-day="${j}" title="Créer un évènement">+</button>`;
         if (info.has || info.hasUser) {
             html += `<span class="cal-dot"></span>`;
         }

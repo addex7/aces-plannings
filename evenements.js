@@ -44,11 +44,11 @@ function initEvenements() {
     chargerEvenementsJour();
 }
 
-function ouvrirModaleEvenement() {
+function ouvrirModaleEvenement(date) {
     const overlay = document.getElementById('modale-evenement');
     if (!overlay) return;
-    const d = dateAffichee || new Date();
-    const iso = d.toISOString().split('T')[0];
+    const d = date || dateAffichee || new Date();
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     document.getElementById('ev-titre').value = '';
     document.getElementById('ev-description').value = '';
     document.getElementById('ev-date-debut').value = iso;

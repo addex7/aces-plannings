@@ -1024,6 +1024,32 @@ body {
 .cal-day-number {
     line-height: 1;
 }
+.cal-btn-add-event {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: white;
+    font-size: 12px;
+    line-height: 16px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+.cal-btn-add-event:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
 .cal-dot {
     width: 6px;
     height: 6px;
