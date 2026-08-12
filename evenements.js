@@ -35,7 +35,7 @@ function initEvenements() {
     const form = document.getElementById('form-evenement');
     const btnClose = document.getElementById('btn-close-evenement');
 
-    if (btn) btn.addEventListener('click', ouvrirModaleEvenement);
+    if (btn) btn.addEventListener('click', () => ouvrirModaleEvenement());
     if (btnClose) btnClose.addEventListener('click', fermerModaleEvenement);
     if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) fermerModaleEvenement(); });
     if (form) form.addEventListener('submit', enregistrerEvenement);
@@ -47,7 +47,7 @@ function initEvenements() {
 function ouvrirModaleEvenement(date) {
     const overlay = document.getElementById('modale-evenement');
     if (!overlay) return;
-    const d = date || dateAffichee || new Date();
+    const d = (date instanceof Date ? date : null) || dateAffichee || new Date();
     const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     document.getElementById('ev-titre').value = '';
     document.getElementById('ev-description').value = '';
