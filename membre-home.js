@@ -215,7 +215,6 @@ function renderAccueilMembre(fields) {
             </div>
         `;
     }).join('');
-    const saveBtn = peutEditer ? '<button type="button" id="accueil-save-validites" class="btn-enregistrer-validites">Enregistrer les informations</button>' : '';
     const docTypeOptions = TYPES_DOCUMENTS.map(t => `<option value="${t}">${t}</option>`).join('');
     const docForm = peutEditer ? `
         <div class="accueil-documents" id="accueil-documents">
@@ -242,7 +241,6 @@ function renderAccueilMembre(fields) {
     container.innerHTML = `
         <form id="accueil-validites-form">
             <div class="validite-grid">${grid}</div>
-            ${saveBtn}
         </form>
         <div class="validite-card validite-experience">
             <div class="validite-label">Expériences récentes</div>
@@ -621,10 +619,27 @@ async function uploaderPhoto(event) {
 }
 
 function attacherListenersAccueil() {
-    const btnValidites = document.getElementById('accueil-save-validites');
-    if (btnValidites) btnValidites.addEventListener('click', sauvegarderValidites);
     const formDoc = document.getElementById('accueil-doc-form');
     if (formDoc) formDoc.addEventListener('submit', uploaderDocumentMembre);
+
+    if (!isSuperAdmin()) return;
+
+    document.querySelectorAll('.validite-input').forEach(input => {
+        input.addEventListener('change', () => sauvegarderValidites());
+    });
+    document.querySelectorAll('.activer-suivi-cb').forEach(cb => {
+        cb.addEventListener('change', () => sauvegarderValidites());
+    });
+    const rolesEl = document.getElementById('accueil-roles');
+    if (rolesEl) {
+        rolesEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', () => {
+                if (typeof mettreAJourRolesMembre === 'function') {
+                    mettreAJourRolesMembre(membreSelectionne.id, rolesEl.querySelectorAll('input[type="checkbox"]:checked'));
+                }
+            });
+        });
+    }
 }
 
 function initAccueilMembre() {
