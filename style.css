@@ -1301,26 +1301,32 @@ body {
     width: 100px;
     height: 100px;
     flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
 }
 #view-accueil-membre .accueil-photo {
-    width: 100px;
-    height: 100px;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid #cbd5e1;
     background: #fff;
+    display: block;
 }
 #view-accueil-membre .accueil-photo-input {
     display: none;
 }
 #view-accueil-membre .accueil-photo-label {
-    display: inline-block;
-    margin-top: 8px;
-    padding: 4px 10px;
-    background: #3b82f6;
-    color: white;
-    border-radius: 4px;
-    font-size: 12px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 4px 0;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 11px;
+    text-align: center;
+    border-radius: 0 0 50% 50%;
     cursor: pointer;
 }
 #view-accueil-membre .accueil-profil-texte {

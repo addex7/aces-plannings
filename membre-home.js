@@ -16,7 +16,8 @@ const MEMBRE_FIELDS = {
     DATE_NAISSANCE: 'Date de naissance',
     AUTORISATION_PARENTALE: 'Autorisation parentale',
     AUTORISATION_PARENTALE_DATE: 'Date de validité autorisation parentale',
-    CPL: 'Pilote CPL'
+    CPL: 'Pilote CPL',
+    INSTRUCTEUR: 'Date de validité instructeur'
 };
 
 const VALIDITES = [
@@ -26,7 +27,8 @@ const VALIDITES = [
     { label: 'Licence assurance FFPLUM', field: MEMBRE_FIELDS.LICENCE_FFPLUM },
     { label: 'Médical', field: MEMBRE_FIELDS.MEDICAL },
     { label: 'Licence SEP', field: MEMBRE_FIELDS.LICENCE_SEP },
-    { label: 'Autorisation parentale', field: MEMBRE_FIELDS.AUTORISATION_PARENTALE_DATE }
+    { label: 'Autorisation parentale', field: MEMBRE_FIELDS.AUTORISATION_PARENTALE_DATE },
+    { label: 'Instructeur', field: MEMBRE_FIELDS.INSTRUCTEUR }
 ];
 
 const TYPES_DOCUMENTS = ['Médical', 'SEP', 'Autorisation parentale', 'Brevet ULM'];
