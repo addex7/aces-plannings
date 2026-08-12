@@ -284,7 +284,7 @@ async function peuplerInstructeursSelect() {
     const sel = document.getElementById('form-instructeur');
     if (!sel) return;
     if (listeInstructeursCache.length) return;
-    const formula = `OR(FIND('Instructeur avion',{Rôles})>0,FIND('Instructeur ULM',{Rôles})>0,FIND('Instructeur planeur',{Rôles})>0)`;
+    const formula = `OR(FIND('Instructeur avion',ARRAYJOIN({Rôles},','))>0,FIND('Instructeur ULM',ARRAYJOIN({Rôles},','))>0,FIND('Instructeur planeur',ARRAYJOIN({Rôles},','))>0)`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
         const data = await res.json();

@@ -1608,14 +1608,21 @@ body {
 .instructeur-dispo-row .machine-cell {
     display: flex;
     align-items: center;
-    padding: 0 12px;
+    padding: 0 4px;
     font-weight: 600;
     color: #1e3d59;
+    overflow: hidden;
+    white-space: nowrap;
 }
 .instructeur-nom {
     cursor: pointer;
     border-bottom: 1px dashed #1e3d59;
     padding-bottom: 1px;
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .instructeur-nom:hover {
     color: #3b82f6;
