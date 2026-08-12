@@ -88,6 +88,8 @@ function remplirFormulaireCarnet(f) {
     document.getElementById('carnet-horametre-depart').value = f['Horamètre départ'] || '';
     document.getElementById('carnet-horametre-arrivee').value = f['Horamètre arrivée'] || '';
     document.getElementById('carnet-observations').value = f['Observations'] || '';
+    document.getElementById('carnet-decollages').value = (f['Décollages'] === 0 || f['Décollages']) ? f['Décollages'] : '1';
+    document.getElementById('carnet-atterrissages').value = (f['Atterrissages'] === 0 || f['Atterrissages']) ? f['Atterrissages'] : '1';
     const fonctions = (f['Fonction'] || '').split('/').map(x => x.trim());
     document.querySelectorAll('input[name="carnet-fonction"]').forEach(cb => {
         cb.checked = fonctions.includes(cb.value);
@@ -360,6 +362,8 @@ async function soumettreCarnetRoute(event) {
     const date = document.getElementById('carnet-date').value;
     const pilote = document.getElementById('carnet-pilote').value.trim();
     const instructeur = document.getElementById('carnet-instructeur').value.trim();
+    const decollages = parseInt(document.getElementById('carnet-decollages').value, 10) || 0;
+    const atterrissages = parseInt(document.getElementById('carnet-atterrissages').value, 10) || 0;
     const fonction = Array.from(document.querySelectorAll('input[name="carnet-fonction"]:checked')).map(cb => cb.value).join('/');
     const machine = document.getElementById('carnet-machine').value;
     const depart = document.getElementById('carnet-depart').value.trim();
@@ -403,6 +407,8 @@ async function soumettreCarnetRoute(event) {
         "Heure départ": heureDepart,
         "Heure arrivée": heureArrivee,
         "Temps de vol": temps,
+        "Décollages": decollages,
+        "Atterrissages": atterrissages,
         "Nature": nature,
         "Carburant départ": valeurCarburant(carburantDepart),
         "Carburant arrivée": valeurCarburant(carburantArrivee),

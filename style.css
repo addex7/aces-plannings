@@ -1361,6 +1361,44 @@ body {
     border-radius: 8px;
     padding: 12px 14px;
 }
+.experience-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.experience-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #f1f5f9;
+    background: #f8fafc;
+}
+.experience-row.suivi-inactif {
+    opacity: 0.6;
+    background: #f1f5f9;
+}
+.experience-titre {
+    flex: 1 1 100%;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+.experience-row .activer-suivi {
+    font-size: 12px;
+    margin-left: auto;
+}
+.accueil-disclaimer {
+    font-size: 12px;
+    color: #64748b;
+    font-style: italic;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #f1f5f9;
+    border-radius: 6px;
+}
 .validite-label {
     font-size: 13px;
     font-weight: 600;

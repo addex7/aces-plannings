@@ -15,7 +15,8 @@ const MEMBRE_FIELDS = {
     PHOTO: 'Photo',
     DATE_NAISSANCE: 'Date de naissance',
     AUTORISATION_PARENTALE: 'Autorisation parentale',
-    AUTORISATION_PARENTALE_DATE: 'Date de validité autorisation parentale'
+    AUTORISATION_PARENTALE_DATE: 'Date de validité autorisation parentale',
+    CPL: 'Pilote CPL'
 };
 
 const VALIDITES = [
@@ -62,6 +63,31 @@ function calcAutorisationParentale(dob, saved) {
         return age !== null && age < 18;
     }
     return false;
+}
+
+function estSuiviActif(fields, label) {
+    const actifList = Array.isArray(fields[SUIVIS_ACTIFS]) ? fields[SUIVIS_ACTIFS] : (fields[SUIVIS_ACTIFS] ? [fields[SUIVIS_ACTIFS]] : []);
+    return actifList.length ? actifList.includes(label) : true;
+}
+
+function dureeVolMinutes(f) {
+    if (f['Horamètre départ'] !== undefined && f['Horamètre arrivée'] !== undefined) {
+        const dep = parseFloat(f['Horamètre départ']);
+        const arr = parseFloat(f['Horamètre arrivée']);
+        if (!isNaN(dep) && !isNaN(arr) && arr >= dep) return Math.round((arr - dep) * 60);
+    }
+    if (!f['Heure départ'] || !f['Heure arrivée']) return 0;
+    const [hD, mD] = f['Heure départ'].split(':').map(Number);
+    const [hA, mA] = f['Heure arrivée'].split(':').map(Number);
+    if (isNaN(hD) || isNaN(mD) || isNaN(hA) || isNaN(mA)) return 0;
+    let minutes = (hA * 60 + mA) - (hD * 60 + mD);
+    if (minutes < 0) minutes += 24 * 60;
+    return minutes;
+}
+
+function dateIlYAMois(mois) {
+    const auj = new Date();
+    return new Date(auj.getFullYear(), auj.getMonth() - mois, auj.getDate());
 }
 
 function estValideJusqua(str) {
@@ -164,10 +190,12 @@ function renderAccueilMembre(fields) {
             'Mon espace membre';
     }
     const peutEditer = isSuperAdmin();
-    const actifList = Array.isArray(fields[SUIVIS_ACTIFS]) ? fields[SUIVIS_ACTIFS] : (fields[SUIVIS_ACTIFS] ? [fields[SUIVIS_ACTIFS]] : []);
-    const estActif = (label) => actifList.length ? actifList.includes(label) : true;
+    const estActif = (label) => estSuiviActif(fields, label);
     const dateNaissance = fields[MEMBRE_FIELDS.DATE_NAISSANCE] || '';
     const autorisation = calcAutorisationParentale(dateNaissance, fields[MEMBRE_FIELDS.AUTORISATION_PARENTALE]);
+    const cpl = fields[MEMBRE_FIELDS.CPL] === true;
+    const actifLAPL = estActif('LAPL');
+    const actifInitiation = estActif('Pilote vol initiation avion');
     let grid = VALIDITES.map(item => {
         const val = fields[item.field];
         const ok = estValideJusqua(val);
@@ -217,60 +245,161 @@ function renderAccueilMembre(fields) {
             ${saveBtn}
         </form>
         <div class="validite-card validite-experience">
-            <div class="validite-label">Expérience récente (1 vol dans les 3 derniers mois)</div>
-            <div class="validite-pill" id="accueil-experience">${pastille(false, null, 'Chargement...')}</div>
+            <div class="validite-label">Expériences récentes</div>
+            <div class="experience-list" id="accueil-experiences">
+                <div class="experience-row" data-exp="recent">
+                    <span class="experience-titre">1 vol dans les 3 derniers mois</span>
+                    <span class="validite-pill" id="accueil-exp-recent">${pastille(false, null, 'Chargement...')}</span>
+                </div>
+                <div class="experience-row" data-exp="passager">
+                    <span class="experience-titre">Emport de passager (3 décollages / 3 atterrissages sur 3 mois)</span>
+                    <span class="validite-pill" id="accueil-exp-passager">${pastille(false, null, 'Chargement...')}</span>
+                </div>
+                ${peutEditer || actifLAPL ? `
+                <div class="experience-row ${actifLAPL ? '' : 'suivi-inactif'}" data-exp="lapl">
+                    <span class="experience-titre">LAPL (12 h / 1 h instructeur / 12 décollages / 12 atterrissages sur 24 mois)</span>
+                    <span class="validite-pill" id="accueil-exp-lapl">${pastille(false, null, 'Chargement...')}</span>
+                    ${peutEditer ? `<label class="activer-suivi"><input type="checkbox" class="activer-suivi-cb" data-label="LAPL" ${actifLAPL ? 'checked' : ''}> Suivi actif</label>` : ''}
+                </div>` : ''}
+                ${peutEditer || actifInitiation ? `
+                <div class="experience-row ${actifInitiation ? '' : 'suivi-inactif'}" data-exp="initiation">
+                    <span class="experience-titre">Pilote vol d'initiation avion (25 h sur 12 mois + emport passager)</span>
+                    <span class="validite-pill" id="accueil-exp-initiation">${pastille(false, null, 'Chargement...')}</span>
+                    ${peutEditer ? `<label class="activer-suivi"><input type="checkbox" class="activer-suivi-cb" data-label="Pilote vol initiation avion" ${actifInitiation ? 'checked' : ''}> Suivi actif</label>
+                    <label class="activer-suivi"><input type="checkbox" class="validite-input" data-field="${MEMBRE_FIELDS.CPL}" ${cpl ? 'checked' : ''}> Pilote CPL</label>` : ''}
+                    ${!peutEditer && cpl ? '<span class="pastille pastille-verte">Pilote CPL</span>' : ''}
+                </div>` : ''}
+            </div>
         </div>
+        <p class="accueil-disclaimer">Le pilote reste responsable de la validité de ses qualifications et de ses licences. Ce système est informatif.</p>
         ${docForm}
     `;
     renderPhoto(fields);
-    chargerExperienceRecente();
+    chargerExperiences();
     chargerDocumentsMembre();
     attacherListenersAccueil();
 }
 
-async function chargerExperienceRecente() {
-    const target = document.getElementById('accueil-experience');
-    if (!target || !membreSelectionne) return;
+async function chargerExperiences() {
+    const container = document.getElementById('accueil-experiences');
+    if (!container || !membreSelectionne) return;
+    const elRecent = document.getElementById('accueil-exp-recent');
+    const elPassager = document.getElementById('accueil-exp-passager');
+    const elLAPL = document.getElementById('accueil-exp-lapl');
+    const elInitiation = document.getElementById('accueil-exp-initiation');
+
+    const updatePill = (el, couleur, texte) => { if (el) el.innerHTML = `<span class="pastille ${couleur}">${texte}</span>`; };
+    const updateDetail = (el, couleur, texte, detail) => { if (el) el.innerHTML = `<span class="pastille ${couleur}">${texte}</span>${detail ? `<span class="validite-date">${detail}</span>` : ''}`; };
+
     try {
         const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
         const prenom = (membreSelectionne.prenom || '').replace(/"/g, '\\"');
         const nom = (membreSelectionne.nom || '').replace(/"/g, '\\"');
-        const formula = `OR(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0)`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=1`;
-        const res = await cachedFetch(url, { headers }, 0, true);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        const vol = (data.records || [])[0];
-        if (!vol || !vol.fields['Date']) {
-            target.innerHTML = pastille(false, null, 'Aucun vol dans les 3 derniers mois');
-            return;
-        }
-        const dateVol = new Date(vol.fields['Date']);
-        const limite = new Date(dateVol);
-        limite.setMonth(limite.getMonth() + 3);
-        const joursRestants = Math.floor((debutJour(limite) - debutJour(new Date())) / (1000 * 60 * 60 * 24));
-        let couleur, icone, texte;
-        if (joursRestants < 0) {
-            couleur = 'pastille-rouge';
-            icone = '✕';
-            texte = 'Non à jour';
-        } else if (joursRestants < 30) {
-            couleur = 'pastille-orange';
-            icone = '';
-            texte = 'Bientôt à renouveler';
+        const mois24 = dateIlYAMois(24);
+        const dateMin = `${mois24.getFullYear()}-${String(mois24.getMonth() + 1).padStart(2, '0')}-${String(mois24.getDate()).padStart(2, '0')}`;
+        const formula = `AND(OR(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0), IS_AFTER({Date}, "${dateMin}"))`;
+        const baseUrl = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
+
+        let records = [];
+        let offset = '';
+        do {
+            const url = baseUrl + (offset ? `&offset=${offset}` : '');
+            const res = await cachedFetch(url, { headers });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+            records = records.concat(data.records || []);
+            offset = data.offset || '';
+        } while (offset);
+
+        const auj = new Date();
+        const limite3m = dateIlYAMois(3);
+        const limite12m = dateIlYAMois(12);
+        const limite24m = dateIlYAMois(24);
+
+        let dernierVol = null;
+        let decollages3m = 0, atterrissages3m = 0;
+        let minutes24m = 0, decollages24m = 0, atterrissages24m = 0, instruction1h = false;
+        let minutes12m = 0;
+
+        records.forEach(r => {
+            const f = r.fields || {};
+            if (!f['Date']) return;
+            const d = new Date(f['Date']);
+            if (d < limite24m) return;
+            if (!dernierVol || d > dernierVol) dernierVol = d;
+            const duree = dureeVolMinutes(f);
+            const dec = parseInt(f['Décollages'], 10) || 1;
+            const att = parseInt(f['Atterrissages'], 10) || 1;
+
+            if (d >= limite3m) {
+                decollages3m += dec;
+                atterrissages3m += att;
+            }
+            if (d >= limite24m) {
+                minutes24m += duree;
+                decollages24m += dec;
+                atterrissages24m += att;
+                const inst = (f['Instructeur'] || '').trim();
+                if (inst && duree >= 60) instruction1h = true;
+            }
+            if (d >= limite12m) {
+                minutes12m += duree;
+            }
+        });
+
+        const h24 = Math.floor(minutes24m / 60);
+        const m24 = minutes24m % 60;
+        const h12 = Math.floor(minutes12m / 60);
+        const m12 = minutes12m % 60;
+
+        // 1 vol 3 mois
+        if (!dernierVol || dernierVol < limite3m) {
+            updatePill(elRecent, 'pastille-rouge', '✕ Aucun vol dans les 3 derniers mois');
         } else {
-            couleur = 'pastille-verte';
-            icone = '✓';
-            texte = 'À jour';
+            const validite = new Date(dernierVol);
+            validite.setMonth(validite.getMonth() + 3);
+            const jours = Math.floor((debutJour(validite) - debutJour(auj)) / (1000 * 60 * 60 * 24));
+            if (jours < 0) {
+                updateDetail(elRecent, 'pastille-rouge', '✕ Non à jour', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())}`);
+            } else if (jours < 30) {
+                updateDetail(elRecent, 'pastille-orange', 'Bientôt à renouveler', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Valide jusqu'au : ${formaterDateFr(validite.toISOString())}`);
+            } else {
+                updateDetail(elRecent, 'pastille-verte', '✓ À jour', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Valide jusqu'au : ${formaterDateFr(validite.toISOString())}`);
+            }
         }
-        target.innerHTML = `
-            <span class="pastille ${couleur}">${icone ? icone + ' ' : ''}${texte}</span>
-            <span class="validite-date">Dernier vol : ${formaterDateFr(dateVol.toISOString())}</span>
-            <span class="validite-date">Valide jusqu'au : ${formaterDateFr(limite.toISOString())}</span>
-        `;
+
+        // Emport de passager
+        const emportOk = decollages3m >= 3 && atterrissages3m >= 3;
+        if (emportOk) {
+            updatePill(elPassager, 'pastille-verte', `✓ À jour (${decollages3m} décollages, ${atterrissages3m} atterrissages)`);
+        } else if (decollages3m > 0 || atterrissages3m > 0) {
+            updatePill(elPassager, 'pastille-orange', `${decollages3m} décollages, ${atterrissages3m} atterrissages / 3`);
+        } else {
+            updatePill(elPassager, 'pastille-rouge', '✕ Aucun décollage/atterrissage sur 3 mois');
+        }
+
+        // LAPL
+        const heuresLAPL = minutes24m >= 12 * 60;
+        const decLAPL = decollages24m >= 12;
+        const attLAPL = atterrissages24m >= 12;
+        const laplOk = heuresLAPL && decLAPL && attLAPL && instruction1h;
+        const texteLAPL = `${h24}h${String(m24).padStart(2, '0')} / 12h00 — ${decollages24m} décollages / 12 — ${atterrissages24m} atterrissages / 12 — 1h instructeur : ${instruction1h ? 'oui' : 'non'}`;
+        updatePill(elLAPL, laplOk ? 'pastille-verte' : 'pastille-rouge', (laplOk ? '✓ À jour — ' : '✕ Non à jour — ') + texteLAPL);
+
+        // Initiation avion
+        const fields = membreSelectionne.fields || {};
+        const cpl = fields[MEMBRE_FIELDS.CPL] === true;
+        const initiationOk = emportOk && (cpl || minutes12m >= 25 * 60);
+        const texteInit = cpl
+            ? `Pilote CPL — ${h12}h${String(m12).padStart(2, '0')} sur 12 mois`
+            : `${h12}h${String(m12).padStart(2, '0')} / 25h00 sur 12 mois — emport passager : ${emportOk ? 'oui' : 'non'}`;
+        updatePill(elInitiation, initiationOk ? 'pastille-verte' : 'pastille-rouge', (initiationOk ? '✓ À jour — ' : '✕ Non à jour — ') + texteInit);
     } catch (err) {
-        console.error('Erreur expérience récente:', err);
-        target.innerHTML = pastille(false, null, 'Erreur de chargement');
+        console.error('Erreur chargement expériences:', err);
+        if (elRecent) elRecent.innerHTML = pastille(false, null, 'Erreur de chargement');
+        if (elPassager) elPassager.innerHTML = pastille(false, null, 'Erreur de chargement');
+        if (elLAPL) elLAPL.innerHTML = pastille(false, null, 'Erreur de chargement');
+        if (elInitiation) elInitiation.innerHTML = pastille(false, null, 'Erreur de chargement');
     }
 }
 
