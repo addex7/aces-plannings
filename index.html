@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=55">
+    <link rel="stylesheet" href="style.css?v=56">
 </head>
 <body>
 
@@ -401,6 +401,8 @@
                         <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Gestion VI"> Gestion VI</label>
                         <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Pilote VI"> Pilote VI</label>
                         <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Instructeur planeur"> Instructeur planeur</label>
+                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Instructeur avion"> Instructeur avion</label>
+                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Instructeur ULM"> Instructeur ULM</label>
                         <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Élève planeur"> Élève planeur</label>
                         <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Pilote planeur"> Pilote planeur</label>
                         <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Documentaliste"> Documentaliste</label>
@@ -541,6 +543,12 @@
                     <label style="font-weight:bold;">Pilote :</label>
                     <strong id="affichage-pilote" style="color:#1e3d59; font-size:15px;"></strong>
                     <input type="hidden" id="form-pilote">
+                </div>
+                <div class="form-group">
+                    <label for="form-instructeur">Instructeur (optionnel) :</label>
+                    <select id="form-instructeur" class="form-control" style="width:100%;">
+                        <option value="">-- Aucun --</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="form-debut">Date & Heure de début :</label>
@@ -830,6 +838,8 @@
                     <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Pilote VI"> Pilote VI</label>
                     <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Super admin"> Super admin</label>
                     <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Instructeur planeur"> Instructeur planeur</label>
+                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Instructeur avion"> Instructeur avion</label>
+                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Instructeur ULM"> Instructeur ULM</label>
                     <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Élève planeur"> Élève planeur</label>
                     <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Pilote planeur"> Pilote planeur</label>
                     <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Documentaliste"> Documentaliste</label>
@@ -881,18 +891,75 @@
         </div>
     </div>
 
+    <!-- Modale : Déclarer une disponibilité instructeur -->
+    <div id="disponibilite-instructeur-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal-disponibilite">&times;</span>
+            <h3>Déclarer une disponibilité</h3>
+            <form id="form-disponibilite-instructeur">
+                <div class="form-group">
+                    <label for="dispo-date">Date :</label>
+                    <input type="date" id="dispo-date" required>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label for="dispo-debut">Heure début *</label>
+                        <input type="time" id="dispo-debut" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dispo-fin">Heure fin *</label>
+                        <input type="time" id="dispo-fin" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="dispo-machine">Machine :</label>
+                    <select id="dispo-machine" class="form-control" style="width:100%;">
+                        <option value="Tous">Tous</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="dispo-disponible" checked style="width:auto;">
+                    <label for="dispo-disponible" style="margin:0;">Disponible</label>
+                </div>
+                <div class="form-actions" style="margin-top:15px;">
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale : Suivi 14 jours d'un instructeur -->
+    <div id="instructeur-suivi-modal" class="modal">
+        <div class="modal-content" style="max-width:1000px; width:95%;">
+            <span class="close-modal-instructeur-suivi">&times;</span>
+            <h3>Disponibilités : <span id="instructeur-suivi-nom"></span></h3>
+            <div class="instructeur-suivi-grid">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="width:120px;">Date</th>
+                            <th>00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23</th>
+                        </tr>
+                    </thead>
+                    <tbody id="instructeur-suivi-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="evenements.js?v=55"></script>
-    <script src="app.js?v=55"></script>
-    <script src="utils.js?v=55"></script>
-    <script src="presences.js?v=55"></script>
-    <script src="planning.js?v=55"></script>
-    <script src="calendrier.js?v=55"></script>
-    <script src="aeronefs.js?v=55"></script>
-    <script src="carnet.js?v=55"></script>
-    <script src="documents.js?v=55"></script>
+    <script src="evenements.js?v=56"></script>
+    <script src="app.js?v=56"></script>
+    <script src="utils.js?v=56"></script>
+    <script src="presences.js?v=56"></script>
+    <script src="planning.js?v=56"></script>
+    <script src="calendrier.js?v=56"></script>
+    <script src="aeronefs.js?v=56"></script>
+    <script src="carnet.js?v=56"></script>
+    <script src="documents.js?v=56"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="membres.js?v=55"></script>
-    <script src="membre-home.js?v=55"></script>
+    <script src="membres.js?v=56"></script>
+    <script src="instructeurs.js?v=56"></script>
+    <script src="membre-home.js?v=56"></script>
 </body>
 </html>

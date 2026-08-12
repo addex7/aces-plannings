@@ -522,6 +522,9 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             resVIPlaneur.json(),
             resVICreneaux.json()
         ]);
+        if (typeof afficherDisposInstructeurs !== 'undefined' && afficherDisposInstructeurs) {
+            await chargerDisponibilitesInstructeurs(dateAffichee);
+        }
         if (dataReservations.records) listeReservationsCache = dataReservations.records;
         let volsVIP = (dataVIPlaneur.records || []).filter(vol => {
             if (!vol.fields) return false;
@@ -907,6 +910,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         if (autoActiverVIP && volsVIP.length > 0) afficherVIPPlaneur = true;
         mettreAJourBoutonVIPPlaneur();
         afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil);
+        if (typeof afficherLignesInstructeurs === 'function') afficherLignesInstructeurs(rowsContainer, soleil);
         await chargerPresencesPlaneur();
         await chargerPresencesClub();
     } catch (error) {
@@ -1450,6 +1454,7 @@ function initGestionnaireModale() {
             if (document.getElementById('form-debut')) document.getElementById('form-debut').value = `${annee}-${mois}-${jour}T09:00`;
             if (document.getElementById('form-fin')) document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T11:00`;
             if (document.getElementById('form-estimation')) document.getElementById('form-estimation').value = '1.0';
+            if (typeof peuplerInstructeursSelect === 'function') peuplerInstructeursSelect();
             const affichage = document.getElementById('affichage-pilote');
             const pilote = nomPiloteCourant();
             if (document.getElementById('form-pilote')) document.getElementById('form-pilote').value = pilote;
@@ -1467,11 +1472,24 @@ function initGestionnaireModale() {
             const piloteNom = document.getElementById('form-pilote').value.trim();
             const passagerNom = document.getElementById('form-passager') ? document.getElementById('form-passager').value.trim() : '';
             const telephone = document.getElementById('form-telephone') ? document.getElementById('form-telephone').value.trim() : '';
-            const dateDebut = new Date(document.getElementById('form-debut').value).toISOString();
-            const dateFin = new Date(document.getElementById('form-fin').value).toISOString();
+            const localDebut = new Date(document.getElementById('form-debut').value);
+            const localFin = new Date(document.getElementById('form-fin').value);
+            const dateDebut = localDebut.toISOString();
+            const dateFin = localFin.toISOString();
             const isVIPlaneur = typesVol.includes('VI Planeur');
             const isVIMoteur = typesVol.includes('VI Moteur');
             const isVI = isVIPlaneur || isVIMoteur;
+            const instructeur = document.getElementById('form-instructeur') ? document.getElementById('form-instructeur').value.trim() : '';
+            let machineNom = 'Tous';
+            if (isVIMoteur || !isVI) {
+                const selectedMachine = getMachineSelectionnee();
+                const avion = (listeAvionsCache || []).find(a => a.id === selectedMachine);
+                machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || selectedMachine || 'Tous';
+            }
+            if (instructeur && typeof verifierConflitDisponibiliteInstructeur === 'function') {
+                const conflit = await verifierConflitDisponibiliteInstructeur(instructeur, localDebut, localFin, machineNom);
+                if (conflit && !confirm("L'instructeur n'est pas disponible sur ce créneau. Voulez-vous quand même réserver ?")) return;
+            }
             if (isVI) {
                 if (!passagerNom) {
                     alert("Le nom du passager est obligatoire.");

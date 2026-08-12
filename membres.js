@@ -26,6 +26,7 @@ function setCurrentUser(user) {
     }
     updateUIRoles();
     if (typeof updateGestionVI === 'function') updateGestionVI();
+    if (typeof initDisponibilitesInstructeurs === 'function') initDisponibilitesInstructeurs();
 }
 
 function updateUIRoles() {
@@ -303,7 +304,7 @@ async function envoyerReset() {
     }
 }
 
-const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Élève planeur', 'Pilote planeur', 'Documentaliste', 'Super admin'];
+const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Élève planeur', 'Pilote planeur', 'Documentaliste', 'Super admin'];
 
 async function chargerUtilisateurs() {
     const tbody = document.getElementById('membres-list');

@@ -1605,3 +1605,59 @@ body {
 #membres-list tr .roles-cell * {
     cursor: default;
 }
+.instructeur-dispo-row .machine-cell {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-weight: 600;
+    color: #1e3d59;
+}
+.instructeur-nom {
+    cursor: pointer;
+    border-bottom: 1px dashed #1e3d59;
+    padding-bottom: 1px;
+}
+.instructeur-nom:hover {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+}
+.dispo-grid {
+    position: relative;
+}
+.dispo-hour {
+    background: #fee2e2;
+    border-right: 1px solid rgba(255,255,255,0.6);
+    box-sizing: border-box;
+    height: 100%;
+}
+.dispo-hour.dispo-green {
+    background: #dcfce7;
+}
+.dispo-hour.dispo-red {
+    background: #fee2e2;
+}
+#instructeur-suivi-modal .instructeur-suivi-grid {
+    overflow-x: auto;
+    margin-top: 15px;
+}
+#instructeur-suivi-modal th,
+#instructeur-suivi-modal td {
+    border: 1px solid #e2e8f0;
+    padding: 6px;
+    text-align: left;
+    font-size: 12px;
+}
+#instructeur-suivi-modal th {
+    background: #f1f5f9;
+    color: #1e3d59;
+}
+#instructeur-suivi-modal .instructeur-suivi-day {
+    display: flex;
+    width: 100%;
+    min-width: 480px;
+    padding: 0;
+}
+#instructeur-suivi-modal .instructeur-suivi-day .dispo-hour {
+    flex: 1;
+    height: 24px;
+}
