@@ -1625,16 +1625,34 @@ body {
     position: relative;
 }
 .dispo-hour {
+    flex: 1;
     background: #fee2e2;
     border-right: 1px solid rgba(255,255,255,0.6);
     box-sizing: border-box;
     height: 100%;
+    opacity: 0.7;
 }
 .dispo-hour.dispo-green {
     background: #dcfce7;
 }
 .dispo-hour.dispo-red {
     background: #fee2e2;
+}
+.dispo-hour-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.35;
+    z-index: 3;
+    pointer-events: none;
+}
+.dispo-hour-overlay.dispo-green {
+    background: #22c55e;
+}
+.dispo-hour-overlay.dispo-red {
+    background: #ef4444;
 }
 #instructeur-suivi-modal .instructeur-suivi-grid {
     overflow-x: auto;
