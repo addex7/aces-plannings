@@ -487,7 +487,6 @@ async function sauvegarderValidites() {
             const data = await patchMembre(membreSelectionne.id, { [SUIVIS_ACTIFS]: suivisActifs });
             updatedFields = { ...updatedFields, ...(data.fields || {}) };
         }
-        alert('Informations enregistrées.');
         renderAccueilMembre(updatedFields);
     } catch (err) {
         const missingField = Object.keys(fields).concat([SUIVIS_ACTIFS]).find(f => err.message && err.message.includes(f));
