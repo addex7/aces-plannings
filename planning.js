@@ -163,7 +163,7 @@ async function ouvrirModaleModification(reservationId) {
     }
 
     // Remplir le formulaire avec les données de la réservation
-    const form = document.getElementById('form-reservation');
+    const form = document.getElementById('reservation-form');
     if (!form) return;
 
     // Remplir les champs du formulaire
@@ -206,7 +206,7 @@ async function ouvrirModaleModification(reservationId) {
     idReservationEnEdition = reservationId;
 
     // Afficher la modale
-    const modal = document.getElementById('modal-reservation');
+    const modal = document.getElementById('reservation-modal');
     if (modal) {
         modal.style.display = 'block';
     }
@@ -214,7 +214,7 @@ async function ouvrirModaleModification(reservationId) {
 
 // --- FONCTION POUR SAUVEGARDER UNE RÉSERVATION ---
 async function sauvegarderReservation() {
-    const form = document.getElementById('form-reservation');
+    const form = document.getElementById('reservation-form');
     if (!form.checkValidity()) {
         alert("Veuillez remplir tous les champs obligatoires.");
         return;
@@ -303,7 +303,7 @@ async function sauvegarderReservation() {
         await chargerVolsInitiation();
 
         // Fermer la modale
-        const modal = document.getElementById('modal-reservation');
+        const modal = document.getElementById('reservation-modal');
         if (modal) modal.style.display = 'none';
         form.reset();
         idReservationEnEdition = null;
@@ -342,9 +342,9 @@ async function supprimerReservation() {
             }
 
             // Fermer la modale
-            const modal = document.getElementById('modal-reservation');
+            const modal = document.getElementById('reservation-modal');
             if (modal) modal.style.display = 'none';
-            document.getElementById('form-reservation').reset();
+            document.getElementById('reservation-form').reset();
             idReservationEnEdition = null;
         }
     } catch (error) {
