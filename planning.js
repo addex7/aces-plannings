@@ -925,6 +925,7 @@ function genererFriseHeures() {
         const heureStr = h + 'h';
         const div = document.createElement('div');
         div.className = 'hour-cell-header';
+        div.style.flex = LARGEURS_HEURES[h];
         div.innerHTML = `<span>${heureStr}</span>`;
         container.appendChild(div);
     }

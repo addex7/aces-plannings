@@ -14,6 +14,7 @@ function genererFriseHeuresInstructeur() {
     for (let h = 0; h < 24; h++) {
         const div = document.createElement('div');
         div.className = 'hour-cell-header';
+        div.style.flex = LARGEURS_HEURES[h];
         div.innerHTML = `<span>${h}h</span>`;
         container.appendChild(div);
     }
