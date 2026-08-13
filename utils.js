@@ -121,7 +121,7 @@ function convertirHeureEnHHMM(decimalHeure) {
     return `${String(heures).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-const LARGEURS_HEURES = [2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,2];
+const LARGEURS_HEURES = [2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,2];
 const TOTAL_LARGEUR_HEURES = LARGEURS_HEURES.reduce((a,b)=>a+b,0);
 
 function positionHeure(decimalHeure) {
