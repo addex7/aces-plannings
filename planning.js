@@ -932,7 +932,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         if (autoActiverVIP && volsVIP.length > 0) afficherVIPPlaneur = true;
         mettreAJourBoutonVIPPlaneur();
         afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil);
-        if (typeof afficherLignesInstructeurs === 'function') afficherLignesInstructeurs(rowsContainer, soleil, disposInstructeurs);
+        if (typeof afficherLignesInstructeurs === 'function') afficherLignesInstructeurs(rowsContainer, soleil, disposInstructeurs, listeReservationsCache);
         await chargerPresencesPlaneur();
         await chargerPresencesClub();
     } catch (error) {

@@ -175,11 +175,12 @@ async function chargerDisponibilitesInstructeurs(dateCible, forceRefresh = false
     return disposInstructeursCache;
 }
 
-function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis) {
+function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reservationsFournis) {
     if (!afficherDisposInstructeurs) return;
     if (!listeInstructeursCache.length) return;
     const dispos = disposFournis || disposInstructeursCache;
-    console.log('[DISPOS] afficherLignes - liste:', listeInstructeursCache.map(u => u.nomComplet), 'dispos:', dispos.length);
+    const reservations = reservationsFournis || [];
+    console.log('[DISPOS] afficherLignes - liste:', listeInstructeursCache.map(u => u.nomComplet), 'dispos:', dispos.length, 'resas:', reservations.length);
     const instructeurs = [...new Set(listeInstructeursCache.map(u => u.nomComplet))].sort();
     const s = soleil || { aubeAero: 0, leverSoleil: 0, coucherSoleil: 24, crepusculeAero: 24 };
     const aubeAeroPercent = (Math.max(0, s.aubeAero) / 24) * 100;
@@ -233,11 +234,47 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis) {
         for (let h = 0; h < 24; h++) {
             const block = document.createElement('div');
             block.className = 'grid-hour-block';
-            const overlay = document.createElement('div');
-            overlay.className = `dispo-hour-overlay dispo-${dispoParHeure[h]}`;
-            block.appendChild(overlay);
+            if (dispoParHeure[h] === 'green') {
+                const overlay = document.createElement('div');
+                overlay.className = 'dispo-hour-overlay dispo-green';
+                block.appendChild(overlay);
+            }
             gridBg.appendChild(block);
         }
+
+        const resasPerso = reservations.filter(r => correspondanceNom((r.fields || {})['Instructeur'], nom));
+        resasPerso.forEach(r => {
+            const f = r.fields || {};
+            const types = Array.isArray(f['Type de vol']) ? f['Type de vol'] : [f['Type de vol']].filter(Boolean);
+            const isInstruction = types.includes('Instruction');
+            const machineIds = Array.isArray(f['Machine']) ? f['Machine'] : [f['Machine']].filter(Boolean);
+            const machineId = machineIds[0];
+            const avion = (typeof listeAvionsCache !== 'undefined' ? listeAvionsCache : []).find(a => a.id === machineId);
+            const immat = (avion && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machineId || '';
+            const debut = new Date(f['Date de début']);
+            const fin = new Date(f['Date de fin']);
+            if (isNaN(debut.getTime()) || isNaN(fin.getTime())) return;
+            let heureDebut = debut.getHours() + debut.getMinutes() / 60;
+            let heureFin = fin.getHours() + fin.getMinutes() / 60;
+            if (debut.getDate() !== dateAffichee.getDate() || debut.getMonth() !== dateAffichee.getMonth() || debut.getFullYear() !== dateAffichee.getFullYear()) heureDebut = 0;
+            if (fin.getDate() !== dateAffichee.getDate() || fin.getMonth() !== dateAffichee.getMonth() || fin.getFullYear() !== dateAffichee.getFullYear()) heureFin = 24;
+            heureDebut = Math.max(0, Math.min(24, heureDebut));
+            heureFin = Math.max(0, Math.min(24, heureFin));
+            const duree = heureFin - heureDebut;
+            if (duree <= 0) return;
+            const barresDiv = document.createElement('div');
+            barresDiv.className = 'reservation-bar reservation-avec-instructeur';
+            if (duree <= 2) barresDiv.classList.add('short-reservation');
+            barresDiv.style.left = `${(heureDebut / 24) * 100}%`;
+            barresDiv.style.width = `${(duree / 24) * 100}%`;
+            const pilote = (f['Pilote'] || '').toString().trim();
+            barresDiv.title = `${pilote} — ${immat}${isInstruction ? ' (Instruction)' : ''}`.trim();
+            const libelle = duree > 2 ? `${immat}${isInstruction ? ' (Ins)' : ''}` : '';
+            barresDiv.innerHTML = `<strong>${libelle}</strong>`;
+            barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
+            gridBg.appendChild(barresDiv);
+        });
+
         rowDiv.appendChild(gridBg);
         rowsContainer.appendChild(rowDiv);
     });
