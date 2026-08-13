@@ -1597,6 +1597,7 @@ function initGestionnaireModale() {
                     "Type de vol": typesVol,
                     "Machine": [machineId],
                     "Pilote": piloteNom,
+                    "Instructeur": instructeur,
                     "Date de début": dateDebut,
                     "Date de fin": dateFin,
                     "Commentaires VI": "",
