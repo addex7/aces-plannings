@@ -103,11 +103,16 @@ function initPlanningInstructeur() {
 }
 
 async function chargerDisposInstructeurPlage(start, end) {
-    const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
-    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-    const formula = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
+    const dates = [];
+    const d = new Date(start);
+    while (d <= end) {
+        const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        dates.push(`DATETIME_FORMAT({Date},'YYYY-MM-DD')='${s}'`);
+        d.setDate(d.getDate() + 1);
+    }
+    const formula = `OR(${dates.join(',')})`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=200`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=200`, { headers }, API_CACHE_TTL, true);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         return data.records || [];
@@ -163,8 +168,10 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
 
     for (let h = 0; h < 24; h++) {
         const d = document.createElement('div');
-        d.className = `dispo-hour dispo-${blocks[h]}`;
-        d.style.cssText = 'flex: 1; height: 100%; border-right: 1px solid #f1f5f9; box-sizing: border-box;';
+        d.className = 'grid-hour-block';
+        const overlay = document.createElement('div');
+        overlay.className = `dispo-hour-overlay dispo-${blocks[h]}`;
+        d.appendChild(overlay);
         inner.appendChild(d);
     }
 
