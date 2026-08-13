@@ -1,5 +1,5 @@
 const TABLE_DISPONIBILITES = 'Disponibilités instructeurs';
-const ROLES_INSTRUCTEUR = ['Instructeur planeur', 'Instructeur avion', 'Instructeur ULM'];
+const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur ULM'];
 let afficherDisposInstructeurs = false;
 let disposInstructeursCache = [];
 let listeInstructeursCache = [];
@@ -133,6 +133,7 @@ async function enregistrerDisponibilite(e) {
 }
 
 async function chargerDisponibilitesInstructeurs(dateCible) {
+    await chargerListeInstructeurs();
     const dateStr = `${dateCible.getFullYear()}-${String(dateCible.getMonth() + 1).padStart(2, '0')}-${String(dateCible.getDate()).padStart(2, '0')}`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'&pageSize=100`, { headers });
@@ -148,8 +149,8 @@ async function chargerDisponibilitesInstructeurs(dateCible) {
 
 function afficherLignesInstructeurs(rowsContainer, soleil) {
     if (!afficherDisposInstructeurs) return;
-    if (!disposInstructeursCache.length) return;
-    const instructeurs = [...new Set(disposInstructeursCache.map(r => (r.fields['Instructeur'] || '').toString().trim()).filter(Boolean))].sort();
+    if (!listeInstructeursCache.length) return;
+    const instructeurs = [...new Set(listeInstructeursCache.map(u => u.nomComplet))].sort();
     const s = soleil || { aubeAero: 0, leverSoleil: 0, coucherSoleil: 24, crepusculeAero: 24 };
     const aubeAeroPercent = (Math.max(0, s.aubeAero) / 24) * 100;
     const leverPercent = (Math.max(0, s.leverSoleil) / 24) * 100;
@@ -280,11 +281,8 @@ async function chargerSuiviInstructeur14Jours(nom, start) {
     } catch (err) { console.error(err); }
 }
 
-async function peuplerInstructeursSelect() {
-    const sel = document.getElementById('form-instructeur');
-    if (!sel) return;
+async function chargerListeInstructeurs() {
     if (listeInstructeursCache.length) return;
-    const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'];
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?pageSize=100`, { headers });
         const data = await res.json();
@@ -297,6 +295,12 @@ async function peuplerInstructeursSelect() {
             return { prenom, nom, nomComplet: `${prenom} ${nom}`.trim(), roles };
         }).filter(u => u.nomComplet && u.roles.some(r => ROLES_INSTRUCTEUR.includes(r)));
     } catch (err) { console.error(err); }
+}
+
+async function peuplerInstructeursSelect() {
+    const sel = document.getElementById('form-instructeur');
+    if (!sel) return;
+    await chargerListeInstructeurs();
     let html = '<option value="">-- Aucun --</option>';
     listeInstructeursCache.forEach(u => { html += `<option value="${u.nomComplet}">${u.nomComplet}</option>`; });
     sel.innerHTML = html;
