@@ -2,6 +2,8 @@
    PLANNING INSTRUCTEUR - VUE 14 JOURS
    ========================================================================== */
 
+const TABLE_RESERVATIONS = 'Réservations';
+
 let dateInstructeurSuivi = new Date();
 let instructeurSelectionne = '';
 
