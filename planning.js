@@ -527,7 +527,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             resVICreneaux.json()
         ]);
         if (typeof afficherDisposInstructeurs !== 'undefined' && afficherDisposInstructeurs) {
-            await chargerDisponibilitesInstructeurs(dateAffichee);
+            await chargerDisponibilitesInstructeurs(dateAffichee, forceRefresh);
         }
         if (dataReservations.records) listeReservationsCache = dataReservations.records;
         let volsVIP = (dataVIPlaneur.records || []).filter(vol => {

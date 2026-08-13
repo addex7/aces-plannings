@@ -133,12 +133,12 @@ async function enregistrerDisponibilite(e) {
     }
 }
 
-async function chargerDisponibilitesInstructeurs(dateCible) {
-    await chargerListeInstructeurs();
+async function chargerDisponibilitesInstructeurs(dateCible, forceRefresh = false) {
+    await chargerListeInstructeurs(forceRefresh);
     const dateStr = `${dateCible.getFullYear()}-${String(dateCible.getMonth() + 1).padStart(2, '0')}-${String(dateCible.getDate()).padStart(2, '0')}`;
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         disposInstructeursCache = data.records || [];
@@ -283,10 +283,10 @@ async function chargerSuiviInstructeur14Jours(nom, start) {
     } catch (err) { console.error(err); }
 }
 
-async function chargerListeInstructeurs() {
-    if (listeInstructeursCache.length) return;
+async function chargerListeInstructeurs(forceRefresh = false) {
+    if (!forceRefresh && listeInstructeursCache.length) return;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?pageSize=100`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         listeInstructeursCache = (data.records || []).map(r => {
