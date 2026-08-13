@@ -11,6 +11,7 @@ function normaliserNom(n) {
 function correspondanceNom(a, b) {
     const na = normaliserNom(a);
     const nb = normaliserNom(b);
+    if (!na || !nb) return false;
     return na === nb || na.startsWith(nb) || nb.startsWith(na);
 }
 
@@ -234,11 +235,9 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
         for (let h = 0; h < 24; h++) {
             const block = document.createElement('div');
             block.className = 'grid-hour-block';
-            if (dispoParHeure[h] === 'green') {
-                const overlay = document.createElement('div');
-                overlay.className = 'dispo-hour-overlay dispo-green';
-                block.appendChild(overlay);
-            }
+            const overlay = document.createElement('div');
+            overlay.className = `dispo-hour-overlay dispo-${dispoParHeure[h]}`;
+            block.appendChild(overlay);
             gridBg.appendChild(block);
         }
 
@@ -250,7 +249,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             const machineIds = Array.isArray(f['Machine']) ? f['Machine'] : [f['Machine']].filter(Boolean);
             const machineId = machineIds[0];
             const avion = (typeof listeAvionsCache !== 'undefined' ? listeAvionsCache : []).find(a => a.id === machineId);
-            const immat = (avion && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machineId || '';
+            const immat = (avion && (avion.fields['Immatriculation'] || avion.fields['Nom'] || '')) || machineId || '';
             const debut = new Date(f['Date de début']);
             const fin = new Date(f['Date de fin']);
             if (isNaN(debut.getTime()) || isNaN(fin.getTime())) return;
@@ -263,13 +262,14 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             const duree = heureFin - heureDebut;
             if (duree <= 0) return;
             const barresDiv = document.createElement('div');
-            barresDiv.className = 'reservation-bar reservation-avec-instructeur';
-            if (duree <= 2) barresDiv.classList.add('short-reservation');
+            barresDiv.className = 'reservation-bar';
+            if (isInstruction) barresDiv.classList.add('reservation-avec-instructeur');
+            if (duree <= 1) barresDiv.classList.add('short-reservation');
             barresDiv.style.left = `${(heureDebut / 24) * 100}%`;
             barresDiv.style.width = `${(duree / 24) * 100}%`;
             const pilote = (f['Pilote'] || '').toString().trim();
             barresDiv.title = `${pilote} — ${immat}${isInstruction ? ' (Instruction)' : ''}`.trim();
-            const libelle = duree > 2 ? `${immat}${isInstruction ? ' (Ins)' : ''}` : '';
+            const libelle = duree > 1 ? `${immat}${isInstruction ? ' (Ins)' : ''}` : '';
             barresDiv.innerHTML = `<strong>${libelle}</strong>`;
             barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
             gridBg.appendChild(barresDiv);

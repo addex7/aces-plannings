@@ -155,7 +155,8 @@ async function ouvrirModaleModification(reservationId) {
     if (!reservationId) return;
 
     // Trouver la réservation dans le cache
-    const reservation = listeReservationsCache.records.find(r => r.id === reservationId);
+    const cacheReservations = Array.isArray(listeReservationsCache) ? listeReservationsCache : ((listeReservationsCache && listeReservationsCache.records) || []);
+    const reservation = cacheReservations.find(r => r.id === reservationId);
     if (!reservation || !reservation.fields) {
         alert("Réservation introuvable.");
         return;
@@ -749,11 +750,13 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const isInstruction = typesVol.includes('Instruction');
                         let libelleEntete = piloteFormate || 'Pilote non défini';
                         if (instructeurNom) {
-                            barresDiv.classList.add('reservation-avec-instructeur');
                             const trigramme = trouverTrigrammeInstructeur(instructeurNom);
                             if (trigramme) libelleEntete += ` — ${trigramme}`;
                         }
-                        if (isInstruction) libelleEntete += ' (Instruction)';
+                        if (isInstruction) {
+                            barresDiv.classList.add('reservation-avec-instructeur');
+                            libelleEntete += ' (Instruction)';
+                        }
                         if (isVIMoteur || isAncienVI) {
                             if (!piloteNom || piloteNom.trim() === "") {
                                 barresDiv.classList.add('vi-sans-pilote');
