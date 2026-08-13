@@ -11,7 +11,8 @@ const headers = {
 };
 
 // Variables globales partagées entre tous les modules
-let dateAffichee = new Date('2026-07-14T12:00:00');
+let dateAffichee = new Date();
+dateAffichee.setHours(12, 0, 0, 0);
 let listeAvionsCache = []; 
 let listeReservationsCache = [];
 let idReservationEnEdition = null; 
