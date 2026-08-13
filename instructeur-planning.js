@@ -40,6 +40,7 @@ async function peuplerSelectInstructeurSuivi() {
 }
 
 function initPlanningInstructeur() {
+    initBoutonDisponibiliteInstructeur();
     const btnPrev = document.getElementById('btn-instructeur-prev');
     const btnNext = document.getElementById('btn-instructeur-next');
     const dateEl = document.getElementById('current-date-instructeur');

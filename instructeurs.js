@@ -35,6 +35,24 @@ function estInstructeurParNom(nom) {
     return u ? ROLES_INSTRUCTEUR.some(r => (u.roles || []).includes(r)) : false;
 }
 
+function initBoutonDisponibiliteInstructeur() {
+    const headerRow = document.querySelector('#view-instructeur header > div');
+    if (!headerRow) return;
+    if (document.getElementById('btn-declarer-disponibilite')) return;
+    const btnDecl = document.createElement('button');
+    btnDecl.id = 'btn-declarer-disponibilite';
+    btnDecl.className = 'btn-primary';
+    btnDecl.textContent = '+ Déclarer mes dispos';
+    btnDecl.addEventListener('click', ouvrirModaleDisponibilite);
+    const ref = document.getElementById('select-instructeur-suivi');
+    if (ref) {
+        ref.parentNode.insertBefore(btnDecl, ref.nextSibling);
+    } else {
+        headerRow.appendChild(btnDecl);
+    }
+    btnDecl.style.display = (estInstructeur() || (typeof isSuperAdmin === 'function' && isSuperAdmin())) ? 'inline-block' : 'none';
+}
+
 function initDisponibilitesInstructeurs() {
     const headerActions = document.querySelector('#view-planning .header-actions');
     if (!headerActions) return;
@@ -50,20 +68,8 @@ function initDisponibilitesInstructeurs() {
         headerActions.insertBefore(btnToggle, ref);
     }
 
-    if (!document.getElementById('btn-declarer-disponibilite')) {
-        const btnDecl = document.createElement('button');
-        btnDecl.id = 'btn-declarer-disponibilite';
-        btnDecl.className = 'btn-primary';
-        btnDecl.textContent = '+ Déclarer mes dispos';
-        btnDecl.addEventListener('click', ouvrirModaleDisponibilite);
-        const ref = document.getElementById('btn-add-reservation');
-        headerActions.insertBefore(btnDecl, ref);
-    }
-
     const btnToggle = document.getElementById('btn-toggle-dispos-instructeurs');
     if (btnToggle) btnToggle.style.display = 'inline-block';
-    const btnDecl = document.getElementById('btn-declarer-disponibilite');
-    if (btnDecl) btnDecl.style.display = (estInstructeur() || (typeof isSuperAdmin === 'function' && isSuperAdmin())) ? 'inline-block' : 'none';
 
     mettreAJourBoutonDisposInstructeurs();
     attacherListenersModaleDisponibilite();
