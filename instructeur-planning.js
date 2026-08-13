@@ -102,16 +102,15 @@ function initPlanningInstructeur() {
     });
 }
 
-async function chargerDisposInstructeurPlage(nom, start, end) {
+async function chargerDisposInstructeurPlage(start, end) {
     const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
     const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-    const prenom = (nom.split(' ')[0] || nom).replace(/'/g, "\\'");
-    const formula = `AND(SEARCH('${prenom}', {Instructeur}) > 0, DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
+    const formula = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=200`, { headers }, API_CACHE_TTL, true);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        console.log('[INSTRUCTEUR DISPOS]', nom, data.records ? data.records.length : 0);
+        console.log('[INSTRUCTEUR DISPOS] records:', data.records ? data.records.length : 0);
         return data.records || [];
     } catch (err) { console.error('[INSTRUCTEUR DISPOS] erreur:', err); return []; }
 }
@@ -239,7 +238,7 @@ async function chargerSuiviInstructeur() {
     end.setHours(23, 59, 59, 999);
 
     const [dispos, reservations] = await Promise.all([
-        chargerDisposInstructeurPlage(instructeurSelectionne, start, end),
+        chargerDisposInstructeurPlage(start, end),
         chargerReservationsInstructeurPlage(instructeurSelectionne, start, end)
     ]);
 
