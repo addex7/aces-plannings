@@ -284,17 +284,18 @@ async function peuplerInstructeursSelect() {
     const sel = document.getElementById('form-instructeur');
     if (!sel) return;
     if (listeInstructeursCache.length) return;
-    const formula = `OR(FIND('Instructeur avion',ARRAYJOIN({Rôles},','))>0,FIND('Instructeur ULM',ARRAYJOIN({Rôles},','))>0,FIND('Instructeur planeur',ARRAYJOIN({Rôles},','))>0)`;
+    const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'];
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?pageSize=100`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         listeInstructeursCache = (data.records || []).map(r => {
             const f = r.fields || {};
             const prenom = f['Prénom'] || '';
             const nom = f['Nom'] || '';
-            return { prenom, nom, nomComplet: `${prenom} ${nom}`.trim(), roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean) };
-        }).filter(u => u.nomComplet);
+            const roles = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
+            return { prenom, nom, nomComplet: `${prenom} ${nom}`.trim(), roles };
+        }).filter(u => u.nomComplet && u.roles.some(r => ROLES_INSTRUCTEUR.includes(r)));
     } catch (err) { console.error(err); }
     let html = '<option value="">-- Aucun --</option>';
     listeInstructeursCache.forEach(u => { html += `<option value="${u.nomComplet}">${u.nomComplet}</option>`; });
