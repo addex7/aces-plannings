@@ -526,8 +526,9 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             resVIPlaneur.json(),
             resVICreneaux.json()
         ]);
+        let disposInstructeurs = [];
         if (typeof afficherDisposInstructeurs !== 'undefined' && afficherDisposInstructeurs) {
-            await chargerDisponibilitesInstructeurs(dateAffichee, forceRefresh);
+            disposInstructeurs = await chargerDisponibilitesInstructeurs(dateAffichee, forceRefresh);
         }
         if (dataReservations.records) listeReservationsCache = dataReservations.records;
         let volsVIP = (dataVIPlaneur.records || []).filter(vol => {
@@ -919,7 +920,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         if (autoActiverVIP && volsVIP.length > 0) afficherVIPPlaneur = true;
         mettreAJourBoutonVIPPlaneur();
         afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil);
-        if (typeof afficherLignesInstructeurs === 'function') afficherLignesInstructeurs(rowsContainer, soleil);
+        if (typeof afficherLignesInstructeurs === 'function') afficherLignesInstructeurs(rowsContainer, soleil, disposInstructeurs);
         await chargerPresencesPlaneur();
         await chargerPresencesClub();
     } catch (error) {

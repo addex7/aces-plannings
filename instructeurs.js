@@ -153,10 +153,11 @@ async function chargerDisponibilitesInstructeurs(dateCible, forceRefresh = false
     return disposInstructeursCache;
 }
 
-function afficherLignesInstructeurs(rowsContainer, soleil) {
+function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis) {
     if (!afficherDisposInstructeurs) return;
     if (!listeInstructeursCache.length) return;
-    console.log('[DISPOS] afficherLignes - liste:', listeInstructeursCache.map(u => u.nomComplet), 'dispos:', disposInstructeursCache.length);
+    const dispos = disposFournis || disposInstructeursCache;
+    console.log('[DISPOS] afficherLignes - liste:', listeInstructeursCache.map(u => u.nomComplet), 'dispos:', dispos.length);
     const instructeurs = [...new Set(listeInstructeursCache.map(u => u.nomComplet))].sort();
     const s = soleil || { aubeAero: 0, leverSoleil: 0, coucherSoleil: 24, crepusculeAero: 24 };
     const aubeAeroPercent = (Math.max(0, s.aubeAero) / 24) * 100;
@@ -173,7 +174,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil) {
     }
 
     instructeurs.forEach(nom => {
-        const dispos = disposInstructeursCache.filter(r => (r.fields['Instructeur'] || '').toString().trim() === nom);
+        const disposPerso = dispos.filter(r => (r.fields['Instructeur'] || '').toString().trim() === nom);
         const rowDiv = document.createElement('div');
         rowDiv.className = 'timeline-row instructeur-dispo-row';
         const machineCell = document.createElement('div');
@@ -193,7 +194,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil) {
         ajouterZoneNuit(gridBg, `${crepusculeAeroPercent}%`, `${100 - crepusculeAeroPercent}%`, 'night-aero');
 
         const dispoParHeure = new Array(24).fill('red');
-        dispos.forEach(d => {
+        disposPerso.forEach(d => {
             const f = d.fields || {};
             const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
             const [hEnd, mEnd] = String(f['Heure fin'] || '00:00').split(':').map(Number);
