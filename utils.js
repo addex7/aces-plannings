@@ -121,6 +121,45 @@ function convertirHeureEnHHMM(decimalHeure) {
     return `${String(heures).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
+function afficherConflitsReservations(barresInfos) {
+    if (!Array.isArray(barresInfos) || barresInfos.length < 2) return;
+    for (let i = 0; i < barresInfos.length; i++) {
+        for (let j = i + 1; j < barresInfos.length; j++) {
+            const a = barresInfos[i];
+            const b = barresInfos[j];
+            const chevauchementDebut = Math.max(a.debut, b.debut);
+            const chevauchementFin = Math.min(a.fin, b.fin);
+            if (chevauchementFin > chevauchementDebut) {
+                const dureeConflit = chevauchementFin - chevauchementDebut;
+                function ajouterOverlay(barInfo) {
+                    const dureeBar = barInfo.fin - barInfo.debut;
+                    const overlay = document.createElement('div');
+                    overlay.className = 'conflit-overlay';
+                    overlay.style.position = 'absolute';
+                    overlay.style.top = '0';
+                    overlay.style.left = `${((chevauchementDebut - barInfo.debut) / dureeBar) * 100}%`;
+                    overlay.style.width = `${(dureeConflit / dureeBar) * 100}%`;
+                    overlay.style.height = '100%';
+                    overlay.style.backgroundColor = 'rgba(255, 255, 0, 0.55)';
+                    overlay.style.pointerEvents = 'none';
+                    overlay.style.zIndex = '1';
+                    overlay.style.border = '1px dashed #c0392b';
+                    overlay.style.display = 'flex';
+                    overlay.style.alignItems = 'center';
+                    overlay.style.justifyContent = 'center';
+                    overlay.title = `Conflit horaire de ${convertirHeureEnHHMM(chevauchementDebut)} à ${convertirHeureEnHHMM(chevauchementFin)}`;
+                    overlay.innerHTML = '<span style="font-size:14px; pointer-events:none;">⚠️</span>';
+                    barInfo.bar.insertBefore(overlay, barInfo.bar.firstChild);
+                }
+                ajouterOverlay(a);
+                ajouterOverlay(b);
+                a.bar.title = (a.bar.title ? a.bar.title + ' | ' : '') + 'Conflit horaire détecté';
+                b.bar.title = (b.bar.title ? b.bar.title + ' | ' : '') + 'Conflit horaire détecté';
+            }
+        }
+    }
+}
+
 // --- CACHE POUR REQUÊTES AIRTABLE (GET) ---
 const API_CACHE = {};
 const API_CACHE_TTL = 30000; // 30 secondes

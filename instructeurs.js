@@ -253,6 +253,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             const f = r.fields || {};
             return correspondanceNom(f['Instructeur'], nom) || correspondanceNom(f['Pilote'], nom);
         });
+        const barresInfos = [];
         resasPerso.forEach(r => {
             const f = r.fields || {};
             const isInstructeur = correspondanceNom(f['Instructeur'], nom);
@@ -286,7 +287,10 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             barresDiv.innerHTML = `<strong>${libelle}</strong>`;
             barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
             gridBg.appendChild(barresDiv);
+            barresInfos.push({ bar: barresDiv, debut: heureDebut, fin: heureFin });
         });
+
+        afficherConflitsReservations(barresInfos);
 
         rowDiv.appendChild(gridBg);
         rowsContainer.appendChild(rowDiv);

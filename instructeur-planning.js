@@ -182,6 +182,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
 
     tdCell.appendChild(inner);
 
+    const barresInfos = [];
     reservationsJour.forEach(r => {
         const f = r.fields || {};
         const debut = new Date(f['Date de début']);
@@ -219,7 +220,10 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         barresDiv.innerHTML = `<strong>${libelle}</strong>`;
         barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
         inner.appendChild(barresDiv);
+        barresInfos.push({ bar: barresDiv, debut: heureDebut, fin: heureFin });
     });
+
+    afficherConflitsReservations(barresInfos);
 
     tr.appendChild(tdCell);
 }
