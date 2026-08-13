@@ -208,7 +208,7 @@ async function ouvrirModaleModification(reservationId) {
     // Afficher la modale
     const modal = document.getElementById('reservation-modal');
     if (modal) {
-        modal.style.display = 'block';
+        modal.style.display = 'flex';
     }
 }
 
