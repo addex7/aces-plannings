@@ -207,7 +207,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis) {
         ajouterZoneNuit(gridBg, `${coucherPercent}%`, `${crepusculeAeroPercent - coucherPercent}%`, 'night-civil');
         ajouterZoneNuit(gridBg, `${crepusculeAeroPercent}%`, `${100 - crepusculeAeroPercent}%`, 'night-aero');
 
-        const dispoParHeure = new Array(24).fill(null);
+        const dispoParHeure = new Array(24).fill('red');
         disposPerso.forEach(d => {
             const f = d.fields || {};
             const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
@@ -225,11 +225,9 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis) {
         for (let h = 0; h < 24; h++) {
             const block = document.createElement('div');
             block.className = 'grid-hour-block';
-            if (dispoParHeure[h] === 'green') {
-                const overlay = document.createElement('div');
-                overlay.className = 'dispo-hour-overlay dispo-green';
-                block.appendChild(overlay);
-            }
+            const overlay = document.createElement('div');
+            overlay.className = `dispo-hour-overlay dispo-${dispoParHeure[h]}`;
+            block.appendChild(overlay);
             gridBg.appendChild(block);
         }
         rowDiv.appendChild(gridBg);
