@@ -184,7 +184,16 @@ async function ouvrirModaleModification(reservationId) {
 
     // Remplir l'instructeur
     if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
-    if (form['form-instructeur']) form['form-instructeur'].value = reservation.fields['Instructeur'] || '';
+    if (form['form-instructeur']) {
+        const instructeurSauve = (reservation.fields['Instructeur'] || '').toString().trim();
+        if (instructeurSauve) {
+            const options = Array.from(form['form-instructeur'].options);
+            const match = options.find(o => o.value && typeof correspondanceNom === 'function' && correspondanceNom(o.value, instructeurSauve));
+            form['form-instructeur'].value = match ? match.value : '';
+        } else {
+            form['form-instructeur'].value = '';
+        }
+    }
 
     // Stocker l'ID de la réservation en cours d'édition
     idReservationEnEdition = reservationId;
