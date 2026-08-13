@@ -740,13 +740,11 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const isInstruction = typesVol.includes('Instruction');
                         let libelleEntete = piloteFormate || 'Pilote non défini';
                         if (instructeurNom) {
+                            barresDiv.classList.add('reservation-avec-instructeur');
                             const trigramme = trouverTrigrammeInstructeur(instructeurNom);
                             if (trigramme) libelleEntete += ` — ${trigramme}`;
                         }
-                        if (isInstruction) {
-                            barresDiv.classList.add('reservation-instruction');
-                            libelleEntete += ' (Instruction)';
-                        }
+                        if (isInstruction) libelleEntete += ' (Instruction)';
                         if (isVIMoteur || isAncienVI) {
                             if (!piloteNom || piloteNom.trim() === "") {
                                 barresDiv.classList.add('vi-sans-pilote');

@@ -360,11 +360,13 @@ body {
     background-color: #f97316;
     border-left: 4px solid #1a237e;
 }
-.reservation-bar.reservation-instruction {
-    background-color: #3b82f6;
+.reservation-bar.reservation-instruction,
+.reservation-bar.reservation-avec-instructeur {
+    background-color: #8b5cf6;
     color: #ffffff;
 }
-.reservation-bar.reservation-instruction strong {
+.reservation-bar.reservation-instruction strong,
+.reservation-bar.reservation-avec-instructeur strong {
     color: #ffffff;
 }
 .reservation-bar.vi-planeur {
