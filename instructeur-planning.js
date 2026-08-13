@@ -102,11 +102,10 @@ function initPlanningInstructeur() {
     });
 }
 
-async function chargerDisposInstructeurPlage(nom, start, end) {
+async function chargerDisposInstructeurPlage(start, end) {
     const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
     const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-    const prenom = (nom.split(' ')[0] || nom).replace(/'/g, "\\'");
-    const formula = `AND(SEARCH('${prenom}', {Instructeur}) > 0, DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
+    const formula = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=200`, { headers });
         const data = await res.json();
@@ -128,36 +127,9 @@ async function chargerReservationsInstructeurPlage(nom, start, end) {
     } catch (err) { console.error(err); return []; }
 }
 
-function ajouterZonesNuit(cellule, s) {
-    if (!s) return;
-    const aube = (Math.max(0, s.aubeAero || 0) / 24) * 100;
-    const lever = (Math.max(0, s.leverSoleil || 0) / 24) * 100;
-    const coucher = (Math.min(24, s.coucherSoleil || 24) / 24) * 100;
-    const crepuscule = (Math.min(24, s.crepusculeAero || 24) / 24) * 100;
-
-    const nuit1 = document.createElement('div');
-    nuit1.className = 'night-zone nuit-aero';
-    nuit1.style.left = '0%';
-    nuit1.style.width = `${aube}%`;
-    cellule.appendChild(nuit1);
-
-    const nuit2 = document.createElement('div');
-    nuit2.className = 'night-zone nuit';
-    nuit2.style.left = `${aube}%`;
-    nuit2.style.width = `${lever - aube}%`;
-    cellule.appendChild(nuit2);
-
-    const nuit3 = document.createElement('div');
-    nuit3.className = 'night-zone nuit';
-    nuit3.style.left = `${coucher}%`;
-    nuit3.style.width = `${crepuscule - coucher}%`;
-    cellule.appendChild(nuit3);
-
-    const nuit4 = document.createElement('div');
-    nuit4.className = 'night-zone nuit-aero';
-    nuit4.style.left = `${crepuscule}%`;
-    nuit4.style.width = `${100 - crepuscule}%`;
-    cellule.appendChild(nuit4);
+function ajouterFondNuit(cellule, dateJour) {
+    if (typeof genererFondNuitHTML !== 'function') return;
+    cellule.insertAdjacentHTML('afterbegin', genererFondNuitHTML(dateJour));
 }
 
 function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom) {
@@ -196,11 +168,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         inner.appendChild(d);
     }
 
-    let s = { aubeAero: 0, leverSoleil: 0, coucherSoleil: 24, crepusculeAero: 24 };
-    if (typeof calculerSoleil === 'function') {
-        try { s = calculerSoleil(dateJour); } catch (e) {}
-    }
-    ajouterZonesNuit(inner, s);
+    ajouterFondNuit(inner, dateJour);
 
     tdCell.appendChild(inner);
 
@@ -267,7 +235,7 @@ async function chargerSuiviInstructeur() {
     end.setHours(23, 59, 59, 999);
 
     const [dispos, reservations] = await Promise.all([
-        chargerDisposInstructeurPlage(instructeurSelectionne, start, end),
+        chargerDisposInstructeurPlage(start, end),
         chargerReservationsInstructeurPlage(instructeurSelectionne, start, end)
     ]);
 
@@ -280,7 +248,10 @@ async function chargerSuiviInstructeur() {
         const disposJour = dispos.filter(r => {
             const f = r.fields || {};
             const d = f['Date'] ? new Date(f['Date']).toISOString().split('T')[0] : '';
-            return d === dateJourStr;
+            const nomOk = typeof correspondanceNom === 'function'
+                ? correspondanceNom(f['Instructeur'], instructeurSelectionne)
+                : (f['Instructeur'] || '').toString().trim() === instructeurSelectionne;
+            return d === dateJourStr && nomOk;
         });
 
         const reservationsJour = reservations.filter(r => {
