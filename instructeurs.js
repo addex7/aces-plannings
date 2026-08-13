@@ -49,7 +49,7 @@ function initDisponibilitesInstructeurs() {
     mettreAJourBoutonDisposInstructeurs();
     attacherListenersModaleDisponibilite();
     attacherListenersSuiviInstructeur();
-    chargerListeInstructeurs();
+    chargerListeInstructeurs().then(() => { if (document.getElementById('form-instructeur')) peuplerInstructeursSelect(); });
 }
 
 function mettreAJourBoutonDisposInstructeurs() {
@@ -136,8 +136,9 @@ async function enregistrerDisponibilite(e) {
 async function chargerDisponibilitesInstructeurs(dateCible) {
     await chargerListeInstructeurs();
     const dateStr = `${dateCible.getFullYear()}-${String(dateCible.getMonth() + 1).padStart(2, '0')}-${String(dateCible.getDate()).padStart(2, '0')}`;
+    const formula = `DATETIME_FORMAT(SET_TIMEZONE({Date},'Europe/Paris'),'YYYY-MM-DD')='${dateStr}'`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'&pageSize=100`, { headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         disposInstructeursCache = data.records || [];
@@ -242,7 +243,7 @@ async function chargerSuiviInstructeur14Jours(nom, start) {
     end.setHours(23, 59, 59, 999);
     const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
     const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-    const formula = `AND({Instructeur}='${nom.replace(/'/g, "\\'")}', DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
+    const formula = `AND({Instructeur}='${nom.replace(/'/g, "\\'")}', DATETIME_FORMAT(SET_TIMEZONE({Date},'Europe/Paris'),'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT(SET_TIMEZONE({Date},'Europe/Paris'),'YYYY-MM-DD')<='${endStr}')`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=200`, { headers });
         const data = await res.json();
@@ -320,7 +321,7 @@ async function verifierConflitDisponibiliteInstructeur(nom, dateDebut, dateFin, 
         jours.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
         d.setDate(d.getDate() + 1);
     }
-    const dates = Array.from(jours).map(j => `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${j}'`);
+    const dates = Array.from(jours).map(j => `DATETIME_FORMAT(SET_TIMEZONE({Date},'Europe/Paris'),'YYYY-MM-DD')='${j}'`);
     const formula = `AND({Instructeur}='${nom.replace(/'/g, "\\'")}', OR(${dates.join(',')}))`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
