@@ -49,6 +49,7 @@ function initDisponibilitesInstructeurs() {
     mettreAJourBoutonDisposInstructeurs();
     attacherListenersModaleDisponibilite();
     attacherListenersSuiviInstructeur();
+    chargerListeInstructeurs();
 }
 
 function mettreAJourBoutonDisposInstructeurs() {
@@ -293,7 +294,7 @@ async function chargerListeInstructeurs() {
             const nom = f['Nom'] || '';
             const roles = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
             return { prenom, nom, nomComplet: `${prenom} ${nom}`.trim(), roles };
-        }).filter(u => u.nomComplet && u.roles.some(r => ROLES_INSTRUCTEUR.includes(r)));
+        }).filter(u => u.nomComplet && u.roles.some(r => ROLES_INSTRUCTEUR.includes((r || '').trim())));
     } catch (err) { console.error(err); }
 }
 
@@ -301,6 +302,10 @@ async function peuplerInstructeursSelect() {
     const sel = document.getElementById('form-instructeur');
     if (!sel) return;
     await chargerListeInstructeurs();
+    if (!listeInstructeursCache.length && estInstructeur() && currentUser) {
+        const nomComplet = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+        if (nomComplet) listeInstructeursCache = [{ prenom: currentUser.prenom, nom: currentUser.nom, nomComplet, roles: currentUser.roles || [] }];
+    }
     let html = '<option value="">-- Aucun --</option>';
     listeInstructeursCache.forEach(u => { html += `<option value="${u.nomComplet}">${u.nomComplet}</option>`; });
     sel.innerHTML = html;

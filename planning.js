@@ -1441,7 +1441,7 @@ function initGestionnaireModale() {
         });
     }
     if (btnOpenModal && modal) {
-        btnOpenModal.addEventListener('click', () => {
+        btnOpenModal.addEventListener('click', async () => {
             idReservationEnEdition = null;
             if (titleModal) titleModal.textContent = "Nouvelle Réservation";
             if (btnDelete) btnDelete.style.display = 'none';
@@ -1454,7 +1454,7 @@ function initGestionnaireModale() {
             if (document.getElementById('form-debut')) document.getElementById('form-debut').value = `${annee}-${mois}-${jour}T09:00`;
             if (document.getElementById('form-fin')) document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T11:00`;
             if (document.getElementById('form-estimation')) document.getElementById('form-estimation').value = '1.0';
-            if (typeof peuplerInstructeursSelect === 'function') peuplerInstructeursSelect();
+            if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
             const affichage = document.getElementById('affichage-pilote');
             const pilote = nomPiloteCourant();
             if (document.getElementById('form-pilote')) document.getElementById('form-pilote').value = pilote;
