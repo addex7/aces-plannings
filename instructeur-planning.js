@@ -124,7 +124,14 @@ async function chargerReservationsInstructeurPlage(nom, start, end) {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        return data.records || [];
+        const records = data.records || [];
+        if (!Array.isArray(listeReservationsCache)) listeReservationsCache = [];
+        records.forEach(r => {
+            const i = listeReservationsCache.findIndex(x => x.id === r.id);
+            if (i >= 0) listeReservationsCache[i] = r;
+            else listeReservationsCache.push(r);
+        });
+        return records;
     } catch (err) { console.error(err); return []; }
 }
 
