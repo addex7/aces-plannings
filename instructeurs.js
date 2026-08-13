@@ -206,7 +206,15 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
         const nomSpan = document.createElement('span');
         nomSpan.className = 'instructeur-nom';
         nomSpan.textContent = nom;
-        nomSpan.addEventListener('click', () => ouvrirSuiviInstructeur(nom));
+        nomSpan.addEventListener('click', () => {
+            if (typeof instructeurSelectionne !== 'undefined') instructeurSelectionne = nom;
+            if (typeof dateInstructeurSuivi !== 'undefined') {
+                dateInstructeurSuivi = new Date(dateAffichee || new Date());
+                dateInstructeurSuivi.setHours(12, 0, 0, 0);
+            }
+            const tab = document.getElementById('tab-instructeur');
+            if (tab) tab.click();
+        });
         machineCell.appendChild(nomSpan);
         rowDiv.appendChild(machineCell);
         const gridBg = document.createElement('div');
