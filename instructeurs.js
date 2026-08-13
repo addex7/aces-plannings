@@ -341,8 +341,9 @@ async function verifierConflitDisponibiliteInstructeur(nom, dateDebut, dateFin, 
         jours.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
         d.setDate(d.getDate() + 1);
     }
+    const prenom = nom.split(' ')[0] || nom;
     const dates = Array.from(jours).map(j => `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${j}'`);
-    const formula = `AND({Instructeur}='${nom.replace(/'/g, "\\'")}', OR(${dates.join(',')}))`;
+    const formula = `AND(SEARCH('${prenom.replace(/'/g, "\\'")}', {Instructeur}) > 0, OR(${dates.join(',')}))`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
         const data = await res.json();
@@ -353,7 +354,8 @@ async function verifierConflitDisponibiliteInstructeur(nom, dateDebut, dateFin, 
             const min = t.getHours() * 60 + t.getMinutes();
             const dispos = records.filter(r => {
                 const f = r.fields || {};
-                const d = f['Date'] ? new Date(f['Date']).toISOString().split('T')[0] : '';
+                if (!correspondanceNom(f['Instructeur'], nom)) return false;
+                const d = (f['Date'] || '').toString().slice(0, 10);
                 if (d !== iso) return false;
                 const m = (f['Machine'] || '').toString().trim();
                 if (m !== 'Tous' && m !== machine) return false;
