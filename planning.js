@@ -170,18 +170,24 @@ async function ouvrirModaleModification(reservationId) {
     form['form-debut'].value = reservation.fields['Date de début'] ? new Date(reservation.fields['Date de début']).toISOString().slice(0, 16) : '';
     form['form-fin'].value = reservation.fields['Date de fin'] ? new Date(reservation.fields['Date de fin']).toISOString().slice(0, 16) : '';
 
-    // Remplir le pilote (si c'est un ID, il faudra le convertir en nom)
-    if (reservation.fields['Pilote']) {
-        form['form-pilote'].value = reservation.fields['Pilote'].join(', '); // Supposons que c'est un tableau d'IDs
+    // Remplir le pilote
+    if (reservation.fields['Pilote'] && form['form-pilote']) {
+        form['form-pilote'].value = Array.isArray(reservation.fields['Pilote'])
+            ? reservation.fields['Pilote'].join(', ')
+            : reservation.fields['Pilote'].toString().trim();
     }
 
     // Remplir la machine
-    if (reservation.fields['Machine']) {
-        form['form-machine'].value = reservation.fields['Machine'].join(', '); // Supposons que c'est un tableau d'IDs
+    if (reservation.fields['Machine'] && form['form-machine']) {
+        form['form-machine'].value = Array.isArray(reservation.fields['Machine'])
+            ? reservation.fields['Machine'].join(', ')
+            : reservation.fields['Machine'].toString().trim();
     }
 
     // Remplir le type de vol
-    form['form-type-vol'].value = reservation.fields['Type de vol'] || 'Vol Classique';
+    form['form-type-vol'].value = Array.isArray(reservation.fields['Type de vol'])
+        ? reservation.fields['Type de vol'].join(', ')
+        : (reservation.fields['Type de vol'] || 'Vol Classique');
 
     // Remplir l'instructeur
     if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
@@ -750,11 +756,9 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const isInstruction = typesVol.includes('Instruction');
                         let libelleEntete = piloteFormate || 'Pilote non défini';
                         if (instructeurNom) {
+                            barresDiv.classList.add('reservation-avec-instructeur');
                             const trigramme = trouverTrigrammeInstructeur(instructeurNom);
                             if (trigramme) libelleEntete += ` — ${trigramme}`;
-                        }
-                        if (isInstruction) {
-                            barresDiv.classList.add('reservation-avec-instructeur');
                             libelleEntete += ' (Instruction)';
                         }
                         if (isVIMoteur || isAncienVI) {

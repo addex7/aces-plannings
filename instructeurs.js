@@ -241,11 +241,13 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             gridBg.appendChild(block);
         }
 
-        const resasPerso = reservations.filter(r => correspondanceNom((r.fields || {})['Instructeur'], nom));
+        const resasPerso = reservations.filter(r => {
+            const f = r.fields || {};
+            return correspondanceNom(f['Instructeur'], nom) || correspondanceNom(f['Pilote'], nom);
+        });
         resasPerso.forEach(r => {
             const f = r.fields || {};
-            const types = Array.isArray(f['Type de vol']) ? f['Type de vol'] : [f['Type de vol']].filter(Boolean);
-            const isInstruction = types.includes('Instruction');
+            const isInstructeur = correspondanceNom(f['Instructeur'], nom);
             const machineIds = Array.isArray(f['Machine']) ? f['Machine'] : [f['Machine']].filter(Boolean);
             const machineId = machineIds[0];
             const avion = (typeof listeAvionsCache !== 'undefined' ? listeAvionsCache : []).find(a => a.id === machineId);
@@ -263,13 +265,16 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             if (duree <= 0) return;
             const barresDiv = document.createElement('div');
             barresDiv.className = 'reservation-bar';
-            if (isInstruction) barresDiv.classList.add('reservation-avec-instructeur');
+            if (isInstructeur) {
+                barresDiv.classList.add('reservation-avec-instructeur');
+                barresDiv.classList.add('reservation-instruction');
+            }
             if (duree <= 1) barresDiv.classList.add('short-reservation');
             barresDiv.style.left = `${(heureDebut / 24) * 100}%`;
             barresDiv.style.width = `${(duree / 24) * 100}%`;
             const pilote = (f['Pilote'] || '').toString().trim();
-            barresDiv.title = `${pilote} — ${immat}${isInstruction ? ' (Instruction)' : ''}`.trim();
-            const libelle = duree > 1 ? `${immat}${isInstruction ? ' (Ins)' : ''}` : '';
+            barresDiv.title = `${pilote} — ${immat}${isInstructeur ? ' (Instruction)' : ''}`.trim();
+            const libelle = duree > 1 ? `${immat}${isInstructeur ? ' (Ins)' : ''}` : '';
             barresDiv.innerHTML = `<strong>${libelle}</strong>`;
             barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
             gridBg.appendChild(barresDiv);
