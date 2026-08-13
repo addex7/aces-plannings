@@ -121,6 +121,20 @@ function convertirHeureEnHHMM(decimalHeure) {
     return `${String(heures).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
+const LARGEURS_HEURES = [2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,2];
+const TOTAL_LARGEUR_HEURES = LARGEURS_HEURES.reduce((a,b)=>a+b,0);
+
+function positionHeure(decimalHeure) {
+    if (decimalHeure <= 0) return 0;
+    if (decimalHeure >= 24) return 100;
+    const h = Math.floor(decimalHeure);
+    const fraction = decimalHeure - h;
+    let cumul = 0;
+    for (let i = 0; i < h; i++) cumul += LARGEURS_HEURES[i];
+    cumul += LARGEURS_HEURES[h] * fraction;
+    return (cumul / TOTAL_LARGEUR_HEURES) * 100;
+}
+
 function afficherConflitsReservations(barresInfos) {
     if (!Array.isArray(barresInfos) || barresInfos.length < 2) return;
     for (let i = 0; i < barresInfos.length; i++) {
@@ -132,13 +146,13 @@ function afficherConflitsReservations(barresInfos) {
             if (chevauchementFin > chevauchementDebut) {
                 const dureeConflit = chevauchementFin - chevauchementDebut;
                 function ajouterOverlay(barInfo) {
-                    const dureeBar = barInfo.fin - barInfo.debut;
+                    const largeurBar = positionHeure(barInfo.fin) - positionHeure(barInfo.debut);
                     const overlay = document.createElement('div');
                     overlay.className = 'conflit-overlay';
                     overlay.style.position = 'absolute';
                     overlay.style.top = '0';
-                    overlay.style.left = `${((chevauchementDebut - barInfo.debut) / dureeBar) * 100}%`;
-                    overlay.style.width = `${(dureeConflit / dureeBar) * 100}%`;
+                    overlay.style.left = `${((positionHeure(chevauchementDebut) - positionHeure(barInfo.debut)) / largeurBar) * 100}%`;
+                    overlay.style.width = `${((positionHeure(chevauchementFin) - positionHeure(chevauchementDebut)) / largeurBar) * 100}%`;
                     overlay.style.height = '100%';
                     overlay.style.backgroundColor = 'rgba(255, 255, 0, 0.55)';
                     overlay.style.pointerEvents = 'none';

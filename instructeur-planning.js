@@ -14,7 +14,7 @@ function genererFriseHeuresInstructeur() {
     for (let h = 0; h < 24; h++) {
         const div = document.createElement('div');
         div.className = 'hour-cell-header';
-        div.innerHTML = `<span>${h.toString().padStart(2, '0')}:00</span>`;
+        div.innerHTML = `<span>${h}h</span>`;
         container.appendChild(div);
     }
 }
@@ -211,8 +211,8 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
             barresDiv.classList.add('reservation-instruction');
         }
         if (duree <= 1) barresDiv.classList.add('short-reservation');
-        barresDiv.style.left = `${(heureDebut / 24) * 100}%`;
-        barresDiv.style.width = `${(duree / 24) * 100}%`;
+        barresDiv.style.left = `${positionHeure(heureDebut)}%`;
+        barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
         barresDiv.style.top = '8px';
         barresDiv.style.height = '30px';
         barresDiv.title = `${pilote} — ${immat}${isInstructeur ? ' (Instruction)' : ''}`;

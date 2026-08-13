@@ -279,8 +279,8 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
                 barresDiv.classList.add('reservation-instruction');
             }
             if (duree <= 1) barresDiv.classList.add('short-reservation');
-            barresDiv.style.left = `${(heureDebut / 24) * 100}%`;
-            barresDiv.style.width = `${(duree / 24) * 100}%`;
+            barresDiv.style.left = `${positionHeure(heureDebut)}%`;
+            barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
             const pilote = (f['Pilote'] || '').toString().trim();
             barresDiv.title = `${pilote} — ${immat}${isInstructeur ? ' (Instruction)' : ''}`.trim();
             const libelle = duree > 1 ? `${immat}${isInstructeur ? ' (Ins)' : ''}` : '';

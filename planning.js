@@ -468,8 +468,8 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
                 const isCreneau = vol._table === 'VI Créneaux';
                 const classePilote = pilote ? 'vi-avec-pilote' : 'vi-sans-pilote';
                 barresDiv.className = `reservation-bar ${classePilote}`;
-                barresDiv.style.left = `${(heureDebut / 24) * 100}%`;
-                barresDiv.style.width = `${(duree / 24) * 100}%`;
+                barresDiv.style.left = `${positionHeure(heureDebut)}%`;
+                barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
                 const libelle = pilote ? `🎯 ${type} (${formaterNomPilote(pilote)})` : `🎯 ${type} DISPONIBLE`;
                 barresDiv.innerHTML = `<strong>${libelle}</strong>`;
                 barresDiv.title = vol.fields['Commentaire'] || '';
@@ -737,8 +737,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                     if (duree > 0) {
                         const barresDiv = document.createElement('div');
                         barresDiv.className = 'reservation-bar';
-                        barresDiv.style.left = `${(heureDebut / 24) * 100}%`;
-                        barresDiv.style.width = `${(duree / 24) * 100}%`;
+                        barresDiv.style.left = `${positionHeure(heureDebut)}%`;
+                        barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
                         barresDiv.style.boxSizing = 'border-box';
                         barresDiv.style.borderLeft = '5px solid #1e3d59';
                         barresDiv.style.borderTopLeftRadius = '4px';
@@ -808,42 +808,9 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                     }
                 }
             });
-            // Détection et affichage des conflits de superposition
-            for (let i = 0; i < barresInfos.length; i++) {
-                for (let j = i + 1; j < barresInfos.length; j++) {
-                    const a = barresInfos[i];
-                    const b = barresInfos[j];
-                    const chevauchementDebut = Math.max(a.debut, b.debut);
-                    const chevauchementFin = Math.min(a.fin, b.fin);
-                    if (chevauchementFin > chevauchementDebut) {
-                        const dureeConflit = chevauchementFin - chevauchementDebut;
-                        function ajouterOverlayConflit(barInfo) {
-                            const dureeBar = barInfo.fin - barInfo.debut;
-                            const overlay = document.createElement('div');
-                            overlay.className = 'conflit-overlay';
-                            overlay.style.position = 'absolute';
-                            overlay.style.top = '0';
-                            overlay.style.left = `${((chevauchementDebut - barInfo.debut) / dureeBar) * 100}%`;
-                            overlay.style.width = `${(dureeConflit / dureeBar) * 100}%`;
-                            overlay.style.height = '100%';
-                            overlay.style.backgroundColor = 'rgba(255, 255, 0, 0.55)';
-                            overlay.style.pointerEvents = 'none';
-                            overlay.style.zIndex = '1';
-                            overlay.style.border = '1px dashed #c0392b';
-                            overlay.style.display = 'flex';
-                            overlay.style.alignItems = 'center';
-                            overlay.style.justifyContent = 'center';
-                            overlay.title = `Conflit horaire de ${convertirHeureEnHHMM(chevauchementDebut)} à ${convertirHeureEnHHMM(chevauchementFin)}`;
-                            overlay.innerHTML = `<span style="font-size:14px; pointer-events:none;">⚠️</span>`;
-                            barInfo.bar.insertBefore(overlay, barInfo.bar.firstChild);
-                        }
-                        ajouterOverlayConflit(a);
-                        ajouterOverlayConflit(b);
-                        a.bar.title = (a.bar.title ? a.bar.title + ' | ' : '') + 'Conflit horaire détecté';
-                        b.bar.title = (b.bar.title ? b.bar.title + ' | ' : '') + 'Conflit horaire détecté';
-                    }
-                }
-            }
+
+            if (typeof afficherConflitsReservations === 'function') afficherConflitsReservations(barresInfos);
+
             const immatAvion = (avion.fields['Immatriculation'] || '').toString().trim().toUpperCase();
             if (immatAvion && carnetsPilotes.length > 0) {
                 const volsCarnetJour = carnetsPilotes.filter(c => {
@@ -953,7 +920,7 @@ function genererFriseHeures() {
     if (!container) return;
     container.innerHTML = "";
     for (let h = 0; h < 24; h++) {
-        const heureStr = h.toString().padStart(2, '0') + ':00';
+        const heureStr = h + 'h';
         const div = document.createElement('div');
         div.className = 'hour-cell-header';
         div.innerHTML = `<span>${heureStr}</span>`;
@@ -1014,8 +981,8 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             isDraggingBar = true;
             ghost = document.createElement('div');
             ghost.className = 'drag-ghost-preview';
-            ghost.style.width = `${(dureeVol / 24) * 100}%`;
-            ghost.style.left = `${(heureDebutInitiale / 24) * 100}%`;
+            ghost.style.width = `${positionHeure(heureDebutInitiale + dureeVol) - positionHeure(heureDebutInitiale)}%`;
+            ghost.style.left = `${positionHeure(heureDebutInitiale)}%`;
             const hDebutStr = convertirHeureEnHHMM(heureDebutInitiale);
             const hFinStr = convertirHeureEnHHMM(heureDebutInitiale + dureeVol);
             ghost.innerHTML = `<span>${hDebutStr} - ${hFinStr}</span>`;
@@ -1028,7 +995,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
         if (nouvelleHeureDebut + dureeVol > 24) {
             nouvelleHeureDebut = 24 - dureeVol;
         }
-        ghost.style.left = `${(nouvelleHeureDebut / 24) * 100}%`;
+        ghost.style.left = `${positionHeure(nouvelleHeureDebut)}%`;
         const hDebutStr = convertirHeureEnHHMM(nouvelleHeureDebut);
         const hFinStr = convertirHeureEnHHMM(nouvelleHeureDebut + dureeVol);
         ghost.innerHTML = `<span>${hDebutStr} - ${hFinStr}</span>`;
@@ -1069,8 +1036,8 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
     const ghostBar = document.createElement('div');
     ghostBar.className = 'ghost-bar-preview';
     ghostBar.innerHTML = `<span style="font-size:11px; font-weight:bold; color:#1e3d59; display:block; text-align:center; margin-top:15px;"></span>`;
-    ghostBar.style.left = `${(hDebutInitiale / 24) * 100}%`;
-    ghostBar.style.width = `${((hFinInitiale - hDebutInitiale) / 24) * 100}%`;
+    ghostBar.style.left = `${positionHeure(hDebutInitiale)}%`;
+    ghostBar.style.width = `${positionHeure(hFinInitiale) - positionHeure(hDebutInitiale)}%`;
     parentGrid.appendChild(ghostBar);
     let hDebFinale = hDebutInitiale;
     let hFinFinale = hFinInitiale;
@@ -1086,8 +1053,8 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
             if (heureCalculee <= hDebutInitiale) heureCalculee = hDebutInitiale + 0.25;
             hFinFinale = heureCalculee;
         }
-        ghostBar.style.left = `${(hDebFinale / 24) * 100}%`;
-        ghostBar.style.width = `${((hFinFinale - hDebFinale) / 24) * 100}%`;
+        ghostBar.style.left = `${positionHeure(hDebFinale)}%`;
+        ghostBar.style.width = `${positionHeure(hFinFinale) - positionHeure(hDebFinale)}%`;
         const txtStart = minutesToTimeString(hDebFinale * 60);
         const txtEnd = minutesToTimeString(hFinFinale * 60);
         ghostBar.querySelector('span').textContent = `${txtStart} - ${txtEnd}`;

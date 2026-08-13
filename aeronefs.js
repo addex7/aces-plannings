@@ -7,7 +7,7 @@ function genererFriseHeuresSuivi() {
     if (!container) return;
     container.innerHTML = ""; 
     for (let h = 0; h < 24; h++) {
-        const heureStr = h.toString().padStart(2, '0') + ':00';
+        const heureStr = h + 'h';
         const div = document.createElement('div');
         div.className = 'hour-cell-header';
         div.innerHTML = `<span>${heureStr}</span>`;
