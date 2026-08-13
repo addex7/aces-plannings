@@ -243,6 +243,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
         for (let h = 0; h < 24; h++) {
             const block = document.createElement('div');
             block.className = 'grid-hour-block';
+            block.style.flex = LARGEURS_HEURES[h];
             const overlay = document.createElement('div');
             overlay.className = `dispo-hour-overlay dispo-${dispoParHeure[h]}`;
             block.appendChild(overlay);

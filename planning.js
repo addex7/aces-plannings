@@ -447,6 +447,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
     for (let h = 0; h < 24; h++) {
         const gridBlock = document.createElement('div');
         gridBlock.className = 'grid-hour-block';
+        gridBlock.style.flex = LARGEURS_HEURES[h];
         gridBg.appendChild(gridBlock);
     }
 
@@ -704,6 +705,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             for (let h = 0; h < 24; h++) {
                 const gridBlock = document.createElement('div');
                 gridBlock.className = 'grid-hour-block';
+                gridBlock.style.flex = LARGEURS_HEURES[h];
                 gridBlock.addEventListener('click', (e) => {
                     if (isResizing || isDraggingBar) {
                         e.stopPropagation();

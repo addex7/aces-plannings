@@ -172,6 +172,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
     for (let h = 0; h < 24; h++) {
         const d = document.createElement('div');
         d.className = 'grid-hour-block';
+        d.style.flex = LARGEURS_HEURES[h];
         const overlay = document.createElement('div');
         overlay.className = `dispo-hour-overlay dispo-${blocks[h]}`;
         d.appendChild(overlay);

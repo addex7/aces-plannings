@@ -333,15 +333,12 @@ body {
     position: relative;
     z-index: 2;
 }
-.grid-hour-block:nth-child(-n+6),
 .hour-cell-header:nth-child(-n+6) {
     flex: 2;
 }
-.grid-hour-block:nth-child(n+7):nth-child(-n+22),
 .hour-cell-header:nth-child(n+7):nth-child(-n+22) {
     flex: 3;
 }
-.grid-hour-block:nth-child(n+23),
 .hour-cell-header:nth-child(n+23) {
     flex: 2;
 }
