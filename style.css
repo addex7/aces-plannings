@@ -357,8 +357,15 @@ body {
     border-left: 4px solid #112d4e;
 }
 .reservation-bar.vi-avec-pilote {
-    background-color: #3f51b5;
+    background-color: #f97316;
     border-left: 4px solid #1a237e;
+}
+.reservation-bar.reservation-instruction {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+.reservation-bar.reservation-instruction strong {
+    color: #ffffff;
 }
 .reservation-bar.vi-planeur {
     background-color: #8e44ad;

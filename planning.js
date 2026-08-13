@@ -151,7 +151,7 @@ async function mettreAJourStatutCreneauxConflit(dateJour, avionId) {
 }
 
 // --- FONCTION POUR OUVRIR LA MODALE DE MODIFICATION ---
-function ouvrirModaleModification(reservationId) {
+async function ouvrirModaleModification(reservationId) {
     if (!reservationId) return;
 
     // Trouver la réservation dans le cache
@@ -181,6 +181,10 @@ function ouvrirModaleModification(reservationId) {
 
     // Remplir le type de vol
     form['form-type-vol'].value = reservation.fields['Type de vol'] || 'Vol Classique';
+
+    // Remplir l'instructeur
+    if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
+    if (form['form-instructeur']) form['form-instructeur'].value = reservation.fields['Instructeur'] || '';
 
     // Stocker l'ID de la réservation en cours d'édition
     idReservationEnEdition = reservationId;
@@ -731,7 +735,12 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const isVIMoteur = typesVol.includes('VI Moteur');
                         const isAncienVI = typesVol.includes("Vol d'Initiation") || typesVol.includes("Vol d'Initiation (VI)");
                         const isCreneau = vol._table === 'VI Créneaux';
+                        const isInstruction = typesVol.includes('Instruction');
                         let libelleEntete = piloteFormate || 'Pilote non défini';
+                        if (isInstruction) {
+                            barresDiv.classList.add('reservation-instruction');
+                            libelleEntete += ' (Instruction)';
+                        }
                         if (isVIMoteur || isAncienVI) {
                             if (!piloteNom || piloteNom.trim() === "") {
                                 barresDiv.classList.add('vi-sans-pilote');
