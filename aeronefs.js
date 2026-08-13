@@ -679,20 +679,22 @@ function initNavigationTabs() {
     const tabPlanning = document.getElementById('tab-planning');
     const tabAeronefs = document.getElementById('tab-aeronefs');
     const tabInitiation = document.getElementById('tab-initiation');
+    const tabInstructeur = document.getElementById('tab-instructeur');
     const tabCarnet = document.getElementById('tab-carnet');
     const tabMembres = document.getElementById('tab-membres');
     const tabDocuments = document.getElementById('tab-documents');
     const viewPlanning = document.getElementById('view-planning');
     const viewAeronefs = document.getElementById('view-aeronefs');
     const viewInitiation = document.getElementById('view-initiation');
+    const viewInstructeur = document.getElementById('view-instructeur');
     const viewCarnet = document.getElementById('view-carnet');
     const viewMembres = document.getElementById('view-membres');
     const viewDocuments = document.getElementById('view-documents');
     const viewAccueilMembre = document.getElementById('view-accueil-membre');
 
     function activerTab(tab, vue) {
-        [tabPlanning, tabAeronefs, tabInitiation, tabCarnet, tabMembres, tabDocuments].forEach(t => { if (t) t.classList.remove('active'); });
-        [viewPlanning, viewAeronefs, viewInitiation, viewCarnet, viewMembres, viewDocuments, viewAccueilMembre].forEach(v => { if (v) v.style.display = 'none'; });
+        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabMembres, tabDocuments].forEach(t => { if (t) t.classList.remove('active'); });
+        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewMembres, viewDocuments, viewAccueilMembre].forEach(v => { if (v) v.style.display = 'none'; });
         if (tab) tab.classList.add('active');
         if (vue) vue.style.display = 'block';
         // Ouvrir le groupe contenant l'onglet actif, fermer les autres groupes déroulants
@@ -712,6 +714,14 @@ function initNavigationTabs() {
             activerTab(tabAeronefs, viewAeronefs);
             injecterControlesDateSuivi();
             chargerSuiviAeronef();
+        });
+    }
+
+    if (tabInstructeur) {
+        tabInstructeur.addEventListener('click', () => {
+            activerTab(tabInstructeur, viewInstructeur);
+            if (typeof initPlanningInstructeur === 'function') initPlanningInstructeur();
+            if (typeof chargerSuiviInstructeur === 'function') chargerSuiviInstructeur();
         });
     }
 

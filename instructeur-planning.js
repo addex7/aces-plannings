@@ -1,0 +1,293 @@
+/* ==========================================================================
+   PLANNING INSTRUCTEUR - VUE 14 JOURS
+   ========================================================================== */
+
+let dateInstructeurSuivi = new Date();
+let instructeurSelectionne = '';
+
+function genererFriseHeuresInstructeur() {
+    const container = document.getElementById('timeline-hours-instructeur');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let h = 0; h < 24; h++) {
+        const div = document.createElement('div');
+        div.className = 'hour-cell-header';
+        div.innerHTML = `<span>${h.toString().padStart(2, '0')}:00</span>`;
+        container.appendChild(div);
+    }
+}
+
+function mettreAJourDateInstructeur() {
+    const el = document.getElementById('current-date-instructeur');
+    if (!el) return;
+    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    el.textContent = dateInstructeurSuivi.toLocaleDateString('fr-FR', options);
+}
+
+async function peuplerSelectInstructeurSuivi() {
+    const sel = document.getElementById('select-instructeur-suivi');
+    if (!sel) return;
+    if (typeof chargerListeInstructeurs === 'function') await chargerListeInstructeurs();
+    const instructeurs = (typeof listeInstructeursCache !== 'undefined') ? listeInstructeursCache : [];
+    let html = '<option value="">-- Instructeur --</option>';
+    instructeurs.forEach(u => {
+        html += `<option value="${u.nomComplet}" ${u.nomComplet === instructeurSelectionne ? 'selected' : ''}>${u.nomComplet}</option>`;
+    });
+    sel.innerHTML = html;
+}
+
+function initPlanningInstructeur() {
+    const btnPrev = document.getElementById('btn-instructeur-prev');
+    const btnNext = document.getElementById('btn-instructeur-next');
+    const dateEl = document.getElementById('current-date-instructeur');
+    const sel = document.getElementById('select-instructeur-suivi');
+
+    if (!btnPrev || !btnNext || !dateEl || !sel) return;
+
+    genererFriseHeuresInstructeur();
+    mettreAJourDateInstructeur();
+
+    if (!btnPrev.dataset.ready) {
+        btnPrev.addEventListener('click', () => {
+            dateInstructeurSuivi.setDate(dateInstructeurSuivi.getDate() - 1);
+            mettreAJourDateInstructeur();
+            chargerSuiviInstructeur();
+        });
+        btnPrev.dataset.ready = '1';
+    }
+
+    if (!btnNext.dataset.ready) {
+        btnNext.addEventListener('click', () => {
+            dateInstructeurSuivi.setDate(dateInstructeurSuivi.getDate() + 1);
+            mettreAJourDateInstructeur();
+            chargerSuiviInstructeur();
+        });
+        btnNext.dataset.ready = '1';
+    }
+
+    if (!dateEl.dataset.ready) {
+        dateEl.addEventListener('click', () => {
+            const annee = dateInstructeurSuivi.getFullYear();
+            const mois = (dateInstructeurSuivi.getMonth() + 1).toString().padStart(2, '0');
+            const jour = dateInstructeurSuivi.getDate().toString().padStart(2, '0');
+            const datePrompt = prompt('Aller à la date (JJ/MM/AAAA) :', `${jour}/${mois}/${annee}`);
+            if (datePrompt) {
+                const [d, m, y] = datePrompt.split('/').map(Number);
+                if (d && m && y) {
+                    dateInstructeurSuivi = new Date(y, m - 1, d, 12, 0, 0);
+                    mettreAJourDateInstructeur();
+                    chargerSuiviInstructeur();
+                }
+            }
+        });
+        dateEl.dataset.ready = '1';
+    }
+
+    if (!sel.dataset.ready) {
+        sel.addEventListener('change', () => {
+            instructeurSelectionne = sel.value;
+            chargerSuiviInstructeur();
+        });
+        sel.dataset.ready = '1';
+    }
+
+    peuplerSelectInstructeurSuivi().then(() => {
+        if (!instructeurSelectionne && sel.options.length > 1) {
+            sel.value = sel.options[1].value;
+            instructeurSelectionne = sel.value;
+        }
+        if (instructeurSelectionne) chargerSuiviInstructeur();
+    });
+}
+
+async function chargerDisposInstructeurPlage(nom, start, end) {
+    const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    const prenom = (nom.split(' ')[0] || nom).replace(/'/g, "\\'");
+    const formula = `AND(SEARCH('${prenom}', {Instructeur}) > 0, DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=200`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        return data.records || [];
+    } catch (err) { console.error(err); return []; }
+}
+
+async function chargerReservationsInstructeurPlage(nom, start, end) {
+    const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    const prenom = (nom.split(' ')[0] || nom).replace(/'/g, "\\'");
+    const formula = `AND(OR(SEARCH('${prenom}', {Instructeur}) > 0, SEARCH('${prenom}', {Pilote}) > 0), DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${endStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${startStr}')`;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        return data.records || [];
+    } catch (err) { console.error(err); return []; }
+}
+
+function ajouterZonesNuit(cellule, s) {
+    if (!s) return;
+    const aube = (Math.max(0, s.aubeAero || 0) / 24) * 100;
+    const lever = (Math.max(0, s.leverSoleil || 0) / 24) * 100;
+    const coucher = (Math.min(24, s.coucherSoleil || 24) / 24) * 100;
+    const crepuscule = (Math.min(24, s.crepusculeAero || 24) / 24) * 100;
+
+    const nuit1 = document.createElement('div');
+    nuit1.className = 'night-zone nuit-aero';
+    nuit1.style.left = '0%';
+    nuit1.style.width = `${aube}%`;
+    cellule.appendChild(nuit1);
+
+    const nuit2 = document.createElement('div');
+    nuit2.className = 'night-zone nuit';
+    nuit2.style.left = `${aube}%`;
+    nuit2.style.width = `${lever - aube}%`;
+    cellule.appendChild(nuit2);
+
+    const nuit3 = document.createElement('div');
+    nuit3.className = 'night-zone nuit';
+    nuit3.style.left = `${coucher}%`;
+    nuit3.style.width = `${crepuscule - coucher}%`;
+    cellule.appendChild(nuit3);
+
+    const nuit4 = document.createElement('div');
+    nuit4.className = 'night-zone nuit-aero';
+    nuit4.style.left = `${crepuscule}%`;
+    nuit4.style.width = `${100 - crepuscule}%`;
+    cellule.appendChild(nuit4);
+}
+
+function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom) {
+    const dateStr = `${dateJour.getFullYear()}-${String(dateJour.getMonth() + 1).padStart(2, '0')}-${String(dateJour.getDate()).padStart(2, '0')}`;
+    const tdDate = document.createElement('td');
+    tdDate.style.cssText = 'padding: 12px 10px; font-weight: bold; color: #1e3d59; vertical-align: middle;';
+    tdDate.textContent = dateJour.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    tr.appendChild(tdDate);
+
+    const tdCell = document.createElement('td');
+    tdCell.style.cssText = 'padding: 4px; position: relative; height: 46px; vertical-align: middle;';
+
+    const blocks = [];
+    for (let h = 0; h < 24; h++) blocks.push('red');
+    disposJour.forEach(d => {
+        const f = d.fields || {};
+        const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
+        const [hEnd, mEnd] = String(f['Heure fin'] || '00:00').split(':').map(Number);
+        const startMin = hStart * 60 + (mStart || 0);
+        const endMin = hEnd * 60 + (mEnd || 0);
+        const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
+        for (let m = 0; m < 1440; m += 60) {
+            const h = m / 60;
+            if (m < startMin || m + 60 > endMin) continue;
+            blocks[h] = estDispo ? 'green' : 'red';
+        }
+    });
+
+    for (let h = 0; h < 24; h++) {
+        const d = document.createElement('div');
+        d.className = `dispo-hour dispo-${blocks[h]}`;
+        d.style.cssText = 'flex: 1; height: 100%; border-right: 1px solid #f1f5f9; box-sizing: border-box;';
+        tdCell.appendChild(d);
+    }
+
+    let s = { aubeAero: 0, leverSoleil: 0, coucherSoleil: 24, crepusculeAero: 24 };
+    if (typeof calculerSoleil === 'function') {
+        try { s = calculerSoleil(dateJour); } catch (e) {}
+    }
+    ajouterZonesNuit(tdCell, s);
+
+    reservationsJour.forEach(r => {
+        const f = r.fields || {};
+        const debut = new Date(f['Date de début']);
+        const fin = new Date(f['Date de fin']);
+        if (isNaN(debut.getTime()) || isNaN(fin.getTime())) return;
+        let heureDebut = debut.getHours() + debut.getMinutes() / 60;
+        let heureFin = fin.getHours() + fin.getMinutes() / 60;
+        if (debut.getDate() !== dateJour.getDate() || debut.getMonth() !== dateJour.getMonth() || debut.getFullYear() !== dateJour.getFullYear()) heureDebut = 0;
+        if (fin.getDate() !== dateJour.getDate() || fin.getMonth() !== dateJour.getMonth() || fin.getFullYear() !== dateJour.getFullYear()) heureFin = 24;
+        heureDebut = Math.max(0, Math.min(24, heureDebut));
+        heureFin = Math.max(0, Math.min(24, heureFin));
+        const duree = heureFin - heureDebut;
+        if (duree <= 0) return;
+
+        const isInstructeur = typeof correspondanceNom === 'function' && correspondanceNom(f['Instructeur'], nom);
+        const machineIds = Array.isArray(f['Machine']) ? f['Machine'] : [f['Machine']].filter(Boolean);
+        const machineId = machineIds[0];
+        const avion = (typeof listeAvionsCache !== 'undefined' ? listeAvionsCache : []).find(a => a.id === machineId);
+        const immat = (avion && (avion.fields['Immatriculation'] || avion.fields['Nom'] || '')) || machineId || '';
+        const pilote = (f['Pilote'] || '').toString().trim();
+
+        const barresDiv = document.createElement('div');
+        barresDiv.className = 'reservation-bar';
+        if (isInstructeur) {
+            barresDiv.classList.add('reservation-avec-instructeur');
+            barresDiv.classList.add('reservation-instruction');
+        }
+        if (duree <= 1) barresDiv.classList.add('short-reservation');
+        barresDiv.style.left = `${(heureDebut / 24) * 100}%`;
+        barresDiv.style.width = `${(duree / 24) * 100}%`;
+        barresDiv.style.top = '8px';
+        barresDiv.style.height = '30px';
+        barresDiv.title = `${pilote} — ${immat}${isInstructeur ? ' (Instruction)' : ''}`;
+        const libelle = duree > 1 ? `${immat}` : '';
+        barresDiv.innerHTML = `<strong>${libelle}</strong>`;
+        barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
+        tdCell.appendChild(barresDiv);
+    });
+
+    tr.appendChild(tdCell);
+}
+
+async function chargerSuiviInstructeur() {
+    const tbody = document.getElementById('instructeur-table-body');
+    if (!tbody) return;
+
+    const sel = document.getElementById('select-instructeur-suivi');
+    if (!instructeurSelectionne && sel && sel.value) instructeurSelectionne = sel.value;
+    if (!instructeurSelectionne) {
+        tbody.innerHTML = '<tr><td colspan="2" style="padding:15px;">Sélectionnez un instructeur pour afficher son planning.</td></tr>';
+        return;
+    }
+    if (sel && sel.value !== instructeurSelectionne) sel.value = instructeurSelectionne;
+
+    tbody.innerHTML = '<tr><td colspan="2" style="padding:15px;">Chargement...</td></tr>';
+
+    const start = new Date(dateInstructeurSuivi);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 14);
+    end.setHours(23, 59, 59, 999);
+
+    const [dispos, reservations] = await Promise.all([
+        chargerDisposInstructeurPlage(instructeurSelectionne, start, end),
+        chargerReservationsInstructeurPlage(instructeurSelectionne, start, end)
+    ]);
+
+    tbody.innerHTML = '';
+    for (let i = 0; i < 14; i++) {
+        const dateJour = new Date(start);
+        dateJour.setDate(start.getDate() + i);
+        const dateJourStr = `${dateJour.getFullYear()}-${String(dateJour.getMonth() + 1).padStart(2, '0')}-${String(dateJour.getDate()).padStart(2, '0')}`;
+
+        const disposJour = dispos.filter(r => {
+            const f = r.fields || {};
+            const d = f['Date'] ? new Date(f['Date']).toISOString().split('T')[0] : '';
+            return d === dateJourStr;
+        });
+
+        const reservationsJour = reservations.filter(r => {
+            const f = r.fields || {};
+            const resStart = new Date(f['Date de début']);
+            const resEnd = new Date(f['Date de fin']);
+            const dayStart = new Date(dateJour);
+            const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+            return resStart < dayEnd && resEnd > dayStart;
+        });
+
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #e2e8f0';
+        rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, instructeurSelectionne);
+        tbody.appendChild(tr);
+    }
+}

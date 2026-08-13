@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=77">
+    <link rel="stylesheet" href="style.css?v=78">
 </head>
 <body>
 
@@ -91,6 +91,7 @@
                             <li id="tab-planning" class="active">📅 Planning</li>
                             <li id="tab-initiation">🎯 Vol d'Initiation</li>
                             <li id="tab-aeronefs">🛩️ Aéronefs</li>
+                            <li id="tab-instructeur">👨‍🏫 Instructeur</li>
                         </ul>
                     </div>
                     <div class="nav-group nav-group-standalone">
@@ -315,6 +316,56 @@
                         </thead>
                         <tbody id="suivi-table-body">
                             <!-- Lignes générées par JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================= VUE INSTRUCTEUR ================= -->
+            <section id="view-instructeur" class="view-section" style="display: none;">
+                <header class="header">
+                    <h2>Planning Instructeur</h2>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <div class="date-picker-container" style="background-color: #f5f0e1; border-radius: 20px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 12px; font-weight: bold; font-size: 14px;">
+                            <button id="btn-instructeur-prev" class="btn-nav" style="background:none; border:none; cursor:pointer; font-size:15px; color:#1e3d59;">◀</button>
+                            <span id="current-date-instructeur" class="date-display" style="font-weight:600; font-size:14px; color:#1e3d59; cursor:pointer;" title="Cliquer pour choisir une date"></span>
+                            <button id="btn-instructeur-next" class="btn-nav" style="background:none; border:none; cursor:pointer; font-size:15px; color:#1e3d59;">▶</button>
+                        </div>
+                        <select id="select-instructeur-suivi" style="background-color: #1e3d59; color: #ffffff; border: none; border-radius: 6px; padding: 8px 16px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;">
+                            <option value="">-- Instructeur --</option>
+                        </select>
+                    </div>
+                </header>
+
+                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <h3 style="margin-top: 0; color: #1e3d59; border-bottom: 2px solid #f5f0e1; padding-bottom: 10px;">Prévisionnel sur 14 jours</h3>
+
+                    <!-- LÉGENDE DES COULEURS -->
+                    <div style="display: flex; gap: 20px; margin: 15px 0; font-size: 12px; color: #475569; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; align-items: center;">
+                        <span style="font-weight: bold; color: #1e3d59;">Légende :</span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="width: 14px; height: 14px; background-color: #ff6e40; border-radius: 3px; display: inline-block;"></span>
+                            <span>Vol privé</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="width: 14px; height: 14px; background-color: #3b82f6; border-radius: 3px; display: inline-block;"></span>
+                            <span>Vol d'instruction</span>
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; margin-top: 15px;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e2e8f0; color: #475569; font-size: 14px;">
+                                <th style="padding: 12px 10px; width: 130px;">Date</th>
+                                <th style="padding: 12px 10px;">
+                                    <div style="position: relative; height: 20px;">
+                                        <div id="timeline-hours-instructeur" style="display: flex; width: 100%; height: 100%;"></div>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="instructeur-table-body">
+                            <tr><td colspan="2" style="padding:15px;">Sélectionnez un instructeur pour afficher son planning.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -952,18 +1003,19 @@
     </div>
 
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="evenements.js?v=77"></script>
-    <script src="app.js?v=77"></script>
-    <script src="utils.js?v=77"></script>
-    <script src="presences.js?v=77"></script>
-    <script src="planning.js?v=77"></script>
-    <script src="calendrier.js?v=77"></script>
-    <script src="aeronefs.js?v=77"></script>
-    <script src="carnet.js?v=77"></script>
-    <script src="documents.js?v=77"></script>
+    <script src="evenements.js?v=78"></script>
+    <script src="app.js?v=78"></script>
+    <script src="utils.js?v=78"></script>
+    <script src="presences.js?v=78"></script>
+    <script src="planning.js?v=78"></script>
+    <script src="calendrier.js?v=78"></script>
+    <script src="aeronefs.js?v=78"></script>
+    <script src="carnet.js?v=78"></script>
+    <script src="documents.js?v=78"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="membres.js?v=77"></script>
-    <script src="instructeurs.js?v=77"></script>
-    <script src="membre-home.js?v=77"></script>
+    <script src="membres.js?v=78"></script>
+    <script src="instructeurs.js?v=78"></script>
+    <script src="instructeur-planning.js?v=78"></script>
+    <script src="membre-home.js?v=78"></script>
 </body>
 </html>
