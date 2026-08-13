@@ -444,6 +444,7 @@ function ouvrirModaleMembre(record) {
     document.getElementById('edit-membre-telephone').value = f['Téléphone'] || '';
     document.getElementById('edit-membre-identifiant').value = f['Identifiant'] || '';
     document.getElementById('edit-membre-password').value = f['Mot de passe'] || '';
+    document.getElementById('edit-membre-trigramme').value = f['Trigramme'] || '';
     const dateNaissance = f['Date de naissance'];
     const dateInput = document.getElementById('edit-membre-date-naissance');
     if (dateInput) dateInput.value = dateNaissance ? new Date(dateNaissance).toISOString().split('T')[0] : '';
@@ -469,6 +470,7 @@ async function sauvegarderMembre(event) {
     const telephone = document.getElementById('edit-membre-telephone').value.trim();
     const identifiant = document.getElementById('edit-membre-identifiant').value.trim();
     const motDePasse = document.getElementById('edit-membre-password').value;
+    const trigramme = document.getElementById('edit-membre-trigramme').value.trim().toUpperCase();
     const dateNaissance = document.getElementById('edit-membre-date-naissance').value || null;
     const d = dateNaissance ? new Date(dateNaissance) : null;
     const auj = new Date();
@@ -480,6 +482,7 @@ async function sauvegarderMembre(event) {
     const roles = Array.from(document.querySelectorAll('input[name="edit-membre-roles"]:checked')).map(cb => cb.value);
     if (!prenom || !nom || !mail || !identifiant) { alert('Prénom, Nom, Mail et Identifiant sont requis.'); return; }
     const fields = { 'Prénom': prenom, 'Nom': nom, 'Mail': mail, 'Téléphone': telephone, 'Identifiant': identifiant, 'Rôles': roles };
+    if (trigramme) fields['Trigramme'] = trigramme;
     if (motDePasse) fields['Mot de passe'] = motDePasse;
     if (dateNaissance) fields['Date de naissance'] = dateNaissance;
     fields['Autorisation parentale'] = age !== null && age < 18;

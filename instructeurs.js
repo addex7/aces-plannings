@@ -14,6 +14,14 @@ function correspondanceNom(a, b) {
     return na === nb || na.startsWith(nb) || nb.startsWith(na);
 }
 
+function trouverTrigrammeInstructeur(nom) {
+    if (!nom) return '';
+    const u = listeInstructeursCache.find(x => correspondanceNom(x.nomComplet, nom));
+    if (u && u.trigramme) return u.trigramme;
+    if (currentUser && currentUser.trigramme && correspondanceNom(currentUser.prenom + ' ' + currentUser.nom, nom)) return currentUser.trigramme;
+    return '';
+}
+
 function estInstructeur() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     const roles = currentUser.roles || [];
@@ -314,7 +322,7 @@ async function chargerListeInstructeurs(forceRefresh = false) {
             const prenom = f['Prénom'] || '';
             const nom = f['Nom'] || '';
             const roles = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
-            return { prenom, nom, nomComplet: `${prenom} ${nom}`.trim(), roles };
+            return { prenom, nom, nomComplet: `${prenom} ${nom}`.trim(), trigramme: (f['Trigramme'] || '').toString().trim(), roles };
         }).filter(u => u.nomComplet && u.roles.some(r => ROLES_INSTRUCTEUR.includes((r || '').trim())));
     } catch (err) { console.error(err); }
 }

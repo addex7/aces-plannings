@@ -732,12 +732,17 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             barresDiv.classList.add('short-reservation');
                         }
                         const passagerNom = (vol.fields['Passager'] || '').toString().trim();
+                        const instructeurNom = (vol.fields['Instructeur'] || '').toString().trim();
                         const typesVol = Array.isArray(typeVol) ? typeVol : [typeVol];
                         const isVIMoteur = typesVol.includes('VI Moteur');
                         const isAncienVI = typesVol.includes("Vol d'Initiation") || typesVol.includes("Vol d'Initiation (VI)");
                         const isCreneau = vol._table === 'VI Créneaux';
                         const isInstruction = typesVol.includes('Instruction');
                         let libelleEntete = piloteFormate || 'Pilote non défini';
+                        if (instructeurNom) {
+                            const trigramme = trouverTrigrammeInstructeur(instructeurNom);
+                            if (trigramme) libelleEntete += ` — ${trigramme}`;
+                        }
                         if (isInstruction) {
                             barresDiv.classList.add('reservation-instruction');
                             libelleEntete += ' (Instruction)';
