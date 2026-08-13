@@ -256,6 +256,7 @@ body {
 }
 .hour-cell-header {
     flex: 1;
+    box-sizing: border-box;
     position: relative;
     font-size: 11px;
     color: #64748b;
@@ -325,6 +326,7 @@ body {
 .grid-hour-block {
     flex: 1;
     border-right: 1px solid #f1f5f9;
+    box-sizing: border-box;
     height: 100%;
     cursor: pointer;
     background-color: transparent !important;
