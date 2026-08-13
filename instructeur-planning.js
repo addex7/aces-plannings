@@ -166,7 +166,10 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
     tr.appendChild(tdDate);
 
     const tdCell = document.createElement('td');
-    tdCell.style.cssText = 'padding: 4px; position: relative; height: 46px; vertical-align: middle;';
+    tdCell.style.cssText = 'padding: 4px; height: 46px; vertical-align: middle;';
+
+    const inner = document.createElement('div');
+    inner.style.cssText = 'display: flex; position: relative; height: 100%; width: 100%;';
 
     const blocks = [];
     for (let h = 0; h < 24; h++) blocks.push('red');
@@ -188,14 +191,16 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         const d = document.createElement('div');
         d.className = `dispo-hour dispo-${blocks[h]}`;
         d.style.cssText = 'flex: 1; height: 100%; border-right: 1px solid #f1f5f9; box-sizing: border-box;';
-        tdCell.appendChild(d);
+        inner.appendChild(d);
     }
 
     let s = { aubeAero: 0, leverSoleil: 0, coucherSoleil: 24, crepusculeAero: 24 };
     if (typeof calculerSoleil === 'function') {
         try { s = calculerSoleil(dateJour); } catch (e) {}
     }
-    ajouterZonesNuit(tdCell, s);
+    ajouterZonesNuit(inner, s);
+
+    tdCell.appendChild(inner);
 
     reservationsJour.forEach(r => {
         const f = r.fields || {};
@@ -233,7 +238,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         const libelle = duree > 1 ? `${immat}` : '';
         barresDiv.innerHTML = `<strong>${libelle}</strong>`;
         barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
-        tdCell.appendChild(barresDiv);
+        inner.appendChild(barresDiv);
     });
 
     tr.appendChild(tdCell);
