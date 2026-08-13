@@ -4,6 +4,16 @@ let afficherDisposInstructeurs = false;
 let disposInstructeursCache = [];
 let listeInstructeursCache = [];
 
+function normaliserNom(n) {
+    return (n || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function correspondanceNom(a, b) {
+    const na = normaliserNom(a);
+    const nb = normaliserNom(b);
+    return na === nb || na.startsWith(nb) || nb.startsWith(na);
+}
+
 function estInstructeur() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     const roles = currentUser.roles || [];
@@ -111,7 +121,11 @@ function fermerModaleDisponibilite() {
 
 async function enregistrerDisponibilite(e) {
     e.preventDefault();
-    const nom = (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '');
+    let nom = '';
+    if (currentUser) {
+        nom = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    }
+    if (!nom && typeof nomPiloteCourant === 'function') nom = nomPiloteCourant();
     if (!nom) { alert('Connecte-toi pour déclarer une disponibilité.'); return; }
     const date = document.getElementById('dispo-date').value;
     const debut = document.getElementById('dispo-debut').value;
@@ -174,7 +188,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis) {
     }
 
     instructeurs.forEach(nom => {
-        const disposPerso = dispos.filter(r => (r.fields['Instructeur'] || '').toString().trim() === nom);
+        const disposPerso = dispos.filter(r => correspondanceNom(r.fields['Instructeur'], nom));
         const rowDiv = document.createElement('div');
         rowDiv.className = 'timeline-row instructeur-dispo-row';
         const machineCell = document.createElement('div');
@@ -193,7 +207,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis) {
         ajouterZoneNuit(gridBg, `${coucherPercent}%`, `${crepusculeAeroPercent - coucherPercent}%`, 'night-civil');
         ajouterZoneNuit(gridBg, `${crepusculeAeroPercent}%`, `${100 - crepusculeAeroPercent}%`, 'night-aero');
 
-        const dispoParHeure = new Array(24).fill('red');
+        const dispoParHeure = new Array(24).fill(null);
         disposPerso.forEach(d => {
             const f = d.fields || {};
             const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
@@ -211,9 +225,11 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis) {
         for (let h = 0; h < 24; h++) {
             const block = document.createElement('div');
             block.className = 'grid-hour-block';
-            const overlay = document.createElement('div');
-            overlay.className = `dispo-hour-overlay dispo-${dispoParHeure[h]}`;
-            block.appendChild(overlay);
+            if (dispoParHeure[h] === 'green') {
+                const overlay = document.createElement('div');
+                overlay.className = 'dispo-hour-overlay dispo-green';
+                block.appendChild(overlay);
+            }
             gridBg.appendChild(block);
         }
         rowDiv.appendChild(gridBg);
