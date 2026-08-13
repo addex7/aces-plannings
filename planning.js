@@ -167,8 +167,8 @@ async function ouvrirModaleModification(reservationId) {
     if (!form) return;
 
     // Remplir les champs du formulaire
-    form['form-debut'].value = reservation.fields['Date de début'] ? new Date(reservation.fields['Date de début']).toISOString().slice(0, 16) : '';
-    form['form-fin'].value = reservation.fields['Date de fin'] ? new Date(reservation.fields['Date de fin']).toISOString().slice(0, 16) : '';
+    form['form-debut'].value = reservation.fields['Date de début'] ? formaterDateHeureLocal(new Date(reservation.fields['Date de début'])) : '';
+    form['form-fin'].value = reservation.fields['Date de fin'] ? formaterDateHeureLocal(new Date(reservation.fields['Date de fin'])) : '';
 
     // Remplir le pilote
     if (reservation.fields['Pilote'] && form['form-pilote']) {
@@ -993,7 +993,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
         }
         const xPos = evt.clientX - rectGrid.left;
         let pourcentageX = Math.max(0, Math.min(1, xPos / rectGrid.width));
-        let nouvelleHeureDebut = pourcentageX * 24;
+        let nouvelleHeureDebut = positionHeureInverse(pourcentageX * 100);
         nouvelleHeureDebut = Math.round(nouvelleHeureDebut * 4) / 4;
         if (nouvelleHeureDebut + dureeVol > 24) {
             nouvelleHeureDebut = 24 - dureeVol;
@@ -1011,7 +1011,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             if (ghost) ghost.remove();
             const xPosFinal = evt.clientX - rectGrid.left;
             let pourcentageFin = Math.max(0, Math.min(1, xPosFinal / rectGrid.width));
-            let heureFinale = Math.round((pourcentageFin * 24) * 4) / 4;
+            let heureFinale = Math.round(positionHeureInverse(pourcentageFin * 100) * 4) / 4;
             if (heureFinale + dureeVol > 24) heureFinale = 24 - dureeVol;
             if (typeof sauvegarderDeplacementVol === 'function') {
                 sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName);
@@ -1048,7 +1048,7 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
         const xRelatif = moveEvent.clientX - rectGrid.left;
         let pourcentage = xRelatif / rectGrid.width;
         pourcentage = Math.max(0, Math.min(1, pourcentage));
-        let heureCalculee = Math.round(pourcentage * 24 * 4) / 4;
+        let heureCalculee = Math.round(positionHeureInverse(pourcentage * 100) * 4) / 4;
         if (bord === 'gauche') {
             if (heureCalculee >= hFinInitiale) heureCalculee = hFinInitiale - 0.25;
             hDebFinale = heureCalculee;

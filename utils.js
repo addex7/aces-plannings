@@ -135,6 +135,26 @@ function positionHeure(decimalHeure) {
     return (cumul / TOTAL_LARGEUR_HEURES) * 100;
 }
 
+function positionHeureInverse(pourcentage) {
+    if (pourcentage <= 0) return 0;
+    if (pourcentage >= 100) return 24;
+    const cible = (pourcentage / 100) * TOTAL_LARGEUR_HEURES;
+    let cumul = 0;
+    for (let h = 0; h < 24; h++) {
+        if (cumul + LARGEURS_HEURES[h] >= cible) {
+            const fraction = (cible - cumul) / LARGEURS_HEURES[h];
+            return h + fraction;
+        }
+        cumul += LARGEURS_HEURES[h];
+    }
+    return 24;
+}
+
+function formaterDateHeureLocal(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function afficherConflitsReservations(barresInfos) {
     if (!Array.isArray(barresInfos) || barresInfos.length < 2) return;
     for (let i = 0; i < barresInfos.length; i++) {
