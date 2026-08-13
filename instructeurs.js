@@ -137,13 +137,17 @@ async function chargerDisponibilitesInstructeurs(dateCible, forceRefresh = false
     await chargerListeInstructeurs(forceRefresh);
     const dateStr = `${dateCible.getFullYear()}-${String(dateCible.getMonth() + 1).padStart(2, '0')}-${String(dateCible.getDate()).padStart(2, '0')}`;
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
+        console.log('[DISPOS] URL:', url);
+        const res = await cachedFetch(url, { headers }, API_CACHE_TTL, forceRefresh);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         disposInstructeursCache = data.records || [];
+        console.log('[DISPOS] records count:', disposInstructeursCache.length, 'for', dateStr);
+        if (disposInstructeursCache.length) console.log('[DISPOS] first record:', disposInstructeursCache[0].fields);
     } catch (err) {
-        console.error(err);
+        console.error('[DISPOS] error:', err);
         disposInstructeursCache = [];
     }
     return disposInstructeursCache;
@@ -152,6 +156,7 @@ async function chargerDisponibilitesInstructeurs(dateCible, forceRefresh = false
 function afficherLignesInstructeurs(rowsContainer, soleil) {
     if (!afficherDisposInstructeurs) return;
     if (!listeInstructeursCache.length) return;
+    console.log('[DISPOS] afficherLignes - liste:', listeInstructeursCache.map(u => u.nomComplet), 'dispos:', disposInstructeursCache.length);
     const instructeurs = [...new Set(listeInstructeursCache.map(u => u.nomComplet))].sort();
     const s = soleil || { aubeAero: 0, leverSoleil: 0, coucherSoleil: 24, crepusculeAero: 24 };
     const aubeAeroPercent = (Math.max(0, s.aubeAero) / 24) * 100;
