@@ -852,7 +852,7 @@ function creerModaleDocumentsAeronef() {
     modal.id = 'documents-aeronef-modal';
     modal.className = 'modal';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
             <span class="close-documents-aeronef">&times;</span>
             <h3 id="documents-aeronef-modal-title">Documents machine</h3>
             <div id="documents-aeronef-list-modal" style="margin: 15px 0;"></div>
