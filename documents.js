@@ -15,9 +15,25 @@ function isDocumentaliste() {
     return roles.includes('Documentaliste') || roles.includes('Super admin');
 }
 
+function peutAccederBaseDocumentaire() {
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
+    const roles = currentUser.roles || [];
+    return roles.some(r => r && (
+        r.includes('Pilote') ||
+        r.includes('Instructeur') ||
+        r === 'Documentaliste' ||
+        r === 'Super admin'
+    ));
+}
+
 function appliquerAccesDocumentaire() {
     const toolbar = document.getElementById('documents-toolbar');
+    const tab = document.getElementById('tab-documents');
+    const view = document.getElementById('view-documents');
+    const acces = peutAccederBaseDocumentaire();
     if (toolbar) toolbar.style.display = isDocumentaliste() ? 'flex' : 'none';
+    if (tab) tab.style.display = acces ? 'block' : 'none';
+    if (view && !acces) view.style.display = 'none';
 }
 
 function initDocuments() {
