@@ -200,6 +200,22 @@ function editerDisponibilite(record) {
     modal.style.display = 'flex';
 }
 
+async function supprimerDisponibilite(record) {
+    const f = record.fields || {};
+    const dateFr = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    if (!confirm(`Supprimer la disponibilité du ${dateFr} de ${f['Heure début']} à ${f['Heure fin']} ?`)) return;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}/${record.id}`, { method: 'DELETE', headers });
+        if (!res.ok) throw new Error('Erreur Airtable');
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+        if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
+        await ouvrirModaleGererDispos();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la suppression : ' + (err.message || ''));
+    }
+}
+
 function fermerModaleGererDispos() {
     const modal = document.getElementById('gerer-dispos-modal');
     if (modal) modal.style.display = 'none';
@@ -243,7 +259,10 @@ async function ouvrirModaleGererDispos() {
                             <strong>${dateFr}</strong> — ${f['Heure début']} à ${f['Heure fin']}<br>
                             <span style="color:#64748b; font-size:12px;">${f['Machine'] || 'Tous'}</span> — ${statut}
                         </div>
-                        <button class="btn-primary" data-id="${r.id}" style="font-size:12px; padding:6px 10px;">Modifier</button>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <button class="btn-primary" data-id="${r.id}" data-action="edit" style="font-size:12px; padding:6px 10px;">Modifier</button>
+                            <button data-id="${r.id}" data-action="delete" style="font-size:12px; padding:6px 10px; background:#ef4444; color:white; border:none; border-radius:6px; cursor:pointer;">Supprimer</button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -251,7 +270,10 @@ async function ouvrirModaleGererDispos() {
                 btn.addEventListener('click', (e) => {
                     const id = e.target.dataset.id;
                     const record = futurs.find(r => r.id === id);
-                    if (record) editerDisponibilite(record);
+                    if (!record) return;
+                    const action = e.target.dataset.action;
+                    if (action === 'delete') supprimerDisponibilite(record);
+                    else editerDisponibilite(record);
                 });
             });
         }
