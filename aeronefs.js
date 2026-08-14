@@ -854,6 +854,11 @@ function creerModaleDocumentsAeronef() {
                     <input type="date" id="doc-aeronef-date">
                 </div>
                 <div class="form-group">
+                    <label for="doc-aeronef-fichier">Fichier</label>
+                    <input type="file" id="doc-aeronef-fichier" style="padding:6px; border:1px solid #cbd5e1; border-radius:6px; width:100%; box-sizing:border-box;">
+                    <span id="doc-aeronef-upload-status" style="font-size:12px; color:#64748b;"></span>
+                </div>
+                <div class="form-group">
                     <label for="doc-aeronef-lien">Lien / Référence</label>
                     <input type="url" id="doc-aeronef-lien" placeholder="https://..." style="width:100%;">
                 </div>
@@ -891,6 +896,29 @@ function creerModaleDocumentsAeronef() {
         if (dateInput) {
             dateInput.required = type ? type.dateRequise : false;
             dateInput.style.opacity = type && !type.dateRequise ? '0.5' : '1';
+        }
+    });
+
+    const inputFichier = document.getElementById('doc-aeronef-fichier');
+    if (inputFichier) inputFichier.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const status = document.getElementById('doc-aeronef-upload-status');
+        const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
+        if (status) status.textContent = 'Envoi en cours...';
+        if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Envoi...'; }
+        try {
+            if (typeof uploaderFichierDocument !== 'function') throw new Error('Uploader non disponible');
+            const url = await uploaderFichierDocument(file);
+            document.getElementById('doc-aeronef-lien').value = url;
+            if (status) status.textContent = 'Fichier importé.';
+            inputFichier.value = '';
+        } catch (err) {
+            console.error(err);
+            alert('Erreur lors de l\'upload : ' + (err.message || ''));
+            if (status) status.textContent = 'Erreur d\'envoi.';
+        } finally {
+            if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Enregistrer'; }
         }
     });
 }
@@ -932,6 +960,10 @@ function ouvrirFormulaireDocumentAeronef(record = null) {
     document.getElementById('doc-aeronef-date').value = record ? (record.fields['Date de validité'] || '') : '';
     document.getElementById('doc-aeronef-lien').value = record ? (record.fields['Lien'] || '') : '';
     document.getElementById('doc-aeronef-actif').checked = record ? (record.fields['Activé'] !== false) : true;
+    const inputFichier = document.getElementById('doc-aeronef-fichier');
+    if (inputFichier) inputFichier.value = '';
+    const status = document.getElementById('doc-aeronef-upload-status');
+    if (status) status.textContent = '';
     const btnNouveau = document.getElementById('btn-nouveau-doc-aeronef');
     if (btnNouveau) btnNouveau.style.display = 'none';
     document.getElementById('doc-aeronef-type').dispatchEvent(new Event('change'));
