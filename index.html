@@ -331,8 +331,7 @@
                             <span id="current-date-instructeur" class="date-display" style="font-weight:600; font-size:14px; color:#1e3d59; cursor:pointer;" title="Cliquer pour choisir une date"></span>
                             <button id="btn-instructeur-next" class="btn-nav" style="background:none; border:none; cursor:pointer; font-size:15px; color:#1e3d59;">▶</button>
                         </div>
-                        <select id="select-instructeur-suivi" style="background-color: #1e3d59; color: #ffffff; border: none; border-radius: 6px; padding: 8px 16px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;">
-                            <option value="">-- Instructeur --</option>
+                        <select id="select-instructeur-suivi" class="btn-primary" style="font-family: inherit;">
                         </select>
                     </div>
                 </header>
@@ -980,6 +979,15 @@
                     <button type="submit" class="btn-submit">Enregistrer</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modale : Gérer mes disponibilités -->
+    <div id="gerer-dispos-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal-gerer-dispos">&times;</span>
+            <h3>Mes disponibilités à venir</h3>
+            <div id="gerer-dispos-list" style="margin-top: 15px;"></div>
         </div>
     </div>
 

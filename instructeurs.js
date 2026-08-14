@@ -38,19 +38,49 @@ function estInstructeurParNom(nom) {
 function initBoutonDisponibiliteInstructeur() {
     const headerRow = document.querySelector('#view-instructeur header > div');
     if (!headerRow) return;
-    if (document.getElementById('btn-declarer-disponibilite')) return;
-    const btnDecl = document.createElement('button');
-    btnDecl.id = 'btn-declarer-disponibilite';
-    btnDecl.className = 'btn-primary';
-    btnDecl.textContent = '+ Déclarer mes dispos';
-    btnDecl.addEventListener('click', ouvrirModaleDisponibilite);
     const ref = document.getElementById('select-instructeur-suivi');
-    if (ref) {
-        ref.parentNode.insertBefore(btnDecl, ref.nextSibling);
-    } else {
-        headerRow.appendChild(btnDecl);
+    const visible = (estInstructeur() || (typeof isSuperAdmin === 'function' && isSuperAdmin())) ? 'inline-block' : 'none';
+
+    if (!document.getElementById('btn-gerer-dispos')) {
+        const btnGerer = document.createElement('button');
+        btnGerer.id = 'btn-gerer-dispos';
+        btnGerer.className = 'btn-toggle';
+        btnGerer.textContent = 'Gérer mes dispos';
+        btnGerer.addEventListener('click', ouvrirModaleGererDispos);
+        if (ref) {
+            ref.parentNode.insertBefore(btnGerer, ref.nextSibling);
+        } else {
+            headerRow.appendChild(btnGerer);
+        }
+        btnGerer.style.display = visible;
     }
-    btnDecl.style.display = (estInstructeur() || (typeof isSuperAdmin === 'function' && isSuperAdmin())) ? 'inline-block' : 'none';
+
+    if (!document.getElementById('btn-declarer-disponibilite')) {
+        const btnDecl = document.createElement('button');
+        btnDecl.id = 'btn-declarer-disponibilite';
+        btnDecl.className = 'btn-primary';
+        btnDecl.textContent = '+ Déclarer mes dispos';
+        btnDecl.addEventListener('click', ouvrirModaleDisponibilite);
+        const gerer = document.getElementById('btn-gerer-dispos');
+        if (ref) {
+            ref.parentNode.insertBefore(btnDecl, gerer ? gerer.nextSibling : ref.nextSibling);
+        } else {
+            headerRow.appendChild(btnDecl);
+        }
+        btnDecl.style.display = visible;
+    }
+    attacherListenersGererDispos();
+}
+
+function attacherListenersGererDispos() {
+    const modal = document.getElementById('gerer-dispos-modal');
+    if (!modal) return;
+    const close = modal.querySelector('.close-modal-gerer-dispos');
+    if (close) close.addEventListener('click', fermerModaleGererDispos);
+    if (!modal.dataset.gererInstruit) {
+        modal.addEventListener('click', (e) => { if (e.target === modal) fermerModaleGererDispos(); });
+        modal.dataset.gererInstruit = '1';
+    }
 }
 
 function initDisponibilitesInstructeurs() {
@@ -111,7 +141,10 @@ function attacherListenersSuiviInstructeur() {
 
 function ouvrirModaleDisponibilite() {
     const modal = document.getElementById('disponibilite-instructeur-modal');
-    if (!modal) return;
+    const form = document.getElementById('form-disponibilite-instructeur');
+    if (!modal || !form) return;
+    form.dataset.recordId = '';
+    form.dataset.recordInstructeur = '';
     const d = dateAffichee || new Date();
     document.getElementById('dispo-date').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     document.getElementById('dispo-debut').value = '09:00';
@@ -134,6 +167,101 @@ function fermerModaleDisponibilite() {
     if (modal) modal.style.display = 'none';
 }
 
+function editerDisponibilite(record) {
+    const modal = document.getElementById('disponibilite-instructeur-modal');
+    const form = document.getElementById('form-disponibilite-instructeur');
+    if (!modal || !form) return;
+    const f = record.fields || {};
+    form.dataset.recordId = record.id;
+    form.dataset.recordInstructeur = f['Instructeur'] || '';
+    document.getElementById('dispo-date').value = f['Date'] || '';
+    document.getElementById('dispo-debut').value = f['Heure début'] || '09:00';
+    document.getElementById('dispo-fin').value = f['Heure fin'] || '11:00';
+    const machineSel = document.getElementById('dispo-machine');
+    if (machineSel) {
+        let html = '<option value="Tous">Tous</option>';
+        (listeAvionsCache || []).forEach(a => {
+            const nom = a.fields && (a.fields['Immatriculation'] || a.fields['Nom']);
+            if (nom) html += `<option value="${nom}">${nom}</option>`;
+        });
+        machineSel.innerHTML = html;
+        if (f['Machine'] && (f['Machine'] === 'Tous' || machineSel.querySelector(`option[value="${f['Machine']}"]`))) {
+            machineSel.value = f['Machine'];
+        } else if (f['Machine']) {
+            const opt = document.createElement('option');
+            opt.value = f['Machine'];
+            opt.textContent = f['Machine'];
+            machineSel.appendChild(opt);
+            machineSel.value = f['Machine'];
+        }
+    }
+    document.getElementById('dispo-disponible').checked = f['Disponible'] !== false;
+    fermerModaleGererDispos();
+    modal.style.display = 'flex';
+}
+
+function fermerModaleGererDispos() {
+    const modal = document.getElementById('gerer-dispos-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function ouvrirModaleGererDispos() {
+    const modal = document.getElementById('gerer-dispos-modal');
+    const list = document.getElementById('gerer-dispos-list');
+    if (!modal || !list) return;
+    let nom = '';
+    if (currentUser) {
+        nom = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    }
+    if (!nom && typeof nomPiloteCourant === 'function') nom = nomPiloteCourant();
+    if (!nom) { alert('Connecte-toi pour gérer tes disponibilités.'); return; }
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const formula = `AND({Instructeur}='${nom}', DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${todayStr}')`;
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc`;
+    try {
+        const res = await cachedFetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        const records = data.records || [];
+        const now = new Date();
+        const futurs = records.filter(r => {
+            const f = r.fields || {};
+            const fin = `${f['Date']}T${f['Heure fin'] || '00:00'}:00`;
+            return new Date(fin) >= now;
+        });
+        if (futurs.length === 0) {
+            list.innerHTML = '<p style="color:#64748b;">Aucune disponibilité à venir.</p>';
+        } else {
+            list.innerHTML = futurs.map(r => {
+                const f = r.fields;
+                const dateFr = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                const statut = f['Disponible'] === false ? '<span style="color:#ef4444;font-size:12px;">Indisponible</span>' : '<span style="color:#17b978;font-size:12px;">Disponible</span>';
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #e2e8f0;">
+                        <div style="font-size:13px;">
+                            <strong>${dateFr}</strong> — ${f['Heure début']} à ${f['Heure fin']}<br>
+                            <span style="color:#64748b; font-size:12px;">${f['Machine'] || 'Tous'}</span> — ${statut}
+                        </div>
+                        <button class="btn-primary" data-id="${r.id}" style="font-size:12px; padding:6px 10px;">Modifier</button>
+                    </div>
+                `;
+            }).join('');
+            list.querySelectorAll('button[data-id]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.dataset.id;
+                    const record = futurs.find(r => r.id === id);
+                    if (record) editerDisponibilite(record);
+                });
+            });
+        }
+        modal.style.display = 'flex';
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors du chargement : ' + (err.message || ''));
+    }
+}
+
 async function enregistrerDisponibilite(e) {
     e.preventDefault();
     let nom = '';
@@ -149,9 +277,14 @@ async function enregistrerDisponibilite(e) {
     const dispo = document.getElementById('dispo-disponible').checked;
     if (!date || !debut || !fin) { alert('Remplis tous les champs.'); return; }
     if (debut >= fin) { alert('L\'heure de fin doit être après le début.'); return; }
-    const payload = { records: [{ fields: { 'Instructeur': nom, 'Date': date, 'Heure début': debut, 'Heure fin': fin, 'Machine': machine, 'Disponible': dispo } }] };
+    const form = document.getElementById('form-disponibilite-instructeur');
+    const dispoId = form ? form.dataset.recordId : '';
+    const fields = { 'Date': date, 'Heure début': debut, 'Heure fin': fin, 'Machine': machine, 'Disponible': dispo };
+    if (!dispoId) fields['Instructeur'] = nom;
+    const payload = { records: [{ ...(dispoId ? { id: dispoId } : {}), fields }] };
+    const method = dispoId ? 'PATCH' : 'POST';
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify(payload) });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method, headers, body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         fermerModaleDisponibilite();

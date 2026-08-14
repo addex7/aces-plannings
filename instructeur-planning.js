@@ -32,7 +32,7 @@ async function peuplerSelectInstructeurSuivi() {
     if (!sel) return;
     if (typeof chargerListeInstructeurs === 'function') await chargerListeInstructeurs();
     const instructeurs = (typeof listeInstructeursCache !== 'undefined') ? listeInstructeursCache : [];
-    let html = '<option value="">-- Instructeur --</option>';
+    let html = '';
     instructeurs.forEach(u => {
         html += `<option value="${u.nomComplet}" ${u.nomComplet === instructeurSelectionne ? 'selected' : ''}>${u.nomComplet}</option>`;
     });
@@ -96,8 +96,8 @@ function initPlanningInstructeur() {
     }
 
     peuplerSelectInstructeurSuivi().then(() => {
-        if (!instructeurSelectionne && sel.options.length > 1) {
-            sel.value = sel.options[1].value;
+        if (!instructeurSelectionne && sel.options.length > 0) {
+            sel.value = sel.options[0].value;
             instructeurSelectionne = sel.value;
         }
         if (instructeurSelectionne) chargerSuiviInstructeur();
