@@ -15,15 +15,9 @@ function isDocumentaliste() {
     return roles.includes('Documentaliste') || roles.includes('Super admin');
 }
 
-function peutVoirDocumentConfidentiel() {
-    if (typeof currentUser === 'undefined' || !currentUser) return false;
-    const roles = currentUser.roles || [];
-    return roles.some(r => r && (r.includes('Instructeur') || r === 'Super admin'));
-}
-
-function estDocumentConfidentiel(rec) {
+function estDocumentMembre(rec) {
     if (!rec || !rec.fields) return false;
-    return rec.fields['Confidentiel'] === true || rec.fields['Confidentiel'] === 1 || rec.fields['Confidentiel'] === 'Oui';
+    return rec.fields['Description'] === 'Justificatif membre';
 }
 
 function appliquerAccesDocumentaire() {
@@ -159,7 +153,7 @@ async function chargerDocuments() {
 function afficherDocuments(records) {
     const list = document.getElementById('documents-list');
     if (!list) return;
-    const recordsVisibles = records.filter(rec => !estDocumentConfidentiel(rec) || peutVoirDocumentConfidentiel());
+    const recordsVisibles = records.filter(rec => !estDocumentMembre(rec));
     if (!recordsVisibles.length) {
         list.innerHTML = '<p>Aucun document pour le moment.</p>';
         return;
@@ -241,13 +235,6 @@ function ouvrirFormDocument(id = null) {
     const inputId = document.getElementById('document-id');
     const select = document.getElementById('document-dossier');
     if (!form || !formContainer) return;
-    if (id) {
-        const rec = documentsCache.find(d => d.id === id);
-        if (rec && estDocumentConfidentiel(rec) && !peutVoirDocumentConfidentiel()) {
-            alert('Ce document est réservé aux instructeurs et super admin.');
-            return;
-        }
-    }
     form.reset();
     inputId.value = id || '';
     if (title) title.textContent = id ? 'Modifier le document' : 'Ajouter un document';
