@@ -801,10 +801,19 @@ const TYPES_DOCUMENTS_AERONEFS = [
 ];
 let documentsAeronefsParMachine = {};
 
+function peutGererMaintenanceEtDocuments() {
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
+    const roles = currentUser.roles || [];
+    return roles.includes('Mécanicien') || roles.includes('Mecanicien') || roles.includes('Super admin') || roles.includes('Super Admin');
+}
+
 function initSuiviDocumentsAeronefs() {
     const header = document.querySelector('#view-aeronefs .header');
     const btnMaintenance = document.getElementById('btn-maintenance');
     if (!header || !btnMaintenance) return;
+
+    const acces = peutGererMaintenanceEtDocuments();
+    btnMaintenance.style.display = acces ? '' : 'none';
 
     if (!document.getElementById('btn-documents-aeronef')) {
         const btn = document.createElement('button');
@@ -812,8 +821,12 @@ function initSuiviDocumentsAeronefs() {
         btn.className = 'btn-primary';
         btn.textContent = 'Suivi documentation machine';
         btn.style.marginLeft = '8px';
+        btn.style.display = acces ? '' : 'none';
         btn.addEventListener('click', ouvrirModaleDocumentsAeronef);
         btnMaintenance.parentNode.insertBefore(btn, btnMaintenance.nextSibling);
+    } else {
+        const btn = document.getElementById('btn-documents-aeronef');
+        if (btn) btn.style.display = acces ? '' : 'none';
     }
 
     if (!document.getElementById('documents-aeronef-recap')) {
@@ -1016,10 +1029,13 @@ function afficherRecapDocumentsAeronef(machine) {
             if (dateValid < aujourdhui) couleur = '#dc2626';
             else if (dateValid < dans3mois) couleur = '#f97316';
         }
+        const label = f['Lien']
+            ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#0f172a; text-decoration:underline;">${type.nom}${dateTxt}</a>`
+            : `<span style="color:#0f172a;">${type.nom}${dateTxt}</span>`;
         return `
             <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
                 <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block;"></span>
-                <span>${type.nom}${dateTxt}</span>
+                ${label}
             </div>
         `;
     }).join('');
