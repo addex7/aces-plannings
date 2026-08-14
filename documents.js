@@ -175,7 +175,7 @@ function afficherDocuments(records) {
         const hasSub = records.some(rec => rec.fields['Sous-dossier']);
         const content = hasSub
             ? Object.keys(subGrouped).sort().map(sous => `
-                <details style="margin-bottom:10px;" open>
+                <details style="margin-bottom:10px;">
                     <summary style="color:#334155; font-weight:600; cursor:pointer; margin-bottom:8px; font-size:1em;">${sous}</summary>
                     <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-bottom:10px;">
                         ${subGrouped[sous].map(rec => creerCarteDocument(rec)).join('')}
@@ -186,7 +186,7 @@ function afficherDocuments(records) {
                 ${records.map(rec => creerCarteDocument(rec)).join('')}
             </div>`;
         return `
-            <details style="margin-bottom:20px;" open>
+            <details style="margin-bottom:20px;">
                 <summary style="color:#1e3d59; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:10px; cursor:pointer; font-size:1.17em; font-weight:bold;">${dossier}</summary>
                 ${content}
             </details>
