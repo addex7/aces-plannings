@@ -610,20 +610,19 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             const nom = (vol.fields['Nom'] || '').toString().trim();
             return nom && nom !== 'DISPONIBLE';
         });
-        const urlCarnetPilotes = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route Pilotes')}`;
-        const resCarnetPilotes = await cachedFetch(urlCarnetPilotes, { headers });
-        const dataCarnetPilotes = await resCarnetPilotes.json();
-        const carnetsPilotes = (dataCarnetPilotes.records || []).filter(r => {
-            const f = r.fields || {};
-            return String(f['Date'] || '').startsWith(debutJour);
-        });
-        const urlMaintenance = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}`;
-        const resMaintenance = await cachedFetch(urlMaintenance, { headers });
-        const dataMaintenance = await resMaintenance.json();
-        const maintenancesJour = (dataMaintenance.records || []).filter(r => {
-            const f = r.fields || {};
-            return String(f['Date'] || '').startsWith(debutJour);
-        });
+        const formulaJour = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${debutJour}'`;
+        const urlCarnetPilotes = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route Pilotes')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
+        const urlMaintenance = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
+        const [resCarnetPilotes, resMaintenance] = await Promise.all([
+            cachedFetch(urlCarnetPilotes, { headers }, API_CACHE_TTL, forceRefresh),
+            cachedFetch(urlMaintenance, { headers }, API_CACHE_TTL, forceRefresh)
+        ]);
+        const [dataCarnetPilotes, dataMaintenance] = await Promise.all([
+            resCarnetPilotes.json(),
+            resMaintenance.json()
+        ]);
+        const carnetsPilotes = dataCarnetPilotes.records || [];
+        const maintenancesJour = dataMaintenance.records || [];
         rowsContainer.innerHTML = "";
         if (listeAvionsCache.length === 0) {
             rowsContainer.innerHTML = "<div class='loading'>Aucun aéronef trouvé.</div>";
