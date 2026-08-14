@@ -9,6 +9,8 @@ let tableVIModale = null;
 let volChoixCreneau = null;
 let volVIModale = null;
 const URL_RESERVER_VI = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
+const DELAI_RAPPEL_VI_JOURS = 7;
+const EMAILJS_TEMPLATE_ID_RAPPEL_VI = ''; // Remplir avec l'ID du template EmailJS dédié aux rappels VI
 let listeVolsInitiationCache = [];
 let listeReservationsConflits = [];
 let filtreInitiationActif = 'apourvoir';
@@ -1952,6 +1954,7 @@ async function chargerVolsInitiation() {
                 debut: debutRaw,
                 fin: vol.fields['Date de fin'],
                 commentaire: vol.fields['Commentaire'],
+                email: vol.fields['Email'] || '',
                 machineName: ''
             });
         });
@@ -1974,6 +1977,7 @@ async function chargerVolsInitiation() {
                 debut: debutRaw,
                 fin: vol.fields['Date de fin'],
                 commentaire: vol.fields['Commentaires VI'],
+                email: vol.fields['Email'] || '',
                 machine: machineIds[0],
                 machineName: machineName
             });
@@ -2025,6 +2029,58 @@ async function chargerVolsInitiation() {
     }
 }
 
+async function verifierEtEnvoyerRappelsVolsInitiation() {
+    if (!hasRoleGestionVI()) return;
+    if (typeof emailjs === 'undefined') { console.warn('EmailJS non chargé.'); return; }
+    const templateId = EMAILJS_TEMPLATE_ID_RAPPEL_VI || EMAILJS_TEMPLATE_ID;
+    if (!templateId) { console.warn('Aucun template EmailJS configuré pour les rappels VI.'); return; }
+
+    const now = new Date();
+    const today = formaterDateISO(now);
+    const rappelKey = 'rappelsVI';
+    let rappelData = { date: '', ids: [] };
+    try { rappelData = JSON.parse(localStorage.getItem(rappelKey) || '{"date":"","ids":[]}'); } catch (e) {}
+    if (rappelData.date === today) return;
+    rappelData.date = today;
+    rappelData.ids = [];
+
+    const dateCible = formaterDateISO(new Date(now.getTime() + DELAI_RAPPEL_VI_JOURS * 24 * 60 * 60 * 1000));
+
+    await chargerVolsInitiation();
+
+    for (const vol of (listeVolsInitiationCache || [])) {
+        if (rappelData.ids.includes(vol.id)) continue;
+        const dateVol = vol.debut ? (vol.debut.includes('T') ? vol.debut.split('T')[0] : vol.debut) : '';
+        if (dateVol !== dateCible) continue;
+        if (vol.statut === 'Annulé' || vol.statut === 'Disponible') continue;
+        if (!vol.passager) continue;
+        const email = (vol.email || '').toString().trim();
+        if (!email || !email.includes('@')) continue;
+
+        const debutDate = new Date(vol.debut);
+        const dateTexte = debutDate.toLocaleDateString('fr-FR');
+        const heureTexte = debutDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        try {
+            emailjs.init(EMAILJS_PUBLIC_KEY);
+            await emailjs.send(EMAILJS_SERVICE_ID, templateId, {
+                to_name: vol.passager,
+                to_email: email,
+                date_vol: dateTexte,
+                heure_vol: heureTexte,
+                type_vol: (vol.type || 'VI') + (vol.source === 'planeur' ? ' (Planeur)' : (vol.source === 'moteur' ? ' (Moteur)' : '')),
+                passager: vol.passager,
+                telephone: vol.telephone || ''
+            });
+            rappelData.ids.push(vol.id);
+            console.log('Rappel VI envoyé à', email);
+        } catch (err) {
+            console.error('Erreur envoi rappel VI à', email, err);
+        }
+    }
+    localStorage.setItem(rappelKey, JSON.stringify(rappelData));
+}
+
 function initGestionnaireVolsInitiation() {
     const btnDispos = document.getElementById('btn-initiation-dispos');
     const btnPris = document.getElementById('btn-initiation-pris');
@@ -2065,6 +2121,7 @@ function initGestionnaireVolsInitiation() {
         });
     }
     initGestionnaireChoixModifier();
+    if (hasRoleGestionVI()) verifierEtEnvoyerRappelsVolsInitiation();
 }
 
 function editerVolInitiation(vol) {
