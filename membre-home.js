@@ -221,16 +221,16 @@ function renderAccueilMembre(fields) {
     const docForm = peutEditer ? `
         <div class="accueil-documents" id="accueil-documents">
             <h3>Documents du membre</h3>
-            <form id="accueil-doc-form" class="accueil-doc-form">
-                <div class="form-group">
+            <form id="accueil-doc-form" class="accueil-doc-form" style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                <div class="form-group" style="flex:1; min-width:120px; margin:0;">
                     <label for="accueil-doc-type">Type</label>
                     <select id="accueil-doc-type">${docTypeOptions}</select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="flex:2; min-width:200px; margin:0;">
                     <label for="accueil-doc-fichier">Fichier</label>
                     <input type="file" id="accueil-doc-fichier" accept="*">
                 </div>
-                <button type="submit" class="btn-primary">Ajouter</button>
+                <button type="submit" class="btn-primary" style="margin:0;">Ajouter</button>
             </form>
             <div class="accueil-doc-list" id="accueil-doc-list"><p>Chargement...</p></div>
         </div>
@@ -524,10 +524,14 @@ async function chargerDocumentsMembre() {
             const f = r.fields || {};
             const titre = f['Titre'] || 'Document';
             const lien = f['Lien'] || '#';
+            const btnDelete = isSuperAdmin() ? `<button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentMembre('${r.id}')">Supprimer</button>` : '';
             return `
-                <div class="accueil-doc-item">
+                <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:8px;">
                     <span>${titre}</span>
-                    <a href="${lien}" target="_blank" rel="noopener">Ouvrir ↗</a>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <a href="${lien}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir ↗</a>
+                        ${btnDelete}
+                    </div>
                 </div>
             `;
         }).join('');
@@ -572,6 +576,22 @@ async function uploaderDocumentMembre(e) {
         alert('Erreur lors de l\'upload : ' + (err.message || err));
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Ajouter'; }
+    }
+}
+
+async function supprimerDocumentMembre(id) {
+    if (!confirm('Supprimer ce document ?')) return;
+    if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur Airtable');
+        await chargerDocumentsMembre();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la suppression : ' + (err.message || ''));
     }
 }
 
