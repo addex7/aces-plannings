@@ -798,7 +798,8 @@ const TYPES_DOCUMENTS_AERONEFS = [
     { code: 'M&B', nom: 'Masse et Centrage', dateRequise: false },
     { code: 'CEN', nom: 'Certificat d\'Examen de Navigabilité', dateRequise: true },
     { code: 'Assurance', nom: 'Assurance', dateRequise: true },
-    { code: 'Accusé', nom: 'Accusé de réception de la déclaration d\'aptitude au vol d\'un ULM', dateRequise: true }
+    { code: 'Accusé', nom: 'Accusé de réception de la déclaration d\'aptitude au vol d\'un ULM', dateRequise: true },
+    { code: 'Autre', nom: 'Autre', dateRequise: false }
 ];
 let documentsAeronefsParMachine = {};
 
@@ -865,6 +866,10 @@ function creerModaleDocumentsAeronef() {
                         ${TYPES_DOCUMENTS_AERONEFS.map(t => `<option value="${t.code}">${t.nom}</option>`).join('')}
                     </select>
                 </div>
+                <div class="form-group" id="doc-aeronef-autre-group" style="display:none;">
+                    <label for="doc-aeronef-autre-nom">Nom du document *</label>
+                    <input type="text" id="doc-aeronef-autre-nom" placeholder="Nom du document" style="width:100%;">
+                </div>
                 <div class="form-group">
                     <label for="doc-aeronef-date">Date de validité</label>
                     <input type="date" id="doc-aeronef-date">
@@ -912,6 +917,14 @@ function creerModaleDocumentsAeronef() {
         if (dateInput) {
             dateInput.required = type ? type.dateRequise : false;
             dateInput.style.opacity = type && !type.dateRequise ? '0.5' : '1';
+        }
+        const autreGroup = document.getElementById('doc-aeronef-autre-group');
+        const autreInput = document.getElementById('doc-aeronef-autre-nom');
+        if (autreGroup && autreInput) {
+            const estAutre = e.target.value === 'Autre';
+            autreGroup.style.display = estAutre ? 'block' : 'none';
+            autreInput.required = estAutre;
+            if (!estAutre) autreInput.value = '';
         }
     });
 
@@ -972,7 +985,26 @@ function ouvrirFormulaireDocumentAeronef(record = null) {
     form.style.display = 'block';
     document.getElementById('doc-aeronef-id').value = record ? record.id : '';
     document.getElementById('doc-aeronef-machine').value = immat;
-    document.getElementById('doc-aeronef-type').value = record ? (record.fields['Type de document'] || '') : '';
+    const typeSelect = document.getElementById('doc-aeronef-type');
+    const autreInput = document.getElementById('doc-aeronef-autre-nom');
+    const autreGroup = document.getElementById('doc-aeronef-autre-group');
+    if (record) {
+        const typeCode = record.fields['Type de document'] || '';
+        const connu = TYPES_DOCUMENTS_AERONEFS.some(t => t.code === typeCode);
+        if (connu) {
+            typeSelect.value = typeCode;
+            if (autreInput) autreInput.value = '';
+            if (autreGroup) autreGroup.style.display = 'none';
+        } else {
+            typeSelect.value = 'Autre';
+            if (autreInput) autreInput.value = typeCode;
+            if (autreGroup) autreGroup.style.display = 'block';
+        }
+    } else {
+        typeSelect.value = '';
+        if (autreInput) autreInput.value = '';
+        if (autreGroup) autreGroup.style.display = 'none';
+    }
     document.getElementById('doc-aeronef-date').value = record ? (record.fields['Date de validité'] || '') : '';
     document.getElementById('doc-aeronef-lien').value = record ? (record.fields['Lien'] || '') : '';
     document.getElementById('doc-aeronef-actif').checked = record ? (record.fields['Activé'] !== false) : true;
@@ -1026,7 +1058,7 @@ function afficherRecapDocumentsAeronef(machine) {
         const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) || { nom: f['Type de document'] };
         let couleur = '#10b981';
         let dateTxt = '';
-        if (type.dateRequise && f['Date de validité']) {
+        if (f['Date de validité']) {
             const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
             dateTxt = ` – ${dateValid.toLocaleDateString('fr-FR')}`;
             if (dateValid < aujourdhui) couleur = '#dc2626';
@@ -1095,12 +1127,17 @@ async function enregistrerDocumentAeronef(e) {
     const form = document.getElementById('form-document-aeronef');
     const id = document.getElementById('doc-aeronef-id').value;
     const machine = document.getElementById('doc-aeronef-machine').value;
-    const typeCode = document.getElementById('doc-aeronef-type').value;
+    let typeCode = document.getElementById('doc-aeronef-type').value;
+    const autreNom = document.getElementById('doc-aeronef-autre-nom') ? document.getElementById('doc-aeronef-autre-nom').value.trim() : '';
     const date = document.getElementById('doc-aeronef-date').value;
     const lien = document.getElementById('doc-aeronef-lien').value;
     const actif = document.getElementById('doc-aeronef-actif').checked;
     if (!machine || !typeCode) { alert('La machine et le type de document sont requis.'); return; }
-    const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === typeCode);
+    if (typeCode === 'Autre') {
+        if (!autreNom) { alert('Veuillez saisir un nom pour le document.'); return; }
+        typeCode = autreNom;
+    }
+    const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === document.getElementById('doc-aeronef-type').value);
     if (type && type.dateRequise && !date) { alert('La date de validité est requise pour ce type de document.'); return; }
     const fields = {
         'Machine': machine,
