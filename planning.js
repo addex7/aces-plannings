@@ -10,7 +10,7 @@ let volChoixCreneau = null;
 let volVIModale = null;
 const URL_RESERVER_VI = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
 const DELAI_RAPPEL_VI_JOURS = 7;
-const EMAILJS_TEMPLATE_ID_RAPPEL_VI = ''; // Remplir avec l'ID du template EmailJS dédié aux rappels VI
+const TABLE_EMAILS_RAPPELS = 'Emails Rappels';
 let listeVolsInitiationCache = [];
 let listeReservationsConflits = [];
 let filtreInitiationActif = 'apourvoir';
@@ -2031,9 +2031,6 @@ async function chargerVolsInitiation() {
 
 async function verifierEtEnvoyerRappelsVolsInitiation() {
     if (!hasRoleGestionVI()) return;
-    if (typeof emailjs === 'undefined') { console.warn('EmailJS non chargé.'); return; }
-    const templateId = EMAILJS_TEMPLATE_ID_RAPPEL_VI || EMAILJS_TEMPLATE_ID;
-    if (!templateId) { console.warn('Aucun template EmailJS configuré pour les rappels VI.'); return; }
 
     const now = new Date();
     const today = formaterDateISO(now);
@@ -2060,22 +2057,31 @@ async function verifierEtEnvoyerRappelsVolsInitiation() {
         const debutDate = new Date(vol.debut);
         const dateTexte = debutDate.toLocaleDateString('fr-FR');
         const heureTexte = debutDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const typeTexte = (vol.type || 'VI') + (vol.source === 'planeur' ? ' (Planeur)' : (vol.source === 'moteur' ? ' (Moteur)' : ''));
+
+        const sujet = `Rappel de votre vol d'initiation du ${dateTexte}`;
+        const message = `Bonjour ${vol.passager},\n\nNous vous rappelons que votre vol d'initiation ${typeTexte} est prévu le ${dateTexte} à ${heureTexte}.\n\nPensez à vérifier les conditions météo et à arriver à l'heure au club.\n\nCordialement,\nAéroclub ACES`;
 
         try {
-            emailjs.init(EMAILJS_PUBLIC_KEY);
-            await emailjs.send(EMAILJS_SERVICE_ID, templateId, {
-                to_name: vol.passager,
-                to_email: email,
-                date_vol: dateTexte,
-                heure_vol: heureTexte,
-                type_vol: (vol.type || 'VI') + (vol.source === 'planeur' ? ' (Planeur)' : (vol.source === 'moteur' ? ' (Moteur)' : '')),
-                passager: vol.passager,
-                telephone: vol.telephone || ''
+            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EMAILS_RAPPELS)}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    records: [{
+                        fields: {
+                            'Destinataire': email,
+                            'Sujet': sujet,
+                            'Message': message,
+                            'Statut': 'À envoyer'
+                        }
+                    }]
+                })
             });
+            if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur Airtable');
             rappelData.ids.push(vol.id);
-            console.log('Rappel VI envoyé à', email);
+            console.log('Rappel VI enregistré pour', email);
         } catch (err) {
-            console.error('Erreur envoi rappel VI à', email, err);
+            console.error('Erreur enregistrement rappel VI pour', email, err);
         }
     }
     localStorage.setItem(rappelKey, JSON.stringify(rappelData));
