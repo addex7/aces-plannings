@@ -670,6 +670,10 @@ async function chargerSuiviAeronef() {
             `;
         }
 
+        if (immatMachine && typeof chargerDocumentsAeronef === 'function') {
+            chargerDocumentsAeronef(immatMachine, true);
+        }
+
     } catch (err) {
         console.error(err);
         tbody.innerHTML = "<tr><td colspan='2' style='padding:15px; color:red;'>Erreur lors du calcul du potentiel.</td></tr>";
@@ -783,3 +787,330 @@ if (formMaintenance) formMaintenance.addEventListener('submit', enregistrerMaint
 
 const closeMaintenance = document.getElementById('close-maintenance');
 if (closeMaintenance) closeMaintenance.addEventListener('click', fermerModaleMaintenance);
+
+// --- SUIVI DOCUMENTATION MACHINE ---
+const TABLE_DOCUMENTS_AERONEFS = 'Documents Aéronefs';
+const TYPES_DOCUMENTS_AERONEFS = [
+    { code: 'CDN', nom: 'Certificat de Navigabilité', dateRequise: false },
+    { code: 'CI', nom: 'Certificat d\'Immatriculation', dateRequise: false },
+    { code: 'LSA', nom: 'Licence de station d\'aéronef', dateRequise: false },
+    { code: 'M&B', nom: 'Masse et Centrage', dateRequise: false },
+    { code: 'CEN', nom: 'Certificat d\'Examen de Navigabilité', dateRequise: true },
+    { code: 'Assurance', nom: 'Assurance', dateRequise: true },
+    { code: 'Accusé', nom: 'Accusé de réception de la déclaration d\'aptitude au vol d\'un ULM', dateRequise: true }
+];
+let documentsAeronefsParMachine = {};
+
+function initSuiviDocumentsAeronefs() {
+    const header = document.querySelector('#view-aeronefs .header');
+    const btnMaintenance = document.getElementById('btn-maintenance');
+    if (!header || !btnMaintenance) return;
+
+    if (!document.getElementById('btn-documents-aeronef')) {
+        const btn = document.createElement('button');
+        btn.id = 'btn-documents-aeronef';
+        btn.className = 'btn-primary';
+        btn.textContent = 'Suivi documentation machine';
+        btn.style.marginLeft = '8px';
+        btn.addEventListener('click', ouvrirModaleDocumentsAeronef);
+        btnMaintenance.parentNode.insertBefore(btn, btnMaintenance.nextSibling);
+    }
+
+    if (!document.getElementById('documents-aeronef-recap')) {
+        const recap = document.createElement('div');
+        recap.id = 'documents-aeronef-recap';
+        recap.style.cssText = 'background: white; border-radius: 12px; padding: 12px 20px; margin: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none;';
+        recap.innerHTML = '<h4 style="margin: 0 0 8px; color: #1e3d59; font-size: 13px;">Documents machine</h4><div id="documents-aeronef-list" style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px;"></div>';
+        const whiteDiv = header.nextElementSibling;
+        if (whiteDiv && whiteDiv.parentNode) {
+            whiteDiv.parentNode.insertBefore(recap, whiteDiv);
+        }
+    }
+    creerModaleDocumentsAeronef();
+}
+
+function creerModaleDocumentsAeronef() {
+    if (document.getElementById('documents-aeronef-modal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'documents-aeronef-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-documents-aeronef">&times;</span>
+            <h3 id="documents-aeronef-modal-title">Documents machine</h3>
+            <div id="documents-aeronef-list-modal" style="margin: 15px 0;"></div>
+            <form id="form-document-aeronef" style="display:none; margin-top:15px; border-top:1px solid #e2e8f0; padding-top:15px;">
+                <input type="hidden" id="doc-aeronef-id">
+                <input type="hidden" id="doc-aeronef-machine">
+                <div class="form-group">
+                    <label for="doc-aeronef-type">Type de document *</label>
+                    <select id="doc-aeronef-type" required>
+                        <option value="">-- Choisir --</option>
+                        ${TYPES_DOCUMENTS_AERONEFS.map(t => `<option value="${t.code}">${t.nom}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="doc-aeronef-date">Date de validité</label>
+                    <input type="date" id="doc-aeronef-date">
+                </div>
+                <div class="form-group">
+                    <label for="doc-aeronef-lien">Lien / Référence</label>
+                    <input type="url" id="doc-aeronef-lien" placeholder="https://..." style="width:100%;">
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="doc-aeronef-actif" checked style="width:auto;">
+                    <label for="doc-aeronef-actif" style="margin:0;">Actif</label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                    <button type="button" id="doc-aeronef-cancel" class="btn-toggle">Annuler</button>
+                </div>
+            </form>
+            <div class="form-actions" style="margin-top:15px;">
+                <button type="button" id="btn-nouveau-doc-aeronef" class="btn-primary">+ Ajouter un document</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const close = modal.querySelector('.close-documents-aeronef');
+    if (close) close.addEventListener('click', fermerModaleDocumentsAeronef);
+    modal.addEventListener('click', (e) => { if (e.target === modal) fermerModaleDocumentsAeronef(); });
+    const btnNouveau = document.getElementById('btn-nouveau-doc-aeronef');
+    if (btnNouveau) btnNouveau.addEventListener('click', () => ouvrirFormulaireDocumentAeronef(null));
+    const form = document.getElementById('form-document-aeronef');
+    if (form) form.addEventListener('submit', enregistrerDocumentAeronef);
+    const btnCancel = document.getElementById('doc-aeronef-cancel');
+    if (btnCancel) btnCancel.addEventListener('click', () => {
+        form.style.display = 'none';
+        document.getElementById('btn-nouveau-doc-aeronef').style.display = 'inline-block';
+    });
+    const selectType = document.getElementById('doc-aeronef-type');
+    if (selectType) selectType.addEventListener('change', (e) => {
+        const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === e.target.value);
+        const dateInput = document.getElementById('doc-aeronef-date');
+        if (dateInput) {
+            dateInput.required = type ? type.dateRequise : false;
+            dateInput.style.opacity = type && !type.dateRequise ? '0.5' : '1';
+        }
+    });
+}
+
+function fermerModaleDocumentsAeronef() {
+    const modal = document.getElementById('documents-aeronef-modal');
+    if (modal) modal.style.display = 'none';
+    const form = document.getElementById('form-document-aeronef');
+    if (form) {
+        form.reset();
+        form.style.display = 'none';
+        document.getElementById('doc-aeronef-id').value = '';
+        document.getElementById('doc-aeronef-machine').value = '';
+    }
+    const btnNouveau = document.getElementById('btn-nouveau-doc-aeronef');
+    if (btnNouveau) btnNouveau.style.display = 'inline-block';
+}
+
+async function ouvrirModaleDocumentsAeronef() {
+    const selectMachine = document.getElementById('select-machine-suivi');
+    const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+    const modal = document.getElementById('documents-aeronef-modal');
+    const title = document.getElementById('documents-aeronef-modal-title');
+    if (title) title.textContent = `Documents – ${immat}`;
+    if (modal) modal.style.display = 'flex';
+    await chargerDocumentsAeronef(immat, true);
+    afficherListeDocumentsAeronef(immat);
+}
+
+function ouvrirFormulaireDocumentAeronef(record = null) {
+    const form = document.getElementById('form-document-aeronef');
+    const selectMachine = document.getElementById('select-machine-suivi');
+    const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+    if (!form) return;
+    form.style.display = 'block';
+    document.getElementById('doc-aeronef-id').value = record ? record.id : '';
+    document.getElementById('doc-aeronef-machine').value = immat;
+    document.getElementById('doc-aeronef-type').value = record ? (record.fields['Type de document'] || '') : '';
+    document.getElementById('doc-aeronef-date').value = record ? (record.fields['Date de validité'] || '') : '';
+    document.getElementById('doc-aeronef-lien').value = record ? (record.fields['Lien'] || '') : '';
+    document.getElementById('doc-aeronef-actif').checked = record ? (record.fields['Activé'] !== false) : true;
+    const btnNouveau = document.getElementById('btn-nouveau-doc-aeronef');
+    if (btnNouveau) btnNouveau.style.display = 'none';
+    document.getElementById('doc-aeronef-type').dispatchEvent(new Event('change'));
+}
+
+async function chargerDocumentsAeronef(machine, forceRefresh = false) {
+    if (!machine) {
+        documentsAeronefsParMachine[machine] = [];
+        return [];
+    }
+    if (!forceRefresh && documentsAeronefsParMachine[machine]) return documentsAeronefsParMachine[machine];
+    try {
+        const formula = `{Machine}='${machine}'`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+        const res = await cachedFetch(url, { headers }, API_CACHE_TTL, forceRefresh);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        const records = data.records || [];
+        documentsAeronefsParMachine[machine] = records;
+        afficherRecapDocumentsAeronef(machine);
+        return records;
+    } catch (err) {
+        console.warn('Erreur chargement documents aéronef:', err);
+        documentsAeronefsParMachine[machine] = [];
+        return [];
+    }
+}
+
+function afficherRecapDocumentsAeronef(machine) {
+    const recap = document.getElementById('documents-aeronef-list');
+    const container = document.getElementById('documents-aeronef-recap');
+    if (!recap || !container) return;
+    const records = (documentsAeronefsParMachine[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
+    if (records.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    const now = new Date();
+    const dans3mois = new Date();
+    dans3mois.setMonth(dans3mois.getMonth() + 3);
+    const aujourdhui = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    recap.innerHTML = records.map(r => {
+        const f = r.fields || {};
+        const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) || { nom: f['Type de document'] };
+        let couleur = '#10b981';
+        let dateTxt = '';
+        if (type.dateRequise && f['Date de validité']) {
+            const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
+            dateTxt = ` – ${dateValid.toLocaleDateString('fr-FR')}`;
+            if (dateValid < aujourdhui) couleur = '#dc2626';
+            else if (dateValid < dans3mois) couleur = '#f97316';
+        }
+        return `
+            <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block;"></span>
+                <span>${type.nom}${dateTxt}</span>
+            </div>
+        `;
+    }).join('');
+    container.style.display = 'block';
+}
+
+function afficherListeDocumentsAeronef(machine) {
+    const list = document.getElementById('documents-aeronef-list-modal');
+    if (!list) return;
+    const records = (documentsAeronefsParMachine[machine] || []).sort((a, b) => (a.fields['Type de document'] || '').localeCompare(b.fields['Type de document'] || ''));
+    if (records.length === 0) {
+        list.innerHTML = '<p style="color:#64748b;">Aucun document enregistré pour cette machine.</p>';
+        return;
+    }
+    list.innerHTML = records.map(r => {
+        const f = r.fields || {};
+        const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) || { nom: f['Type de document'], dateRequise: false };
+        const dateTxt = f['Date de validité'] ? `<br><span style="color:#64748b; font-size:12px;">Validité : ${new Date(f['Date de validité'] + 'T00:00:00').toLocaleDateString('fr-FR')}</span>` : '';
+        const lien = f['Lien'] ? `<a href="${f['Lien']}" target="_blank" style="color:#1e3d59; font-size:12px; word-break:break-all;">Voir le document</a>` : '';
+        const actif = f['Activé'] !== false;
+        const toggleLabel = actif ? 'Désactiver' : 'Activer';
+        const toggleColor = actif ? '#ef4444' : '#17b978';
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #e2e8f0; flex-wrap:wrap; gap:8px;">
+                <div style="font-size:13px;">
+                    <strong>${type.nom}</strong>
+                    ${dateTxt}
+                    <br>${lien}
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button class="btn-primary" data-action="edit" data-id="${r.id}" style="font-size:12px; padding:6px 10px;">Modifier</button>
+                    <button data-action="toggle" data-id="${r.id}" style="font-size:12px; padding:6px 10px; background:${toggleColor}; color:white; border:none; border-radius:6px; cursor:pointer;">${toggleLabel}</button>
+                    <button data-action="delete" data-id="${r.id}" style="font-size:12px; padding:6px 10px; background:#ef4444; color:white; border:none; border-radius:6px; cursor:pointer;">Supprimer</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    list.querySelectorAll('button[data-id]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            const action = e.target.dataset.action;
+            const records = documentsAeronefsParMachine[machine] || [];
+            const record = records.find(r => r.id === id);
+            if (!record) return;
+            if (action === 'edit') ouvrirFormulaireDocumentAeronef(record);
+            else if (action === 'delete') supprimerDocumentAeronef(record);
+            else if (action === 'toggle') toggleActifDocumentAeronef(record, !record.fields['Activé']);
+        });
+    });
+}
+
+async function enregistrerDocumentAeronef(e) {
+    e.preventDefault();
+    const form = document.getElementById('form-document-aeronef');
+    const id = document.getElementById('doc-aeronef-id').value;
+    const machine = document.getElementById('doc-aeronef-machine').value;
+    const typeCode = document.getElementById('doc-aeronef-type').value;
+    const date = document.getElementById('doc-aeronef-date').value;
+    const lien = document.getElementById('doc-aeronef-lien').value;
+    const actif = document.getElementById('doc-aeronef-actif').checked;
+    if (!machine || !typeCode) { alert('La machine et le type de document sont requis.'); return; }
+    const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === typeCode);
+    if (type && type.dateRequise && !date) { alert('La date de validité est requise pour ce type de document.'); return; }
+    const fields = {
+        'Machine': machine,
+        'Type de document': typeCode,
+        'Lien': lien,
+        'Activé': actif
+    };
+    if (date) fields['Date de validité'] = date;
+    try {
+        const method = id ? 'PATCH' : 'POST';
+        const url = id
+            ? `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}/${id}`
+            : `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}`;
+        const body = id ? JSON.stringify({ fields }) : JSON.stringify({ records: [{ fields }] });
+        const res = await cachedFetch(url, { method, headers, body });
+        if (!res.ok) throw new Error(await res.text());
+        const selectMachine = document.getElementById('select-machine-suivi');
+        const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+        await chargerDocumentsAeronef(immat, true);
+        afficherListeDocumentsAeronef(immat);
+        afficherRecapDocumentsAeronef(immat);
+        fermerModaleDocumentsAeronef();
+        if (typeof chargerSuiviAeronef === 'function') chargerSuiviAeronef();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l\'enregistrement : ' + err.message);
+    }
+}
+
+async function supprimerDocumentAeronef(record) {
+    const f = record.fields || {};
+    const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) || { nom: f['Type de document'] };
+    if (!confirm(`Supprimer le document "${type.nom}" ?`)) return;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}/${record.id}`, { method: 'DELETE', headers });
+        if (!res.ok) throw new Error('Erreur Airtable');
+        const selectMachine = document.getElementById('select-machine-suivi');
+        const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+        await chargerDocumentsAeronef(immat, true);
+        afficherListeDocumentsAeronef(immat);
+        afficherRecapDocumentsAeronef(immat);
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la suppression : ' + err.message);
+    }
+}
+
+async function toggleActifDocumentAeronef(record, actif) {
+    const fields = { 'Activé': actif };
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}/${record.id}`, { method: 'PATCH', headers, body: JSON.stringify({ fields }) });
+        if (!res.ok) throw new Error('Erreur Airtable');
+        const selectMachine = document.getElementById('select-machine-suivi');
+        const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+        await chargerDocumentsAeronef(immat, true);
+        afficherListeDocumentsAeronef(immat);
+        afficherRecapDocumentsAeronef(immat);
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la mise à jour : ' + err.message);
+    }
+}
+
+initSuiviDocumentsAeronefs();
