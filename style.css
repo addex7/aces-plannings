@@ -660,6 +660,25 @@ body {
     color: #1e3d59;
     font-weight: 600;
 }
+#carnet-machine-filtre {
+    background-color: #1e3d59;
+    color: white;
+    border: none;
+    padding: 10px 32px 10px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13.5px;
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+#carnet-machine-filtre:hover {
+    background-color: #17b978;
+}
 .carnet-table {
     width: 100%;
     border-collapse: collapse;
