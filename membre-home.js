@@ -221,16 +221,16 @@ function renderAccueilMembre(fields) {
     const docForm = peutEditer ? `
         <div class="accueil-documents" id="accueil-documents">
             <h3>Documents du membre</h3>
-            <form id="accueil-doc-form" class="accueil-doc-form" style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
-                <div class="form-group" style="flex:1; min-width:120px; margin:0;">
-                    <label for="accueil-doc-type">Type</label>
-                    <select id="accueil-doc-type">${docTypeOptions}</select>
+            <form id="accueil-doc-form" class="accueil-doc-form" style="display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                <div class="form-group" style="flex:1; min-width:120px; margin:0; display:flex; flex-direction:column;">
+                    <label for="accueil-doc-type" style="margin-bottom:4px; font-size:13px;">Type</label>
+                    <select id="accueil-doc-type" style="height:40px; box-sizing:border-box; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">${docTypeOptions}</select>
                 </div>
-                <div class="form-group" style="flex:2; min-width:200px; margin:0;">
-                    <label for="accueil-doc-fichier">Fichier</label>
-                    <input type="file" id="accueil-doc-fichier" accept="*">
+                <div class="form-group" style="flex:2; min-width:200px; margin:0; display:flex; flex-direction:column;">
+                    <label for="accueil-doc-fichier" style="margin-bottom:4px; font-size:13px;">Fichier</label>
+                    <input type="file" id="accueil-doc-fichier" accept="*" style="height:40px; box-sizing:border-box; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">
                 </div>
-                <button type="submit" class="btn-primary" style="margin:0;">Ajouter</button>
+                <button type="submit" class="btn-primary" style="align-self:flex-end; height:40px; margin:0; padding:0 16px;">Ajouter</button>
             </form>
             <div class="accueil-doc-list" id="accueil-doc-list"><p>Chargement...</p></div>
         </div>
