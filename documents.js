@@ -15,25 +15,22 @@ function isDocumentaliste() {
     return roles.includes('Documentaliste') || roles.includes('Super admin');
 }
 
-function peutAccederBaseDocumentaire() {
+function peutVoirDocumentConfidentiel() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     const roles = currentUser.roles || [];
-    return roles.some(r => r && (
-        r.includes('Pilote') ||
-        r.includes('Instructeur') ||
-        r === 'Documentaliste' ||
-        r === 'Super admin'
-    ));
+    return roles.some(r => r && (r.includes('Instructeur') || r === 'Super admin'));
+}
+
+function estDocumentConfidentiel(rec) {
+    if (!rec || !rec.fields) return false;
+    return rec.fields['Confidentiel'] === true || rec.fields['Confidentiel'] === 1 || rec.fields['Confidentiel'] === 'Oui';
 }
 
 function appliquerAccesDocumentaire() {
     const toolbar = document.getElementById('documents-toolbar');
     const tab = document.getElementById('tab-documents');
-    const view = document.getElementById('view-documents');
-    const acces = peutAccederBaseDocumentaire();
     if (toolbar) toolbar.style.display = isDocumentaliste() ? 'flex' : 'none';
-    if (tab) tab.style.display = acces ? 'block' : 'none';
-    if (view && !acces) view.style.display = 'none';
+    if (tab) tab.style.display = 'block';
 }
 
 function initDocuments() {
@@ -162,11 +159,12 @@ async function chargerDocuments() {
 function afficherDocuments(records) {
     const list = document.getElementById('documents-list');
     if (!list) return;
-    if (!records.length) {
+    const recordsVisibles = records.filter(rec => !estDocumentConfidentiel(rec) || peutVoirDocumentConfidentiel());
+    if (!recordsVisibles.length) {
         list.innerHTML = '<p>Aucun document pour le moment.</p>';
         return;
     }
-    const grouped = records.reduce((acc, rec) => {
+    const grouped = recordsVisibles.reduce((acc, rec) => {
         const dossier = rec.fields['Catégorie'] || 'Autre';
         if (!acc[dossier]) acc[dossier] = [];
         acc[dossier].push(rec);
@@ -243,6 +241,13 @@ function ouvrirFormDocument(id = null) {
     const inputId = document.getElementById('document-id');
     const select = document.getElementById('document-dossier');
     if (!form || !formContainer) return;
+    if (id) {
+        const rec = documentsCache.find(d => d.id === id);
+        if (rec && estDocumentConfidentiel(rec) && !peutVoirDocumentConfidentiel()) {
+            alert('Ce document est réservé aux instructeurs et super admin.');
+            return;
+        }
+    }
     form.reset();
     inputId.value = id || '';
     if (title) title.textContent = id ? 'Modifier le document' : 'Ajouter un document';
