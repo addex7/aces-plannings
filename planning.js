@@ -9,8 +9,6 @@ let tableVIModale = null;
 let volChoixCreneau = null;
 let volVIModale = null;
 const URL_RESERVER_VI = 'https://addex7.github.io/aces-plannings/reserver-vi.html';
-const DELAI_RAPPEL_VI_JOURS = 7;
-const TABLE_EMAILS_RAPPELS = 'Emails Rappels';
 let listeVolsInitiationCache = [];
 let listeReservationsConflits = [];
 let filtreInitiationActif = 'apourvoir';
@@ -1954,7 +1952,6 @@ async function chargerVolsInitiation() {
                 debut: debutRaw,
                 fin: vol.fields['Date de fin'],
                 commentaire: vol.fields['Commentaire'],
-                email: vol.fields['Email'] || '',
                 machineName: ''
             });
         });
@@ -1977,7 +1974,6 @@ async function chargerVolsInitiation() {
                 debut: debutRaw,
                 fin: vol.fields['Date de fin'],
                 commentaire: vol.fields['Commentaires VI'],
-                email: vol.fields['Email'] || '',
                 machine: machineIds[0],
                 machineName: machineName
             });
@@ -2029,64 +2025,6 @@ async function chargerVolsInitiation() {
     }
 }
 
-async function verifierEtEnvoyerRappelsVolsInitiation() {
-    if (!hasRoleGestionVI()) return;
-
-    const now = new Date();
-    const today = formaterDateISO(now);
-    const rappelKey = 'rappelsVI';
-    let rappelData = { date: '', ids: [] };
-    try { rappelData = JSON.parse(localStorage.getItem(rappelKey) || '{"date":"","ids":[]}'); } catch (e) {}
-    if (rappelData.date === today) return;
-    rappelData.date = today;
-    rappelData.ids = [];
-
-    const dateCible = formaterDateISO(new Date(now.getTime() + DELAI_RAPPEL_VI_JOURS * 24 * 60 * 60 * 1000));
-
-    await chargerVolsInitiation();
-
-    for (const vol of (listeVolsInitiationCache || [])) {
-        if (rappelData.ids.includes(vol.id)) continue;
-        const dateVol = vol.debut ? (vol.debut.includes('T') ? vol.debut.split('T')[0] : vol.debut) : '';
-        if (dateVol !== dateCible) continue;
-        if (vol.statut === 'Annulé' || vol.statut === 'Disponible') continue;
-        if (!vol.passager) continue;
-        const email = (vol.email || '').toString().trim();
-        if (!email || !email.includes('@')) continue;
-
-        const debutDate = new Date(vol.debut);
-        const dateTexte = debutDate.toLocaleDateString('fr-FR');
-        const heureTexte = debutDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        const typeTexte = (vol.type || 'VI') + (vol.source === 'planeur' ? ' (Planeur)' : (vol.source === 'moteur' ? ' (Moteur)' : ''));
-
-        const sujet = `Rappel de votre vol d'initiation du ${dateTexte}`;
-        const message = `Bonjour ${vol.passager},\n\nNous vous rappelons que votre vol d'initiation ${typeTexte} est prévu le ${dateTexte} à ${heureTexte}.\n\nPensez à vérifier les conditions météo et à arriver à l'heure au club.\n\nCordialement,\nAéroclub ACES`;
-
-        try {
-            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EMAILS_RAPPELS)}`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    records: [{
-                        fields: {
-                            'Destinataire': email,
-                            'Sujet': sujet,
-                            'Message': message,
-                            'Statut': 'À envoyer'
-                        }
-                    }]
-                })
-            });
-            if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur Airtable');
-            rappelData.ids.push(vol.id);
-            console.log('Rappel VI enregistré pour', email);
-        } catch (err) {
-            console.error('Erreur enregistrement rappel VI pour', email, err);
-        }
-    }
-    localStorage.setItem(rappelKey, JSON.stringify(rappelData));
-}
-
 function initGestionnaireVolsInitiation() {
     const btnDispos = document.getElementById('btn-initiation-dispos');
     const btnPris = document.getElementById('btn-initiation-pris');
@@ -2127,7 +2065,6 @@ function initGestionnaireVolsInitiation() {
         });
     }
     initGestionnaireChoixModifier();
-    if (hasRoleGestionVI()) verifierEtEnvoyerRappelsVolsInitiation();
 }
 
 function editerVolInitiation(vol) {
