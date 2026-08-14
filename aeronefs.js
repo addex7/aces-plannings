@@ -260,6 +260,7 @@ function calculerTempsReelReservation(carnets, machine, dateDebut, dateFin, pilo
 }
 
 async function chargerSuiviAeronef() {
+    if (typeof appliquerAccesMaintenanceEtDocuments === 'function') appliquerAccesMaintenanceEtDocuments();
     const tbody = document.getElementById('suivi-table-body');
     const selectMachine = document.getElementById('select-machine-suivi');
     if (!tbody || !selectMachine) return;
@@ -807,13 +808,18 @@ function peutGererMaintenanceEtDocuments() {
     return roles.includes('Mécanicien') || roles.includes('Mecanicien') || roles.includes('Super admin') || roles.includes('Super Admin');
 }
 
+function appliquerAccesMaintenanceEtDocuments() {
+    const btnMaintenance = document.getElementById('btn-maintenance');
+    const btnDocs = document.getElementById('btn-documents-aeronef');
+    const acces = peutGererMaintenanceEtDocuments();
+    if (btnMaintenance) btnMaintenance.style.display = acces ? '' : 'none';
+    if (btnDocs) btnDocs.style.display = acces ? '' : 'none';
+}
+
 function initSuiviDocumentsAeronefs() {
     const header = document.querySelector('#view-aeronefs .header');
     const btnMaintenance = document.getElementById('btn-maintenance');
     if (!header || !btnMaintenance) return;
-
-    const acces = peutGererMaintenanceEtDocuments();
-    btnMaintenance.style.display = acces ? '' : 'none';
 
     if (!document.getElementById('btn-documents-aeronef')) {
         const btn = document.createElement('button');
@@ -821,13 +827,10 @@ function initSuiviDocumentsAeronefs() {
         btn.className = 'btn-primary';
         btn.textContent = 'Suivi documentation machine';
         btn.style.marginLeft = '8px';
-        btn.style.display = acces ? '' : 'none';
         btn.addEventListener('click', ouvrirModaleDocumentsAeronef);
         btnMaintenance.parentNode.insertBefore(btn, btnMaintenance.nextSibling);
-    } else {
-        const btn = document.getElementById('btn-documents-aeronef');
-        if (btn) btn.style.display = acces ? '' : 'none';
     }
+    appliquerAccesMaintenanceEtDocuments();
 
     if (!document.getElementById('documents-aeronef-recap')) {
         const recap = document.createElement('div');
