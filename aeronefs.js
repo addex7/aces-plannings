@@ -1094,13 +1094,13 @@ function afficherListeDocumentsAeronef(machine) {
         const toggleLabel = actif ? 'Désactiver' : 'Activer';
         const toggleColor = actif ? '#ef4444' : '#17b978';
         return `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #e2e8f0; flex-wrap:wrap; gap:8px;">
+            <div style="padding:10px; border-bottom:1px solid #e2e8f0;">
                 <div style="font-size:13px;">
                     <strong>${type.nom}</strong>
                     ${dateTxt}
-                    <br>${lien}
+                    ${lien ? `<div>${lien}</div>` : ''}
                 </div>
-                <div style="display:flex; gap:6px; align-items:center;">
+                <div style="display:flex; gap:6px; margin-top:8px;">
                     <button class="btn-primary" data-action="edit" data-id="${r.id}" style="font-size:12px; padding:6px 10px;">Modifier</button>
                     <button data-action="toggle" data-id="${r.id}" style="font-size:12px; padding:6px 10px; background:${toggleColor}; color:white; border:none; border-radius:6px; cursor:pointer;">${toggleLabel}</button>
                     <button data-action="delete" data-id="${r.id}" style="font-size:12px; padding:6px 10px; background:#ef4444; color:white; border:none; border-radius:6px; cursor:pointer;">Supprimer</button>
