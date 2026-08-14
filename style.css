@@ -555,7 +555,7 @@ body {
     position: relative;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
-.close-modal, .close-modal-vi, .close-modal-carnet, .close-modal-gerer-dispos, .close-modal-disponibilite, .close-modal-instructeur-suivi {
+.close-modal, .close-modal-vi, .close-modal-carnet, .close-modal-gerer-dispos, .close-modal-disponibilite, .close-modal-instructeur-suivi, .close-documents-aeronef {
     position: absolute;
     top: 15px; right: 20px;
     font-size: 24px; cursor: pointer;
