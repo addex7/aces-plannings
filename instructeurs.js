@@ -289,6 +289,7 @@ async function enregistrerDisponibilite(e) {
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         fermerModaleDisponibilite();
         if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+        if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'enregistrement : ' + (err.message || ''));
