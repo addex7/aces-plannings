@@ -21,7 +21,8 @@ body {
     justify-content: space-between;
     padding: 15px 12px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     transition: width 0.3s ease, padding 0.3s ease, min-width 0.3s ease;
 }
 .app-layout.sidebar-collapsed .sidebar {
@@ -108,6 +109,10 @@ body {
     border-top: 1px solid rgba(255,255,255,0.1);
     padding-top: 15px;
     white-space: nowrap;
+    position: sticky;
+    bottom: 0;
+    background-color: #1e3d59;
+    z-index: 1;
 }
 /* Zone principale */
 .main-content {
