@@ -94,7 +94,7 @@ function initDisponibilitesInstructeurs() {
         btnToggle.title = 'Afficher/Masquer les disponibilités';
         btnToggle.textContent = 'Dispos instructeurs';
         btnToggle.addEventListener('click', basculerDisposInstructeurs);
-        const ref = document.getElementById('btn-add-reservation');
+        const ref = document.getElementById('btn-toggle-vi-planeur');
         headerActions.insertBefore(btnToggle, ref);
     }
 
