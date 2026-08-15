@@ -447,7 +447,7 @@ body {
 .glider-presence-section {
     padding: 15px;
     background-color: #ffffff;
-    margin: 0 0 12px 0;
+    margin: 0;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
@@ -1299,7 +1299,7 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 12px;
     align-items: stretch;
-    margin-top: 0;
+    margin-top: 12px;
 }
 .club-evenements-row .glider-presence-section,
 .club-evenements-row .evenements-section {
