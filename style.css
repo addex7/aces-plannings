@@ -451,6 +451,11 @@ body {
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
+.presence-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 .glider-presence-section h3 {
     margin-top: 0;
     color: #1e3d59;
@@ -1299,7 +1304,7 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 12px;
     align-items: stretch;
-    margin-top: 12px;
+    margin-top: 0;
 }
 .club-evenements-row .glider-presence-section,
 .club-evenements-row .evenements-section {
