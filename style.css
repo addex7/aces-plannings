@@ -129,22 +129,22 @@ body {
     position: absolute;
     top: 50%;
     left: 170px;
-    width: 14px;
-    height: 50vh;
-    background: #17b978;
-    color: #1e3d59;
+    transform: translate(-50%, -50%);
+    width: 22px;
+    height: 44px;
+    background: #1e3d59;
+    color: white;
     border: none;
     border-radius: 0 6px 6px 0;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 13px;
     z-index: 100;
     opacity: 0;
     pointer-events: none;
     transition: left 0.3s ease, opacity 0.3s ease;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    padding-top: 8px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.2);
 }
 #sidebar-toggle:hover,
