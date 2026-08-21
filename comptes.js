@@ -15,7 +15,7 @@
    ========================================================================== */
 
 const TABLE_COMPTES = 'Comptes Pilotes';
-const TABLE_UTILISATEURS = 'Utilisateurs';
+const TABLE_UTILISATEURS_COMPTES = 'Utilisateurs';
 let utilisateursComptesCache = [];
 let comptesPilotesCache = [];
 
@@ -34,9 +34,10 @@ function initComptesPilotes() {
 function appliquerAccesComptes() {
     const tab = document.getElementById('tab-comptes');
     const header = document.getElementById('comptes-header-actions');
-    if (tab) tab.style.display = currentUser ? 'block' : 'none';
+    const connecte = typeof currentUser !== 'undefined' && currentUser;
+    if (tab) tab.style.display = connecte ? 'block' : 'none';
     if (header) {
-        header.style.display = (currentUser && isTresorier()) ? 'flex' : 'none';
+        header.style.display = (connecte && isTresorier()) ? 'flex' : 'none';
         header.style.gap = '10px';
         header.style.alignItems = 'center';
         header.style.flexWrap = 'wrap';
@@ -63,12 +64,12 @@ function nomPiloteComptes(u) {
 }
 
 function isTresorier() {
-    return currentUser && (currentUser.roles || []).some(r => r === 'Trésorier' || r === 'Super admin');
+    return typeof currentUser !== 'undefined' && currentUser && (currentUser.roles || []).some(r => r === 'Trésorier' || r === 'Super admin');
 }
 
 async function chargerUtilisateursComptes() {
     if (utilisateursComptesCache.length) return;
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&filterByFormula=%7BActif%7D%3D1&pageSize%3D100`;
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&filterByFormula=%7BActif%7D%3D1&pageSize%3D100`;
     const res = await cachedFetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Erreur lors du chargement des pilotes.');
