@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=85">
+    <link rel="stylesheet" href="style.css?v=87">
 </head>
 <body>
 
@@ -565,6 +565,43 @@
                 <div id="accueil-membre-container"></div>
             </section>
 
+            <!-- ================= VUE COMPTES PILOTES ================= -->
+            <section id="view-comptes" class="view-section" style="display: none;">
+                <header class="header">
+                    <h2>Compte pilote</h2>
+                    <div id="comptes-header-actions" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <input type="file" id="comptes-csv-input" accept=".csv" style="font-size:13px;">
+                            <button id="comptes-csv-btn" type="button" class="btn-primary">Importer CSV GVV</button>
+                        </div>
+                        <select id="comptes-pilote-select" style="padding:6px; border-radius:6px; border:1px solid #e2e8f0;"></select>
+                    </div>
+                </header>
+
+                <div id="comptes-summary"></div>
+                <div id="comptes-list" class="comptes-list"></div>
+
+                <form id="comptes-form-recette" style="display:none; margin-top:20px; padding:15px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;">
+                    <h3 style="margin-top:0; margin-bottom:12px;">Enregistrer une recette manuelle</h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label for="comptes-recette-date">Date</label>
+                            <input type="date" id="comptes-recette-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="comptes-recette-desc">Description</label>
+                            <input type="text" id="comptes-recette-desc" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="comptes-recette-montant">Montant (€)</label>
+                            <input type="number" step="0.01" id="comptes-recette-montant" required>
+                        </div>
+                    </div>
+                    <div class="form-actions" style="margin-top:10px;">
+                        <button type="submit" class="btn-primary">Enregistrer la recette</button>
+                    </div>
+                </form>
+            </section>
         </main>
     </div>
 
@@ -948,44 +985,6 @@
         </div>
     </div>
 
-            <!-- ================= VUE COMPTES PILOTES ================= -->
-            <section id="view-comptes" class="view-section" style="display: none;">
-                <header class="header">
-                    <h2>Compte pilote</h2>
-                    <div id="comptes-header-actions" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <input type="file" id="comptes-csv-input" accept=".csv" style="font-size:13px;">
-                            <button id="comptes-csv-btn" type="button" class="btn-primary">Importer CSV GVV</button>
-                        </div>
-                        <select id="comptes-pilote-select" style="padding:6px; border-radius:6px; border:1px solid #e2e8f0;"></select>
-                    </div>
-                </header>
-
-                <div id="comptes-summary"></div>
-                <div id="comptes-list" class="comptes-list"></div>
-
-                <form id="comptes-form-recette" style="display:none; margin-top:20px; padding:15px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;">
-                    <h3 style="margin-top:0; margin-bottom:12px;">Enregistrer une recette manuelle</h3>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
-                        <div class="form-group">
-                            <label for="comptes-recette-date">Date</label>
-                            <input type="date" id="comptes-recette-date" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="comptes-recette-desc">Description</label>
-                            <input type="text" id="comptes-recette-desc" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="comptes-recette-montant">Montant (€)</label>
-                            <input type="number" step="0.01" id="comptes-recette-montant" required>
-                        </div>
-                    </div>
-                    <div class="form-actions" style="margin-top:10px;">
-                        <button type="submit" class="btn-primary">Enregistrer la recette</button>
-                    </div>
-                </form>
-            </section>
-
     <!-- Modale : Déclarer une disponibilité instructeur -->
     <div id="disponibilite-instructeur-modal" class="modal">
         <div class="modal-content">
@@ -1033,20 +1032,20 @@
     </div>
 
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="evenements.js?v=79"></script>
-    <script src="app.js?v=79"></script>
-    <script src="utils.js?v=79"></script>
-    <script src="presences.js?v=79"></script>
-    <script src="planning.js?v=79"></script>
-    <script src="calendrier.js?v=79"></script>
-    <script src="comptes.js?v=80"></script>
-    <script src="aeronefs.js?v=79"></script>
-    <script src="carnet.js?v=79"></script>
-    <script src="documents.js?v=79"></script>
+    <script src="evenements.js?v=81"></script>
+    <script src="app.js?v=81"></script>
+    <script src="utils.js?v=81"></script>
+    <script src="presences.js?v=81"></script>
+    <script src="planning.js?v=81"></script>
+    <script src="calendrier.js?v=81"></script>
+    <script src="comptes.js?v=81"></script>
+    <script src="aeronefs.js?v=81"></script>
+    <script src="carnet.js?v=81"></script>
+    <script src="documents.js?v=81"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="membres.js?v=79"></script>
-    <script src="instructeurs.js?v=79"></script>
-    <script src="instructeur-planning.js?v=79"></script>
-    <script src="membre-home.js?v=79"></script>
+    <script src="membres.js?v=81"></script>
+    <script src="instructeurs.js?v=81"></script>
+    <script src="instructeur-planning.js?v=81"></script>
+    <script src="membre-home.js?v=81"></script>
 </body>
 </html>
