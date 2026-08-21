@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCarnetRoute();
     initSidebarToggle();
     initEvenements();
+    initComptesPilotes();
     Promise.all([
         chargerDonneesPlanning(),
         chargerPresencesClub()

@@ -1727,3 +1727,31 @@ body {
     flex: 1;
     height: 24px;
 }
+
+/* --- COMPTES PILOTES --- */
+.comptes-solde.negatif {
+    color: #dc2626;
+}
+.comptes-solde.attente {
+    color: #f59e0b;
+}
+.comptes-solde.positif {
+    color: #16a34a;
+}
+.comptes-row.debit {
+    color: #dc2626;
+    background: #fef2f2;
+}
+.comptes-row.credit {
+    color: #16a34a;
+    background: #f0fdf4;
+}
+.comptes-row.attente {
+    color: #f59e0b;
+    background: #fffbeb;
+}
+.comptes-list table th,
+.comptes-list table td {
+    padding: 8px;
+    border-bottom: 1px solid #f1f5f9;
+}

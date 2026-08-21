@@ -232,6 +232,13 @@ async function sauvegarderReservation() {
 
     // Récupérer le pilote (si c'est un nouveau pilote, il faudra le créer)
     const piloteNom = reservationData['form-pilote'];
+    if (piloteNom && typeof pilotePeutReserver === 'function') {
+        const peutReserver = await pilotePeutReserver(piloteNom);
+        if (!peutReserver) {
+            alert('Le compte pilote de ' + piloteNom + ' est négatif. Réservation impossible.');
+            return;
+        }
+    }
     let piloteId = null;
 
     // TODO: Ajouter la logique pour créer un nouveau pilote si nécessaire

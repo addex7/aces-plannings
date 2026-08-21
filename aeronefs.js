@@ -689,6 +689,7 @@ function initNavigationTabs() {
     const tabCarnet = document.getElementById('tab-carnet');
     const tabMembres = document.getElementById('tab-membres');
     const tabDocuments = document.getElementById('tab-documents');
+    const tabComptes = document.getElementById('tab-comptes');
     const viewPlanning = document.getElementById('view-planning');
     const viewAeronefs = document.getElementById('view-aeronefs');
     const viewInitiation = document.getElementById('view-initiation');
@@ -696,11 +697,12 @@ function initNavigationTabs() {
     const viewCarnet = document.getElementById('view-carnet');
     const viewMembres = document.getElementById('view-membres');
     const viewDocuments = document.getElementById('view-documents');
+    const viewComptes = document.getElementById('view-comptes');
     const viewAccueilMembre = document.getElementById('view-accueil-membre');
 
     function activerTab(tab, vue) {
-        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabMembres, tabDocuments].forEach(t => { if (t) t.classList.remove('active'); });
-        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewMembres, viewDocuments, viewAccueilMembre].forEach(v => { if (v) v.style.display = 'none'; });
+        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabMembres, tabDocuments, tabComptes].forEach(t => { if (t) t.classList.remove('active'); });
+        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewMembres, viewDocuments, viewComptes, viewAccueilMembre].forEach(v => { if (v) v.style.display = 'none'; });
         if (tab) tab.classList.add('active');
         if (vue) vue.style.display = 'block';
         // Ouvrir le groupe contenant l'onglet actif, fermer les autres groupes déroulants
@@ -761,6 +763,13 @@ function initNavigationTabs() {
         tabDocuments.addEventListener('click', () => {
             activerTab(tabDocuments, viewDocuments);
             if (typeof chargerDocuments === 'function') chargerDocuments();
+        });
+    }
+
+    if (tabComptes) {
+        tabComptes.addEventListener('click', () => {
+            activerTab(tabComptes, viewComptes);
+            if (typeof chargerComptesPilotes === 'function') chargerComptesPilotes();
         });
     }
 
