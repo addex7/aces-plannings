@@ -18,6 +18,7 @@ const TABLE_COMPTES = 'Comptes Pilotes';
 const TABLE_UTILISATEURS_COMPTES = 'Utilisateurs';
 let utilisateursComptesCache = [];
 let comptesPilotesCache = [];
+let comptesShowAll = false;
 
 function initComptesPilotes() {
     const btnImport = document.getElementById('comptes-csv-btn');
@@ -101,7 +102,7 @@ async function chargerComptesPilotes() {
         const records = await fetchComptes(piloteNom);
         comptesPilotesCache = records;
         afficherResume(records, summary, piloteNom);
-        afficherTransactions(records, container);
+        afficherTransactions(records, container, piloteNom);
 
         const isCurrent = !select || select.value === nomPiloteComptes(currentUser);
         if (form) form.style.display = isCurrent ? 'block' : 'none';
@@ -177,41 +178,44 @@ function afficherResume(records, summary, piloteNom) {
 
     const soldeFinal = solde + enAttente;
 
-    let soldeClasse = 'positif';
-    if (soldeFinal < 0) soldeClasse = 'negatif';
-    else if (enAttente > 0) soldeClasse = 'attente';
-
     const html = `
-        <div style="display:flex; flex-wrap:wrap; gap:15px; align-items:center;">
-            <div class="comptes-solde ${soldeClasse}" style="font-size:24px; font-weight:bold;">
-                Solde final : ${soldeFinal.toFixed(2).replace('.', ',')} €
+        <div class="comptes-summary-card">
+            <div class="comptes-summary-item">
+                <div class="comptes-summary-icon solde-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>
+                </div>
+                <div>
+                    <div class="comptes-summary-label">SOLDE FINAL</div>
+                    <div class="comptes-summary-value solde-val">${soldeFinal.toFixed(2).replace('.', ',')} €</div>
+                </div>
             </div>
-            <div style="color:#dc2626; font-weight:600;">Dépenses : -${depenses.toFixed(2).replace('.', ',')} €</div>
-            <div style="color:#16a34a; font-weight:600;">Recettes validées : +${recettes.toFixed(2).replace('.', ',')} €</div>
-            ${enAttente > 0 ? `<div style="color:#f59e0b; font-weight:600;">Recettes en attente : +${enAttente.toFixed(2).replace('.', ',')} €</div>` : ''}
+            <div class="comptes-summary-item">
+                <div class="comptes-summary-icon depense-icon"><span>&#8595;</span></div>
+                <div>
+                    <div class="comptes-summary-label">DÉPENSES</div>
+                    <div class="comptes-summary-value depense-val">-${depenses.toFixed(2).replace('.', ',')} €</div>
+                </div>
+            </div>
+            <div class="comptes-summary-item">
+                <div class="comptes-summary-icon recette-icon"><span>&#8593;</span></div>
+                <div>
+                    <div class="comptes-summary-label">RECETTES VALIDÉES</div>
+                    <div class="comptes-summary-value recette-val">+${recettes.toFixed(2).replace('.', ',')} €</div>
+                </div>
+            </div>
         </div>
-        <h3 style="margin:15px 0 8px;">Transactions de ${escHtml(piloteNom)}</h3>
     `;
     if (summary) summary.innerHTML = html;
 }
 
-function afficherTransactions(records, container) {
+function afficherTransactions(records, container, piloteNom, showAll = comptesShowAll) {
     if (!container) return;
-    if (!records.length) { container.innerHTML = '<p>Aucune transaction enregistrée.</p>'; return; }
+    if (!records.length) { container.innerHTML = '<p class="comptes-vide">Aucune transaction enregistrée.</p>'; return; }
 
-    let html = `<table style="width:100%; border-collapse:collapse; font-size:14px;">
-        <thead>
-            <tr style="text-align:left; border-bottom:2px solid #e2e8f0;">
-                <th style="padding:8px;">Date</th>
-                <th style="padding:8px;">Description</th>
-                <th style="padding:8px;">Référence</th>
-                <th style="padding:8px; text-align:right;">Montant</th>
-                <th style="padding:8px; width:24px;"></th>
-            </tr>
-        </thead>
-        <tbody>`;
+    const displayRecords = showAll ? records : records.slice(0, 5);
+    const hasMore = records.length > 5;
 
-    records.forEach(r => {
+    const rows = displayRecords.map(r => {
         const f = r.fields || {};
         const date = f['Date'] ? new Date(f['Date']).toLocaleDateString('fr-FR') : '';
         const desc = f['Description'] || '';
@@ -221,28 +225,48 @@ function afficherTransactions(records, container) {
         const source = f['Source'] || '';
         const statut = f['Statut'] || 'Validé';
 
-        let montant = '', cls = '';
+        let montant = '', cls = '', arrow = '';
         if (debit > 0) {
             montant = `-${debit.toFixed(2).replace('.', ',')} €`;
             cls = 'debit';
+            arrow = '&#8595;';
         } else if (credit > 0) {
             montant = `+${credit.toFixed(2).replace('.', ',')} €`;
             cls = (source === 'Saisie pilote' && statut === 'En attente') ? 'attente' : 'credit';
+            arrow = '&#8593;';
         }
 
         const isManuel = source === 'Saisie pilote';
-        const deleteBtn = isManuel ? `<button type="button" class="comptes-delete" data-id="${escHtml(r.id)}" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:18px;padding:0 4px;" title="Supprimer">&times;</button>` : '';
-        html += `<tr class="comptes-row ${cls}" style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:8px; white-space:nowrap;">${escHtml(date)}</td>
-            <td style="padding:8px;">${escHtml(desc)}</td>
-            <td style="padding:8px; color:#64748b;">${escHtml(ref)}</td>
-            <td style="padding:8px; text-align:right; font-weight:600;">${escHtml(montant)}</td>
-            <td style="padding:8px; text-align:center; width:24px;">${deleteBtn}</td>
+        const deleteBtn = isManuel ? `<button type="button" class="comptes-delete" data-id="${escHtml(r.id)}" title="Supprimer">&times;</button>` : '';
+        return `<tr class="comptes-row ${cls}">
+            <td class="comptes-date">${escHtml(date)}</td>
+            <td class="comptes-desc">${escHtml(desc)}</td>
+            <td class="comptes-ref">${escHtml(ref)}</td>
+            <td class="comptes-montant">${arrow}<span class="comptes-montant-valeur">${escHtml(montant)}</span>${deleteBtn}</td>
         </tr>`;
-    });
+    }).join('');
 
-    html += '</tbody></table>';
+    const html = `
+        <div class="comptes-list-header">
+            <h3 class="comptes-list-title">Transactions de ${escHtml(piloteNom)}</h3>
+            <button type="button" class="comptes-export-btn" id="comptes-export-csv">Exporter en CSV</button>
+        </div>
+        <table class="comptes-table">
+            <thead><tr><th>Date</th><th>Description</th><th>Référence</th><th>Montant</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        ${hasMore ? `<div class="comptes-list-footer"><button type="button" class="comptes-voir-toutes" id="comptes-toggle-rows">Voir toutes les transactions <span>&#8595;</span></button></div>` : ''}
+    `;
     container.innerHTML = html;
+
+    const exportBtn = container.querySelector('#comptes-export-csv');
+    if (exportBtn) exportBtn.addEventListener('click', () => exporterCSVComptes(records, piloteNom));
+
+    const toggleBtn = container.querySelector('#comptes-toggle-rows');
+    if (toggleBtn) toggleBtn.addEventListener('click', () => {
+        comptesShowAll = !comptesShowAll;
+        afficherTransactions(records, container, piloteNom, comptesShowAll);
+    });
 
     container.querySelectorAll('.comptes-delete').forEach(btn => {
         btn.addEventListener('click', async (ev) => {
@@ -257,6 +281,30 @@ function afficherTransactions(records, container) {
             }
         });
     });
+}
+
+function exporterCSVComptes(records, piloteNom) {
+    if (!records.length) return;
+    const lignes = ['Date;Description;Référence;Débit;Crédit'];
+    records.forEach(r => {
+        const f = r.fields || {};
+        const date = f['Date'] || '';
+        const desc = (f['Description'] || '').replace(/;/g, ' ');
+        const ref = (f['Référence'] || '').replace(/;/g, ' ');
+        const debit = f['Débit'] || 0;
+        const credit = f['Crédit'] || 0;
+        lignes.push(`${date};${desc};${ref};${debit};${credit}`);
+    });
+    const csv = '\uFEFF' + lignes.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `compte_${(piloteNom || 'pilote').replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function escHtml(s) {

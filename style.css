@@ -1755,3 +1755,256 @@ body {
     padding: 8px;
     border-bottom: 1px solid #f1f5f9;
 }
+
+/* --- NOUVEAU DESIGN COMPTES PILOTES --- */
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.comptes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 8px;
+}
+.comptes-titres h2 {
+    margin: 0 0 4px;
+    font-size: 28px;
+    color: #1e3d59;
+}
+.comptes-subtitle {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+.comptes-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.comptes-import-btn {
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.comptes-import-btn:hover { background: #15803d; }
+#comptes-pilote-select,
+#comptes-csv-input {
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    font-size: 13px;
+}
+
+.comptes-loading {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    color: #0369a1;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+.comptes-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #7dd3fc;
+    border-top-color: #0369a1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.comptes-summary {
+    margin-bottom: 20px;
+}
+.comptes-summary-card {
+    background: #1e3d59;
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    color: #fff;
+}
+.comptes-summary-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1 1 180px;
+}
+.comptes-summary-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.solde-icon { background: rgba(125, 211, 252, 0.2); color: #7dd3fc; }
+.depense-icon { background: rgba(248, 113, 113, 0.2); color: #f87171; }
+.recette-icon { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
+.comptes-summary-label {
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+    margin-bottom: 4px;
+}
+.comptes-summary-value {
+    font-size: 22px;
+    font-weight: 700;
+}
+.solde-val { color: #7dd3fc; }
+.depense-val { color: #f87171; }
+.recette-val { color: #4ade80; }
+
+.comptes-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+@media (max-width: 900px) {
+    .comptes-grid { grid-template-columns: 1fr; }
+}
+
+.comptes-form-card {
+    background: #1e3d59;
+    border-radius: 16px;
+    padding: 22px;
+    color: #fff;
+}
+.comptes-form-title {
+    margin: 0 0 18px;
+    font-size: 18px;
+    font-weight: 600;
+}
+.comptes-form-card .comptes-form-group {
+    margin-bottom: 14px;
+}
+.comptes-form-card label {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 6px;
+    opacity: 0.85;
+}
+.comptes-form-card input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 14px;
+}
+.comptes-form-card input::placeholder { color: rgba(255,255,255,0.45); }
+.comptes-btn-ajouter {
+    width: 100%;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.comptes-btn-ajouter:hover { background: #15803d; }
+.comptes-btn-ajouter::after { content: '+'; font-size: 18px; }
+
+.comptes-list-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.comptes-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.comptes-list-title {
+    margin: 0;
+    font-size: 18px;
+    color: #1e3d59;
+}
+.comptes-export-btn {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.comptes-export-btn:hover { background: #f8fafc; }
+.comptes-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+.comptes-table th {
+    text-align: left;
+    padding: 10px;
+    color: #1e3d59;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+}
+.comptes-table td {
+    padding: 10px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+}
+.comptes-row.debit { color: #dc2626; background: #fef2f2; }
+.comptes-row.credit { color: #16a34a; background: #f0fdf4; }
+.comptes-row.attente { color: #f59e0b; background: #fffbeb; }
+.comptes-date { white-space: nowrap; }
+.comptes-desc { max-width: 260px; word-break: break-word; }
+.comptes-ref { color: #64748b; font-size: 13px; }
+.comptes-montant {
+    text-align: right;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.comptes-montant .comptes-delete {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 18px;
+    margin-left: 8px;
+    padding: 0 4px;
+    line-height: 1;
+}
+.comptes-list-footer {
+    text-align: center;
+    margin-top: 14px;
+}
+.comptes-voir-toutes {
+    background: transparent;
+    border: none;
+    color: #1e3d59;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+.comptes-voir-toutes span { margin-left: 4px; }
+.comptes-vide { color: #64748b; }
