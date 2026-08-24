@@ -82,7 +82,7 @@ async function chargerNotifications() {
     if (!currentUser) return;
     const list = document.getElementById('notifications-list');
     const count = document.getElementById('notifications-count');
-    const piloteNom = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    const piloteNom = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
     if (!list) return;
     try {
         const formula = `{Pilote}='${piloteNom.replace(/'/g, "\\'")}'`;
@@ -145,7 +145,7 @@ async function creerNotification(piloteNom, message, type = 'info', lien = '') {
     const body = {
         records: [{
             fields: {
-                'Pilote': piloteNom,
+                'Pilote': typeof formaterNomPilote === 'function' ? formaterNomPilote(piloteNom) : piloteNom,
                 'Message': message,
                 'Type': type,
                 'Date': new Date().toISOString().slice(0, 10),
