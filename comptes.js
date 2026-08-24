@@ -147,9 +147,9 @@ async function fetchComptes(piloteNom) {
         const dateA = new Date(a.fields?.['Date'] || '1970-01-01');
         const dateB = new Date(b.fields?.['Date'] || '1970-01-01');
         if (dateB - dateA !== 0) return dateB - dateA;
-        const createdA = new Date(a.createdTime || 0);
-        const createdB = new Date(b.createdTime || 0);
-        return createdB - createdA;
+        const descA = String(a.fields?.['Description'] || '');
+        const descB = String(b.fields?.['Description'] || '');
+        return descB.localeCompare(descA);
     });
     return records;
 }
@@ -249,7 +249,7 @@ function afficherTransactions(records, container, piloteNom, showAll = comptesSh
         const deleteBtn = isManuel ? `<button type="button" class="comptes-delete" data-id="${escHtml(r.id)}" title="Supprimer">&times;</button>` : '';
         return `<tr class="comptes-row ${cls}">
             <td class="comptes-date">${escHtml(date)}</td>
-            <td class="comptes-desc">${escHtml(desc)}</td>
+            <td class="comptes-desc">${escHtml(stripOrdre(desc))}</td>
             <td class="comptes-ref">${escHtml(ref)}</td>
             <td class="comptes-montant">${arrow}<span class="comptes-montant-valeur">${escHtml(montant)}</span>${deleteBtn}</td>
         </tr>`;
@@ -298,7 +298,7 @@ function exporterCSVComptes(records, piloteNom) {
     records.forEach(r => {
         const f = r.fields || {};
         const date = f['Date'] || '';
-        const desc = (f['Description'] || '').replace(/;/g, ' ');
+        const desc = stripOrdre(f['Description'] || '').replace(/;/g, ' ');
         const ref = (f['Référence'] || '').replace(/;/g, ' ');
         const debit = f['Débit'] || 0;
         const credit = f['Crédit'] || 0;
@@ -314,6 +314,10 @@ function exporterCSVComptes(records, piloteNom) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+function stripOrdre(s) {
+    return String(s || '').replace(/^~#\d{4}~/, '');
 }
 
 function escHtml(s) {
@@ -411,7 +415,8 @@ function parserCSVComptes(text) {
                         prix: 0,
                         quantite: 0,
                         debit: isDebit ? sMontant : 0,
-                        credit: isDebit ? 0 : sMontant
+                        credit: isDebit ? 0 : sMontant,
+                        ordre: courant.transactions.length
                     });
                 }
             }
@@ -434,7 +439,8 @@ function parserCSVComptes(text) {
                 prix: parseMontantCompte(cols[3]),
                 quantite: parseMontantCompte(cols[4]),
                 debit,
-                credit
+                credit,
+                ordre: courant.transactions.length
             });
         }
     }
@@ -497,7 +503,7 @@ async function creerImportCSV(piloteNom, transactions) {
         fields: {
             'Pilote': piloteNom,
             'Date': t.dateIso,
-            'Description': t.description,
+            'Description': '~#' + String(t.ordre || 0).padStart(4, '0') + '~' + t.description,
             'Référence': t.reference,
             'Prix': t.prix,
             'Quantité': t.quantite,
