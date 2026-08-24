@@ -175,17 +175,19 @@ function afficherResume(records, summary, piloteNom) {
         if (credit > 0) { recettes += credit; solde += credit; }
     });
 
+    const soldeFinal = solde + enAttente;
+
     let soldeClasse = 'positif';
-    if (solde < 0) soldeClasse = 'negatif';
+    if (soldeFinal < 0) soldeClasse = 'negatif';
     else if (enAttente > 0) soldeClasse = 'attente';
 
     const html = `
         <div style="display:flex; flex-wrap:wrap; gap:15px; align-items:center;">
             <div class="comptes-solde ${soldeClasse}" style="font-size:24px; font-weight:bold;">
-                Solde : ${solde.toFixed(2).replace('.', ',')} €
+                Solde final : ${soldeFinal.toFixed(2).replace('.', ',')} €
             </div>
             <div style="color:#dc2626; font-weight:600;">Dépenses : -${depenses.toFixed(2).replace('.', ',')} €</div>
-            <div style="color:#16a34a; font-weight:600;">Recettes : +${recettes.toFixed(2).replace('.', ',')} €</div>
+            <div style="color:#16a34a; font-weight:600;">Recettes validées : +${recettes.toFixed(2).replace('.', ',')} €</div>
             ${enAttente > 0 ? `<div style="color:#f59e0b; font-weight:600;">Recettes en attente : +${enAttente.toFixed(2).replace('.', ',')} €</div>` : ''}
         </div>
         <h3 style="margin:15px 0 8px;">Transactions de ${escHtml(piloteNom)}</h3>
@@ -204,6 +206,7 @@ function afficherTransactions(records, container) {
                 <th style="padding:8px;">Description</th>
                 <th style="padding:8px;">Référence</th>
                 <th style="padding:8px; text-align:right;">Montant</th>
+                <th style="padding:8px; width:24px;"></th>
             </tr>
         </thead>
         <tbody>`;
@@ -227,16 +230,33 @@ function afficherTransactions(records, container) {
             cls = (source === 'Saisie pilote' && statut === 'En attente') ? 'attente' : 'credit';
         }
 
+        const isManuel = source === 'Saisie pilote';
+        const deleteBtn = isManuel ? `<button type="button" class="comptes-delete" data-id="${escHtml(r.id)}" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:18px;padding:0 4px;" title="Supprimer">&times;</button>` : '';
         html += `<tr class="comptes-row ${cls}" style="border-bottom:1px solid #f1f5f9;">
             <td style="padding:8px; white-space:nowrap;">${escHtml(date)}</td>
             <td style="padding:8px;">${escHtml(desc)}</td>
             <td style="padding:8px; color:#64748b;">${escHtml(ref)}</td>
             <td style="padding:8px; text-align:right; font-weight:600;">${escHtml(montant)}</td>
+            <td style="padding:8px; text-align:center; width:24px;">${deleteBtn}</td>
         </tr>`;
     });
 
     html += '</tbody></table>';
     container.innerHTML = html;
+
+    container.querySelectorAll('.comptes-delete').forEach(btn => {
+        btn.addEventListener('click', async (ev) => {
+            if (!confirm('Supprimer cette recette manuelle ?')) return;
+            const id = ev.currentTarget.dataset.id;
+            try {
+                await supprimerRecetteManuelle(id);
+                await chargerComptesPilotes();
+            } catch (err) {
+                console.error(err);
+                alert('Erreur : ' + err.message);
+            }
+        });
+    });
 }
 
 function escHtml(s) {
@@ -472,6 +492,16 @@ async function enregistrerRecetteManuelle(e) {
         console.error(err);
         alert('Erreur lors de l\'enregistrement : ' + err.message);
     }
+}
+
+async function supprimerRecetteManuelle(recordId) {
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}/${recordId}`;
+    const res = await fetch(url, { method: 'DELETE', headers });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error?.message || 'Erreur suppression.');
+    }
+    await res.json().catch(() => {});
 }
 
 async function getSoldePilote(piloteNom) {
