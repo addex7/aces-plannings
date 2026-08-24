@@ -101,6 +101,7 @@ async function chargerComptesPilotes() {
 
         const records = await fetchComptes(piloteNom);
         comptesPilotesCache = records;
+        afficherDernierImport(records);
         afficherResume(records, summary, piloteNom);
         afficherTransactions(records, container, piloteNom);
 
@@ -166,6 +167,21 @@ function convertirDateFR(d) {
     if (!m) return null;
     const [_, j, m_, a] = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     return `${a}-${m_}-${j}`;
+}
+
+function afficherDernierImport(records) {
+    const lastImportEl = document.getElementById('comptes-last-import');
+    if (!lastImportEl) return;
+    const lastImport = records
+        .filter(r => (r.fields?.['Source'] || '') === 'Import CSV' && r.createdTime)
+        .sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime))[0];
+    if (lastImport) {
+        const d = new Date(lastImport.createdTime);
+        lastImportEl.textContent = `· Dernier import CSV : ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+        lastImportEl.style.display = '';
+    } else {
+        lastImportEl.style.display = 'none';
+    }
 }
 
 function afficherResume(records, summary, piloteNom) {

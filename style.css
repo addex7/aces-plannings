@@ -2009,3 +2009,14 @@ body {
 }
 .comptes-voir-toutes span { margin-left: 4px; }
 .comptes-vide { color: #64748b; }
+.comptes-titres h2 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.comptes-last-import {
+    font-size: 13px;
+    font-weight: 400;
+    color: #64748b;
+    white-space: nowrap;
+}
