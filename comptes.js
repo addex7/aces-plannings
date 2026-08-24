@@ -236,7 +236,7 @@ function afficherTransactions(records, container, piloteNom, showAll = comptesSh
             arrow = '&#8593;';
         }
 
-        const isManuel = source === 'Saisie pilote';
+        const isManuel = source === 'Saisie pilote' && statut === 'En attente';
         const deleteBtn = isManuel ? `<button type="button" class="comptes-delete" data-id="${escHtml(r.id)}" title="Supprimer">&times;</button>` : '';
         return `<tr class="comptes-row ${cls}">
             <td class="comptes-date">${escHtml(date)}</td>
