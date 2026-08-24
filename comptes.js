@@ -138,7 +138,7 @@ function peuplerSelectPilotes(select) {
 async function fetchComptes(piloteNom) {
     if (!piloteNom) return [];
     const formula = `{Pilote}='${piloteNom.replace(/'/g, "\\'")}'`;
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc`;
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=desc`;
     const res = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Impossible de lire les comptes.');
