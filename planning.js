@@ -817,9 +817,35 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                 }
             });
 
+            const avionImmat = (avion.fields['Immatriculation'] || '').toString().trim().toUpperCase();
+            maintenancesJour.forEach(m => {
+                const mf = m.fields || {};
+                if (!mf['Date'] || isNaN(parseFloat(mf['durée']))) return;
+                const mImmat = (mf['Machine'] || '').toString().trim().toUpperCase();
+                if (mImmat !== avionImmat) return;
+                const mStart = new Date(mf['Date']);
+                const mEnd = new Date(mStart.getTime() + parseFloat(mf['durée']) * 3600000);
+                const segDebut = new Date(Math.max(mStart.getTime(), dayStart.getTime()));
+                const segFin = new Date(Math.min(mEnd.getTime(), dayEnd.getTime()));
+                let hDebut = segDebut.getHours() + (segDebut.getMinutes() / 60);
+                let hFin = segFin.getHours() + (segFin.getMinutes() / 60);
+                if (segFin.getTime() >= dayEnd.getTime()) hFin = 24;
+                const dureeM = hFin - hDebut;
+                if (dureeM > 0) {
+                    const maintDiv = document.createElement('div');
+                    maintDiv.className = 'maintenance-bar';
+                    maintDiv.style.left = `${positionHeure(hDebut)}%`;
+                    maintDiv.style.width = `${positionHeure(hFin) - positionHeure(hDebut)}%`;
+                    maintDiv.style.zIndex = '10';
+                    maintDiv.title = `Maintenance ${mImmat} — ${hDebut.toFixed(2)}h à ${hFin.toFixed(2)}h`;
+                    if (dureeM >= 1) maintDiv.textContent = 'Maintenance';
+                    gridBg.appendChild(maintDiv);
+                }
+            });
+
             if (typeof afficherConflitsReservations === 'function') afficherConflitsReservations(barresInfos);
 
-            const immatAvion = (avion.fields['Immatriculation'] || '').toString().trim().toUpperCase();
+            const immatAvion = avionImmat;
             if (immatAvion && carnetsPilotes.length > 0) {
                 const volsCarnetJour = carnetsPilotes.filter(c => {
                     const f = c.fields || {};
