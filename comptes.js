@@ -248,8 +248,19 @@ async function importerCSVComptes() {
     const file = input && input.files[0];
     if (!file) { alert('Veuillez sélectionner un fichier CSV.'); return; }
 
-    const buffer = await file.arrayBuffer();
-    const text = new TextDecoder('windows-1252').decode(buffer);
+    const text = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const arr = e.target.result;
+            try {
+                resolve(new TextDecoder('utf-8', { fatal: true }).decode(arr));
+            } catch (_) {
+                resolve(new TextDecoder('windows-1252').decode(arr));
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
     try {
         const extraits = parserCSVComptes(text);
         if (!extraits.length) { alert('Aucun extrait de compte trouvé dans ce fichier.'); return; }
@@ -300,7 +311,9 @@ function parserCSVComptes(text) {
             courant = { nom: '', transactions: [] };
             extraits.push(courant);
             inTransactions = false;
-            const nomLigne = lignes[i + 2] || '';
+            let j = i + 1;
+            while (j < lignes.length && !lignes[j].startsWith('Compte de') && !lignes[j].startsWith('Date;')) j++;
+            const nomLigne = lignes[j] || '';
             const parts = nomLigne.split(';;');
             courant.nom = (parts[parts.length - 1] || '').trim();
         } else if (l.startsWith('Date;')) {
