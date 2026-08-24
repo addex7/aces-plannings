@@ -311,11 +311,8 @@ function parserCSVComptes(text) {
             courant = { nom: '', transactions: [] };
             extraits.push(courant);
             inTransactions = false;
-            let j = i + 1;
-            while (j < lignes.length && !lignes[j].startsWith('Date;')) j++;
-            const nomLigne = (j > i + 1 && lignes[j - 1]) ? lignes[j - 1] : '';
-            const nomParts = nomLigne.split(';').map(c => c.trim()).filter(Boolean);
-            courant.nom = nomParts.pop() || '';
+            const nomLigne = lignes[i + 1] || '';
+            courant.nom = nomLigne.replace(/\s+/g, ' ').trim();
         } else if (l.startsWith('Date;')) {
             inTransactions = true;
         } else if (l.startsWith('Solde au') || l.startsWith('Solde avant le')) {
@@ -346,13 +343,16 @@ function parserCSVComptes(text) {
 
 function trouverPiloteParNom(csvNom) {
     if (!csvNom) return null;
-    const parts = csvNom.split(/\s+/).filter(Boolean).map(p => p.toLowerCase());
-    if (parts.length < 2) return null;
+    const parts = csvNom.split(/[\s;]+/).filter(Boolean).map(p => p.toLowerCase().trim());
+    if (parts.length < 1) return null;
     return utilisateursComptesCache.find(r => {
         const f = r.fields || {};
         const prenom = (f['Prénom'] || '').toLowerCase().trim();
         const nom = (f['Nom'] || '').toLowerCase().trim();
-        return parts.includes(prenom) && parts.includes(nom);
+        if (!prenom || !nom) return false;
+        const nomOK = parts.includes(nom);
+        const prenomOK = parts.includes(prenom) || parts.some(p => p[0] === prenom[0]);
+        return nomOK && prenomOK;
     });
 }
 
