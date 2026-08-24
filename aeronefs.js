@@ -213,6 +213,7 @@ async function enregistrerMaintenance(e) {
             throw new Error(await resAvion.text());
         }
 
+        await notifierReservationsSurMaintenance(immat, dateTime, duree);
         fermerModaleMaintenance();
         chargerSuiviAeronef();
     } catch (err) {
@@ -1207,6 +1208,53 @@ async function toggleActifDocumentAeronef(record, actif) {
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la mise à jour : ' + err.message);
+    }
+}
+
+async function getNomPiloteReservation(piloteField) {
+    const id = Array.isArray(piloteField) ? piloteField[0] : piloteField;
+    if (typeof id === 'string' && id.startsWith('rec')) {
+        try {
+            const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Utilisateurs')}/${id}`, { headers });
+            const data = await res.json();
+            if (res.ok && data.fields) {
+                return `${data.fields['Prénom'] || ''} ${data.fields['Nom'] || ''}`.trim();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    return Array.isArray(piloteField) ? piloteField.join(' ') : (piloteField || '').toString().trim();
+}
+
+async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures) {
+    try {
+        if (typeof creerNotification !== 'function') return;
+        const dateFin = new Date(dateDebut.getTime() + dureeHeures * 3600000);
+        const startDay = dateDebut.toISOString().slice(0, 10);
+        const endDay = dateFin.toISOString().slice(0, 10);
+        const heureDebut = dateDebut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const heureFin = dateFin.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const dateText = dateDebut.toLocaleDateString('fr-FR');
+        const formula = `AND(FIND('${immat.replace(/'/g, "\\'")}', ARRAYJOIN({Machine}, ',')), DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')<='${endDay}', DATETIME_FORMAT({Date de fin}, 'YYYY-MM-DD')>='${startDay}')`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+        const res = await fetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        const records = data.records || [];
+        for (const r of records) {
+            const f = r.fields || {};
+            if (!f['Date de début'] || !f['Date de fin']) continue;
+            const resaStart = new Date(f['Date de début']);
+            const resaEnd = new Date(f['Date de fin']);
+            if (resaStart >= dateFin || resaEnd <= dateDebut) continue;
+            const piloteNom = await getNomPiloteReservation(f['Pilote']);
+            if (!piloteNom) continue;
+            const message = `L'appareil ${immat} est programmé en maintenance le ${dateText} de ${heureDebut} à ${heureFin}. Votre réservation sur cet appareil risque d'être compromise.`;
+            await creerNotification(piloteNom, message, 'warning');
+        }
+    } catch (err) {
+        console.error('Erreur notification maintenance:', err);
     }
 }
 
