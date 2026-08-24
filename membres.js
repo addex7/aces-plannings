@@ -29,6 +29,7 @@ function setCurrentUser(user) {
     if (typeof initDisponibilitesInstructeurs === 'function') initDisponibilitesInstructeurs();
     if (typeof appliquerAccesMaintenanceEtDocuments === 'function') appliquerAccesMaintenanceEtDocuments();
     if (typeof appliquerAccesComptes === 'function') appliquerAccesComptes();
+    if (typeof chargerNotifications === 'function') chargerNotifications();
 }
 
 function updateUIRoles() {
