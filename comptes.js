@@ -300,7 +300,7 @@ async function importerCSVComptes() {
 }
 
 function parserCSVComptes(text) {
-    const lignes = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const lignes = text.replace(/^\uFEFF/, '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const extraits = [];
     let courant = null;
     let inTransactions = false;
