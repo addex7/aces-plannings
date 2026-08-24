@@ -166,9 +166,13 @@ function afficherResume(records, summary, piloteNom) {
         const credit = parseMontantCompte(f['Crédit']);
         const source = f['Source'] || '';
         const statut = f['Statut'] || 'Validé';
+        if (statut === 'En attente' && source === 'Saisie pilote' && credit > 0) {
+            enAttente += credit;
+            return;
+        }
+        if (statut !== 'Validé') return;
         if (debit > 0) { depenses += debit; solde -= debit; }
         if (credit > 0) { recettes += credit; solde += credit; }
-        if (source === 'Saisie pilote' && statut === 'En attente') enAttente += credit;
     });
 
     let soldeClasse = 'positif';
@@ -204,7 +208,7 @@ function afficherTransactions(records, container) {
         </thead>
         <tbody>`;
 
-    records.slice().reverse().forEach(r => {
+    records.forEach(r => {
         const f = r.fields || {};
         const date = f['Date'] ? new Date(f['Date']).toLocaleDateString('fr-FR') : '';
         const desc = f['Description'] || '';
@@ -244,7 +248,8 @@ async function importerCSVComptes() {
     const file = input && input.files[0];
     if (!file) { alert('Veuillez sélectionner un fichier CSV.'); return; }
 
-    const text = await file.text();
+    const buffer = await file.arrayBuffer();
+    const text = new TextDecoder('windows-1252').decode(buffer);
     try {
         const extraits = parserCSVComptes(text);
         if (!extraits.length) { alert('Aucun extrait de compte trouvé dans ce fichier.'); return; }
@@ -263,11 +268,15 @@ async function importerCSVComptes() {
 
             await supprimerImportCSV(piloteNom);
 
+            const matched = new Set();
             for (const t of ex.transactions) {
-                if (t.credit > 0) await validerRecetteManuelle(piloteNom, t.credit);
+                if (t.credit > 0) {
+                    const validee = await validerRecetteManuelle(piloteNom, t.credit);
+                    if (validee) matched.add(t);
+                }
             }
 
-            await creerImportCSV(piloteNom, ex.transactions);
+            await creerImportCSV(piloteNom, ex.transactions.filter(t => !matched.has(t)));
         }
 
         alert('Import CSV terminé.');
@@ -373,6 +382,7 @@ async function validerRecetteManuelle(piloteNom, montant) {
         const patchData = await patch.json();
         if (!patch.ok) throw new Error(patchData.error?.message || 'Erreur validation recette.');
     }
+    return !!record;
 }
 
 async function creerImportCSV(piloteNom, transactions) {
@@ -457,6 +467,7 @@ async function getSoldePilote(piloteNom) {
         const records = await fetchComptes(piloteNom);
         return records.reduce((s, r) => {
             const f = r.fields || {};
+            if ((f['Statut'] || 'Validé') !== 'Validé') return s;
             const debit = parseMontantCompte(f['Débit']);
             const credit = parseMontantCompte(f['Crédit']);
             return s + credit - debit;
