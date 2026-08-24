@@ -70,7 +70,7 @@ function isTresorier() {
 async function chargerUtilisateursComptes() {
     if (utilisateursComptesCache.length) return;
     const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&filterByFormula=%7BActif%7D%3D1&pageSize%3D100`;
-    const res = await cachedFetch(url, { headers });
+    const res = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Erreur lors du chargement des pilotes.');
     utilisateursComptesCache = data.records || [];
@@ -138,7 +138,7 @@ async function fetchComptes(piloteNom) {
     if (!piloteNom) return [];
     const formula = `{Pilote}='${piloteNom.replace(/'/g, "\\'")}'`;
     const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc`;
-    const res = await cachedFetch(url, { headers });
+    const res = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Impossible de lire les comptes.');
     return data.records || [];
@@ -310,7 +310,7 @@ async function importerCSVComptes() {
             await creerImportCSV(piloteNom, ex.transactions.filter(t => !matched.has(t)));
         }
 
-        alert('Import CSV terminé.');
+        // Import terminé sans alerte
         input.value = '';
         await chargerComptesPilotes();
     } catch (err) {
@@ -379,7 +379,7 @@ function trouverPiloteParNom(csvNom) {
 async function supprimerImportCSV(piloteNom) {
     const formula = `AND({Pilote}='${piloteNom.replace(/'/g, "\\'")}', {Source}='Import CSV')`;
     const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
-    const res = await cachedFetch(url, { headers });
+    const res = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Erreur suppression anciennes lignes.');
 
@@ -389,7 +389,7 @@ async function supprimerImportCSV(piloteNom) {
     for (let i = 0; i < ids.length; i += 10) {
         const batch = ids.slice(i, i + 10);
         const params = batch.map(id => `records[]=${encodeURIComponent(id)}`).join('&');
-        const del = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?${params}`, {
+        const del = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?${params}`, {
             method: 'DELETE',
             headers
         });
@@ -401,13 +401,13 @@ async function supprimerImportCSV(piloteNom) {
 async function validerRecetteManuelle(piloteNom, montant) {
     const formula = `AND({Pilote}='${piloteNom.replace(/'/g, "\\'")}', {Source}='Saisie pilote', {Statut}='En attente', {Crédit}=${montant})`;
     const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`;
-    const res = await cachedFetch(url, { headers });
+    const res = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Erreur validation recette.');
 
     const record = (data.records || [])[0];
     if (record) {
-        const patch = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}/${record.id}`, {
+        const patch = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}/${record.id}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { 'Statut': 'Validé' } })
@@ -435,7 +435,7 @@ async function creerImportCSV(piloteNom, transactions) {
     }));
 
     for (let i = 0; i < records.length; i += 10) {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}`, {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ records: records.slice(i, i + 10) })
@@ -477,7 +477,7 @@ async function enregistrerRecetteManuelle(e) {
     };
 
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}`, {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify(body)
@@ -485,7 +485,7 @@ async function enregistrerRecetteManuelle(e) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
 
-        alert('Recette enregistrée. Elle apparaît en orange en attente de validation par le trésorier.');
+        // Recette enregistrée sans alerte
         e.target.reset();
         await chargerComptesPilotes();
     } catch (err) {
