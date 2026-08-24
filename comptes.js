@@ -335,7 +335,27 @@ function parserCSVComptes(text) {
             courant.nom = nomLigne.replace(/\s+/g, ' ').trim();
         } else if (l.startsWith('Date;')) {
             inTransactions = true;
-        } else if (l.startsWith('Solde au') || l.startsWith('Solde avant le')) {
+        } else if (l.startsWith('Solde avant le')) {
+            inTransactions = false;
+            const sCols = l.split(';').map(c => c.trim());
+            if (sCols.length >= 4 && courant) {
+                const sDate = convertirDateFR(sCols[1]);
+                const sType = (sCols[2] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                const sMontant = Math.abs(parseMontantCompte(sCols[3]));
+                if (sDate && sMontant > 0) {
+                    const isDebit = sType.includes('debit') || sType.includes('debiteur');
+                    courant.transactions.push({
+                        dateIso: sDate,
+                        description: 'Solde initial au ' + sDate,
+                        reference: '',
+                        prix: 0,
+                        quantite: 0,
+                        debit: isDebit ? sMontant : 0,
+                        credit: isDebit ? 0 : sMontant
+                    });
+                }
+            }
+        } else if (l.startsWith('Solde au')) {
             inTransactions = false;
         } else if (inTransactions && courant) {
             const cols = l.split(';').map(c => c.trim());
