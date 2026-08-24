@@ -312,8 +312,8 @@ function parserCSVComptes(text) {
             extraits.push(courant);
             inTransactions = false;
             let j = i + 1;
-            while (j < lignes.length && !lignes[j].includes('Compte de') && !lignes[j].startsWith('Date;')) j++;
-            const nomLigne = lignes[j] || '';
+            while (j < lignes.length && !lignes[j].startsWith('Date;')) j++;
+            const nomLigne = (j > i + 1 && lignes[j - 1]) ? lignes[j - 1] : '';
             const nomParts = nomLigne.split(';').map(c => c.trim()).filter(Boolean);
             courant.nom = nomParts.pop() || '';
         } else if (l.startsWith('Date;')) {
