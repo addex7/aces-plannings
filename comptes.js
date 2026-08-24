@@ -142,7 +142,16 @@ async function fetchComptes(piloteNom) {
     const res = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Impossible de lire les comptes.');
-    return data.records || [];
+    const records = data.records || [];
+    records.sort((a, b) => {
+        const dateA = new Date(a.fields?.['Date'] || '1970-01-01');
+        const dateB = new Date(b.fields?.['Date'] || '1970-01-01');
+        if (dateB - dateA !== 0) return dateB - dateA;
+        const createdA = new Date(a.createdTime || 0);
+        const createdB = new Date(b.createdTime || 0);
+        return createdB - createdA;
+    });
+    return records;
 }
 
 function parseMontantCompte(s) {
