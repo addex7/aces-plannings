@@ -350,15 +350,13 @@ async function importerCSVComptes() {
 
             await supprimerImportCSV(piloteNom);
 
-            const matched = new Set();
             for (const t of ex.transactions) {
                 if (t.credit > 0) {
-                    const validee = await validerRecetteManuelle(piloteNom, t.credit);
-                    if (validee) matched.add(t);
+                    await validerRecetteManuelle(piloteNom, t.credit, t.dateIso);
                 }
             }
 
-            await creerImportCSV(piloteNom, ex.transactions.filter(t => !matched.has(t)));
+            await creerImportCSV(piloteNom, ex.transactions);
         }
 
         // Import terminé sans alerte
@@ -471,8 +469,8 @@ async function supprimerImportCSV(piloteNom) {
     }
 }
 
-async function validerRecetteManuelle(piloteNom, montant) {
-    const formula = `AND({Pilote}='${piloteNom.replace(/'/g, "\\'")}', {Source}='Saisie pilote', {Statut}='En attente', {Crédit}=${montant})`;
+async function validerRecetteManuelle(piloteNom, montant, dateIso) {
+    const formula = `AND({Pilote}='${piloteNom.replace(/'/g, "\\'")}', {Source}='Saisie pilote', {Crédit}=${montant}, DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${dateIso}')`;
     const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`;
     const res = await fetch(url, { headers });
     const data = await res.json();
@@ -480,15 +478,9 @@ async function validerRecetteManuelle(piloteNom, montant) {
 
     const record = (data.records || [])[0];
     if (record) {
-        const patch = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}/${record.id}`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ fields: { 'Statut': 'Validé' } })
-        });
-        const patchData = await patch.json();
-        if (!patch.ok) throw new Error(patchData.error?.message || 'Erreur validation recette.');
+        await supprimerRecetteManuelle(record.id);
     }
-    return !!record;
+    return false;
 }
 
 async function creerImportCSV(piloteNom, transactions) {
