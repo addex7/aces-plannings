@@ -281,6 +281,9 @@ async function importerCSVComptes() {
         reader.onerror = reject;
         reader.readAsArrayBuffer(file);
     });
+
+    const loading = document.getElementById('comptes-loading');
+    if (loading) loading.style.display = 'flex';
     try {
         const extraits = parserCSVComptes(text);
         if (!extraits.length) { alert('Aucun extrait de compte trouvé dans ce fichier.'); return; }
@@ -316,6 +319,8 @@ async function importerCSVComptes() {
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'import CSV : ' + err.message);
+    } finally {
+        if (loading) loading.style.display = 'none';
     }
 }
 
