@@ -312,10 +312,10 @@ function parserCSVComptes(text) {
             extraits.push(courant);
             inTransactions = false;
             let j = i + 1;
-            while (j < lignes.length && !lignes[j].startsWith('Compte de') && !lignes[j].startsWith('Date;')) j++;
+            while (j < lignes.length && !lignes[j].includes('Compte de') && !lignes[j].startsWith('Date;')) j++;
             const nomLigne = lignes[j] || '';
-            const parts = nomLigne.split(';;');
-            courant.nom = (parts[parts.length - 1] || '').trim();
+            const nomParts = nomLigne.split(';').map(c => c.trim()).filter(Boolean);
+            courant.nom = nomParts.pop() || '';
         } else if (l.startsWith('Date;')) {
             inTransactions = true;
         } else if (l.startsWith('Solde au') || l.startsWith('Solde avant le')) {
