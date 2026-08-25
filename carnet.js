@@ -9,7 +9,7 @@ const TABLE_CARNET_ROUTE = 'Carnet de route Pilotes';
 let listeVolsCarnetCache = [];
 let idCarnetEnEdition = null;
 let machineCarnetSelectionnee = 'F-GASB';
-const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV'];
+const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CEQJ', 'F-CDVN', 'F-CFRK', 'F-CHDT', 'F-CEQZ', 'F-CESL'];
 
 function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee) {
     // Priorité aux horamètres si les deux sont renseignés
