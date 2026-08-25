@@ -1635,6 +1635,13 @@ function initGestionnaireModale() {
                     body: JSON.stringify({ records: [recordData] })
                 });
                 if (response.ok) {
+                    const resData = await response.json();
+                    const resaId = resData.records?.[0]?.id || idReservationEnEdition || '';
+                    const action = idReservationEnEdition ? 'Modification de réservation' : 'Création de réservation';
+                    if (typeof enregistrerAudit === 'function') {
+                        console.log('Tentative log audit réservation', { piloteNom, machineId, resaId, action });
+                        await enregistrerAudit(action, machineId, `Pilote : ${piloteNom} | Type : ${typesVol} | ${dateDebut} - ${dateFin} | ${resaId}`, 'Planning');
+                    }
                     modal.style.display = 'none';
                     formReservation.reset();
                     idReservationEnEdition = null;
