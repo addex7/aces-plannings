@@ -623,6 +623,42 @@
                     <div id="comptes-list" class="comptes-list-card"></div>
                 </div>
             </section>
+
+            <!-- ================= VUE JOURNAL D'AUDIT ================= -->
+            <section id="view-audit" class="view-section" style="display: none;">
+                <header class="header">
+                    <h2>Journal d'audit</h2>
+                    <div class="header-actions">
+                        <input type="text" id="audit-search" class="form-control" placeholder="Rechercher..." style="width:220px;">
+                        <select id="audit-module-filtre" class="form-control" style="width:160px;">
+                            <option value="">Tous les modules</option>
+                            <option value="Membres">Membres</option>
+                            <option value="Rôles">Rôles</option>
+                            <option value="Événements">Événements</option>
+                            <option value="Planning">Planning</option>
+                            <option value="Carnet">Carnet</option>
+                            <option value="Aéronefs">Aéronefs</option>
+                        </select>
+                        <button id="audit-reload" class="btn-primary" type="button">⟳ Rafraîchir</button>
+                    </div>
+                </header>
+                <div class="carnet-table-container">
+                    <table class="carnet-table audit-table" id="audit-table">
+                        <thead>
+                            <tr>
+                                <th>Date / Heure</th>
+                                <th>Utilisateur</th>
+                                <th>Action</th>
+                                <th>Cible</th>
+                                <th>Détails</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-body">
+                            <tr><td colspan="5" class="carnet-empty">Sélectionnez l'onglet pour charger le journal.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -889,42 +925,6 @@
             </form>
         </div>
     </div>
-
-            <!-- ================= VUE JOURNAL D'AUDIT ================= -->
-            <section id="view-audit" class="view-section" style="display: none;">
-                <header class="header">
-                    <h2>Journal d'audit</h2>
-                    <div class="header-actions">
-                        <input type="text" id="audit-search" class="form-control" placeholder="Rechercher..." style="width:220px;">
-                        <select id="audit-module-filtre" class="form-control" style="width:160px;">
-                            <option value="">Tous les modules</option>
-                            <option value="Membres">Membres</option>
-                            <option value="Rôles">Rôles</option>
-                            <option value="Événements">Événements</option>
-                            <option value="Planning">Planning</option>
-                            <option value="Carnet">Carnet</option>
-                            <option value="Aéronefs">Aéronefs</option>
-                        </select>
-                        <button id="audit-reload" class="btn-primary" type="button">⟳ Rafraîchir</button>
-                    </div>
-                </header>
-                <div class="carnet-table-container">
-                    <table class="carnet-table audit-table" id="audit-table">
-                        <thead>
-                            <tr>
-                                <th>Date / Heure</th>
-                                <th>Utilisateur</th>
-                                <th>Action</th>
-                                <th>Cible</th>
-                                <th>Détails</th>
-                            </tr>
-                        </thead>
-                        <tbody id="audit-body">
-                            <tr><td colspan="5" class="carnet-empty">Sélectionnez l'onglet pour charger le journal.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
 
     <!-- Fenêtre Modale : Saisie d'un Acte de Maintenance -->
     <div id="maintenance-modal" class="modal" style="display: none;">
