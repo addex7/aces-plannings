@@ -300,6 +300,24 @@ async function mettreAJourStatutObservation(recordId, statut) {
 
 async function chargerCarnetRoute() {
     const tbody = document.getElementById('carnet-body');
+    const tableContainer = document.querySelector('.carnet-table-container');
+    const planeurContainer = document.getElementById('carnet-planeur-container');
+    const btnOuvrir = document.getElementById('btn-ouvrir-carnet');
+    const alarme = document.getElementById('carnet-observation-alarme');
+
+    if (machineCarnetSelectionnee === 'PLANEUR') {
+        if (tableContainer) tableContainer.style.display = 'none';
+        if (planeurContainer) planeurContainer.style.display = 'block';
+        if (btnOuvrir) btnOuvrir.style.display = 'none';
+        if (alarme) alarme.style.display = 'none';
+        if (tbody) tbody.innerHTML = '';
+        return;
+    }
+
+    if (tableContainer) tableContainer.style.display = 'block';
+    if (planeurContainer) planeurContainer.style.display = 'none';
+    if (btnOuvrir) btnOuvrir.style.display = 'inline-block';
+    if (alarme) alarme.style.display = 'none';
     if (tbody) tbody.innerHTML = '<tr><td colspan="15" class="carnet-empty">Chargement du carnet de route...</td></tr>';
     try {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc`;

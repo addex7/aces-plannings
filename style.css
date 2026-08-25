@@ -2140,3 +2140,34 @@ body {
     pointer-events: none;
     box-sizing: border-box;
 }
+
+/* --- PAGE PLANEUR --- */
+.carnet-planeur-container {
+    padding: 20px;
+}
+.planeur-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+}
+.planeur-box {
+    background: #f8fafc;
+    border: 2px solid #1e3d59;
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    color: #1e3d59;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.planeur-box:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    background: #ffffff;
+}
+.planeur-box h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
