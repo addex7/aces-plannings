@@ -302,7 +302,10 @@ async function sauvegarderReservation() {
             const recordId = (newReservation.records && newReservation.records[0] && newReservation.records[0].id) || '';
             await mettreAJourHorametreAeronef(avionId, dureeHeures);
             await ajouterAuCarnetDeRoute(avionId, piloteId, dureeHeures);
-            if (typeof enregistrerAudit === 'function') enregistrerAudit('Création de réservation', avionId, `Pilote : ${piloteNom} | ${heureDebut.toLocaleString('fr-FR')} - ${heureFin.toLocaleString('fr-FR')} | ${recordId}`, 'Planning');
+            if (typeof enregistrerAudit === 'function') {
+                console.log('Tentative log audit réservation', { piloteNom, avionId, recordId });
+                await enregistrerAudit('Création de réservation', avionId, `Pilote : ${piloteNom} | ${heureDebut.toLocaleString('fr-FR')} - ${heureFin.toLocaleString('fr-FR')} | ${recordId}`, 'Planning');
+            }
         }
 
         // Rafraîchir les données

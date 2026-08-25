@@ -39,13 +39,21 @@ async function enregistrerAudit(action, cible = '', details = '', module = '') {
         }]
     };
     try {
-        await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_AUDIT)}`, {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_AUDIT)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify(body)
         });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            console.error('Échec enregistrement audit:', res.status, data.error?.message || data);
+            return false;
+        }
+        console.log('Audit enregistré:', { action, cible, module, id: data.records?.[0]?.id });
+        return true;
     } catch (err) {
         console.error('Erreur enregistrement audit:', err);
+        return false;
     }
 }
 
