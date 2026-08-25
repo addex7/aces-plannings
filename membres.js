@@ -36,9 +36,12 @@ function updateUIRoles() {
     const profile = document.getElementById('user-profile-name');
     const logoutBtn = document.getElementById('btn-logout');
     const tabMembres = document.getElementById('tab-membres');
+    const tabAudit = document.getElementById('tab-audit');
+    const superAdmin = isSuperAdmin();
     if (profile) profile.textContent = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : 'Pilote Connecté';
     if (logoutBtn) logoutBtn.style.display = currentUser ? 'inline-block' : 'none';
     if (tabMembres) tabMembres.style.display = currentUser ? 'block' : 'none';
+    if (tabAudit) tabAudit.style.display = superAdmin ? 'block' : 'none';
 }
 
 function genererToken() {
@@ -251,6 +254,7 @@ async function validerSetup() {
             roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean)
         };
         setCurrentUser(currentUser);
+        if (typeof enregistrerAudit === 'function') enregistrerAudit('Activation de compte', `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), `Mode : ${mode}`, 'Membres');
         const url = new URL(window.location.href);
         url.searchParams.delete('token');
         url.searchParams.delete('reset');
@@ -353,6 +357,7 @@ async function mettreAJourRolesMembre(recordId, checkboxes) {
             body: JSON.stringify({ fields: { 'Rôles': roles } })
         });
         if (!res.ok) throw new Error(await res.text());
+        if (typeof enregistrerAudit === 'function') enregistrerAudit('Modification des rôles', recordId, `Rôles : ${(roles || []).join(', ')}`, 'Rôles');
     } catch (err) {
         console.error('Erreur mise à jour des rôles :', err);
         alert('Erreur lors de la mise à jour des rôles.');
@@ -396,6 +401,7 @@ async function ajouterUtilisateur(event) {
         const record = await res.json();
         afficherInvitation(record, mail);
         await chargerUtilisateurs();
+        if (typeof enregistrerAudit === 'function') enregistrerAudit('Création de membre', `${prenom} ${nom}`, `Rôles : ${(roles || []).join(', ')}`, 'Membres');
         event.target.reset();
     } catch (err) {
         console.error(err);
@@ -498,6 +504,7 @@ async function sauvegarderMembre(event) {
         if (!res.ok) throw new Error(await res.text());
         fermerModaleMembre();
         await chargerUtilisateurs();
+        if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', `${prenom} ${nom}`, `Rôles : ${(roles || []).join(', ')}`, 'Membres');
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la sauvegarde.');
@@ -507,11 +514,14 @@ async function sauvegarderMembre(event) {
 async function supprimerMembre() {
     if (!idMembreEnEdition) return;
     if (!confirm('Confirmer la suppression de ce membre ?')) return;
+    const prenom = document.getElementById('edit-membre-prenom')?.value?.trim() || '';
+    const nom = document.getElementById('edit-membre-nom')?.value?.trim() || '';
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, { method: 'DELETE', headers });
         if (!res.ok) throw new Error(await res.text());
         fermerModaleMembre();
         await chargerUtilisateurs();
+        if (typeof enregistrerAudit === 'function') enregistrerAudit('Suppression de membre', `${prenom} ${nom}`.trim(), '', 'Membres');
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la suppression.');

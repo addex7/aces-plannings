@@ -2189,3 +2189,48 @@ body {
     font-size: 18px;
     font-weight: 600;
 }
+
+/* --- JOURNAL D'AUDIT --- */
+.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 14px;
+}
+.audit-table thead {
+    background: #1e3d59;
+    color: #fff;
+}
+.audit-table th,
+.audit-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+.audit-table tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+.audit-table tbody tr:hover {
+    background: #eef6ff;
+}
+.audit-date {
+    white-space: nowrap;
+    color: #475569;
+    font-size: 13px;
+}
+.audit-user {
+    font-weight: 600;
+    color: #1e3d59;
+}
+.audit-action {
+    color: #0f172a;
+}
+.audit-target {
+    color: #334155;
+}
+.audit-detail {
+    color: #64748b;
+    font-size: 13px;
+}

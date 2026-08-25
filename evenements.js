@@ -110,6 +110,7 @@ async function enregistrerEvenement(e) {
         fermerModaleEvenement();
         chargerProchainsEvenements();
         chargerEvenementsJour();
+        if (typeof enregistrerAudit === 'function') enregistrerAudit('Création d\'événement', titre, `Du ${dateDebut} ${heureDebut} au ${dateFin} ${heureFin}`, 'Événements');
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la création de l\'événement.');
