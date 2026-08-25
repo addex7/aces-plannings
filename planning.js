@@ -1132,11 +1132,22 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
             body: JSON.stringify({ records: [{ id: reservationId, fields: { "Date de début": dateDebut.toISOString(), "Date de fin": dateFin.toISOString() } }] })
         });
         if (response.ok) {
+            const resData = await response.json();
+            const resaId = resData.records?.[0]?.id || reservationId || '';
+            const resa = (listeReservationsCache || []).find(r => r.id === reservationId);
+            const pilote = Array.isArray(resa?.fields?.['Pilote']) ? resa.fields['Pilote'][0] : (resa?.fields?.['Pilote'] || '');
+            const machine = Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || tableName);
+            if (typeof enregistrerAudit === 'function') {
+                await enregistrerAudit('Modification de réservation (durée)', machine, `Pilote : ${pilote} | ${dateDebut.toISOString()} - ${dateFin.toISOString()} | ${resaId}`, 'Planning');
+            }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
             if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                 chargerSuiviAeronef();
             }
+        } else {
+            const data = await response.json().catch(() => ({}));
+            console.error('Échec modification durée:', response.status, data.error?.message || data);
         }
     } catch (error) {
         console.error(error);
@@ -1158,11 +1169,22 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
             body: JSON.stringify({ records: [{ id: volId, fields: { "Date de début": nouvelleDateDebut.toISOString(), "Date de fin": nouvelleDateFin.toISOString() } }] })
         });
         if (response.ok) {
+            const resData = await response.json();
+            const resaId = resData.records?.[0]?.id || volId || '';
+            const resa = (listeReservationsCache || []).find(r => r.id === volId);
+            const pilote = Array.isArray(resa?.fields?.['Pilote']) ? resa.fields['Pilote'][0] : (resa?.fields?.['Pilote'] || '');
+            const machine = Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || avionId);
+            if (typeof enregistrerAudit === 'function') {
+                await enregistrerAudit('Modification de réservation (déplacement)', machine, `Pilote : ${pilote} | ${nouvelleDateDebut.toISOString()} - ${nouvelleDateFin.toISOString()} | ${resaId}`, 'Planning');
+            }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
             if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                 chargerSuiviAeronef();
             }
+        } else {
+            const data = await response.json().catch(() => ({}));
+            console.error('Échec déplacement réservation:', response.status, data.error?.message || data);
         }
     } catch (error) {
         console.error(error);
@@ -1653,6 +1675,9 @@ function initGestionnaireModale() {
                     if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                         chargerSuiviAeronef();
                     }
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    console.error('Échec sauvegarde réservation:', response.status, data.error?.message || data);
                 }
             } catch (error) {
                 console.error(error);
