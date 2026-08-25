@@ -299,8 +299,10 @@ async function sauvegarderReservation() {
             }
 
             const newReservation = await reservationResponse.json();
+            const recordId = (newReservation.records && newReservation.records[0] && newReservation.records[0].id) || '';
             await mettreAJourHorametreAeronef(avionId, dureeHeures);
             await ajouterAuCarnetDeRoute(avionId, piloteId, dureeHeures);
+            if (typeof enregistrerAudit === 'function') enregistrerAudit('Création de réservation', avionId, `Pilote : ${piloteNom} | ${heureDebut.toLocaleString('fr-FR')} - ${heureFin.toLocaleString('fr-FR')} | ${recordId}`, 'Planning');
         }
 
         // Rafraîchir les données

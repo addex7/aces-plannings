@@ -53,13 +53,15 @@ async function chargerAudit(force = false) {
     const tbody = document.getElementById('audit-body');
     if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Chargement...</td></tr>';
     try {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_AUDIT)}?sort[0][field]=${FIELDS_AUDIT.DATE}&sort[0][direction]=desc&pageSize=200`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_AUDIT)}?sort[0][field]=${FIELDS_AUDIT.DATE}&sort[0][direction]=desc&pageSize=100`;
         const res = await cachedFetch(url, { headers }, 30000, force);
         const data = await res.json();
         if (!res.ok) {
             const message = data.error?.message || 'Erreur inconnue';
             if (res.status === 403 || res.status === 404) {
                 if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">La table "Audit" n\'existe pas ou n\'est pas accessible. Vérifie son nom et les permissions du token Airtable.</td></tr>';
+            } else if (res.status === 422) {
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Paramètres de chargement invalides. Vérifie la configuration du journal.</td></tr>';
             } else {
                 throw new Error(message);
             }
@@ -69,7 +71,7 @@ async function chargerAudit(force = false) {
         filtrerAudit();
     } catch (err) {
         console.error(err);
-        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Erreur de chargement du journal.</td></tr>';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="carnet-empty">Erreur de chargement du journal : ${escHtml(err.message || 'inconnue')}</td></tr>`;
     }
 }
 
