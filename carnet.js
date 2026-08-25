@@ -10,6 +10,8 @@ let listeVolsCarnetCache = [];
 let idCarnetEnEdition = null;
 let machineCarnetSelectionnee = 'F-GASB';
 const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CEQJ', 'F-CDVN', 'F-CFRK', 'F-CHDT', 'F-CEQZ', 'F-CESL'];
+const REMOQUES_PLANEURS = IMMATS_PLANEURS.map(i => `Remorque ${i}`);
+const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS];
 
 function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee) {
     // Priorité aux horamètres si les deux sont renseignés
@@ -256,7 +258,7 @@ function afficherAlarmeObservation(records) {
         const m = f['Machine'];
         const matchMachine = !machineCarnetSelectionnee
             || (machineCarnetSelectionnee === 'PLANEUR'
-                ? IMMATS_PLANEURS.includes(m)
+                ? MACHINES_PLANEUR_REMOQUE.includes(m)
                 : m === machineCarnetSelectionnee);
         return (f['Observations'] || '').trim() !== '' && matchMachine;
     }).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
@@ -633,6 +635,36 @@ async function nettoyerCarnetRouteMaintenance(machineImmat) {
     } catch (e) { console.error(e); }
 }
 
+function genererGrillesPlaneur() {
+    const container = document.getElementById('carnet-planeur-container');
+    if (!container) return;
+    const createGrid = (items) => {
+        const grid = document.createElement('div');
+        grid.className = 'planeur-grid';
+        items.forEach(immat => {
+            const box = document.createElement('div');
+            box.className = 'planeur-box';
+            box.dataset.immat = immat;
+            box.innerHTML = `<h3>${immat}</h3>`;
+            box.addEventListener('click', () => ouvrirModaleCarnet(null, immat));
+            grid.appendChild(box);
+        });
+        return grid;
+    };
+    container.innerHTML = '';
+    const titrePlaneurs = document.createElement('h3');
+    titrePlaneurs.className = 'planeur-section-title';
+    titrePlaneurs.textContent = 'Planeurs';
+    container.appendChild(titrePlaneurs);
+    container.appendChild(createGrid(IMMATS_PLANEURS));
+    const titreRemorques = document.createElement('h3');
+    titreRemorques.className = 'planeur-section-title';
+    titreRemorques.textContent = 'Remorques';
+    titreRemorques.style.marginTop = '20px';
+    container.appendChild(titreRemorques);
+    container.appendChild(createGrid(REMOQUES_PLANEURS));
+}
+
 function initCarnetRoute() {
     const btnOuvrir = document.getElementById('btn-ouvrir-carnet');
     const btnFermer = document.querySelector('.close-modal-carnet');
@@ -640,6 +672,8 @@ function initCarnetRoute() {
     const modal = document.getElementById('carnet-modal');
     const form = document.getElementById('carnet-form');
     const selectFiltre = document.getElementById('carnet-machine-filtre');
+
+    genererGrillesPlaneur();
 
     if (btnOuvrir) btnOuvrir.addEventListener('click', () => ouvrirModaleCarnet());
     if (btnFermer) btnFermer.addEventListener('click', fermerModaleCarnet);
@@ -656,10 +690,6 @@ function initCarnetRoute() {
             chargerCarnetRoute();
         });
     }
-    document.querySelectorAll('.planeur-box').forEach(box => {
-        box.addEventListener('click', () => ouvrirModaleCarnet(null, box.dataset.immat));
-    });
-
     const champsCalculHora = ['carnet-machine', 'carnet-horametre-depart', 'carnet-heure-depart', 'carnet-heure-arrivee'];
     champsCalculHora.forEach(id => {
         const el = document.getElementById(id);
