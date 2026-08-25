@@ -1137,8 +1137,10 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
             const resa = (listeReservationsCache || []).find(r => r.id === reservationId);
             const pilote = Array.isArray(resa?.fields?.['Pilote']) ? resa.fields['Pilote'][0] : (resa?.fields?.['Pilote'] || '');
             const machine = Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || tableName);
+            const avion = (listeAvionsCache || []).find(a => a.id === machine);
+            const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machine;
             if (typeof enregistrerAudit === 'function') {
-                await enregistrerAudit('Modification de réservation (durée)', machine, `Pilote : ${pilote} | ${dateDebut.toISOString()} - ${dateFin.toISOString()} | ${resaId}`, 'Planning');
+                await enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | ${dateDebut.toISOString()} - ${dateFin.toISOString()} | ${resaId}`, 'Planning');
             }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
@@ -1174,8 +1176,10 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
             const resa = (listeReservationsCache || []).find(r => r.id === volId);
             const pilote = Array.isArray(resa?.fields?.['Pilote']) ? resa.fields['Pilote'][0] : (resa?.fields?.['Pilote'] || '');
             const machine = Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || avionId);
+            const avion = (listeAvionsCache || []).find(a => a.id === machine);
+            const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machine;
             if (typeof enregistrerAudit === 'function') {
-                await enregistrerAudit('Modification de réservation (déplacement)', machine, `Pilote : ${pilote} | ${nouvelleDateDebut.toISOString()} - ${nouvelleDateFin.toISOString()} | ${resaId}`, 'Planning');
+                await enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | ${nouvelleDateDebut.toISOString()} - ${nouvelleDateFin.toISOString()} | ${resaId}`, 'Planning');
             }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
@@ -1660,9 +1664,11 @@ function initGestionnaireModale() {
                     const resData = await response.json();
                     const resaId = resData.records?.[0]?.id || idReservationEnEdition || '';
                     const action = idReservationEnEdition ? 'Modification de réservation' : 'Création de réservation';
+                    const avion = (listeAvionsCache || []).find(a => a.id === machineId);
+                    const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machineId;
                     if (typeof enregistrerAudit === 'function') {
-                        console.log('Tentative log audit réservation', { piloteNom, machineId, resaId, action });
-                        await enregistrerAudit(action, machineId, `Pilote : ${piloteNom} | Type : ${typesVol} | ${dateDebut} - ${dateFin} | ${resaId}`, 'Planning');
+                        console.log('Tentative log audit réservation', { piloteNom, machineNom, resaId, action });
+                        await enregistrerAudit(action, machineNom, `Pilote : ${piloteNom} | Type : ${typesVol} | ${dateDebut} - ${dateFin} | ${resaId}`, 'Planning');
                     }
                     modal.style.display = 'none';
                     formReservation.reset();
