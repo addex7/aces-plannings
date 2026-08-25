@@ -1714,6 +1714,14 @@ function initGestionnaireModale() {
                     headers: headers
                 });
                 if (response.ok) {
+                    const resaPilote = Array.isArray(resa?.fields?.['Pilote']) ? resa.fields['Pilote'][0] : (resa?.fields?.['Pilote'] || '');
+                    const resaDebut = resa?.fields?.['Date de début'] || '';
+                    const resaFin = resa?.fields?.['Date de fin'] || '';
+                    const avion = (listeAvionsCache || []).find(a => a.id === resaMachine);
+                    const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || resaMachine;
+                    if (typeof enregistrerAudit === 'function') {
+                        await enregistrerAudit('Suppression de réservation', machineNom, `Pilote : ${resaPilote} | ${resaDebut.slice(0,16).replace('T',' ')} - ${resaFin.slice(0,16).replace('T',' ')}`, 'Planning');
+                    }
                     modal.style.display = 'none';
                     formReservation.reset();
                     idReservationEnEdition = null;
@@ -1726,6 +1734,9 @@ function initGestionnaireModale() {
                     if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                         chargerSuiviAeronef();
                     }
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    console.error('Échec suppression réservation:', response.status, data.error?.message || data);
                 }
             } catch (error) {
                 console.error(error);
