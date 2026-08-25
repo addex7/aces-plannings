@@ -82,6 +82,9 @@ async function sinscrireClub(lieu) {
             alert(`Erreur lors de l'inscription : ${msg}`);
             return;
         }
+        if (typeof enregistrerAudit === 'function') {
+            await enregistrerAudit('Inscription Club', lieu, `Pilote : ${nomPilote} | Date : ${dateStr}`, 'Présences');
+        }
         await chargerPresencesClub();
     } catch (error) {
         console.error(error);
@@ -92,8 +95,18 @@ async function sinscrireClub(lieu) {
 async function desinscrireClub(recordId) {
     if (!confirm("Voulez-vous supprimer cette inscription ?")) return;
     try {
+        const recRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}/${recordId}`, { headers });
+        const rec = recRes.ok ? await recRes.json() : null;
         const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
-        if (response.ok) await chargerPresencesClub();
+        if (response.ok) {
+            if (typeof enregistrerAudit === 'function' && rec) {
+                const pilote = rec.fields?.['Nom du pilote'] || '';
+                const lieu = rec.fields?.['Lieu'] || '';
+                const date = rec.fields?.['Date'] || '';
+                await enregistrerAudit('Désinscription Club', lieu, `Pilote : ${pilote} | Date : ${date}`, 'Présences');
+            }
+            await chargerPresencesClub();
+        }
     } catch (error) {
         console.error(error);
     }
@@ -151,6 +164,9 @@ async function sinscrirePlaneur(role) {
             alert(`Erreur lors de l'inscription : ${msg}`);
             return;
         }
+        if (typeof enregistrerAudit === 'function') {
+            await enregistrerAudit('Inscription Planeur', role, `Pilote : ${nomPilote} | Date : ${dateStr}`, 'Présences');
+        }
         await chargerPresencesPlaneur();
     } catch (error) {
         console.error(error);
@@ -161,8 +177,18 @@ async function sinscrirePlaneur(role) {
 async function desinscrirePlaneur(recordId) {
     if (!confirm("Voulez-vous supprimer cette inscription ?")) return;
     try {
+        const recRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}/${recordId}`, { headers });
+        const rec = recRes.ok ? await recRes.json() : null;
         const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
-        if (response.ok) await chargerPresencesPlaneur();
+        if (response.ok) {
+            if (typeof enregistrerAudit === 'function' && rec) {
+                const pilote = rec.fields?.['Nom du pilote'] || '';
+                const role = rec.fields?.['Rôle'] || '';
+                const date = rec.fields?.['Date'] || '';
+                await enregistrerAudit('Désinscription Planeur', role, `Pilote : ${pilote} | Date : ${date}`, 'Présences');
+            }
+            await chargerPresencesPlaneur();
+        }
     } catch (error) {
         console.error(error);
     }
