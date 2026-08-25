@@ -1142,7 +1142,7 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
             const ancienDebut = resa?.fields?.['Date de début'] || '';
             const ancienFin = resa?.fields?.['Date de fin'] || '';
             if (typeof enregistrerAudit === 'function') {
-                await enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut} | Fin initiale : ${ancienFin} | Nouveau : ${dateDebut.toISOString()} - ${dateFin.toISOString()} | ${resaId}`, 'Planning');
+                await enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut} | Fin initiale : ${ancienFin} | Nouveau : ${dateDebut.toISOString()} - ${dateFin.toISOString()}`, 'Planning');
             }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
@@ -1183,7 +1183,7 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
             const ancienDebut = resa?.fields?.['Date de début'] || '';
             const ancienFin = resa?.fields?.['Date de fin'] || '';
             if (typeof enregistrerAudit === 'function') {
-                await enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut} | Fin initiale : ${ancienFin} | Nouveau : ${nouvelleDateDebut.toISOString()} - ${nouvelleDateFin.toISOString()} | ${resaId}`, 'Planning');
+                await enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut} | Fin initiale : ${ancienFin} | Nouveau : ${nouvelleDateDebut.toISOString()} - ${nouvelleDateFin.toISOString()}`, 'Planning');
             }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
@@ -1674,8 +1674,8 @@ function initGestionnaireModale() {
                     const ancienDebut = resaOriginale?.fields?.['Date de début'] || '';
                     const ancienFin = resaOriginale?.fields?.['Date de fin'] || '';
                     const details = idReservationEnEdition
-                        ? `Pilote : ${piloteNom} | Type : ${typesVol} | Ancien : ${ancienDebut} - ${ancienFin} → Nouveau : ${dateDebut} - ${dateFin} | ${resaId}`
-                        : `Pilote : ${piloteNom} | Type : ${typesVol} | ${dateDebut} - ${dateFin} | ${resaId}`;
+                        ? `Pilote : ${piloteNom} | Type : ${typesVol} | Ancien : ${ancienDebut} - ${ancienFin} → Nouveau : ${dateDebut} - ${dateFin}`
+                        : `Pilote : ${piloteNom} | Type : ${typesVol} | ${dateDebut} - ${dateFin}`;
                     if (typeof enregistrerAudit === 'function') {
                         console.log('Tentative log audit réservation', { piloteNom, machineNom, resaId, action });
                         await enregistrerAudit(action, machineNom, details, 'Planning');
