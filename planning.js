@@ -1139,8 +1139,10 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
             const machine = Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || tableName);
             const avion = (listeAvionsCache || []).find(a => a.id === machine);
             const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machine;
+            const ancienDebut = resa?.fields?.['Date de début'] || '';
+            const ancienFin = resa?.fields?.['Date de fin'] || '';
             if (typeof enregistrerAudit === 'function') {
-                await enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | ${dateDebut.toISOString()} - ${dateFin.toISOString()} | ${resaId}`, 'Planning');
+                await enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut} | Fin initiale : ${ancienFin} | Nouveau : ${dateDebut.toISOString()} - ${dateFin.toISOString()} | ${resaId}`, 'Planning');
             }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
@@ -1178,8 +1180,10 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
             const machine = Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || avionId);
             const avion = (listeAvionsCache || []).find(a => a.id === machine);
             const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machine;
+            const ancienDebut = resa?.fields?.['Date de début'] || '';
+            const ancienFin = resa?.fields?.['Date de fin'] || '';
             if (typeof enregistrerAudit === 'function') {
-                await enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | ${nouvelleDateDebut.toISOString()} - ${nouvelleDateFin.toISOString()} | ${resaId}`, 'Planning');
+                await enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut} | Fin initiale : ${ancienFin} | Nouveau : ${nouvelleDateDebut.toISOString()} - ${nouvelleDateFin.toISOString()} | ${resaId}`, 'Planning');
             }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
@@ -1666,9 +1670,15 @@ function initGestionnaireModale() {
                     const action = idReservationEnEdition ? 'Modification de réservation' : 'Création de réservation';
                     const avion = (listeAvionsCache || []).find(a => a.id === machineId);
                     const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machineId;
+                    const resaOriginale = idReservationEnEdition ? (listeReservationsCache || []).find(r => r.id === idReservationEnEdition) : null;
+                    const ancienDebut = resaOriginale?.fields?.['Date de début'] || '';
+                    const ancienFin = resaOriginale?.fields?.['Date de fin'] || '';
+                    const details = idReservationEnEdition
+                        ? `Pilote : ${piloteNom} | Type : ${typesVol} | Ancien : ${ancienDebut} - ${ancienFin} → Nouveau : ${dateDebut} - ${dateFin} | ${resaId}`
+                        : `Pilote : ${piloteNom} | Type : ${typesVol} | ${dateDebut} - ${dateFin} | ${resaId}`;
                     if (typeof enregistrerAudit === 'function') {
                         console.log('Tentative log audit réservation', { piloteNom, machineNom, resaId, action });
-                        await enregistrerAudit(action, machineNom, `Pilote : ${piloteNom} | Type : ${typesVol} | ${dateDebut} - ${dateFin} | ${resaId}`, 'Planning');
+                        await enregistrerAudit(action, machineNom, details, 'Planning');
                     }
                     modal.style.display = 'none';
                     formReservation.reset();
