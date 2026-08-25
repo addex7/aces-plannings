@@ -9,6 +9,7 @@ const TABLE_CARNET_ROUTE = 'Carnet de route Pilotes';
 let listeVolsCarnetCache = [];
 let idCarnetEnEdition = null;
 let machineCarnetSelectionnee = 'F-GASB';
+const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV'];
 
 function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee) {
     // Priorité aux horamètres si les deux sont renseignés
@@ -34,7 +35,7 @@ function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heur
     return `${String(hrs).padStart(2, '0')}h${String(mins).padStart(2, '0')}`;
 }
 
-function ouvrirModaleCarnet(recordId = null) {
+function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const modal = document.getElementById('carnet-modal');
     const form = document.getElementById('carnet-form');
     const titre = modal ? modal.querySelector('h3') : null;
@@ -47,12 +48,26 @@ function ouvrirModaleCarnet(recordId = null) {
     const selectFiltre = document.getElementById('carnet-machine-filtre');
     const departInput = document.getElementById('carnet-depart');
     const arriveeInput = document.getElementById('carnet-arrivee');
-    if (titre) titre.textContent = recordId ? 'Modifier un vol' : 'Saisir un vol';
+    const heureDepart = document.getElementById('carnet-heure-depart');
+    const heureArrivee = document.getElementById('carnet-heure-arrivee');
+    const decollages = document.getElementById('carnet-decollages');
+    const atterrissages = document.getElementById('carnet-atterrissages');
+    const piloteInput = document.getElementById('carnet-pilote');
+    if (titre) titre.textContent = recordId ? 'Modifier un vol' : (machineImmat ? 'Nouvelle observation' : 'Saisir un vol');
     if (btnDelete) btnDelete.style.display = recordId ? 'inline-block' : 'none';
     if (dateInput) dateInput.value = new Date().toLocaleDateString('en-CA');
     if (departInput) departInput.value = 'LFOY';
     if (arriveeInput) arriveeInput.value = 'LFOY';
-    if (selectMachine && selectFiltre) selectMachine.value = selectFiltre.value;
+    if (machineImmat) {
+        if (heureDepart) heureDepart.value = '00:00';
+        if (heureArrivee) heureArrivee.value = '00:00';
+        if (decollages) decollages.value = '0';
+        if (atterrissages) atterrissages.value = '0';
+        if (piloteInput && typeof nomPiloteCourant === 'function') piloteInput.value = nomPiloteCourant();
+        if (selectMachine && selectMachine.querySelector(`option[value="${machineImmat}"]`)) selectMachine.value = machineImmat;
+    } else if (selectMachine && selectFiltre && selectMachine.querySelector(`option[value="${selectFiltre.value}"]`)) {
+        selectMachine.value = selectFiltre.value;
+    }
     document.getElementById('carnet-id').value = recordId || '';
     if (recordId) {
         const record = listeVolsCarnetCache.find(r => r.id === recordId);
@@ -232,7 +247,12 @@ function afficherAlarmeObservation(records) {
     }
     const avecObs = records.filter(r => {
         const f = r.fields || {};
-        return (f['Observations'] || '').trim() !== '' && (!machineCarnetSelectionnee || f['Machine'] === machineCarnetSelectionnee);
+        const m = f['Machine'];
+        const matchMachine = !machineCarnetSelectionnee
+            || (machineCarnetSelectionnee === 'PLANEUR'
+                ? IMMATS_PLANEURS.includes(m)
+                : m === machineCarnetSelectionnee);
+        return (f['Observations'] || '').trim() !== '' && matchMachine;
     }).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
     if (avecObs.length === 0) {
         alarme.style.display = 'none';
@@ -265,7 +285,7 @@ function afficherAlarmeObservation(records) {
         html += `
             <div data-record-id="${obs.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(180, 83, 9, 0.2);">
                 <div>
-                    <strong>🛠️ ${dateStr}</strong> — ${(f['Observations'] || '').trim()}
+                    <strong>🛠️ ${f['Machine'] || ''} — ${dateStr}</strong> — ${(f['Observations'] || '').trim()}
                     <span class="obs-statut" style="font-style: italic; margin-left: 8px; color: #92400e;">(${statut})</span>
                 </div>
                 <div class="obs-btns" style="display: flex; gap: 6px; flex-shrink: 0;">${btnsHtml}</div>
@@ -309,8 +329,22 @@ async function chargerCarnetRoute() {
         if (tableContainer) tableContainer.style.display = 'none';
         if (planeurContainer) planeurContainer.style.display = 'block';
         if (btnOuvrir) btnOuvrir.style.display = 'none';
-        if (alarme) alarme.style.display = 'none';
         if (tbody) tbody.innerHTML = '';
+        try {
+            const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc`;
+            const response = await cachedFetch(url, { headers });
+            const data = await response.json();
+            if (response.ok) {
+                listeVolsCarnetCache = data.records || [];
+                afficherAlarmeObservation(listeVolsCarnetCache);
+            } else {
+                if (alarme) alarme.style.display = 'none';
+                console.error(data);
+            }
+        } catch (error) {
+            console.error(error);
+            if (alarme) alarme.style.display = 'none';
+        }
         return;
     }
 
@@ -616,6 +650,9 @@ function initCarnetRoute() {
             chargerCarnetRoute();
         });
     }
+    document.querySelectorAll('.planeur-box').forEach(box => {
+        box.addEventListener('click', () => ouvrirModaleCarnet(null, box.dataset.immat));
+    });
 
     const champsCalculHora = ['carnet-machine', 'carnet-horametre-depart', 'carnet-heure-depart', 'carnet-heure-arrivee'];
     champsCalculHora.forEach(id => {
