@@ -18,9 +18,7 @@ function initAudit() {
     const search = document.getElementById('audit-search');
     const moduleFiltre = document.getElementById('audit-module-filtre');
     const reload = document.getElementById('audit-reload');
-    const tab = document.getElementById('tab-audit');
 
-    if (tab) tab.addEventListener('click', chargerAudit);
     if (reload) reload.addEventListener('click', () => chargerAudit(true));
     if (search) search.addEventListener('input', filtrerAudit);
     if (moduleFiltre) moduleFiltre.addEventListener('change', filtrerAudit);
@@ -58,7 +56,15 @@ async function chargerAudit(force = false) {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_AUDIT)}?sort[0][field]=${FIELDS_AUDIT.DATE}&sort[0][direction]=desc&pageSize=200`;
         const res = await cachedFetch(url, { headers }, 30000, force);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        if (!res.ok) {
+            const message = data.error?.message || 'Erreur inconnue';
+            if (res.status === 403 || res.status === 404) {
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">La table "Audit" n\'existe pas ou n\'est pas accessible. Vérifie son nom et les permissions du token Airtable.</td></tr>';
+            } else {
+                throw new Error(message);
+            }
+            return;
+        }
         auditRecordsCache = data.records || [];
         filtrerAudit();
     } catch (err) {

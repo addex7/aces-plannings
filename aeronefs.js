@@ -691,6 +691,7 @@ function initNavigationTabs() {
     const tabMembres = document.getElementById('tab-membres');
     const tabDocuments = document.getElementById('tab-documents');
     const tabComptes = document.getElementById('tab-comptes');
+    const tabAudit = document.getElementById('tab-audit');
     const viewPlanning = document.getElementById('view-planning');
     const viewAeronefs = document.getElementById('view-aeronefs');
     const viewInitiation = document.getElementById('view-initiation');
@@ -699,11 +700,12 @@ function initNavigationTabs() {
     const viewMembres = document.getElementById('view-membres');
     const viewDocuments = document.getElementById('view-documents');
     const viewComptes = document.getElementById('view-comptes');
+    const viewAudit = document.getElementById('view-audit');
     const viewAccueilMembre = document.getElementById('view-accueil-membre');
 
     function activerTab(tab, vue) {
-        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabMembres, tabDocuments, tabComptes].forEach(t => { if (t) t.classList.remove('active'); });
-        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewMembres, viewDocuments, viewComptes, viewAccueilMembre].forEach(v => { if (v) v.style.display = 'none'; });
+        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabMembres, tabDocuments, tabComptes, tabAudit].forEach(t => { if (t) t.classList.remove('active'); });
+        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewMembres, viewDocuments, viewComptes, viewAudit, viewAccueilMembre].forEach(v => { if (v) v.style.display = 'none'; });
         if (tab) tab.classList.add('active');
         if (vue) vue.style.display = 'block';
         // Ouvrir le groupe contenant l'onglet actif, fermer les autres groupes déroulants
@@ -771,6 +773,13 @@ function initNavigationTabs() {
         tabComptes.addEventListener('click', () => {
             activerTab(tabComptes, viewComptes);
             if (typeof chargerComptesPilotes === 'function') chargerComptesPilotes();
+        });
+    }
+
+    if (tabAudit) {
+        tabAudit.addEventListener('click', () => {
+            activerTab(tabAudit, viewAudit);
+            if (typeof chargerAudit === 'function') chargerAudit(true);
         });
     }
 
