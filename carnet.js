@@ -59,20 +59,26 @@ function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     if (departInput) departInput.value = 'LFOY';
     if (arriveeInput) arriveeInput.value = 'LFOY';
     if (machineImmat) {
+        form.dataset.mode = 'observation';
         if (heureDepart) heureDepart.value = '00:00';
         if (heureArrivee) heureArrivee.value = '00:00';
         if (decollages) decollages.value = '0';
         if (atterrissages) atterrissages.value = '0';
         if (piloteInput && typeof nomPiloteCourant === 'function') piloteInput.value = nomPiloteCourant();
         if (selectMachine && selectMachine.querySelector(`option[value="${machineImmat}"]`)) selectMachine.value = machineImmat;
-    } else if (selectMachine && selectFiltre && selectMachine.querySelector(`option[value="${selectFiltre.value}"]`)) {
-        selectMachine.value = selectFiltre.value;
+        const obs = document.getElementById('carnet-observations');
+        setTimeout(() => { if (obs) obs.focus(); }, 50);
+    } else {
+        form.dataset.mode = 'vol';
+        if (selectMachine && selectFiltre && selectMachine.querySelector(`option[value="${selectFiltre.value}"]`)) {
+            selectMachine.value = selectFiltre.value;
+        }
     }
     document.getElementById('carnet-id').value = recordId || '';
     if (recordId) {
         const record = listeVolsCarnetCache.find(r => r.id === recordId);
         if (record && record.fields) remplirFormulaireCarnet(record.fields);
-    } else if (selectMachine) {
+    } else if (selectMachine && form.dataset.mode !== 'observation') {
         mettreAJourDonneesDepartDefaut(selectMachine.value);
     }
     modal.style.display = 'flex';

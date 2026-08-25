@@ -2171,3 +2171,14 @@ body {
     font-weight: 700;
     letter-spacing: 0.5px;
 }
+
+/* --- MODALE OBSERVATION PLANEUR --- */
+#carnet-form[data-mode="observation"] .form-group:not(.observation-only),
+#carnet-form[data-mode="observation"] .form-row,
+#carnet-form[data-mode="observation"] .checkbox-group {
+    display: none !important;
+}
+#carnet-form[data-mode="observation"] .observation-only {
+    display: block;
+    margin-top: 0;
+}
