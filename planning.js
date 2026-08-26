@@ -1969,10 +1969,10 @@ function afficherVolsInitiation() {
     if (!container) return;
     const maintenant = new Date();
     const vols = normaliserVolsInitiation().filter(v => {
-        if (filtreInitiationActif === 'archives') {
-            return new Date(v.debut) < maintenant && filtreTypesInitiation.includes(v.type);
-        }
-        return v.categorie === filtreInitiationActif && filtreTypesInitiation.includes(v.type);
+        if (!filtreTypesInitiation.includes(v.type)) return false;
+        const passe = new Date(v.debut) < maintenant;
+        if (filtreInitiationActif === 'archives') return passe;
+        return !passe && v.categorie === filtreInitiationActif;
     });
     const estArchive = filtreInitiationActif === 'archives';
     if (vols.length === 0) {
