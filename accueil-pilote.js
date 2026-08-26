@@ -295,7 +295,25 @@ async function chargerDernierVol() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message);
 
-        for (const r of (data.records || [])) {
+        const estUnVol = (f) => {
+            const hDep = (f['Heure départ'] || '').toString().trim();
+            const hArr = (f['Heure arrivée'] || '').toString().trim();
+            if (!hDep || !hArr || hDep === '00:00' || hArr === '00:00') return false;
+            const dec = parseInt(f['Décollages'], 10);
+            const att = parseInt(f['Atterrissages'], 10);
+            return !isNaN(dec) && dec > 0 && !isNaN(att) && att > 0;
+        };
+
+        const records = (data.records || []).slice().sort((a, b) => {
+            const dA = new Date(a.fields['Date'] || 0);
+            const dB = new Date(b.fields['Date'] || 0);
+            if (dB - dA !== 0) return dB - dA;
+            const cA = new Date(a.createdTime || 0);
+            const cB = new Date(b.createdTime || 0);
+            return cB - cA;
+        });
+
+        for (const r of records) {
             const f = r.fields || {};
             const p = f['Pilote'];
             const arr = Array.isArray(p) ? p : [p];
@@ -308,7 +326,7 @@ async function chargerDernierVol() {
                 }
                 return false;
             });
-            if (match) {
+            if (match && estUnVol(f)) {
                 const duree = dureeVolMinutesAccueil(f);
                 const h = Math.floor(duree / 60);
                 const m = duree % 60;
