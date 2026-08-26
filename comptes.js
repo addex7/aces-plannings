@@ -106,7 +106,8 @@ async function chargerComptesPilotes() {
         afficherTransactions(records, container, piloteNom);
 
         const isCurrent = !select || select.value === nomPiloteComptes(currentUser);
-        if (form) form.style.display = isCurrent ? 'block' : 'none';
+        const canEdit = isCurrent || isTresorier();
+        if (form) form.style.display = canEdit ? 'block' : 'none';
     } catch (err) {
         console.error(err);
         if (container) container.innerHTML = `<p style="color:#dc2626;">Erreur : ${err.message}</p>`;
@@ -554,7 +555,8 @@ async function enregistrerRecetteManuelle(e) {
         return;
     }
 
-    const piloteNom = nomPiloteComptes(currentUser);
+    const select = document.getElementById('comptes-pilote-select');
+    const piloteNom = (select && select.value) ? select.value : nomPiloteComptes(currentUser);
     const body = {
         records: [{
             fields: {
