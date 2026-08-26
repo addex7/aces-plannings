@@ -60,11 +60,12 @@ async function chargerAccueilPilote() {
     }
     container.innerHTML = '<p class="carnet-empty">Chargement du tableau de bord...</p>';
 
-    const [resas, solde, signalements, validites] = await Promise.all([
+    const [resas, solde, signalements, validites, vols] = await Promise.all([
         chargerProchaineJournee().catch(() => ({ text: '-', date: null, label: 'Aucune inscription' })),
         chargerSoldeAccueil().catch(() => 0),
         chargerSignalementsAccueil().catch(() => []),
-        chargerValiditesAccueil().catch(() => null)
+        chargerValiditesAccueil().catch(() => null),
+        chargerDernierVol().catch(() => null)
     ]);
 
     const piloteNom = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() || 'Prénom NOM';
@@ -79,7 +80,15 @@ async function chargerAccueilPilote() {
             <button type="button" id="accueil-btn-planning" class="btn-primary" style="width:100%; margin-top:12px;">Voir le planning</button>
         </div>`;
 
-    const htmlVols = `
+    const htmlVols = vols ? `
+        <div class="ap-card ap-card-orange">
+            <div class="ap-card-header">
+                <div class="ap-card-number">${vols.dateText}</div>
+                <div class="ap-card-icon">✈️</div>
+            </div>
+            <div class="ap-card-label">${escHtml(vols.machine)} — ${escHtml(vols.duree)} ${vols.instructeur ? `— ${escHtml(vols.instructeur)}` : ''}</div>
+            <button type="button" id="accueil-btn-carnet-retour" class="btn-primary" style="width:100%; margin-top:8px;">Retour de vol</button>
+        </div>` : `
         <div class="ap-card ap-card-orange">
             <div class="ap-card-header">
                 <div class="ap-card-number">-</div>
@@ -272,6 +281,53 @@ async function chargerSoldeAccueil() {
         return getSoldePilote(nom);
     }
     return 0;
+}
+
+async function chargerDernierVol() {
+    if (!currentUser) return null;
+    const table = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
+    const prenom = (currentUser.prenom || '').toLowerCase();
+    const nom = (currentUser.nom || '').toLowerCase();
+    const id = currentUser.id;
+    try {
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?sort[0][field]=Date&sort[0][direction]=desc&pageSize=50`;
+        const res = await cachedFetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message);
+
+        for (const r of (data.records || [])) {
+            const f = r.fields || {};
+            const p = f['Pilote'];
+            const arr = Array.isArray(p) ? p : [p];
+            const match = arr.some(v => {
+                if (v === id) return true;
+                if (typeof v === 'string') {
+                    const vl = v.toLowerCase();
+                    if (prenom && vl.includes(prenom)) return true;
+                    if (nom && vl.includes(nom)) return true;
+                }
+                return false;
+            });
+            if (match) {
+                const duree = dureeVolMinutesAccueil(f);
+                const h = Math.floor(duree / 60);
+                const m = duree % 60;
+                const dureeText = duree > 0 ? `${h}h${String(m).padStart(2, '0')}` : '-';
+                return {
+                    date: f['Date'],
+                    dateText: formaterDateAccueil(f['Date']),
+                    machine: f['Machine'] || '?',
+                    duree: dureeText,
+                    instructeur: f['Instructeur'] || '',
+                    pilote: f['Pilote'] || ''
+                };
+            }
+        }
+        return null;
+    } catch (err) {
+        console.error('Erreur chargement dernier vol:', err);
+        return null;
+    }
 }
 
 async function chargerSignalementsAccueil() {
