@@ -60,12 +60,13 @@ async function chargerAccueilPilote() {
     }
     container.innerHTML = '<p class="carnet-empty">Chargement du tableau de bord...</p>';
 
-    const [resas, solde, signalements, validites, vols] = await Promise.all([
+    const [resas, solde, signalements, validites, vols, messagesClub] = await Promise.all([
         chargerProchaineJournee().catch(() => ({ text: '-', date: null, label: 'Aucune inscription' })),
         chargerSoldeAccueil().catch(() => 0),
         chargerSignalementsAccueil().catch(() => []),
         chargerValiditesAccueil().catch(() => null),
-        chargerDernierVol().catch(() => null)
+        chargerDernierVol().catch(() => null),
+        chargerMessagesClub().catch(() => [])
     ]);
 
     const piloteNom = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() || 'Prénom NOM';
@@ -128,12 +129,14 @@ async function chargerAccueilPilote() {
         </div>`;
 
     const htmlValidites = `
-        <div class="ap-card ap-card-white ap-card-wide">
+        <div class="ap-card ap-card-white">
             <h3>Mes validités & qualifications</h3>
             <div class="ap-validites-list">
                 ${renderValidites(validites)}
             </div>
         </div>`;
+
+    const htmlMessagesClub = renderMessagesClub(messagesClub);
 
     container.innerHTML = `
         <div class="accueil-pilote-header">
@@ -145,7 +148,10 @@ async function chargerAccueilPilote() {
             ${htmlVols}
             ${htmlSolde}
             ${htmlSignalements}
-            ${htmlValidites}
+            <div class="ap-bottom-row">
+                ${htmlValidites}
+                ${htmlMessagesClub}
+            </div>
         </div>
     `;
 
@@ -182,6 +188,16 @@ async function chargerAccueilPilote() {
             const immat = row.dataset.immat;
             const grp = signalements.find(sg => sg.immat === immat);
             if (grp) ouvrirModaleSignalements(grp.immat, grp.items);
+        });
+    });
+
+    container.querySelectorAll('.ap-message-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const id = row.dataset.id;
+            if (!id) return;
+            const t = document.getElementById('tab-messagerie');
+            if (t) t.click();
+            if (typeof voirMessage === 'function') voirMessage(id);
         });
     });
 }
@@ -520,7 +536,7 @@ function renderValidites(data) {
     const soldeText = data.solde.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
     const soldeLabel = data.solde >= 0 ? 'Compte positif' : (data.solde >= -300 ? 'Compte à surveiller' : 'Compte négatif');
 
-    let html = data.items.map(item => {
+    let html = data.items.filter(item => item.actif !== false).map(item => {
         let dot, label;
         if (item.actif === false) {
             dot = 'pastille-grise';
@@ -553,6 +569,50 @@ function renderValidites(data) {
         </div>`;
 
     return html;
+}
+
+async function chargerMessagesClub() {
+    if (!currentUser) return [];
+    const table = typeof TABLE_MESSAGERIE !== 'undefined' ? TABLE_MESSAGERIE : 'Messagerie';
+    const nom = typeof nomCompletCourant === 'function' ? nomCompletCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    if (!nom) return [];
+    try {
+        const formula = `OR(FIND('Tous', {Destinataire}) > 0, FIND('${nom.replace(/'/g, "\\'")}', {Destinataire}) > 0)`;
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=5`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        return data.records || [];
+    } catch (err) {
+        console.error('Erreur chargement messages club:', err);
+        return [];
+    }
+}
+
+function renderMessagesClub(records) {
+    const messages = (records || []).map(r => {
+        const f = r.fields || {};
+        const date = f['Date'] ? formaterDateAccueil(f['Date']) : '';
+        const expediteur = f['Expéditeur'] || '';
+        const objet = f['Objet'] || '(sans objet)';
+        const lu = f['Lu'];
+        return { id: r.id, date, expediteur, objet, lu };
+    });
+    const list = messages.length ? messages.map(m => `
+        <div class="ap-message-row" data-id="${escHtml(m.id)}" style="cursor:pointer; padding:8px 0; border-bottom:1px solid #e2e8f0;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="color:#1e3d59; font-size:13px;">${escHtml(m.expediteur)}</strong>
+                <span style="font-size:12px; color:#64748b;">${escHtml(m.date)}</span>
+            </div>
+            <div style="font-size:13px; color:#334155; margin-top:2px;">${m.lu ? '' : '<span style="color:#dc2626; font-weight:bold;">●</span> '}${escHtml(m.objet)}</div>
+        </div>
+    `).join('') : '<p class="carnet-empty">Aucun message.</p>';
+    return `
+        <div class="ap-card ap-card-white ap-card-messages">
+            <h3>Messages club</h3>
+            <div class="ap-messages-list" style="max-height:220px; overflow-y:auto;">
+                ${list}
+            </div>
+        </div>`;
 }
 
 document.addEventListener('DOMContentLoaded', initAccueilPilote);

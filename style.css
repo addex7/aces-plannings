@@ -2282,6 +2282,21 @@ body {
 .ap-card-wide {
     grid-column: 1 / -1;
 }
+.ap-bottom-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.ap-card-messages h3,
+.ap-card-messages p {
+    color: #1e3d59;
+}
+.ap-messages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
 .ap-card-header {
     display: flex;
     justify-content: space-between;
