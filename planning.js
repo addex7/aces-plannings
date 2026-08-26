@@ -1737,6 +1737,32 @@ function initGestionnaireModale() {
             const piloteNom = document.getElementById('form-pilote').value.trim();
             const passagerNom = document.getElementById('form-passager') ? document.getElementById('form-passager').value.trim() : '';
             const telephone = document.getElementById('form-telephone') ? document.getElementById('form-telephone').value.trim() : '';
+
+            // Vérification solde et validités
+            if (piloteNom && typeof pilotePeutReserver === 'function') {
+                const peutReserver = await pilotePeutReserver(piloteNom);
+                if (!peutReserver) {
+                    const solde = typeof getSoldePilote === 'function' ? await getSoldePilote(piloteNom) : null;
+                    const soldeText = solde !== null ? solde.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+                    alert('Le compte pilote de ' + piloteNom + ' est à ' + soldeText + ' € (plafond autorisé : -500 €). Réservation impossible avant de recréditer le compte.');
+                    return;
+                }
+            }
+            if (typeof chargerValiditesAccueil === 'function') {
+                try {
+                    const validites = await chargerValiditesAccueil();
+                    if (validites && validites.items) {
+                        const invalides = validites.items.filter(i => i.ok === false);
+                        if (invalides.length) {
+                            const liste = invalides.map(i => '• ' + i.label).join('\n');
+                            alert('Attention, les validités suivantes ne sont pas à jour :\n' + liste);
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Vérification des validités avant réservation:', err);
+                }
+            }
+
             const localDebut = new Date(document.getElementById('form-debut').value);
             const localFin = new Date(document.getElementById('form-fin').value);
             const dateDebut = localDebut.toISOString();
