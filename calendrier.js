@@ -10,6 +10,13 @@ function initMiniCalendrier() {
     if (!container) return;
     container.addEventListener('click', gererClicMiniCalendrier);
     renderMiniCalendrier();
+    const waitUser = setInterval(() => {
+        if (typeof currentUser !== 'undefined' && currentUser) {
+            clearInterval(waitUser);
+            renderMiniCalendrier();
+        }
+    }, 100);
+    setTimeout(() => clearInterval(waitUser), 5000);
 }
 
 function gererClicMiniCalendrier(e) {
@@ -109,8 +116,8 @@ async function chargerDonneesCalendrier(annee, mois) {
     const debutStr = debutMois.toISOString().split('T')[0];
     const finStr = finMois.toISOString().split('T')[0];
     const userName = (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '').toString().trim();
-    const userPrenom = (typeof prenomUtilisateur === 'function' ? prenomUtilisateur() : '');
-    const userNom = (typeof nomUtilisateur === 'function' ? nomUtilisateur() : '');
+    const userPrenom = (typeof currentUser !== 'undefined' && currentUser ? currentUser.prenom : '') || '';
+    const userNom = (typeof currentUser !== 'undefined' && currentUser ? currentUser.nom : '') || '';
     const userFullName = `${userPrenom} ${userNom}`.trim();
 
     miniCalendrierData = {};
@@ -135,7 +142,7 @@ async function chargerDonneesCalendrier(annee, mois) {
                 if (d < debutMois || d > finMois) continue;
                 const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
                 info.has = true;
-                if (pilote && (pilote === userName || pilote === userFullName)) info.hasUser = true;
+                if (pilote && (correspondanceNom(pilote, userName) || correspondanceNom(pilote, userFullName))) info.hasUser = true;
             }
         });
     } catch (err) { console.error('Erreur calendrier Réservations:', err); }
@@ -156,7 +163,7 @@ async function chargerDonneesCalendrier(annee, mois) {
             const nom = (f['Nom du pilote'] || '').toString().trim();
             const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
             info.has = true;
-            if (nom && (nom === userName || nom === userFullName)) info.hasUser = true;
+            if (nom && (correspondanceNom(nom, userName) || correspondanceNom(nom, userFullName))) info.hasUser = true;
         });
     } catch (err) { console.error('Erreur calendrier Présences Planeur:', err); }
 
@@ -176,7 +183,7 @@ async function chargerDonneesCalendrier(annee, mois) {
             const nom = (f['Nom du pilote'] || '').toString().trim();
             const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
             info.has = true;
-            if (nom && (nom === userName || nom === userFullName)) info.hasUser = true;
+            if (nom && (correspondanceNom(nom, userName) || correspondanceNom(nom, userFullName))) info.hasUser = true;
         });
     } catch (err) { console.error('Erreur calendrier Présences Club:', err); }
 }
