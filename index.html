@@ -979,24 +979,34 @@
                 <input type="hidden" id="maintenance-machine-id">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="maintenance-date">Date de fin de l'intervention :</label>
-                        <input type="date" id="maintenance-date" required>
+                        <label for="maintenance-date-debut">Date de début :</label>
+                        <input type="date" id="maintenance-date-debut" required>
                     </div>
                     <div class="form-group">
-                        <label for="maintenance-heure">Heure (HH:MM) :</label>
-                        <input type="time" id="maintenance-heure" required>
+                        <label for="maintenance-heure-debut">Heure de début :</label>
+                        <input type="time" id="maintenance-heure-debut" required>
                     </div>
                     <div class="form-group">
-                        <label for="maintenance-duree">Durée (h) :</label>
-                        <input type="number" id="maintenance-duree" step="0.1" min="0" required>
+                        <label for="maintenance-date-fin">Date de fin :</label>
+                        <input type="date" id="maintenance-date-fin" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenance-heure-fin">Heure de fin :</label>
+                        <input type="time" id="maintenance-heure-fin" required>
                     </div>
                     <div class="form-group">
                         <label for="maintenance-ancienne-butee">Ancienne butée :</label>
                         <input type="number" id="maintenance-ancienne-butee" step="0.01" min="0" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="display:flex; align-items:center;">
+                        <label class="checkbox-option" style="margin:0;">
+                            <input type="checkbox" id="maintenance-changer-butee">
+                            <span>Changer la butée</span>
+                        </label>
+                    </div>
+                    <div class="form-group" id="maintenance-nouvelle-butee-group" style="display:none;">
                         <label for="maintenance-nouvelle-butee">Nouvelle butée :</label>
-                        <input type="number" id="maintenance-nouvelle-butee" step="0.01" min="0" required>
+                        <input type="number" id="maintenance-nouvelle-butee" step="0.01" min="0">
                     </div>
                 </div>
                 <div class="form-actions">
@@ -1160,7 +1170,7 @@
     <script src="planning.js?v=97"></script>
     <script src="calendrier.js?v=82"></script>
     <script src="comptes.js?v=99"></script>
-    <script src="aeronefs.js?v=88"></script>
+    <script src="aeronefs.js?v=89"></script>
     <script src="carnet.js?v=87"></script>
     <script src="documents.js?v=82"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>

@@ -138,19 +138,34 @@ function ouvrirModaleMaintenance(record = null) {
     if (!machine || !machine.fields) return;
 
     const f = record ? record.fields : {};
-    const dateMaint = f['Date'] ? new Date(f['Date']) : new Date();
-    const dateStr = dateMaint.getFullYear() + '-' + String(dateMaint.getMonth() + 1).padStart(2, '0') + '-' + String(dateMaint.getDate()).padStart(2, '0');
-    const heureStr = String(dateMaint.getHours()).padStart(2, '0') + ':' + String(dateMaint.getMinutes()).padStart(2, '0');
+    const now = new Date();
+    const dureeH = parseFloat(String(f['durée'] || '').replace(',', '.')) || 0;
+    const dateDebut = f['Date'] ? new Date(f['Date']) : now;
+    const dateFin = f['Date'] ? new Date(dateDebut.getTime() + dureeH * 3600000) : new Date(now.getTime() + 3600000);
+
+    const fmtDate = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const fmtHeure = d => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
     document.getElementById('maintenance-id').value = record ? record.id : '';
     document.getElementById('maintenance-machine-id').value = machine.id;
     document.getElementById('maintenance-machine-immat').value = machine.fields['Immatriculation'] || '';
-    document.getElementById('maintenance-date').value = dateStr;
-    document.getElementById('maintenance-heure').value = heureStr;
-    document.getElementById('maintenance-duree').value = f['durée'] !== undefined ? f['durée'] : '1';
+    document.getElementById('maintenance-date-debut').value = fmtDate(dateDebut);
+    document.getElementById('maintenance-heure-debut').value = fmtHeure(dateDebut);
+    document.getElementById('maintenance-date-fin').value = fmtDate(dateFin);
+    document.getElementById('maintenance-heure-fin').value = fmtHeure(dateFin);
+
     const butee = parseFloat(String(machine.fields['Prochaine Butée'] || '').replace(',', '.')) || 0;
-    document.getElementById('maintenance-ancienne-butee').value = f['Ancienne butée'] !== undefined ? f['Ancienne butée'] : butee;
-    document.getElementById('maintenance-nouvelle-butee').value = f['Nouvelle Butée'] !== undefined ? f['Nouvelle Butée'] : '';
+    const ancienne = f['Ancienne butée'] !== undefined ? f['Ancienne butée'] : butee;
+    document.getElementById('maintenance-ancienne-butee').value = ancienne;
+
+    const nouvelle = f['Nouvelle Butée'] !== undefined ? f['Nouvelle Butée'] : '';
+    const checkbox = document.getElementById('maintenance-changer-butee');
+    const nouvelleGroup = document.getElementById('maintenance-nouvelle-butee-group');
+    const nouvelleInput = document.getElementById('maintenance-nouvelle-butee');
+    const aChanger = nouvelle !== '' && parseFloat(nouvelle) !== parseFloat(ancienne);
+    if (checkbox) checkbox.checked = aChanger;
+    if (nouvelleGroup) nouvelleGroup.style.display = aChanger ? 'block' : 'none';
+    if (nouvelleInput) nouvelleInput.value = aChanger ? nouvelle : (parseFloat(ancienne) + 50);
     if (modal) modal.style.display = 'flex';
 }
 
@@ -166,16 +181,30 @@ async function enregistrerMaintenance(e) {
     const maintenanceId = document.getElementById('maintenance-id').value;
     const immat = document.getElementById('maintenance-machine-immat').value;
     const avionId = document.getElementById('maintenance-machine-id').value;
-    const date = document.getElementById('maintenance-date').value;
-    const heure = document.getElementById('maintenance-heure').value;
-    const duree = parseFloat(String(document.getElementById('maintenance-duree').value).replace(',', '.'));
+    const dateDebut = document.getElementById('maintenance-date-debut').value;
+    const heureDebut = document.getElementById('maintenance-heure-debut').value;
+    const dateFin = document.getElementById('maintenance-date-fin').value;
+    const heureFin = document.getElementById('maintenance-heure-fin').value;
     const ancienneButee = parseFloat(String(document.getElementById('maintenance-ancienne-butee').value).replace(',', '.'));
-    const nouvelleButee = parseFloat(String(document.getElementById('maintenance-nouvelle-butee').value).replace(',', '.'));
+    const changerButee = document.getElementById('maintenance-changer-butee').checked;
+    const nouvelleButee = changerButee
+        ? parseFloat(String(document.getElementById('maintenance-nouvelle-butee').value).replace(',', '.'))
+        : ancienneButee;
 
-    if (!immat || !date || !heure || isNaN(duree) || isNaN(ancienneButee) || isNaN(nouvelleButee)) return;
+    if (!immat || !dateDebut || !heureDebut || !dateFin || !heureFin || isNaN(ancienneButee)) return;
+    if (changerButee && isNaN(nouvelleButee)) {
+        alert('Renseigne la nouvelle butée.');
+        return;
+    }
 
-    const dateTime = new Date(`${date}T${heure}`);
-    const isoDate = isNaN(dateTime.getTime()) ? `${date}T${heure}` : dateTime.toISOString();
+    const dateTime = new Date(`${dateDebut}T${heureDebut}`);
+    const dateTimeFin = new Date(`${dateFin}T${heureFin}`);
+    if (isNaN(dateTime.getTime()) || isNaN(dateTimeFin.getTime()) || dateTimeFin <= dateTime) {
+        alert('La date de fin doit être postérieure à la date de début.');
+        return;
+    }
+    const duree = (dateTimeFin.getTime() - dateTime.getTime()) / 3600000;
+    const isoDate = dateTime.toISOString();
 
     try {
         const fieldsObj = {
@@ -827,6 +856,22 @@ if (btnMaintenance) btnMaintenance.addEventListener('click', () => ouvrirModaleM
 
 const formMaintenance = document.getElementById('maintenance-form');
 if (formMaintenance) formMaintenance.addEventListener('submit', enregistrerMaintenance);
+
+const ancienneButeeInput = document.getElementById('maintenance-ancienne-butee');
+const changerButee = document.getElementById('maintenance-changer-butee');
+const nouvelleButeeGroup = document.getElementById('maintenance-nouvelle-butee-group');
+const nouvelleButeeInput = document.getElementById('maintenance-nouvelle-butee');
+if (changerButee && ancienneButeeInput && nouvelleButeeGroup && nouvelleButeeInput) {
+    changerButee.addEventListener('change', () => {
+        if (changerButee.checked) {
+            nouvelleButeeGroup.style.display = 'block';
+            const ancienne = parseFloat(String(ancienneButeeInput.value).replace(',', '.')) || 0;
+            if (String(nouvelleButeeInput.value).trim() === '') nouvelleButeeInput.value = ancienne + 50;
+        } else {
+            nouvelleButeeGroup.style.display = 'none';
+        }
+    });
+}
 
 const closeMaintenance = document.getElementById('close-maintenance');
 if (closeMaintenance) closeMaintenance.addEventListener('click', fermerModaleMaintenance);
