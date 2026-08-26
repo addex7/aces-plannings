@@ -4,6 +4,11 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f5f0e1;
     color: #1e3d59;
+    overflow-x: hidden;
+}
+img, table, video, iframe, svg {
+    max-width: 100%;
+    height: auto;
 }
 .app-layout {
     display: flex;
@@ -121,9 +126,16 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     overflow-y: auto;
+    min-width: 0;
     padding: 10px;
     gap: 10px;
     transition: padding 0.3s ease;
+}
+@media (max-width: 600px) {
+    .main-content {
+        padding: 8px;
+        gap: 8px;
+    }
 }
 #sidebar-toggle {
     position: absolute;
@@ -2265,10 +2277,11 @@ body {
 }
 .ap-card {
     border-radius: 10px;
-    padding: 20px;
+    padding: clamp(14px, 3vw, 20px);
     color: white;
     display: flex;
     flex-direction: column;
+    min-width: 0;
     box-shadow: 0 4px 10px rgba(0,0,0,0.08);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -2293,6 +2306,11 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+}
+@media (max-width: 700px) {
+    .ap-bottom-row {
+        grid-template-columns: 1fr;
+    }
 }
 .ap-card-messages {
     display: flex;
@@ -2407,11 +2425,12 @@ body {
     line-height: 1.1;
 }
 .ap-card-icon {
-    font-size: 40px;
+    font-size: clamp(28px, 6vw, 40px);
     opacity: 0.8;
+    flex-shrink: 0;
 }
 .ap-card-label {
-    font-size: 15px;
+    font-size: clamp(13px, 2.5vw, 15px);
     font-weight: 500;
     margin-bottom: 12px;
 }
