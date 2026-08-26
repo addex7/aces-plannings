@@ -139,8 +139,8 @@ body {
     cursor: pointer;
     font-size: 13px;
     z-index: 100;
-    opacity: 0;
-    pointer-events: none;
+    opacity: 0.7;
+    pointer-events: auto;
     transition: left 0.3s ease, opacity 0.3s ease;
     display: flex;
     align-items: center;
@@ -148,14 +148,12 @@ body {
     box-shadow: 2px 0 5px rgba(0,0,0,0.2);
 }
 #sidebar-toggle:hover,
-.sidebar:hover + #sidebar-toggle {
+.sidebar:hover ~ #sidebar-toggle {
     opacity: 1;
-    pointer-events: auto;
 }
 .app-layout.sidebar-collapsed #sidebar-toggle {
     left: 0;
-    opacity: 0.8;
-    pointer-events: auto;
+    opacity: 1;
 }
 .view-section {
     display: flex;

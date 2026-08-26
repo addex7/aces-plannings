@@ -798,6 +798,14 @@ function initNavigationTabs() {
         });
     }
 
+    const messagerieIcon = document.getElementById('messagerie-icon');
+    if (messagerieIcon) {
+        messagerieIcon.addEventListener('click', () => {
+            activerTab(null, viewMessagerie);
+            if (typeof chargerMessagerie === 'function') chargerMessagerie();
+        });
+    }
+
     // Menus déroulants
     document.querySelectorAll('.nav-group-title').forEach(titre => {
         titre.addEventListener('click', () => {
