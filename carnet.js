@@ -37,7 +37,7 @@ function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heur
     return `${String(hrs).padStart(2, '0')}h${String(mins).padStart(2, '0')}`;
 }
 
-function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
+async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const modal = document.getElementById('carnet-modal');
     const form = document.getElementById('carnet-form');
     const titre = modal ? modal.querySelector('h3') : null;
@@ -55,18 +55,25 @@ function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const decollages = document.getElementById('carnet-decollages');
     const atterrissages = document.getElementById('carnet-atterrissages');
     const piloteInput = document.getElementById('carnet-pilote');
+    const piloteLabel = document.getElementById('carnet-pilote-label');
     if (titre) titre.textContent = recordId ? 'Modifier un vol' : (machineImmat ? 'Nouvelle observation' : 'Saisir un vol');
     if (btnDelete) btnDelete.style.display = recordId ? 'inline-block' : 'none';
     if (dateInput) dateInput.value = new Date().toLocaleDateString('en-CA');
     if (departInput) departInput.value = 'LFOY';
     if (arriveeInput) arriveeInput.value = 'LFOY';
+
+    const piloteDefaut = (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
+    if (piloteInput) piloteInput.value = piloteDefaut;
+    if (piloteLabel) piloteLabel.textContent = piloteDefaut;
+
+    await peuplerInstructeursSelect(recordId ? (listeVolsCarnetCache.find(r => r.id === recordId)?.fields['Instructeur'] || '') : '');
+
     if (machineImmat) {
         form.dataset.mode = 'observation';
         if (heureDepart) heureDepart.value = '00:00';
         if (heureArrivee) heureArrivee.value = '00:00';
         if (decollages) decollages.value = '0';
         if (atterrissages) atterrissages.value = '0';
-        if (piloteInput && typeof nomPiloteCourant === 'function') piloteInput.value = nomPiloteCourant();
         if (selectMachine && selectMachine.querySelector(`option[value="${machineImmat}"]`)) selectMachine.value = machineImmat;
         const obs = document.getElementById('carnet-observations');
         setTimeout(() => { if (obs) obs.focus(); }, 50);
@@ -95,9 +102,14 @@ function fermerModaleCarnet() {
 }
 
 function remplirFormulaireCarnet(f) {
+    const pilote = f['Pilote'] || (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
     document.getElementById('carnet-date').value = f['Date'] ? (f['Date'].split('T')[0] || '') : '';
-    document.getElementById('carnet-pilote').value = f['Pilote'] || '';
-    document.getElementById('carnet-instructeur').value = f['Instructeur'] || '';
+    const piloteInput = document.getElementById('carnet-pilote');
+    if (piloteInput) piloteInput.value = pilote;
+    const piloteLabel = document.getElementById('carnet-pilote-label');
+    if (piloteLabel) piloteLabel.textContent = pilote;
+    const instSel = document.getElementById('carnet-instructeur');
+    if (instSel) instSel.value = f['Instructeur'] || '';
     document.getElementById('carnet-machine').value = f['Machine'] || 'F-GASB';
     document.getElementById('carnet-depart').value = f['Départ'] || 'LFOY';
     document.getElementById('carnet-arrivee').value = f['Arrivée'] || 'LFOY';
@@ -119,6 +131,41 @@ function remplirFormulaireCarnet(f) {
     });
     const inputHArrivee = document.getElementById('carnet-horametre-arrivee');
     if (inputHArrivee && !inputHArrivee.value) mettreAJourHorametreArrivee();
+}
+
+let listeInstructeursCache = [];
+
+async function peuplerInstructeursSelect(instructeur = '') {
+    const sel = document.getElementById('carnet-instructeur');
+    if (!sel) return;
+    const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
+    try {
+        if (!listeInstructeursCache.length) {
+            const table = typeof TABLE_UTILISATEURS !== 'undefined' ? TABLE_UTILISATEURS : 'Utilisateurs';
+            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message);
+            listeInstructeursCache = (data.records || []).filter(r => {
+                const roles = Array.isArray(r.fields?.['Rôles']) ? r.fields['Rôles'] : [r.fields?.['Rôles']].filter(Boolean);
+                return roles.some(role => ROLES_INSTRUCTEUR.includes(role));
+            });
+        }
+        const noneOption = sel.querySelector('option[value=""]');
+        sel.innerHTML = noneOption ? noneOption.outerHTML : '<option value="">-- Aucun --</option>';
+        listeInstructeursCache.forEach(r => {
+            const f = r.fields || {};
+            const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Instructeur';
+            const opt = document.createElement('option');
+            opt.value = nomComplet;
+            opt.textContent = nomComplet;
+            if (instructeur && (nomComplet === instructeur || f['Nom'] === instructeur || f['Prénom'] === instructeur)) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        if (instructeur) sel.value = instructeur;
+    } catch (err) {
+        console.error('Erreur chargement instructeurs:', err);
+        sel.innerHTML = `<option value="">-- Aucun --</option>${instructeur ? `<option value="${escHtml(instructeur)}">${escHtml(instructeur)}</option>` : ''}`;
+    }
 }
 
 function mettreAJourDonneesDepartDefaut(machine) {
