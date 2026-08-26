@@ -1824,7 +1824,7 @@ function ouvrirModaleCreationDepuisGrille(avionId, heureDebutClic) {
     modal.style.display = 'flex';
 }
 
-function ouvrirModaleEdition(vol, avionIdOuImmat) {
+async function ouvrirModaleEdition(vol, avionIdOuImmat) {
     if (!modal) return;
     idReservationEnEdition = vol.id;
     if (titleModal) titleModal.textContent = "Modifier la Réservation";
@@ -1834,6 +1834,24 @@ function ouvrirModaleEdition(vol, avionIdOuImmat) {
     }
     const typeVol = vol.fields['Type de vol'] || 'Vol Classique';
     cocherTypeVol(typeVol);
+    if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
+    const sel = document.getElementById('form-instructeur');
+    if (sel) {
+        const saved = vol.fields['Instructeur'];
+        let nom = '';
+        if (saved) {
+            const idInstructeur = Array.isArray(saved) ? saved[0] : saved;
+            if (typeof listeInstructeursCache !== 'undefined' && listeInstructeursCache.length) {
+                const found = listeInstructeursCache.find(i => i.id === idInstructeur || i.nomComplet === idInstructeur);
+                nom = found ? found.nomComplet : idInstructeur;
+            } else {
+                nom = idInstructeur.toString().trim();
+            }
+        }
+        const options = Array.from(sel.options);
+        const match = nom && options.find(o => o.value && typeof correspondanceNom === 'function' && correspondanceNom(o.value, nom));
+        sel.value = match ? match.value : (options.some(o => o.value === nom) ? nom : '');
+    }
     const affichage = document.getElementById('affichage-pilote');
     const pilote = vol.fields['Pilote'] || nomPiloteCourant();
     document.getElementById('form-pilote').value = pilote;
