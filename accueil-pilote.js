@@ -379,7 +379,6 @@ async function chargerExperiencesAccueil(cpl = false) {
     const laplOk = minutes24m >= 12 * 60 && decollages24m >= 12 && atterrissages24m >= 12 && instruction1h;
     const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00 — ${decollages24m} décollages / 12 — ${atterrissages24m} atterrissages / 12 — 1h instructeur : ${instruction1h ? 'oui' : 'non'}`;
 
-    const cpl = (currentUser.fields || {})['Pilote CPL'] === true;
     const initiationOk = passagerOk && (cpl || minutes12m >= 25 * 60);
     const initiationDetail = cpl
         ? `Pilote CPL — ${h12}h${String(m12).padStart(2, '0')} sur 12 mois`
