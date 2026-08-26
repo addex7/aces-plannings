@@ -115,7 +115,7 @@ async function chargerAccueilPilote() {
 
     const htmlSignalements = `
         <div class="ap-card ap-card-white ap-card-signalements">
-            <h3><span class="ap-title-icon">🚩</span> Signalements en cours</h3>
+            <h3>Signalements en cours</h3>
             ${signalements.length ? `
                 <div class="ap-signalements-list">
                     ${signalements.map(s => `
@@ -126,12 +126,11 @@ async function chargerAccueilPilote() {
                     `).join('')}
                 </div>
             ` : '<p class="carnet-empty">Aucun signalement en cours.</p>'}
-            <button type="button" id="accueil-btn-signalements" class="ap-link-arrow">Voir tous les signalements →</button>
         </div>`;
 
     const htmlValidites = `
         <div class="ap-card ap-card-white">
-            <h3><span class="ap-title-icon">🆔</span> Mes validités & qualifications</h3>
+            <h3>Mes validités & qualifications</h3>
             <div class="ap-validites-list">
                 ${renderValidites(validites)}
             </div>
@@ -181,12 +180,6 @@ async function chargerAccueilPilote() {
     const btnCompte = document.getElementById('accueil-btn-compte');
     if (btnCompte) btnCompte.addEventListener('click', () => {
         const t = document.getElementById('tab-comptes');
-        if (t) t.click();
-    });
-
-    const btnSignalements = document.getElementById('accueil-btn-signalements');
-    if (btnSignalements) btnSignalements.addEventListener('click', () => {
-        const t = document.getElementById('tab-aeronefs');
         if (t) t.click();
     });
 
@@ -650,13 +643,6 @@ async function posterMessageClub(titre, corps) {
     }
 }
 
-function initialesMessage(nom) {
-    if (!nom) return '?';
-    const parts = nom.trim().split(/\s+/).filter(Boolean);
-    const letters = parts.slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('');
-    return letters || nom[0].toUpperCase();
-}
-
 function renderMessagesClub(records) {
     const messages = (records || []).map(r => {
         const f = r.fields || {};
@@ -664,28 +650,24 @@ function renderMessagesClub(records) {
         const expediteur = f['Expéditeur'] || '';
         const objet = f['Objet'] || '(sans objet)';
         const corps = f['Corps'] || '';
-        const initials = initialesMessage(expediteur);
-        return { id: r.id, date, expediteur, objet, corps, initials };
+        return { id: r.id, date, expediteur, objet, corps };
     });
     const list = messages.length ? messages.map(m => `
-        <div class="ap-message-item">
-            <div class="ap-message-avatar">${escHtml(m.initials)}</div>
-            <div class="ap-message-content">
-                <div class="ap-message-author-row">
-                    <strong>${escHtml(m.expediteur)}</strong>
-                    <span>${escHtml(m.date)}</span>
-                </div>
-                <div class="ap-message-title">${escHtml(m.objet)}</div>
-                <div class="ap-message-body">${escHtml(m.corps).replace(/\n/g, '<br>')}</div>
+        <div class="ap-message-item" style="padding:10px 0; border-bottom:1px solid #e2e8f0;">
+            <div class="ap-message-title">${escHtml(m.objet)}</div>
+            <div class="ap-message-meta">
+                <span>${escHtml(m.expediteur)}</span>
+                <span>${escHtml(m.date)}</span>
             </div>
+            <div class="ap-message-body">${escHtml(m.corps).replace(/\n/g, '<br>')}</div>
         </div>
     `).join('') : '<p class="carnet-empty">Aucun message.</p>';
     const afficherForm = peutEcrireMessagesClub();
     return `
         <div class="ap-card ap-card-white ap-card-messages">
             <h3 class="ap-messages-header">
-                <span><span class="ap-title-icon">💬</span> Messages club</span>
-                ${afficherForm ? '<button type="button" id="ap-btn-new-msg" class="ap-btn-new-msg" title="Nouveau message"><span>Nouveau message</span><span>+</span></button>' : ''}
+                <span>Messages club</span>
+                ${afficherForm ? '<button type="button" id="ap-btn-new-msg" class="ap-btn-new-msg" title="Nouveau message">+</button>' : ''}
             </h3>
             <div class="ap-messages-list">
                 ${list}
