@@ -26,13 +26,13 @@ function trouverTrigrammeInstructeur(nom) {
 function estInstructeur() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     const roles = currentUser.roles || [];
-    return ROLES_INSTRUCTEUR.some(r => roles.includes(r));
+    return roles.some(r => (r || '').toString().trim().toLowerCase().includes('instructeur'));
 }
 
 function estInstructeurParNom(nom) {
     if (!nom) return false;
     const u = listeInstructeursCache.find(x => `${x.prenom || ''} ${x.nom || ''}`.trim().toLowerCase() === nom.toLowerCase());
-    return u ? ROLES_INSTRUCTEUR.some(r => (u.roles || []).includes(r)) : false;
+    return u ? (u.roles || []).some(r => (r || '').toString().trim().toLowerCase().includes('instructeur')) : false;
 }
 
 function initBoutonDisponibiliteInstructeur() {
@@ -548,7 +548,7 @@ async function chargerListeInstructeurs(forceRefresh = false) {
             const nom = f['Nom'] || '';
             const roles = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
             return { id: r.id, prenom, nom, nomComplet: `${prenom} ${nom}`.trim(), trigramme: (f['Trigramme'] || '').toString().trim(), roles };
-        }).filter(u => u.nomComplet && u.roles.some(r => ROLES_INSTRUCTEUR.includes((r || '').trim())));
+        }).filter(u => u.nomComplet && u.roles.some(r => (r || '').toString().trim().toLowerCase().includes('instructeur')));
     } catch (err) { console.error(err); }
 }
 
