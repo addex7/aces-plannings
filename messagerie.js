@@ -88,9 +88,9 @@ function renderDestinatairesListe() {
     }
     const allSelected = utilisateurs.length > 0 && utilisateurs.every(n => destinatairesSelectionnes.includes(n));
     container.innerHTML = utilisateurs.map((nom, i) => `
-        <label style="display:flex; align-items:center; gap:8px; padding:6px 0; cursor:pointer; color:#334155; ${i % 2 === 1 ? 'background:#f1f5f9;' : ''}">
-            <input type="checkbox" class="destinataire-check" value="${escHtml(nom)}" ${destinatairesSelectionnes.includes(nom) ? 'checked' : ''}>
-            <span>${escHtml(nom)}</span>
+        <label style="display:flex; align-items:center; gap:8px; padding:6px 4px; cursor:pointer; color:#334155; ${i % 2 === 1 ? 'background:#f1f5f9;' : ''}">
+            <input type="checkbox" class="destinataire-check" style="flex-shrink:0;" value="${escHtml(nom)}" ${destinatairesSelectionnes.includes(nom) ? 'checked' : ''}>
+            <span style="flex:1; min-width:0; word-break:break-word;">${escHtml(nom)}</span>
         </label>
     `).join('');
     const tousBtn = document.getElementById('message-destinataires-tous');
