@@ -547,7 +547,7 @@ async function chargerListeInstructeurs(forceRefresh = false) {
             const prenom = f['Prénom'] || '';
             const nom = f['Nom'] || '';
             const roles = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
-            return { prenom, nom, nomComplet: `${prenom} ${nom}`.trim(), trigramme: (f['Trigramme'] || '').toString().trim(), roles };
+            return { id: r.id, prenom, nom, nomComplet: `${prenom} ${nom}`.trim(), trigramme: (f['Trigramme'] || '').toString().trim(), roles };
         }).filter(u => u.nomComplet && u.roles.some(r => ROLES_INSTRUCTEUR.includes((r || '').trim())));
     } catch (err) { console.error(err); }
 }

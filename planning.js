@@ -192,14 +192,20 @@ async function ouvrirModaleModification(reservationId) {
     // Remplir l'instructeur
     if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
     if (form['form-instructeur']) {
-        const instructeurSauve = (reservation.fields['Instructeur'] || '').toString().trim();
-        if (instructeurSauve) {
-            const options = Array.from(form['form-instructeur'].options);
-            const match = options.find(o => o.value && typeof correspondanceNom === 'function' && correspondanceNom(o.value, instructeurSauve));
-            form['form-instructeur'].value = match ? match.value : '';
-        } else {
-            form['form-instructeur'].value = '';
+        const savedInstructeur = reservation.fields['Instructeur'];
+        let nomInstructeur = '';
+        if (savedInstructeur) {
+            const idInstructeur = Array.isArray(savedInstructeur) ? savedInstructeur[0] : savedInstructeur;
+            if (typeof listeInstructeursCache !== 'undefined' && listeInstructeursCache.length) {
+                const found = listeInstructeursCache.find(i => i.id === idInstructeur || i.nomComplet === idInstructeur);
+                nomInstructeur = found ? found.nomComplet : idInstructeur;
+            } else {
+                nomInstructeur = idInstructeur.toString().trim();
+            }
         }
+        const options = Array.from(form['form-instructeur'].options);
+        const match = nomInstructeur && options.find(o => o.value && typeof correspondanceNom === 'function' && correspondanceNom(o.value, nomInstructeur));
+        form['form-instructeur'].value = match ? match.value : (options.some(o => o.value === nomInstructeur) ? nomInstructeur : '');
     }
 
     // Stocker l'ID de la réservation en cours d'édition
