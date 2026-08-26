@@ -790,6 +790,7 @@ function initNavigationTabs() {
     const tabComptes = document.getElementById('tab-comptes');
     const tabAudit = document.getElementById('tab-audit');
     const tabMessagerie = document.getElementById('tab-messagerie');
+    const tabAccueil = document.getElementById('tab-accueil');
     const viewPlanning = document.getElementById('view-planning');
     const viewAeronefs = document.getElementById('view-aeronefs');
     const viewInitiation = document.getElementById('view-initiation');
@@ -801,10 +802,11 @@ function initNavigationTabs() {
     const viewAudit = document.getElementById('view-audit');
     const viewAccueilMembre = document.getElementById('view-accueil-membre');
     const viewMessagerie = document.getElementById('view-messagerie');
+    const viewAccueilPilote = document.getElementById('view-accueil-pilote');
 
     function activerTab(tab, vue) {
-        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabMembres, tabDocuments, tabComptes, tabAudit, tabMessagerie].forEach(t => { if (t) t.classList.remove('active'); });
-        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewMembres, viewDocuments, viewComptes, viewAudit, viewAccueilMembre, viewMessagerie].forEach(v => { if (v) v.style.display = 'none'; });
+        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabMembres, tabDocuments, tabComptes, tabAudit, tabMessagerie, tabAccueil].forEach(t => { if (t) t.classList.remove('active'); });
+        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewMembres, viewDocuments, viewComptes, viewAudit, viewAccueilMembre, viewMessagerie, viewAccueilPilote].forEach(v => { if (v) v.style.display = 'none'; });
         if (tab) tab.classList.add('active');
         if (vue) vue.style.display = 'block';
         // Ouvrir le groupe contenant l'onglet actif, fermer les autres groupes déroulants
@@ -816,6 +818,13 @@ function initNavigationTabs() {
     if (tabPlanning) {
         tabPlanning.addEventListener('click', () => {
             activerTab(tabPlanning, viewPlanning);
+        });
+    }
+
+    if (tabAccueil) {
+        tabAccueil.addEventListener('click', () => {
+            activerTab(tabAccueil, viewAccueilPilote);
+            if (typeof chargerAccueilPilote === 'function') chargerAccueilPilote();
         });
     }
 

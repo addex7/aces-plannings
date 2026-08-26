@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=98">
+    <link rel="stylesheet" href="style.css?v=99">
 </head>
 <body>
 
@@ -93,7 +93,7 @@
                     <div class="nav-group">
                         <div class="nav-group-title">📅 Planning</div>
                         <ul class="nav-sub">
-                            <li id="tab-planning" class="active">📅 Planning</li>
+                            <li id="tab-planning">📅 Planning</li>
                             <li id="tab-initiation">🎯 Vol d'Initiation</li>
                             <li id="tab-aeronefs">🛩️ Aéronefs</li>
                             <li id="tab-instructeur">👨‍🏫 Instructeur</li>
@@ -101,6 +101,7 @@
                     </div>
                     <div class="nav-group nav-group-standalone">
                         <ul class="nav-sub">
+                            <li id="tab-accueil" class="active">🏠 Accueil</li>
                             <li id="tab-carnet">📖 Carnet de route</li>
                             <li id="tab-documents">📄 Base documentaire</li>
                             <li id="tab-membres" style="display:none;">👥 Membres</li>
@@ -126,9 +127,19 @@
 
         <!-- Zone principale de contenu -->
         <main class="main-content">
-            
+
+            <!-- ================= VUE ACCUEIL PILOTE ================= -->
+            <section id="view-accueil-pilote" class="view-section" style="display: block;">
+                <div class="header">
+                    <h2>Accueil pilote</h2>
+                </div>
+                <div id="accueil-pilote-container" class="accueil-pilote-container">
+                    <p class="carnet-empty">Chargement du tableau de bord...</p>
+                </div>
+            </section>
+
             <!-- ================= VUE PLANNING ================= -->
-            <section id="view-planning" class="view-section">
+            <section id="view-planning" class="view-section" style="display: none;">
                 <!-- En-tête avec Navigation de Date et Bouton d'Ajout -->
                 <header class="header">
                     <h2>Planning des Vols</h2>
@@ -1181,16 +1192,17 @@
     <script src="planning.js?v=108"></script>
     <script src="calendrier.js?v=85"></script>
     <script src="comptes.js?v=99"></script>
-    <script src="aeronefs.js?v=93"></script>
+    <script src="aeronefs.js?v=94"></script>
     <script src="carnet.js?v=87"></script>
     <script src="documents.js?v=82"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=4"></script>
-    <script src="membres.js?v=89"></script>
+    <script src="membres.js?v=90"></script>
     <script src="instructeurs.js?v=85"></script>
     <script src="instructeur-planning.js?v=82"></script>
     <script src="messagerie.js?v=13"></script>
     <script src="membre-home.js?v=82"></script>
+    <script src="accueil-pilote.js?v=1"></script>
     <!-- Fenêtre Modale : Lecture d'un message -->
     <div id="message-read-modal" class="modal" style="display:none;">
         <div class="modal-content" style="max-width:600px;">

@@ -182,6 +182,8 @@ function showApp() {
     if (overlay) overlay.style.display = 'none';
     if (setup) setup.style.display = 'none';
     updateUIRoles();
+    const tabAccueil = document.getElementById('tab-accueil');
+    if (tabAccueil) tabAccueil.click();
 }
 
 async function seConnecter() {
