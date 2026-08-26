@@ -24,8 +24,7 @@ function initMessagerie() {
     const fileName = document.getElementById('message-piece-name');
     const nouveauBtn = document.getElementById('btn-nouveau-message');
     const close = document.getElementById('message-read-close');
-    const input = document.getElementById('message-destinataires-input');
-    const suggestions = document.getElementById('message-destinataires-suggestions');
+    const list = document.getElementById('message-destinataires-list');
     const tousBtn = document.getElementById('message-destinataires-tous');
 
     if (fileInput) {
@@ -57,82 +56,65 @@ function initMessagerie() {
             if (item) voirMessage(item.dataset.id);
         });
     }
-    if (input) {
-        input.addEventListener('input', () => filtrerDestinataires(input.value));
-        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
-    }
-    if (suggestions) {
-        suggestions.addEventListener('click', (e) => {
-            const el = e.target.closest('.destinataire-suggestion');
-            if (el) ajouterDestinataire(el.dataset.nom);
+    if (list) {
+        list.addEventListener('change', (e) => {
+            if (e.target && e.target.classList.contains('destinataire-check')) {
+                basculerDestinataire(e.target.value, e.target.checked);
+            }
         });
     }
-    if (tousBtn) tousBtn.addEventListener('click', ajouterTousLesDestinataires);
+    if (tousBtn) tousBtn.addEventListener('click', basculerTousLesDestinataires);
     chargerDestinataires();
+
+    // Auto-rafraîchissement
+    setInterval(() => {
+        if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
+        const vue = document.getElementById('view-messagerie');
+        if (vue && vue.style.display !== 'none' && typeof chargerMessagerie === 'function') chargerMessagerie();
+    }, 15000);
 }
 
-function renderDestinatairesChips() {
-    const container = document.getElementById('message-destinataires-chips');
+function renderDestinatairesListe() {
+    const container = document.getElementById('message-destinataires-list');
     if (!container) return;
-    if (destinatairesSelectionnes.length === 0) {
-        container.innerHTML = '<span style="color:#94a3b8; font-size:13px;">Aucun destinataire sélectionné</span>';
+    const current = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    const utilisateurs = (utilisateursMessagerieCache || []).map(r => {
+        const f = r.fields || {};
+        return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+    }).filter(n => n && n !== current).sort();
+    if (utilisateurs.length === 0) {
+        container.innerHTML = '<span style="color:#94a3b8; font-size:13px;">Aucun destinataire disponible</span>';
         return;
     }
-    container.innerHTML = destinatairesSelectionnes.map(nom => `
-        <span style="display:inline-flex; align-items:center; gap:4px; background:#1e3d59; color:white; padding:4px 8px; border-radius:12px; font-size:13px;">
-            ${escHtml(nom)}
-            <button type="button" data-nom="${escHtml(nom)}" class="retirer-destinataire" style="background:none; border:none; color:white; cursor:pointer; font-weight:bold; line-height:1;">×</button>
-        </span>
+    const allSelected = utilisateurs.length > 0 && utilisateurs.every(n => destinatairesSelectionnes.includes(n));
+    container.innerHTML = utilisateurs.map((nom, i) => `
+        <label style="display:flex; align-items:center; gap:8px; padding:6px 0; cursor:pointer; color:#334155; ${i % 2 === 1 ? 'background:#f1f5f9;' : ''}">
+            <input type="checkbox" class="destinataire-check" value="${escHtml(nom)}" ${destinatairesSelectionnes.includes(nom) ? 'checked' : ''}>
+            <span>${escHtml(nom)}</span>
+        </label>
     `).join('');
-    container.querySelectorAll('.retirer-destinataire').forEach(btn => {
-        btn.addEventListener('click', () => retirerDestinataire(btn.dataset.nom));
-    });
+    const tousBtn = document.getElementById('message-destinataires-tous');
+    if (tousBtn) tousBtn.textContent = allSelected ? 'Décocher tout le monde' : 'Tout le monde';
 }
 
-function filtrerDestinataires(value) {
-    const suggestions = document.getElementById('message-destinataires-suggestions');
-    if (!suggestions) return;
-    const v = (value || '').trim().toLowerCase();
-    if (!v) { suggestions.style.display = 'none'; return; }
+function basculerDestinataire(nom, checked) {
+    if (checked) {
+        if (!destinatairesSelectionnes.includes(nom)) destinatairesSelectionnes.push(nom);
+    } else {
+        destinatairesSelectionnes = destinatairesSelectionnes.filter(n => n !== nom);
+    }
+    renderDestinatairesListe();
+}
+
+function basculerTousLesDestinataires() {
     const current = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
-    const matches = (utilisateursMessagerieCache || []).filter(r => {
+    const utilisateurs = (utilisateursMessagerieCache || []).map(r => {
         const f = r.fields || {};
-        const nom = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
-        if (!nom || nom === current || destinatairesSelectionnes.includes(nom)) return false;
-        return nom.toLowerCase().includes(v);
-    });
-    if (matches.length === 0) { suggestions.style.display = 'none'; return; }
-    suggestions.innerHTML = matches.map(r => {
-        const f = r.fields || {};
-        const nom = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
-        return `<div class="destinataire-suggestion" data-nom="${escHtml(nom)}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #f1f5f9; color:#334155;">${escHtml(nom)}</div>`;
-    }).join('');
-    suggestions.style.display = 'block';
-}
-
-function ajouterDestinataire(nom) {
-    if (!nom || destinatairesSelectionnes.includes(nom)) return;
-    destinatairesSelectionnes = destinatairesSelectionnes.filter(n => n !== 'Tous');
-    destinatairesSelectionnes.push(nom);
-    const input = document.getElementById('message-destinataires-input');
-    if (input) input.value = '';
-    const suggestions = document.getElementById('message-destinataires-suggestions');
-    if (suggestions) suggestions.style.display = 'none';
-    renderDestinatairesChips();
-}
-
-function retirerDestinataire(nom) {
-    destinatairesSelectionnes = destinatairesSelectionnes.filter(n => n !== nom);
-    renderDestinatairesChips();
-}
-
-function ajouterTousLesDestinataires() {
-    destinatairesSelectionnes = ['Tous'];
-    const input = document.getElementById('message-destinataires-input');
-    if (input) input.value = '';
-    const suggestions = document.getElementById('message-destinataires-suggestions');
-    if (suggestions) suggestions.style.display = 'none';
-    renderDestinatairesChips();
+        return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+    }).filter(n => n && n !== current);
+    const allSelected = utilisateurs.length > 0 && utilisateurs.every(n => destinatairesSelectionnes.includes(n));
+    destinatairesSelectionnes = allSelected ? [] : [...utilisateurs];
+    renderDestinatairesListe();
 }
 
 async function chargerDestinataires() {
@@ -141,7 +123,7 @@ async function chargerDestinataires() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         utilisateursMessagerieCache = data.records || [];
-        renderDestinatairesChips();
+        renderDestinatairesListe();
     } catch (err) {
         console.error('Erreur chargement destinataires:', err);
     }
@@ -202,6 +184,7 @@ async function envoyerMessage(e) {
     const corps = document.getElementById('message-corps');
     const fileInput = document.getElementById('message-piece');
     const fileName = document.getElementById('message-piece-name');
+    const loader = document.getElementById('message-loader');
     if (!objet || !corps) return;
 
     const objetVal = objet.value.trim();
@@ -212,31 +195,26 @@ async function envoyerMessage(e) {
     const expediteur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
     if (!expediteur) { alert('Vous devez être connecté.'); return; }
 
-    let pieceJointe = null;
-    const file = fileInput && fileInput.files[0];
-    if (file) {
-        try {
+    if (loader) loader.style.display = 'flex';
+    try {
+        let pieceJointe = null;
+        const file = fileInput && fileInput.files[0];
+        if (file) {
             const uploader = typeof uploaderFichierDocument === 'function' ? uploaderFichierDocument : null;
             if (!uploader) throw new Error('Uploader non disponible');
             pieceJointe = await uploader(file);
-        } catch (err) {
-            console.error(err);
-            alert('Erreur lors de l\'upload de la pièce jointe : ' + (err.message || 'inconnue'));
-            return;
         }
-    }
 
-    const fields = {
-        [FIELDS_MESSAGE.DATE]: new Date().toISOString().slice(0, 10),
-        [FIELDS_MESSAGE.EXPEDITEUR]: expediteur,
-        [FIELDS_MESSAGE.DESTINATAIRE]: destinatairesSelectionnes.join('; '),
-        [FIELDS_MESSAGE.OBJET]: objetVal,
-        [FIELDS_MESSAGE.CORPS]: corpsVal,
-        [FIELDS_MESSAGE.LU]: false
-    };
-    if (pieceJointe !== null) fields[FIELDS_MESSAGE.PIECE] = pieceJointe;
+        const fields = {
+            [FIELDS_MESSAGE.DATE]: new Date().toISOString().slice(0, 10),
+            [FIELDS_MESSAGE.EXPEDITEUR]: expediteur,
+            [FIELDS_MESSAGE.DESTINATAIRE]: destinatairesSelectionnes.join('; '),
+            [FIELDS_MESSAGE.OBJET]: objetVal,
+            [FIELDS_MESSAGE.CORPS]: corpsVal,
+            [FIELDS_MESSAGE.LU]: false
+        };
+        if (pieceJointe !== null) fields[FIELDS_MESSAGE.PIECE] = pieceJointe;
 
-    try {
         const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}`, {
             method: 'POST',
             headers,
@@ -252,12 +230,14 @@ async function envoyerMessage(e) {
         if (messageForm) messageForm.reset();
         if (fileName) fileName.textContent = '';
         destinatairesSelectionnes = [];
-        renderDestinatairesChips();
+        renderDestinatairesListe();
         const messageFormSection = document.getElementById('message-form-section');
         if (messageFormSection) messageFormSection.style.display = 'none';
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'envoi : ' + (err.message || 'inconnue'));
+    } finally {
+        if (loader) loader.style.display = 'none';
     }
 }
 

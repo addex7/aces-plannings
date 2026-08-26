@@ -672,10 +672,8 @@
                     <form id="message-form">
                         <div class="form-group">
                             <label>Destinataires *</label>
-                            <div id="message-destinataires-chips" style="display:flex; flex-wrap:wrap; gap:6px; padding:6px; border:1px solid #cbd5e1; border-radius:6px; min-height:36px; align-items:center; background:#f8fafc;"></div>
-                            <input type="text" id="message-destinataires-input" class="form-control" placeholder="Taper un nom..." autocomplete="off" style="margin-top:8px;">
-                            <div id="message-destinataires-suggestions" style="display:none; border:1px solid #e2e8f0; border-radius:6px; max-height:150px; overflow-y:auto; background:white; margin-top:4px;"></div>
-                            <button type="button" id="message-destinataires-tous" class="btn-secondary" style="margin-top:8px;">Tout le monde</button>
+                            <div id="message-destinataires-list" style="max-height:200px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:6px; padding:8px; background:#f8fafc;"></div>
+                            <button type="button" id="message-destinataires-tous" class="btn-secondary" style="margin-top:8px; width:100%;">Tout le monde</button>
                         </div>
                         <div class="form-group">
                             <label for="message-objet">Objet *</label>
@@ -694,6 +692,10 @@
                             <button type="submit" class="btn-submit">Envoyer</button>
                         </div>
                     </form>
+                </div>
+                <div id="message-loader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:20000; align-items:center; justify-content:center; flex-direction:column;">
+                    <div style="font-size:48px; animation:spin 1s linear infinite;">⏳</div>
+                    <p style="margin-top:16px; color:#1e3d59; font-weight:600;">Envoi en cours...</p>
                 </div>
                 <div id="messages-list" style="background:white; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); overflow:hidden;">
                     <p class="carnet-empty">Cliquez sur l'onglet pour charger vos messages.</p>
@@ -1166,7 +1168,7 @@
     <script src="membres.js?v=87"></script>
     <script src="instructeurs.js?v=83"></script>
     <script src="instructeur-planning.js?v=82"></script>
-    <script src="messagerie.js?v=6"></script>
+    <script src="messagerie.js?v=7"></script>
     <script src="membre-home.js?v=82"></script>
     <!-- Fenêtre Modale : Lecture d'un message -->
     <div id="message-read-modal" class="modal" style="display:none;">
