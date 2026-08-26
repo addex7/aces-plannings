@@ -2402,3 +2402,40 @@ body {
     margin: 0 0 8px 0;
     color: #1e3d59;
 }
+.ap-signalement-detail {
+    padding: 8px 12px;
+    margin: 0 0 8px 0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ap-signalement-detail-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+.ap-signalement-detail-item:last-child {
+    border-bottom: none;
+}
+.ap-signalement-detail-desc {
+    flex: 1;
+    color: #1e3d59;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ap-signalement-detail-etat {
+    color: #64748b;
+    font-size: 11px;
+    white-space: nowrap;
+}
+.ap-signalement-row:hover {
+    background: #f1f5f9;
+}

@@ -109,10 +109,17 @@ async function chargerAccueilPilote() {
             ${signalements.length ? `
                 <div class="ap-signalements-list">
                     ${signalements.map(s => `
-                        <div class="ap-signalement-row">
+                        <div class="ap-signalement-row" data-immat="${escHtml(s.immat)}" style="cursor:pointer;">
                             <span class="ap-signalement-machine">${escHtml(s.immat)}</span>
-                            <span class="ap-signalement-desc">${escHtml(s.description)}</span>
-                            <span class="ap-signalement-etat">${escHtml(s.etat)}</span>
+                            <span class="ap-signalement-count">${s.items.length} Signalement${s.items.length > 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="ap-signalement-detail" style="display:none;">
+                            ${s.items.map(i => `
+                                <div class="ap-signalement-detail-item">
+                                    <span class="ap-signalement-detail-desc">${escHtml(i.description)}</span>
+                                    <span class="ap-signalement-detail-etat">${escHtml(i.etat)}</span>
+                                </div>
+                            `).join('')}
                         </div>
                     `).join('')}
                 </div>
@@ -167,6 +174,15 @@ async function chargerAccueilPilote() {
     if (btnCompte) btnCompte.addEventListener('click', () => {
         const t = document.getElementById('tab-comptes');
         if (t) t.click();
+    });
+
+    container.querySelectorAll('.ap-signalement-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const detail = row.nextElementSibling;
+            if (detail && detail.classList.contains('ap-signalement-detail')) {
+                detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+            }
+        });
     });
 }
 
@@ -240,13 +256,20 @@ async function chargerSignalementsAccueil() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message);
 
-        return (data.records || []).map(r => {
+        const records = (data.records || []).map(r => {
             const f = r.fields || {};
             const immat = (f['Machine'] || '').toString().trim() || '?';
             const description = (f['Observations'] || '').toString().trim() || 'Signalement';
             const etat = (f['Statut observation'] || 'Non pris en compte').toString().trim();
             return { immat, description, etat };
         }).sort((a, b) => a.immat.localeCompare(b.immat));
+
+        const groups = {};
+        records.forEach(s => {
+            if (!groups[s.immat]) groups[s.immat] = { immat: s.immat, items: [] };
+            groups[s.immat].items.push({ description: s.description, etat: s.etat });
+        });
+        return Object.values(groups).sort((a, b) => a.immat.localeCompare(b.immat));
     } catch (err) {
         console.error('Erreur chargement signalements accueil:', err);
         return [];
