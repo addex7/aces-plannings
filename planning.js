@@ -520,8 +520,19 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
                 barresDiv.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (isResizing || isDraggingBar) return;
-                    const tabInitiation = document.getElementById('tab-initiation');
-                    if (tabInitiation) tabInitiation.click();
+                    const volPourEdition = {
+                        source: isCreneau ? 'creneau' : 'planeur',
+                        id: vol.id,
+                        passager: nom,
+                        pilote: pilote,
+                        telephone: vol.fields['Téléphone'] || '',
+                        debut: vol.fields['Date de début'],
+                        fin: vol.fields['Date de fin'],
+                        commentaire: vol.fields['Commentaire'] || '',
+                        token: vol.fields['Token'] || '',
+                        type: type
+                    };
+                    editerVolInitiation(volPourEdition);
                 });
                 barresDiv.addEventListener('mouseenter', () => { barresDiv.style.zIndex = '100'; });
                 barresDiv.addEventListener('mouseleave', () => { barresDiv.style.zIndex = '5'; });
@@ -605,6 +616,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         'Date de début': dateRaw + 'T' + (f['Heure début'] || '00:00') + ':00',
                         'Date de fin': dateRaw + 'T' + (f['Heure fin'] || '00:00') + ':00',
                         'Pilote': pilote,
+                        'Téléphone': f['Téléphone'] || '',
+                        'Token': f['Token'] || '',
                         'Commentaire': f['Commentaire'] || ''
                     }
                 };
