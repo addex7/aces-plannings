@@ -174,6 +174,25 @@ let currentRecord = null;
 let recordIdOrigine = null;
 let typeSelectionne = null;
 
+async function enregistrerAudit(action, cible = '', details = '', module = '') {
+    const body = {
+        records: [{
+            fields: {
+                'Date': new Date().toISOString(),
+                'Utilisateur': '',
+                'Action': action,
+                'Cible': cible,
+                'Détails': details,
+                'Module': module
+            }
+        }]
+    };
+    try {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Audit')}`, { method: 'POST', headers, body: JSON.stringify(body) });
+        if (!res.ok) console.warn('Échec audit:', await res.text());
+    } catch (e) { console.error('Erreur audit:', e); }
+}
+
 function genererToken() {
     const arr = new Uint8Array(16);
     crypto.getRandomValues(arr);
@@ -400,6 +419,13 @@ async function onSubmitReservation(e) {
         } else {
             await sendConfirmationEmail(record, token, { prenom, nom, email });
         }
+        const f = record.fields || {};
+        const dateVol = f['Date'] ? formatDate(f['Date']) : '';
+        const heureVol = `${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`;
+        const typeVol = f['Type'] || 'VI';
+        const passager = `${prenom} ${nom}`.trim();
+        const action = isModification ? 'Modification réservation publique' : 'Réservation créneau VI';
+        await enregistrerAudit(action, typeVol, `Passager : ${passager} | Email : ${email} | Tél. : ${telephone} | 📅 ${dateVol} • 🕐 ${heureVol}`, 'Initiation');
         showConfirmation(record, token, { prenom, nom, email });
     } catch (err) {
         console.error(err);
@@ -610,6 +636,12 @@ async function onManageUpdate(e) {
         currentRecord = record;
         showManageView(record);
         showMessage('success', 'Informations mises à jour.');
+        const fUpd = record.fields || {};
+        const dateUpd = fUpd['Date'] ? formatDate(fUpd['Date']) : '';
+        const heureUpd = `${fUpd['Heure début'] || ''} - ${fUpd['Heure fin'] || ''}`;
+        const typeUpd = fUpd['Type'] || 'VI';
+        const passagerUpd = `${fields['Prénom']} ${fields['Nom']}`.trim();
+        await enregistrerAudit('Modification coordonnées VI', typeUpd, `Passager : ${passagerUpd} | Email : ${fields['Email']} | Tél. : ${fields['Téléphone']} | 📅 ${dateUpd} • 🕐 ${heureUpd}`, 'Initiation');
         await sendConfirmationEmail(record, currentToken, { prenom: fields['Prénom'], nom: fields['Nom'], email: fields['Email'] });
     } catch (err) {
         console.error(err);
@@ -641,6 +673,12 @@ async function onManageCancel() {
             }}] })
         });
         if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur');
+        const fCancel = currentRecord.fields || {};
+        const dateCancel = fCancel['Date'] ? formatDate(fCancel['Date']) : '';
+        const heureCancel = `${fCancel['Heure début'] || ''} - ${fCancel['Heure fin'] || ''}`;
+        const typeCancel = fCancel['Type'] || 'VI';
+        const passagerCancel = `${fCancel['Prénom'] || ''} ${fCancel['Nom'] || ''}`.trim();
+        await enregistrerAudit('Annulation créneau VI', typeCancel, `Passager : ${passagerCancel} | 📅 ${dateCancel} • 🕐 ${heureCancel}`, 'Initiation');
         currentToken = null;
         currentRecord = null;
         showMessage('info', 'Réservation annulée. Le créneau est de nouveau disponible.');
