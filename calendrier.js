@@ -119,6 +119,7 @@ async function chargerDonneesCalendrier(annee, mois) {
     const userPrenom = (typeof currentUser !== 'undefined' && currentUser ? currentUser.prenom : '') || '';
     const userNom = (typeof currentUser !== 'undefined' && currentUser ? currentUser.nom : '') || '';
     const userFullName = `${userPrenom} ${userNom}`.trim();
+    const userId = (typeof currentUser !== 'undefined' && currentUser ? currentUser.id : null);
 
     miniCalendrierData = {};
 
@@ -133,7 +134,8 @@ async function chargerDonneesCalendrier(annee, mois) {
             const f = r.fields || {};
             const rStart = new Date(f['Date de début']);
             const rEnd = new Date(f['Date de fin']);
-            const pilote = (f['Pilote'] || '').toString().trim();
+            const pilote = f['Pilote'];
+            const pilotes = Array.isArray(pilote) ? pilote : (pilote ? [pilote] : []);
             rStart.setHours(0, 0, 0, 0);
             rEnd.setHours(0, 0, 0, 0);
             for (let t = rStart.getTime(); t <= rEnd.getTime(); t += 86400000) {
@@ -142,7 +144,12 @@ async function chargerDonneesCalendrier(annee, mois) {
                 if (d < debutMois || d > finMois) continue;
                 const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
                 info.has = true;
-                if (pilote && (correspondanceNom(pilote, userName) || correspondanceNom(pilote, userFullName))) info.hasUser = true;
+                const isUser = pilotes.some(p => {
+                    if (userId && p === userId) return true;
+                    const ps = (p || '').toString().trim();
+                    return ps && (correspondanceNom(ps, userName) || correspondanceNom(ps, userFullName));
+                });
+                if (isUser) info.hasUser = true;
             }
         });
     } catch (err) { console.error('Erreur calendrier Réservations:', err); }

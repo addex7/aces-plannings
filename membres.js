@@ -30,6 +30,7 @@ function setCurrentUser(user) {
     if (typeof appliquerAccesMaintenanceEtDocuments === 'function') appliquerAccesMaintenanceEtDocuments();
     if (typeof appliquerAccesComptes === 'function') appliquerAccesComptes();
     if (typeof chargerNotifications === 'function') chargerNotifications();
+    if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
 }
 
 function updateUIRoles() {
