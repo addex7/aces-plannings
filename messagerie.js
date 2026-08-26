@@ -183,7 +183,9 @@ function afficherMessages(records) {
         const lu = f[FIELDS_MESSAGE.LU];
         const expediteur = f[FIELDS_MESSAGE.EXPEDITEUR] || '';
         const objet = f[FIELDS_MESSAGE.OBJET] || '(sans objet)';
-        const piece = (f[FIELDS_MESSAGE.PIECE] || []).length > 0 ? '📎' : '';
+        const pieceVal = f[FIELDS_MESSAGE.PIECE];
+        const aPiece = Array.isArray(pieceVal) ? pieceVal.length > 0 : (typeof pieceVal === 'string' && pieceVal.trim().length > 0);
+        const piece = aPiece ? '📎' : '';
         return `<div class="message-item ${lu ? 'message-lu' : 'message-non-lu'}" data-id="${escHtml(r.id)}" style="cursor:pointer; padding:10px 12px; border-bottom:1px solid #e2e8f0;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <strong style="color:#1e3d59;">${escHtml(expediteur)}</strong>
@@ -192,6 +194,15 @@ function afficherMessages(records) {
             <div style="margin-top:4px;">${lu ? '' : '<span style="color:#dc2626; font-weight:bold;">●</span> '}<span style="color:#334155;">${escHtml(objet)}</span> ${piece}</div>
         </div>`;
     }).join('');
+}
+
+function lireFichier(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Erreur lecture fichier'));
+        reader.readAsDataURL(file);
+    });
 }
 
 async function envoyerMessage(e) {
@@ -210,6 +221,23 @@ async function envoyerMessage(e) {
     const expediteur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
     if (!expediteur) { alert('Vous devez être connecté.'); return; }
 
+    let pieceJointe = null;
+    const file = fileInput && fileInput.files[0];
+    if (file) {
+        try {
+            const dataUrl = await lireFichier(file);
+            const payload = JSON.stringify({ filename: file.name, data: dataUrl });
+            if (payload.length > 95000) {
+                alert('Le fichier est trop volumineux pour être envoyé dans Airtable (limite ~70 Ko).');
+                return;
+            }
+            pieceJointe = payload;
+        } catch (err) {
+            alert('Erreur lors de la lecture du fichier.');
+            return;
+        }
+    }
+
     const fields = {
         [FIELDS_MESSAGE.DATE]: new Date().toISOString().slice(0, 10),
         [FIELDS_MESSAGE.EXPEDITEUR]: expediteur,
@@ -218,6 +246,7 @@ async function envoyerMessage(e) {
         [FIELDS_MESSAGE.CORPS]: corpsVal,
         [FIELDS_MESSAGE.LU]: false
     };
+    if (pieceJointe !== null) fields[FIELDS_MESSAGE.PIECE] = pieceJointe;
 
     try {
         const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}`, {
@@ -229,16 +258,6 @@ async function envoyerMessage(e) {
         if (!res.ok) throw new Error(data.error?.message || 'Erreur envoi');
         const record = (data.records || [])[0];
         if (!record) throw new Error('Aucune réponse Airtable');
-
-        const file = fileInput && fileInput.files[0];
-        if (file) {
-            try {
-                await uploadPieceJointe(record.id, file);
-            } catch (pjErr) {
-                console.error('Échec pièce jointe :', pjErr);
-                alert('Message envoyé, mais la pièce jointe n\'a pas pu être ajoutée.');
-            }
-        }
 
         alert('Message envoyé.');
         const messageForm = document.getElementById('message-form');
@@ -254,38 +273,6 @@ async function envoyerMessage(e) {
     }
 }
 
-async function uploadPieceJointe(recordId, file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async () => {
-            const dataUrl = reader.result;
-            const comma = dataUrl.indexOf(',');
-            if (comma === -1) { reject(new Error('Lecture fichier impossible')); return; }
-            const base64 = dataUrl.slice(comma + 1);
-            try {
-                const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(recordId)}/${encodeURIComponent(FIELDS_MESSAGE.PIECE)}/uploadAttachment`;
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({
-                        file: base64,
-                        filename: file.name,
-                        contentType: file.type || 'application/octet-stream'
-                    })
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    console.error('Upload PJ', res.status, url, data);
-                    throw new Error(data.error?.message || `Échec upload pièce jointe (${res.status})`);
-                }
-                resolve(data);
-            } catch (err) { reject(err); }
-        };
-        reader.onerror = () => reject(new Error('Erreur lecture fichier'));
-        reader.readAsDataURL(file);
-    });
-}
-
 function voirMessage(id) {
     const record = messagesCache.find(r => r.id === id);
     if (!record) return;
@@ -296,12 +283,22 @@ function voirMessage(id) {
 
     const d = f[FIELDS_MESSAGE.DATE] ? new Date(f[FIELDS_MESSAGE.DATE] + 'T00:00:00') : null;
     const date = d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '';
-    const pieces = Array.isArray(f[FIELDS_MESSAGE.PIECE]) ? f[FIELDS_MESSAGE.PIECE] : [];
-    const piecesHtml = pieces.length
-        ? `<div style="margin-top:15px;"><strong>Pièce(s) jointe(s) :</strong><br>` +
-          pieces.map(p => `<a href="${escHtml(p.url)}" target="_blank" style="display:inline-block; margin-top:4px;">${escHtml(p.filename || p.url)}</a>`).join('<br>') +
-          `</div>`
-        : '';
+    const pieceVal = f[FIELDS_MESSAGE.PIECE];
+    let piecesHtml = '';
+    if (Array.isArray(pieceVal) && pieceVal.length) {
+        piecesHtml = `<div style="margin-top:15px;"><strong>Pièce(s) jointe(s) :</strong><br>` +
+          pieceVal.map(p => `<a href="${escHtml(p.url)}" target="_blank" style="display:inline-block; margin-top:4px;">${escHtml(p.filename || p.url)}</a>`).join('<br>') +
+          `</div>`;
+    } else if (typeof pieceVal === 'string' && pieceVal.trim()) {
+        try {
+            const pj = JSON.parse(pieceVal);
+            if (pj && pj.data && pj.filename) {
+                piecesHtml = `<div style="margin-top:15px;"><a href="${escHtml(pj.data)}" download="${escHtml(pj.filename)}" style="display:inline-block; background:#1e3d59; color:white; padding:8px 12px; border-radius:6px; text-decoration:none;">📎 Télécharger ${escHtml(pj.filename)}</a></div>`;
+            }
+        } catch (e) {
+            piecesHtml = '';
+        }
+    }
 
     content.innerHTML = `
         <h3>${escHtml(f[FIELDS_MESSAGE.OBJET] || '')}</h3>
