@@ -138,7 +138,7 @@ async function chargerMessagerie() {
         container.innerHTML = '<p class="carnet-empty">Connectez-vous pour voir vos messages.</p>';
         return;
     }
-    const formula = `OR(FIND('Tous', {Destinataire}), FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire}))`;
+    const formula = `OR(FIND('Tous', {Destinataire}) > 0, FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire}) > 0)`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=50`, { headers });
         const data = await res.json();
@@ -303,7 +303,7 @@ async function compterMessagesNonLus() {
     if (!badge) return;
     const destinataire = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
     if (!destinataire) { badge.style.display = 'none'; return; }
-    const formula = `AND(OR(FIND('Tous', {Destinataire}), FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire})), {Lu}=FALSE())`;
+    const formula = `AND(OR(FIND('Tous', {Destinataire}) > 0, FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire}) > 0), {Lu}=FALSE())`;
     try {
         const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`, { headers });
         const data = await res.json();
