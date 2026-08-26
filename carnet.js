@@ -133,26 +133,26 @@ function remplirFormulaireCarnet(f) {
     if (inputHArrivee && !inputHArrivee.value) mettreAJourHorametreArrivee();
 }
 
-let listeInstructeursCache = [];
+let carnetInstructeursCache = [];
 
 async function peuplerInstructeursSelect(instructeur = '') {
     const sel = document.getElementById('carnet-instructeur');
     if (!sel) return;
     const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
     try {
-        if (!listeInstructeursCache.length) {
+        if (!carnetInstructeursCache.length) {
             const table = typeof TABLE_UTILISATEURS !== 'undefined' ? TABLE_UTILISATEURS : 'Utilisateurs';
             const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error?.message);
-            listeInstructeursCache = (data.records || []).filter(r => {
+            carnetInstructeursCache = (data.records || []).filter(r => {
                 const roles = Array.isArray(r.fields?.['Rôles']) ? r.fields['Rôles'] : [r.fields?.['Rôles']].filter(Boolean);
                 return roles.some(role => ROLES_INSTRUCTEUR.includes(role));
             });
         }
         const noneOption = sel.querySelector('option[value=""]');
         sel.innerHTML = noneOption ? noneOption.outerHTML : '<option value="">-- Aucun --</option>';
-        listeInstructeursCache.forEach(r => {
+        carnetInstructeursCache.forEach(r => {
             const f = r.fields || {};
             const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Instructeur';
             const opt = document.createElement('option');
