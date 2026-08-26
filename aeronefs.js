@@ -621,18 +621,20 @@ async function chargerSuiviAeronef() {
                 }
             });
 
-            const maintenanceDuJour = maintenances.find(m => {
-                const mDate = String(m.fields['Date'] || '').slice(0, 10);
-                return mDate === dateJourStr;
-            });
-            if (maintenanceDuJour) {
-                const maintenanceDate = new Date(maintenanceDuJour.fields['Date']);
-                const heureMaint = maintenanceDate.getHours() + (maintenanceDate.getMinutes() / 60);
-                const left = (heureMaint / 24) * 100;
-                const duree = parseFloat(maintenanceDuJour.fields['durée']) || 1;
-                const widthPct = Math.min((duree / 24) * 100, 100 - left);
+            maintenances.forEach(m => {
+                const mf = m.fields || {};
+                if (!mf['Date'] || isNaN(parseFloat(mf['durée']))) return;
+                const mStart = new Date(mf['Date']);
+                const mEnd = new Date(mStart.getTime() + parseFloat(mf['durée']) * 3600000);
+                if (mStart >= endOfDay || mEnd <= startOfDay) return;
+                const segDebut = new Date(Math.max(mStart.getTime(), startOfDay.getTime()));
+                const segFin = new Date(Math.min(mEnd.getTime(), endOfDay.getTime()));
+                let heureDebut = segDebut.getHours() + (segDebut.getMinutes() / 60);
+                let heureFin = segFin.getHours() + (segFin.getMinutes() / 60);
+                if (segFin.getTime() >= endOfDay.getTime()) heureFin = 24;
+                const left = (heureDebut / 24) * 100;
+                const widthPct = Math.min(((heureFin - heureDebut) / 24) * 100, 100 - left);
                 const maintenanceBubble = document.createElement('div');
-                maintenanceBubble.className = 'maintenance-bar';
                 maintenanceBubble.style.cssText = `
                     position: absolute;
                     top: 9px;
@@ -641,8 +643,9 @@ async function chargerSuiviAeronef() {
                     height: 25px;
                     background-color: rgba(124, 58, 237, 0.7);
                     border-radius: 3px;
-                    z-index: 4;
+                    z-index: 10;
                     cursor: pointer;
+                    pointer-events: auto;
                     overflow: hidden;
                     color: white;
                     font-size: 10px;
@@ -652,45 +655,49 @@ async function chargerSuiviAeronef() {
                     justify-content: center;
                 `;
                 maintenanceBubble.textContent = widthPct > 12 ? '🔧 Maintenance' : '🔧';
-                const butee = maintenanceDuJour.fields['Nouvelle Butée'] || '';
-                const heureStr = maintenanceDate.getHours().toString().padStart(2, '0') + ':' + maintenanceDate.getMinutes().toString().padStart(2, '0');
-                maintenanceBubble.title = `Maintenance à ${heureStr} (${duree}h) - Nouvelle butée : ${butee}`;
+                const butee = mf['Nouvelle Butée'] || '';
+                const heureStr = segDebut.getHours().toString().padStart(2, '0') + ':' + segDebut.getMinutes().toString().padStart(2, '0');
+                const finStr = segFin.getHours().toString().padStart(2, '0') + ':' + segFin.getMinutes().toString().padStart(2, '0');
+                maintenanceBubble.title = `Maintenance ${heureStr} - ${finStr} — Butée : ${butee}`;
 
-                const handleLeft = document.createElement('div');
-                handleLeft.className = 'resize-handle resize-handle-left';
-                const handleRight = document.createElement('div');
-                handleRight.className = 'resize-handle resize-handle-right';
-                maintenanceBubble.appendChild(handleLeft);
-                maintenanceBubble.appendChild(handleRight);
+                const oneDay = mStart >= startOfDay && mEnd <= endOfDay;
+                if (oneDay) {
+                    const handleLeft = document.createElement('div');
+                    handleLeft.className = 'resize-handle resize-handle-left';
+                    const handleRight = document.createElement('div');
+                    handleRight.className = 'resize-handle resize-handle-right';
+                    maintenanceBubble.appendChild(handleLeft);
+                    maintenanceBubble.appendChild(handleRight);
 
-                handleLeft.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    if (typeof initierResize === 'function') {
-                        initierResize(e, maintenanceDuJour.id, gridBg, maintenanceBubble, 'gauche', heureMaint, heureMaint + duree, dateJour, 'Maintenance');
-                    }
-                });
-                handleRight.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    if (typeof initierResize === 'function') {
-                        initierResize(e, maintenanceDuJour.id, gridBg, maintenanceBubble, 'droite', heureMaint, heureMaint + duree, dateJour, 'Maintenance');
-                    }
-                });
+                    handleLeft.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                        if (typeof initierResize === 'function') {
+                            initierResize(e, m.id, gridBg, maintenanceBubble, 'gauche', heureDebut, heureFin, dateJour, 'Maintenance');
+                        }
+                    });
+                    handleRight.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                        if (typeof initierResize === 'function') {
+                            initierResize(e, m.id, gridBg, maintenanceBubble, 'droite', heureDebut, heureFin, dateJour, 'Maintenance');
+                        }
+                    });
 
-                maintenanceBubble.addEventListener('mousedown', (e) => {
-                    if (e.target.classList.contains('resize-handle')) return;
-                    e.stopPropagation();
-                    if (typeof initierDeplacementBarre === 'function') {
-                        initierDeplacementBarre(e, maintenanceDuJour.id, machineActuelle.id, gridBg, maintenanceBubble, heureMaint, duree, null, 'Maintenance');
-                    }
-                });
+                    maintenanceBubble.addEventListener('mousedown', (e) => {
+                        if (e.target.classList.contains('resize-handle')) return;
+                        e.stopPropagation();
+                        if (typeof initierDeplacementBarre === 'function') {
+                            initierDeplacementBarre(e, m.id, machineActuelle.id, gridBg, maintenanceBubble, heureDebut, heureFin - heureDebut, null, 'Maintenance');
+                        }
+                    });
+                }
 
                 maintenanceBubble.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (isDraggingBar || isResizing) return;
-                    ouvrirModaleMaintenance(maintenanceDuJour);
+                    ouvrirModaleMaintenance(m);
                 });
                 gridBg.appendChild(maintenanceBubble);
-            }
+            });
 
             gridBg.appendChild(volsLayer);
             tdPlanning.appendChild(gridBg);
