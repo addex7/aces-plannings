@@ -637,10 +637,11 @@ async function chargerSuiviAeronef() {
                 const maintenanceBubble = document.createElement('div');
                 maintenanceBubble.style.cssText = `
                     position: absolute;
-                    top: 9px;
+                    top: 4px;
+                    bottom: 4px;
                     left: ${left}%;
                     width: ${widthPct}%;
-                    height: 25px;
+                    height: auto;
                     background-color: rgba(124, 58, 237, 0.7);
                     border-radius: 3px;
                     z-index: 10;
