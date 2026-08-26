@@ -669,7 +669,7 @@ function renderMessagesClub(records) {
                 <span>Messages club</span>
                 ${afficherForm ? '<button type="button" id="ap-btn-new-msg" class="ap-btn-new-msg" title="Nouveau message">+</button>' : ''}
             </h3>
-            <div class="ap-messages-list" style="max-height:220px; overflow-y:auto;">
+            <div class="ap-messages-list">
                 ${list}
             </div>
             ${afficherForm ? `

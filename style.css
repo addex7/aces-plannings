@@ -2288,6 +2288,11 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
+.ap-card-messages {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
 .ap-card-messages h3,
 .ap-card-messages p {
     color: #1e3d59;
@@ -2354,6 +2359,9 @@ body {
     color: #1e3d59;
 }
 .ap-messages-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 6px;
