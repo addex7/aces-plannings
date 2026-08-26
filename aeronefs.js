@@ -167,6 +167,11 @@ function ouvrirModaleMaintenance(record = null) {
     if (nouvelleGroup) nouvelleGroup.style.display = aChanger ? 'block' : 'none';
     if (nouvelleInput) nouvelleInput.value = aChanger ? nouvelle : (parseFloat(ancienne) + 50);
     if (modal) modal.style.display = 'flex';
+    const btnDelete = document.getElementById('btn-delete-maintenance');
+    if (btnDelete) {
+        btnDelete.style.display = record ? 'inline-block' : 'none';
+        btnDelete.onclick = record ? supprimerMaintenance : null;
+    }
 }
 
 function fermerModaleMaintenance() {
@@ -174,6 +179,24 @@ function fermerModaleMaintenance() {
     if (modal) modal.style.display = 'none';
     const form = document.getElementById('maintenance-form');
     if (form) form.reset();
+}
+
+async function supprimerMaintenance() {
+    const maintenanceId = document.getElementById('maintenance-id').value;
+    if (!maintenanceId || !confirm('Confirmer la suppression de cet acte de maintenance ?')) return;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}/${maintenanceId}`, { method: 'DELETE', headers });
+        if (!res.ok) throw new Error(await res.text());
+        if (typeof enregistrerAudit === 'function') {
+            const immat = document.getElementById('maintenance-machine-immat').value;
+            await enregistrerAudit('Suppression maintenance', immat, `ID : ${maintenanceId}`, 'Maintenance');
+        }
+        fermerModaleMaintenance();
+        chargerSuiviAeronef();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la suppression de la maintenance.');
+    }
 }
 
 async function enregistrerMaintenance(e) {
@@ -609,6 +632,7 @@ async function chargerSuiviAeronef() {
                 const duree = parseFloat(maintenanceDuJour.fields['durée']) || 1;
                 const widthPct = Math.min((duree / 24) * 100, 100 - left);
                 const maintenanceBubble = document.createElement('div');
+                maintenanceBubble.className = 'maintenance-bar';
                 maintenanceBubble.style.cssText = `
                     position: absolute;
                     top: 9px;
@@ -631,8 +655,38 @@ async function chargerSuiviAeronef() {
                 const butee = maintenanceDuJour.fields['Nouvelle Butée'] || '';
                 const heureStr = maintenanceDate.getHours().toString().padStart(2, '0') + ':' + maintenanceDate.getMinutes().toString().padStart(2, '0');
                 maintenanceBubble.title = `Maintenance à ${heureStr} (${duree}h) - Nouvelle butée : ${butee}`;
+
+                const handleLeft = document.createElement('div');
+                handleLeft.className = 'resize-handle resize-handle-left';
+                const handleRight = document.createElement('div');
+                handleRight.className = 'resize-handle resize-handle-right';
+                maintenanceBubble.appendChild(handleLeft);
+                maintenanceBubble.appendChild(handleRight);
+
+                handleLeft.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    if (typeof initierResize === 'function') {
+                        initierResize(e, maintenanceDuJour.id, gridBg, maintenanceBubble, 'gauche', heureMaint, heureMaint + duree, dateJour, 'Maintenance');
+                    }
+                });
+                handleRight.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    if (typeof initierResize === 'function') {
+                        initierResize(e, maintenanceDuJour.id, gridBg, maintenanceBubble, 'droite', heureMaint, heureMaint + duree, dateJour, 'Maintenance');
+                    }
+                });
+
+                maintenanceBubble.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('resize-handle')) return;
+                    e.stopPropagation();
+                    if (typeof initierDeplacementBarre === 'function') {
+                        initierDeplacementBarre(e, maintenanceDuJour.id, machineActuelle.id, gridBg, maintenanceBubble, heureMaint, duree, null, 'Maintenance');
+                    }
+                });
+
                 maintenanceBubble.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    if (isDraggingBar || isResizing) return;
                     ouvrirModaleMaintenance(maintenanceDuJour);
                 });
                 gridBg.appendChild(maintenanceBubble);

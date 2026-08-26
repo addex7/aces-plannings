@@ -1151,11 +1151,15 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
     const jour = referenceDate.getDate();
     const dateDebut = new Date(annee, mois, jour, Math.floor(hDeb), (hDeb % 1) * 60, 0);
     const dateFin = new Date(annee, mois, jour, Math.floor(hFin), (hFin % 1) * 60, 0);
+    const isMaintenance = tableName === 'Maintenance';
+    const fieldsPatch = isMaintenance
+        ? { "Date": dateDebut.toISOString(), "durée": (dateFin - dateDebut) / 3600000 }
+        : { "Date de début": dateDebut.toISOString(), "Date de fin": dateFin.toISOString() };
     try {
         const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
             method: 'PATCH',
             headers: headers,
-            body: JSON.stringify({ records: [{ id: reservationId, fields: { "Date de début": dateDebut.toISOString(), "Date de fin": dateFin.toISOString() } }] })
+            body: JSON.stringify({ records: [{ id: reservationId, fields: fieldsPatch }] })
         });
         if (response.ok) {
             const resData = await response.json();
@@ -1168,7 +1172,12 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
             const ancienDebut = resa?.fields?.['Date de début'] || '';
             const ancienFin = resa?.fields?.['Date de fin'] || '';
             if (typeof enregistrerAudit === 'function') {
-                await enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | Nouveau : ${dateDebut.toISOString().slice(0,16).replace('T',' ')} - ${dateFin.toISOString().slice(0,16).replace('T',' ')}`, 'Planning');
+                const message = `Nouveau : ${dateDebut.toISOString().slice(0,16).replace('T',' ')} - ${dateFin.toISOString().slice(0,16).replace('T',' ')}`;
+                if (isMaintenance) {
+                    await enregistrerAudit('Modification maintenance (durée)', tableName, message, 'Maintenance');
+                } else {
+                    await enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning');
+                }
             }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
@@ -1192,11 +1201,15 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
     const mInteger = Math.round((nouvelleHeureDebut % 1) * 60);
     const nouvelleDateDebut = new Date(annee, mois, jour, hInteger, mInteger, 0);
     const nouvelleDateFin = new Date(nouvelleDateDebut.getTime() + (dureeVol * 60 * 60 * 1000));
+    const isMaintenance = tableName === 'Maintenance';
+    const fieldsPatch = isMaintenance
+        ? { "Date": nouvelleDateDebut.toISOString(), "durée": dureeVol }
+        : { "Date de début": nouvelleDateDebut.toISOString(), "Date de fin": nouvelleDateFin.toISOString() };
     try {
         const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
             method: 'PATCH',
             headers: headers,
-            body: JSON.stringify({ records: [{ id: volId, fields: { "Date de début": nouvelleDateDebut.toISOString(), "Date de fin": nouvelleDateFin.toISOString() } }] })
+            body: JSON.stringify({ records: [{ id: volId, fields: fieldsPatch }] })
         });
         if (response.ok) {
             const resData = await response.json();
@@ -1209,7 +1222,12 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
             const ancienDebut = resa?.fields?.['Date de début'] || '';
             const ancienFin = resa?.fields?.['Date de fin'] || '';
             if (typeof enregistrerAudit === 'function') {
-                await enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | Nouveau : ${nouvelleDateDebut.toISOString().slice(0,16).replace('T',' ')} - ${nouvelleDateFin.toISOString().slice(0,16).replace('T',' ')}`, 'Planning');
+                const message = `Nouveau : ${nouvelleDateDebut.toISOString().slice(0,16).replace('T',' ')} - ${nouvelleDateFin.toISOString().slice(0,16).replace('T',' ')}`;
+                if (isMaintenance) {
+                    await enregistrerAudit('Modification maintenance (déplacement)', tableName, message, 'Maintenance');
+                } else {
+                    await enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning');
+                }
             }
             await chargerDonneesPlanning(true);
             const viewAeronefs = document.getElementById('view-aeronefs');
