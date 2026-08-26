@@ -167,10 +167,16 @@ async function chargerDonneesCalendrier(annee, mois) {
             if (!d) return;
             if (d < debutMois || d > finMois) return;
             const iso = d.toISOString().split('T')[0];
-            const nom = (f['Nom du pilote'] || '').toString().trim();
+            const nomField = f['Nom du pilote'];
+            const noms = Array.isArray(nomField) ? nomField : (nomField ? [nomField] : []);
             const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
             info.has = true;
-            if (nom && (correspondanceNom(nom, userName) || correspondanceNom(nom, userFullName))) info.hasUser = true;
+            const isUser = noms.some(n => {
+                if (userId && n === userId) return true;
+                const ns = (n || '').toString().trim();
+                return ns && (correspondanceNom(ns, userName) || correspondanceNom(ns, userFullName));
+            });
+            if (isUser) info.hasUser = true;
         });
     } catch (err) { console.error('Erreur calendrier Présences Planeur:', err); }
 
@@ -187,10 +193,16 @@ async function chargerDonneesCalendrier(annee, mois) {
             if (!d) return;
             if (d < debutMois || d > finMois) return;
             const iso = d.toISOString().split('T')[0];
-            const nom = (f['Nom du pilote'] || '').toString().trim();
+            const nomField = f['Nom du pilote'];
+            const noms = Array.isArray(nomField) ? nomField : (nomField ? [nomField] : []);
             const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
             info.has = true;
-            if (nom && (correspondanceNom(nom, userName) || correspondanceNom(nom, userFullName))) info.hasUser = true;
+            const isUser = noms.some(n => {
+                if (userId && n === userId) return true;
+                const ns = (n || '').toString().trim();
+                return ns && (correspondanceNom(ns, userName) || correspondanceNom(ns, userFullName));
+            });
+            if (isUser) info.hasUser = true;
         });
     } catch (err) { console.error('Erreur calendrier Présences Club:', err); }
 }

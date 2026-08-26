@@ -943,6 +943,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         if (typeof afficherLignesInstructeurs === 'function') afficherLignesInstructeurs(rowsContainer, soleil, disposInstructeurs, listeReservationsCache);
         await chargerPresencesPlaneur();
         await chargerPresencesClub();
+        actualiserLigneHeureCourante();
     } catch (error) {
         console.error(error);
         rowsContainer.innerHTML = "<div class='loading'>Erreur de chargement des données.</div>";
@@ -1017,6 +1018,33 @@ function estProprietaireReservation(record) {
     return (typeof correspondanceNom === 'function' && correspondanceNom(pilote, moi))
         || (typeof correspondanceNom === 'function' && correspondanceNom(nomPiloteCourant(), pilote))
         || pilote.trim().toLowerCase() === nomPiloteCourant().toLowerCase();
+}
+
+function actualiserLigneHeureCourante() {
+    const rows = document.getElementById('timeline-rows');
+    if (!rows) return;
+    if (typeof dateAffichee === 'undefined' || !dateAffichee) return;
+    const now = new Date();
+    const isToday = now.getFullYear() === dateAffichee.getFullYear() &&
+        now.getMonth() === dateAffichee.getMonth() &&
+        now.getDate() === dateAffichee.getDate();
+    let line = document.getElementById('ligne-heure-courante');
+    if (!line) {
+        line = document.createElement('div');
+        line.id = 'ligne-heure-courante';
+        line.style.cssText = 'position:absolute;top:0;bottom:0;width:1px;background:#ef4444;z-index:1000;pointer-events:none;display:none;';
+        rows.appendChild(line);
+    }
+    if (!isToday) {
+        line.style.display = 'none';
+        return;
+    }
+    if (rows.style.position !== 'relative' && getComputedStyle(rows).position !== 'relative') {
+        rows.style.position = 'relative';
+    }
+    line.style.display = 'block';
+    const heureDec = now.getHours() + (now.getMinutes() / 60);
+    line.style.left = `${positionHeure(heureDec)}%`;
 }
 
 function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations', record = null) {
@@ -2527,3 +2555,6 @@ async function creerCreneauxVI(e) {
         alert('Erreur lors de la création : ' + err.message);
     }
 }
+
+setInterval(actualiserLigneHeureCourante, 60000);
+actualiserLigneHeureCourante();
