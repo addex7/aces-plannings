@@ -2402,8 +2402,9 @@ body {
     margin-bottom: 8px;
 }
 .ap-card-number {
-    font-size: 32px;
+    font-size: clamp(20px, 3.2vw, 28px);
     font-weight: 700;
+    line-height: 1.1;
 }
 .ap-card-icon {
     font-size: 40px;
