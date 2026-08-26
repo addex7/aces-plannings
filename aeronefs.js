@@ -493,7 +493,7 @@ async function chargerSuiviAeronef() {
             hoursLayer.style.cssText = 'position: absolute; top:0; left:0; width:100%; height:100%; display:flex; z-index: 2;';
             for (let h = 0; h < 24; h++) {
                 const gridBlock = document.createElement('div');
-                gridBlock.style.cssText = 'flex: 1; border-right: 1px solid rgba(203, 213, 225, 0.4); height: 100%; cursor: pointer;';
+                gridBlock.style.cssText = `flex: ${LARGEURS_HEURES[h]}; border-right: 1px solid rgba(203, 213, 225, 0.4); height: 100%; cursor: pointer;`;
                 
                 const currentHour = h;
                 const currentDateObj = new Date(dateJour);
@@ -564,9 +564,9 @@ async function chargerSuiviAeronef() {
                         position: absolute;
                         top: 4px;
                         bottom: 4px;
-                        left: ${(heureDebut / 24) * 100}%;
+                        left: ${positionHeure(heureDebut)}%;
 
-                        width: ${(duree / 24) * 100}%;
+                        width: ${positionHeure(heureFin) - positionHeure(heureDebut)}%;
                         background-color: ${bgColor};
                         color: white;
                         border-radius: 4px;
@@ -632,8 +632,8 @@ async function chargerSuiviAeronef() {
                 let heureDebut = segDebut.getHours() + (segDebut.getMinutes() / 60);
                 let heureFin = segFin.getHours() + (segFin.getMinutes() / 60);
                 if (segFin.getTime() >= endOfDay.getTime()) heureFin = 24;
-                const left = (heureDebut / 24) * 100;
-                const widthPct = Math.min(((heureFin - heureDebut) / 24) * 100, 100 - left);
+                const left = positionHeure(heureDebut);
+                const widthPct = Math.min(positionHeure(heureFin) - positionHeure(heureDebut), 100 - left);
                 const maintenanceBubble = document.createElement('div');
                 maintenanceBubble.style.cssText = `
                     position: absolute;
@@ -662,32 +662,32 @@ async function chargerSuiviAeronef() {
                 maintenanceBubble.title = `Maintenance ${heureStr} - ${finStr} — Butée : ${butee}`;
 
                 const oneDay = mStart >= startOfDay && mEnd <= endOfDay;
+                const handleLeft = document.createElement('div');
+                handleLeft.className = 'resize-handle resize-handle-left';
+                const handleRight = document.createElement('div');
+                handleRight.className = 'resize-handle resize-handle-right';
+                maintenanceBubble.appendChild(handleLeft);
+                maintenanceBubble.appendChild(handleRight);
+
+                handleLeft.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    if (typeof initierResize === 'function') {
+                        initierResize(e, m.id, gridBg, maintenanceBubble, 'gauche', heureDebut, heureFin, dateJour, 'Maintenance', m);
+                    }
+                });
+                handleRight.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    if (typeof initierResize === 'function') {
+                        initierResize(e, m.id, gridBg, maintenanceBubble, 'droite', heureDebut, heureFin, dateJour, 'Maintenance', m);
+                    }
+                });
+
                 if (oneDay) {
-                    const handleLeft = document.createElement('div');
-                    handleLeft.className = 'resize-handle resize-handle-left';
-                    const handleRight = document.createElement('div');
-                    handleRight.className = 'resize-handle resize-handle-right';
-                    maintenanceBubble.appendChild(handleLeft);
-                    maintenanceBubble.appendChild(handleRight);
-
-                    handleLeft.addEventListener('mousedown', (e) => {
-                        e.stopPropagation();
-                        if (typeof initierResize === 'function') {
-                            initierResize(e, m.id, gridBg, maintenanceBubble, 'gauche', heureDebut, heureFin, dateJour, 'Maintenance');
-                        }
-                    });
-                    handleRight.addEventListener('mousedown', (e) => {
-                        e.stopPropagation();
-                        if (typeof initierResize === 'function') {
-                            initierResize(e, m.id, gridBg, maintenanceBubble, 'droite', heureDebut, heureFin, dateJour, 'Maintenance');
-                        }
-                    });
-
                     maintenanceBubble.addEventListener('mousedown', (e) => {
                         if (e.target.classList.contains('resize-handle')) return;
                         e.stopPropagation();
                         if (typeof initierDeplacementBarre === 'function') {
-                            initierDeplacementBarre(e, m.id, machineActuelle.id, gridBg, maintenanceBubble, heureDebut, heureFin - heureDebut, null, 'Maintenance');
+                            initierDeplacementBarre(e, m.id, machineActuelle.id, gridBg, maintenanceBubble, heureDebut, heureFin - heureDebut, dateJour, 'Maintenance', m);
                         }
                     });
                 }
@@ -728,8 +728,8 @@ async function chargerSuiviAeronef() {
                     const dureeCarnet = Math.max(heureArriveeCarnet - heureDepartCarnet, 0);
                     const offsetHeures = -dateJour.getTimezoneOffset() / 60;
                     const heureDepartCarnetLocal = heureDepartCarnet + offsetHeures;
-                    const left = (heureDepartCarnetLocal / 24) * 100;
-                    const widthPct = Math.max((dureeCarnet / 24) * 100, 1.0);
+                    const left = positionHeure(heureDepartCarnetLocal);
+                    const widthPct = Math.max(positionHeure(heureDepartCarnetLocal + dureeCarnet) - positionHeure(heureDepartCarnetLocal), 1.0);
 
                     const item = document.createElement('div');
                     item.style.cssText = `

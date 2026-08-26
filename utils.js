@@ -77,11 +77,10 @@ function calculerSoleilLFOY(date) {
 function genererFondNuitHTML(dateCible) {
     const soleil = calculerSoleilLFOY(dateCible);
     
-    const pctFinNuitMatin = (Math.max(0, soleil.leverSoleil) / 24) * 100;
-    const pctFinNuitAeroMatin = (Math.max(0, soleil.aubeAero) / 24) * 100;
-
-    const pctDebutNuitAeroSoir = (Math.min(24, soleil.crepusculeAero) / 24) * 100;
-    const pctDebutNuitSoir = (Math.min(24, soleil.coucherSoleil) / 24) * 100;
+    const pctFinNuitAeroMatin = positionHeure(Math.max(0, soleil.aubeAero));
+    const pctFinNuitMatin = positionHeure(Math.max(0, soleil.leverSoleil));
+    const pctDebutNuitSoir = positionHeure(Math.min(24, soleil.coucherSoleil));
+    const pctDebutNuitAeroSoir = positionHeure(Math.min(24, soleil.crepusculeAero));
 
     return `
         <div class="night-overlay-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">

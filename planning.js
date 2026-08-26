@@ -925,47 +925,6 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                     contentWrapper.appendChild(carnetContainer);
                 }
             }
-            const maintenanceAvion = maintenancesJour.find(m => {
-                const f = m.fields || {};
-                return (f['Machine'] || '').toString().trim().toUpperCase() === immatAvion;
-            });
-            if (maintenanceAvion) {
-                const maintenanceDate = new Date(maintenanceAvion.fields['Date']);
-                const heureMaint = maintenanceDate.getHours() + (maintenanceDate.getMinutes() / 60);
-                const left = (heureMaint / 24) * 100;
-                const duree = parseFloat(maintenanceAvion.fields['durée']) || 1;
-                const widthPct = Math.min((duree / 24) * 100, 100 - left);
-                const maintenanceBubble = document.createElement('div');
-                maintenanceBubble.style.cssText = `
-                    position: absolute;
-                    top: 5px;
-                    left: ${left}%;
-                    width: ${widthPct}%;
-                    min-width: 18px;
-                    height: 25px;
-                    background-color: rgba(124, 58, 237, 0.7);
-                    border-radius: 3px;
-                    cursor: pointer;
-                    overflow: hidden;
-                    color: white;
-                    font-size: 10px;
-                    font-weight: 500;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 4;
-                    pointer-events: auto;
-                `;
-                maintenanceBubble.textContent = widthPct > 12 ? '🔧 Maintenance' : '🔧';
-                const butee = maintenanceAvion.fields['Nouvelle Butée'] || '';
-                const heureStr = maintenanceDate.getHours().toString().padStart(2, '0') + ':' + maintenanceDate.getMinutes().toString().padStart(2, '0');
-                maintenanceBubble.title = `Maintenance à ${heureStr} (${duree}h) - Nouvelle butée : ${butee}`;
-                maintenanceBubble.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    ouvrirModaleMaintenance(maintenanceAvion);
-                });
-                gridBg.appendChild(maintenanceBubble);
-            }
             rowsContainer.appendChild(rowDiv);
         });
         if (autoActiverVIP && volsVIP.length > 0) afficherVIPPlaneur = true;
@@ -1033,7 +992,7 @@ function populerSelectAvions(avions) {
     }
 }
 
-function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations') {
+function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations', record = null) {
     let aBouge = false;
     let ghost = null;
     const rectGrid = gridBg.getBoundingClientRect();
@@ -1077,7 +1036,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             let heureFinale = Math.round(positionHeureInverse(pourcentageFin * 100) * 4) / 4;
             if (heureFinale + dureeVol > 24) heureFinale = 24 - dureeVol;
             if (typeof sauvegarderDeplacementVol === 'function') {
-                sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName);
+                sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, callbackMiseAJour);
             }
         }
         setTimeout(() => {
@@ -1091,7 +1050,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
     window.addEventListener('mouseup', onMouseUp);
 }
 
-function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutInitiale, hFinInitiale, dateCibleVol, tableName = 'Réservations') {
+function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutInitiale, hFinInitiale, dateCibleVol, tableName = 'Réservations', record = null) {
     e.preventDefault();
     isResizing = true;
     barElement.style.opacity = '0.3';
@@ -1131,7 +1090,7 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
         barElement.style.opacity = '1';
         if (ghostBar.parentNode) ghostBar.parentNode.removeChild(ghostBar);
         if (hDebFinale !== hDebutInitiale || hFinFinale !== hFinInitiale) {
-            await appliquerChangementDuree(reservationId, hDebFinale, hFinFinale, dateCibleVol, tableName);
+            await appliquerChangementDuree(reservationId, hDebFinale, hFinFinale, dateCibleVol, tableName, record);
         }
         setTimeout(() => {
             isResizing = false;
@@ -1144,7 +1103,7 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
     document.addEventListener('mouseup', onMouseUp);
 }
 
-async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, tableName = 'Réservations') {
+async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, tableName = 'Réservations', record = null) {
     const referenceDate = dateCible ? new Date(dateCible) : dateAffichee;
     const annee = referenceDate.getFullYear();
     const mois = referenceDate.getMonth();
@@ -1152,9 +1111,27 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
     const dateDebut = new Date(annee, mois, jour, Math.floor(hDeb), (hDeb % 1) * 60, 0);
     const dateFin = new Date(annee, mois, jour, Math.floor(hFin), (hFin % 1) * 60, 0);
     const isMaintenance = tableName === 'Maintenance';
-    const fieldsPatch = isMaintenance
-        ? { "Date": dateDebut.toISOString(), "durée": (dateFin - dateDebut) / 3600000 }
-        : { "Date de début": dateDebut.toISOString(), "Date de fin": dateFin.toISOString() };
+    let fieldsPatch;
+    let dateDebutOut = dateDebut;
+    let dateFinOut = dateFin;
+    if (isMaintenance && record) {
+        const mStart = new Date(record.fields['Date']);
+        const mEnd = new Date(mStart.getTime() + parseFloat(record.fields['durée']) * 3600000);
+        const startOfDay = new Date(annee, mois, jour, 0, 0, 0);
+        const hDebInit = Math.max(0, Math.min(24, (mStart.getTime() - startOfDay.getTime()) / 3600000));
+        const hFinInit = Math.max(0, Math.min(24, (mEnd.getTime() - startOfDay.getTime()) / 3600000));
+        const changedDeb = Math.abs(hDeb - hDebInit) > 0.001;
+        const changedFin = Math.abs(hFin - hFinInit) > 0.001;
+        const newStart = changedDeb ? new Date(startOfDay.getTime() + hDeb * 3600000) : mStart;
+        const newEnd = changedFin ? new Date(startOfDay.getTime() + hFin * 3600000) : mEnd;
+        fieldsPatch = { "Date": newStart.toISOString(), "durée": (newEnd - newStart) / 3600000 };
+        dateDebutOut = newStart;
+        dateFinOut = newEnd;
+    } else if (isMaintenance) {
+        fieldsPatch = { "Date": dateDebut.toISOString(), "durée": (dateFin - dateDebut) / 3600000 };
+    } else {
+        fieldsPatch = { "Date de début": dateDebut.toISOString(), "Date de fin": dateFin.toISOString() };
+    }
     try {
         const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
             method: 'PATCH',
@@ -1172,7 +1149,7 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
             const ancienDebut = resa?.fields?.['Date de début'] || '';
             const ancienFin = resa?.fields?.['Date de fin'] || '';
             if (typeof enregistrerAudit === 'function') {
-                const message = `Nouveau : ${dateDebut.toISOString().slice(0,16).replace('T',' ')} - ${dateFin.toISOString().slice(0,16).replace('T',' ')}`;
+                const message = `Nouveau : ${dateDebutOut.toISOString().slice(0,16).replace('T',' ')} - ${dateFinOut.toISOString().slice(0,16).replace('T',' ')}`;
                 if (isMaintenance) {
                     await enregistrerAudit('Modification maintenance (durée)', tableName, message, 'Maintenance');
                 } else {
@@ -1193,18 +1170,35 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
     }
 }
 
-async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dureeVol, tableName = 'Réservations') {
-    const annee = dateAffichee.getFullYear();
-    const mois = dateAffichee.getMonth();
-    const jour = dateAffichee.getDate();
+async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dureeVol, tableName = 'Réservations', record = null, dateCible = null) {
+    const ref = dateCible ? new Date(dateCible) : dateAffichee;
+    const annee = ref.getFullYear();
+    const mois = ref.getMonth();
+    const jour = ref.getDate();
     const hInteger = Math.floor(nouvelleHeureDebut);
     const mInteger = Math.round((nouvelleHeureDebut % 1) * 60);
     const nouvelleDateDebut = new Date(annee, mois, jour, hInteger, mInteger, 0);
     const nouvelleDateFin = new Date(nouvelleDateDebut.getTime() + (dureeVol * 60 * 60 * 1000));
     const isMaintenance = tableName === 'Maintenance';
-    const fieldsPatch = isMaintenance
-        ? { "Date": nouvelleDateDebut.toISOString(), "durée": dureeVol }
-        : { "Date de début": nouvelleDateDebut.toISOString(), "Date de fin": nouvelleDateFin.toISOString() };
+    let fieldsPatch;
+    let dateDebutOut = nouvelleDateDebut;
+    let dateFinOut = nouvelleDateFin;
+    if (isMaintenance && record) {
+        const mStart = new Date(record.fields['Date']);
+        const mEnd = new Date(mStart.getTime() + parseFloat(record.fields['durée']) * 3600000);
+        const startOfDay = new Date(annee, mois, jour, 0, 0, 0);
+        const hOriginal = Math.max(0, Math.min(24, (mStart.getTime() - startOfDay.getTime()) / 3600000));
+        const deltaHeures = nouvelleHeureDebut - hOriginal;
+        const newStart = new Date(mStart.getTime() + deltaHeures * 3600000);
+        const newEnd = new Date(mEnd.getTime() + deltaHeures * 3600000);
+        fieldsPatch = { "Date": newStart.toISOString(), "durée": (newEnd - newStart) / 3600000 };
+        dateDebutOut = newStart;
+        dateFinOut = newEnd;
+    } else if (isMaintenance) {
+        fieldsPatch = { "Date": nouvelleDateDebut.toISOString(), "durée": dureeVol };
+    } else {
+        fieldsPatch = { "Date de début": nouvelleDateDebut.toISOString(), "Date de fin": nouvelleDateFin.toISOString() };
+    }
     try {
         const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
             method: 'PATCH',
@@ -1222,7 +1216,7 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
             const ancienDebut = resa?.fields?.['Date de début'] || '';
             const ancienFin = resa?.fields?.['Date de fin'] || '';
             if (typeof enregistrerAudit === 'function') {
-                const message = `Nouveau : ${nouvelleDateDebut.toISOString().slice(0,16).replace('T',' ')} - ${nouvelleDateFin.toISOString().slice(0,16).replace('T',' ')}`;
+                const message = `Nouveau : ${dateDebutOut.toISOString().slice(0,16).replace('T',' ')} - ${dateFinOut.toISOString().slice(0,16).replace('T',' ')}`;
                 if (isMaintenance) {
                     await enregistrerAudit('Modification maintenance (déplacement)', tableName, message, 'Maintenance');
                 } else {
