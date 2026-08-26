@@ -161,6 +161,10 @@ async function ouvrirModaleModification(reservationId) {
         alert("Réservation introuvable.");
         return;
     }
+    if (!peutBougerReservations() && !estProprietaireReservation(reservation)) {
+        ouvrirModaleInformation(reservation);
+        return;
+    }
 
     // Remplir le formulaire avec les données de la réservation
     const form = document.getElementById('reservation-form');
@@ -1848,6 +1852,10 @@ function ouvrirModaleCreationDepuisGrille(avionId, heureDebutClic) {
 
 async function ouvrirModaleEdition(vol, avionIdOuImmat) {
     if (!modal) return;
+    if (!peutBougerReservations() && !estProprietaireReservation(vol)) {
+        ouvrirModaleInformation(vol);
+        return;
+    }
     idReservationEnEdition = vol.id;
     if (titleModal) titleModal.textContent = "Modifier la Réservation";
     if (btnDelete) btnDelete.style.display = 'block';
@@ -1931,6 +1939,51 @@ function ouvrirModaleCreationDepuisGrilleDate(avionId, heureDebutClic, dateCible
     if (document.getElementById('form-pilote')) document.getElementById('form-pilote').value = pilote;
     if (affichage) affichage.textContent = pilote;
     modal.style.display = 'flex';
+}
+
+function ouvrirModaleInformation(vol) {
+    const infoModal = document.getElementById('reservation-info-modal');
+    const content = document.getElementById('reservation-info-content');
+    if (!infoModal || !content || !vol || !vol.fields) return;
+    const f = vol.fields;
+    const pilote = Array.isArray(f['Pilote']) ? f['Pilote'].join(', ') : (f['Pilote'] || '—');
+    let machine = f['Machine'] || '—';
+    if (Array.isArray(machine) && machine.length > 0) {
+        const raw = machine[0];
+        if (typeof raw === 'string' && raw.startsWith('rec')) {
+            const avion = (listeAvionsCache || []).find(a => a.id === raw);
+            machine = avion ? (avion.fields['Immatriculation'] || avion.fields['Nom'] || raw) : raw;
+        } else {
+            machine = raw;
+        }
+    }
+    const type = Array.isArray(f['Type de vol']) ? f['Type de vol'].join(', ') : (f['Type de vol'] || '—');
+    const instructeurRaw = f['Instructeur'];
+    let instructeur = '—';
+    if (instructeurRaw) {
+        const idInstructeur = Array.isArray(instructeurRaw) ? instructeurRaw[0] : instructeurRaw;
+        if (typeof listeInstructeursCache !== 'undefined' && listeInstructeursCache.length) {
+            const found = listeInstructeursCache.find(i => i.id === idInstructeur || i.nomComplet === idInstructeur);
+            instructeur = found ? found.nomComplet : idInstructeur;
+        } else {
+            instructeur = idInstructeur;
+        }
+    }
+    const debut = f['Date de début'] ? formaterDateHeureLocal(new Date(f['Date de début'])) : '—';
+    const fin = f['Date de fin'] ? formaterDateHeureLocal(new Date(f['Date de fin'])) : '—';
+    const duree = f['Temps estimé'] || '—';
+    const commentaires = f['Commentaires'] || f['Commentaires VI'] || '';
+    content.innerHTML = `
+        <p><strong>Pilote :</strong> ${pilote}</p>
+        <p><strong>Machine :</strong> ${machine}</p>
+        <p><strong>Type de vol :</strong> ${type}</p>
+        <p><strong>Instructeur :</strong> ${instructeur}</p>
+        <p><strong>Début :</strong> ${debut}</p>
+        <p><strong>Fin :</strong> ${fin}</p>
+        <p><strong>Durée estimée :</strong> ${duree}</p>
+        ${commentaires ? `<p><strong>Commentaires :</strong> ${commentaires}</p>` : ''}
+    `;
+    infoModal.style.display = 'flex';
 }
 
 function initBoutonsNavigation() {

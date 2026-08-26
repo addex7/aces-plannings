@@ -771,6 +771,15 @@
         </div>
     </div>
 
+    <!-- Fenêtre Modale : Consultation d'une Réservation -->
+    <div id="reservation-info-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 420px;">
+            <span class="close-modal" onclick="document.getElementById('reservation-info-modal').style.display='none'">&times;</span>
+            <h3>Détails du vol</h3>
+            <div id="reservation-info-content" style="margin-top: 15px; line-height: 1.6;"></div>
+        </div>
+    </div>
+
     <!-- Fenêtre Modale : Création VI Planeur -->
     <div id="vi-planeur-modal" class="modal">
         <div class="modal-content">
@@ -1168,7 +1177,7 @@
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=83"></script>
     <script src="presences.js?v=83"></script>
-    <script src="planning.js?v=103"></script>
+    <script src="planning.js?v=104"></script>
     <script src="calendrier.js?v=82"></script>
     <script src="comptes.js?v=99"></script>
     <script src="aeronefs.js?v=93"></script>
