@@ -18,6 +18,11 @@ let messagesCache = [];
 let utilisateursMessagerieCache = [];
 let destinatairesSelectionnes = [];
 
+function nomCompletCourant() {
+    if (typeof currentUser === 'undefined' || !currentUser) return '';
+    return `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+}
+
 function initMessagerie() {
     const form = document.getElementById('message-form');
     const fileInput = document.getElementById('message-piece');
@@ -77,7 +82,7 @@ function initMessagerie() {
 function renderDestinatairesListe() {
     const container = document.getElementById('message-destinataires-list');
     if (!container) return;
-    const current = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
     const utilisateurs = (utilisateursMessagerieCache || []).map(r => {
         const f = r.fields || {};
         return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
@@ -107,7 +112,7 @@ function basculerDestinataire(nom, checked) {
 }
 
 function basculerTousLesDestinataires() {
-    const current = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
     const utilisateurs = (utilisateursMessagerieCache || []).map(r => {
         const f = r.fields || {};
         return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
@@ -133,7 +138,7 @@ async function chargerMessagerie() {
     const container = document.getElementById('messages-list');
     if (!container) return;
     container.innerHTML = '<div class="loading">Chargement...</div>';
-    const destinataire = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    const destinataire = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
     if (!destinataire) {
         container.innerHTML = '<p class="carnet-empty">Connectez-vous pour voir vos messages.</p>';
         return;
@@ -302,7 +307,7 @@ async function marquerLu(id) {
 async function compterMessagesNonLus() {
     const badge = document.getElementById('messagerie-badge');
     if (!badge) return;
-    const destinataire = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    const destinataire = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
     if (!destinataire) { badge.style.display = 'none'; return; }
     const formula = `AND(OR(FIND('Tous', {Destinataire}) > 0, FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire}) > 0), {Lu}=FALSE())`;
     try {
