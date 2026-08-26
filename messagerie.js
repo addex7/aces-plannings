@@ -197,7 +197,7 @@ async function envoyerMessage(e) {
     if (destinatairesSelectionnes.length === 0) { alert('Veuillez choisir au moins un destinataire.'); return; }
     if (!objetVal || !corpsVal) { alert('Objet et corps sont requis.'); return; }
 
-    const expediteur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    const expediteur = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
     if (!expediteur) { alert('Vous devez être connecté.'); return; }
 
     if (loader) loader.style.display = 'flex';
@@ -283,8 +283,21 @@ function voirMessage(id) {
         <div style="color:#64748b; font-size:13px; margin-bottom:10px;">De : ${escHtml(f[FIELDS_MESSAGE.EXPEDITEUR] || '')} — ${escHtml(date)}</div>
         <div style="white-space:pre-wrap; color:#334155;">${escHtml(f[FIELDS_MESSAGE.CORPS] || '')}</div>
         ${piecesHtml}
+        <div class="message-reply-actions" style="margin-top:20px; padding-top:15px; border-top:1px solid #e2e8f0; display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn-secondary message-reply-expediteur" style="flex:1; min-width:140px;">Répondre à l'expéditeur</button>
+            <button type="button" class="btn-secondary message-reply-destinataires" style="flex:1; min-width:140px;">Répondre aux destinataires</button>
+            <button type="button" class="btn-secondary message-reply-tous" style="flex:1; min-width:140px;">Répondre à tout le monde</button>
+        </div>
     `;
     modal.style.display = 'flex';
+
+    const btnExp = content.querySelector('.message-reply-expediteur');
+    const btnDest = content.querySelector('.message-reply-destinataires');
+    const btnTous = content.querySelector('.message-reply-tous');
+    if (btnExp) btnExp.addEventListener('click', () => repondreMessage(record, 'expediteur'));
+    if (btnDest) btnDest.addEventListener('click', () => repondreMessage(record, 'destinataires'));
+    if (btnTous) btnTous.addEventListener('click', () => repondreMessage(record, 'tous'));
+
     if (!f[FIELDS_MESSAGE.LU]) marquerLu(id);
 }
 
@@ -318,6 +331,68 @@ async function compterMessagesNonLus() {
         badge.style.display = count > 0 ? 'inline-block' : 'none';
     } catch (err) {
         console.error('Erreur compteur messages:', err);
+    }
+}
+
+function nomsDestinatairesPossibles() {
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    return (utilisateursMessagerieCache || []).map(r => {
+        const f = r.fields || {};
+        return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+    }).filter(n => n && n !== current);
+}
+
+function trouverNomComplet(short) {
+    if (!short) return '';
+    if (short.indexOf('.') === -1) return short;
+    const all = (utilisateursMessagerieCache || []).map(r => {
+        const f = r.fields || {};
+        return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+    }).filter(Boolean);
+    const formater = typeof formaterNomPilote === 'function' ? formaterNomPilote : n => n;
+    const found = all.find(full => formater(full) === short);
+    return found || short;
+}
+
+function ouvrirReponse(record, destinataires) {
+    const modal = document.getElementById('message-read-modal');
+    const formSection = document.getElementById('message-form-section');
+    const objet = document.getElementById('message-objet');
+    const corps = document.getElementById('message-corps');
+    if (modal) modal.style.display = 'none';
+    if (formSection) formSection.style.display = 'block';
+    if (objet) {
+        const original = (record.fields || {})[FIELDS_MESSAGE.OBJET] || '';
+        const originalTrim = original.trim();
+        objet.value = originalTrim.toLowerCase().startsWith('re: ') ? originalTrim : 'Re: ' + originalTrim;
+    }
+    if (corps) corps.value = '';
+    destinatairesSelectionnes = [...destinataires];
+    renderDestinatairesListe();
+    if (corps) corps.focus();
+}
+
+function repondreMessage(record, mode) {
+    const f = record.fields || {};
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    if (mode === 'expediteur') {
+        const expediteur = f[FIELDS_MESSAGE.EXPEDITEUR] || '';
+        const full = trouverNomComplet(expediteur);
+        ouvrirReponse(record, [full].filter(Boolean));
+    } else if (mode === 'destinataires') {
+        const destRaw = (f[FIELDS_MESSAGE.DESTINATAIRE] || '').toString().trim();
+        let liste = [];
+        if (destRaw === 'Tous' || destRaw.toLowerCase().includes('tous')) {
+            liste = nomsDestinatairesPossibles();
+        } else {
+            liste = destRaw.split(';').map(s => s.trim()).filter(s => s && s !== current);
+        }
+        if (liste.includes('Tous')) {
+            liste = nomsDestinatairesPossibles();
+        }
+        ouvrirReponse(record, liste);
+    } else if (mode === 'tous') {
+        ouvrirReponse(record, nomsDestinatairesPossibles());
     }
 }
 
