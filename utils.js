@@ -6,6 +6,17 @@
 const LFOY_LAT = 49.533;
 const LFOY_LON = 0.088;
 
+function normaliserNom(n) {
+    return (n || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function correspondanceNom(a, b) {
+    const na = normaliserNom(a);
+    const nb = normaliserNom(b);
+    if (!na || !nb) return false;
+    return na === nb || na.startsWith(nb) || nb.startsWith(na);
+}
+
 // --- FORMATAGE DU NOM DU PILOTE (ex: Benjamin Q.) ---
 function formaterNomPilote(nomComplet) {
     if (!nomComplet) return '';
