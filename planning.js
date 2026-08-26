@@ -1627,7 +1627,7 @@ function populerMachinesCases(avions) {
     container.innerHTML = '';
     avions.forEach(avion => {
         const label = document.createElement('label');
-        label.className = 'checkbox-option';
+        label.className = 'nr-option';
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.name = 'form-machine';
@@ -1637,9 +1637,18 @@ function populerMachinesCases(avions) {
                 document.querySelectorAll('input[name="form-machine"]').forEach(cb => { if (cb !== e.target) cb.checked = false; });
             }
         });
-        const text = document.createTextNode(avion.fields['Immatriculation'] || avion.fields['Nom'] || 'Sans nom');
+        const check = document.createElement('span');
+        check.className = 'nr-check';
+        const icon = document.createElement('span');
+        icon.className = 'nr-icon';
+        icon.textContent = '✈️';
+        const txt = document.createElement('span');
+        txt.className = 'nr-label';
+        txt.textContent = avion.fields['Immatriculation'] || avion.fields['Nom'] || 'Sans nom';
         label.appendChild(input);
-        label.appendChild(text);
+        label.appendChild(check);
+        label.appendChild(icon);
+        label.appendChild(txt);
         container.appendChild(label);
     });
 }

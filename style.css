@@ -2659,3 +2659,217 @@ img, table, video, iframe, svg {
     font-size: 13px;
     white-space: nowrap;
 }
+
+/* --- NOUVEAU MODAL RÉSERVATION --- */
+#reservation-modal .modal-content {
+    max-width: 600px;
+    padding: 28px;
+    border-radius: 16px;
+    background: #fff;
+    color: #1e3d59;
+}
+.nr-title {
+    margin: 0 0 20px 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e3d59;
+}
+.nr-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+.nr-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.nr-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.nr-options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+@media (max-width: 600px) {
+    .nr-options-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.nr-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.nr-option:hover {
+    border-color: #3b82f6;
+}
+.nr-option input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.nr-check {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #cbd5e1;
+    border-radius: 50%;
+    background: #fff;
+    transition: border-color 0.2s, background 0.2s;
+}
+.nr-option input:checked + .nr-check,
+.nr-option input:checked ~ .nr-check {
+    border-color: #3b82f6;
+    background: #3b82f6;
+    box-shadow: inset 0 0 0 4px #fff;
+}
+.nr-option:has(input:checked) {
+    border-color: #3b82f6;
+    background: #f0f7ff;
+}
+.nr-option .nr-icon {
+    font-size: 26px;
+    line-height: 1;
+}
+.nr-option .nr-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    text-align: center;
+}
+.nr-select,
+.nr-input,
+.nr-textarea,
+.nr-datetime input[type="datetime-local"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    font-size: 14px;
+    color: #1e3d59;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.nr-select:focus,
+.nr-input:focus,
+.nr-textarea:focus,
+.nr-datetime input[type="datetime-local"]:focus {
+    border-color: #3b82f6;
+    background: #fff;
+}
+.nr-datetimes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+@media (max-width: 500px) {
+    .nr-datetimes {
+        grid-template-columns: 1fr;
+    }
+}
+.nr-datetime {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.nr-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    width: fit-content;
+}
+.nr-stepper button {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.nr-stepper button:hover {
+    background: #e2e8f0;
+}
+.nr-stepper input {
+    width: 80px;
+    height: 40px;
+    border: none;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e3d59;
+    background: #fff;
+}
+.nr-hint {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+.nr-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e2e8f0;
+}
+.nr-btn-cancel {
+    padding: 10px 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.nr-btn-cancel:hover {
+    background: #f1f5f9;
+}
+.nr-btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background: #22c55e;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.nr-btn-save:hover {
+    background: #16a34a;
+}
+.nr-icon-save {
+    font-size: 14px;
+}

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=110">
+    <link rel="stylesheet" href="style.css?v=111">
 </head>
 <body>
 
@@ -723,64 +723,74 @@
     <div id="reservation-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h3 id="modal-title">Nouvelle Réservation</h3>
-            
-            <form id="reservation-form">
-                <div id="group-type-vol" class="form-group">
-                    <label>Type de vol :</label>
-                    <div class="checkbox-group" id="form-type-vol-group">
-                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="Local" checked> Local</label>
-                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="Navigation"> Navigation</label>
-                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="Vol de nuit"> Vol de nuit</label>
-                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="Instruction"> Instruction</label>
-                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="VI Moteur"> VI Moteur</label>
-                        <label class="checkbox-option"><input type="checkbox" name="form-type-vol" value="VI Planeur"> VI Planeur</label>
+            <h3 id="modal-title" class="nr-title">Nouvelle réservation</h3>
+
+            <form id="reservation-form" class="nr-form">
+                <div id="group-type-vol" class="nr-section">
+                    <div class="nr-section-title">TYPE DE VOL</div>
+                    <div class="nr-options-grid" id="form-type-vol-group">
+                        <label class="nr-option"><input type="checkbox" name="form-type-vol" value="Local" checked><span class="nr-check"></span><span class="nr-icon">✈️</span><span class="nr-label">Local</span></label>
+                        <label class="nr-option"><input type="checkbox" name="form-type-vol" value="Navigation"><span class="nr-check"></span><span class="nr-icon">🧭</span><span class="nr-label">Navigation</span></label>
+                        <label class="nr-option"><input type="checkbox" name="form-type-vol" value="Vol de nuit"><span class="nr-check"></span><span class="nr-icon">🌙</span><span class="nr-label">Vol de nuit</span></label>
+                        <label class="nr-option"><input type="checkbox" name="form-type-vol" value="Instruction"><span class="nr-check"></span><span class="nr-icon">🎓</span><span class="nr-label">Instruction</span></label>
+                        <label class="nr-option"><input type="checkbox" name="form-type-vol" value="VI Moteur"><span class="nr-check"></span><span class="nr-icon">👤</span><span class="nr-label">VI Moteur</span></label>
+                        <label class="nr-option"><input type="checkbox" name="form-type-vol" value="VI Planeur"><span class="nr-check"></span><span class="nr-icon">🛩️</span><span class="nr-label">VI Planeur</span></label>
                     </div>
                 </div>
-                <div id="group-machine" class="form-group">
-                    <label>Machine / Aéronef :</label>
-                    <div class="checkbox-group" id="form-machine-group">
+                <div id="group-machine" class="nr-section">
+                    <div class="nr-section-title">AÉRONEF</div>
+                    <div class="nr-options-grid" id="form-machine-group">
                         <!-- Populé dynamiquement -->
                     </div>
                 </div>
-                <div id="group-pilote" class="form-group" style="display:none; align-items:center; gap:8px;">
-                    <label for="form-pilote" style="font-weight:bold;">Pilote :</label>
-                    <select id="form-pilote" class="form-control" style="width:100%;">
+                <div id="group-pilote" class="nr-section" style="display:none;">
+                    <div class="nr-section-title">PILOTE</div>
+                    <select id="form-pilote" class="nr-select">
                         <option value="">-- Choisir un pilote --</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="form-instructeur">Instructeur (optionnel) :</label>
-                    <select id="form-instructeur" class="form-control" style="width:100%;">
+                <div class="nr-section">
+                    <div class="nr-section-title">INSTRUCTEUR (OPTIONNEL)</div>
+                    <select id="form-instructeur" class="nr-select">
                         <option value="">-- Aucun --</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="form-debut">Date & Heure de début :</label>
-                    <input type="datetime-local" id="form-debut" required>
+                <div class="nr-section">
+                    <div class="nr-datetimes">
+                        <div class="nr-datetime">
+                            <div class="nr-section-title">DÉBUT</div>
+                            <input type="datetime-local" id="form-debut" required>
+                        </div>
+                        <div class="nr-datetime">
+                            <div class="nr-section-title">FIN</div>
+                            <input type="datetime-local" id="form-fin" required>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="form-fin">Date & Heure de fin :</label>
-                    <input type="datetime-local" id="form-fin" required>
+                <div id="group-estimation" class="nr-section">
+                    <div class="nr-section-title">DURÉE ESTIMÉE (HEURES)</div>
+                    <div class="nr-stepper">
+                        <button type="button" onclick="document.getElementById('form-estimation').stepDown()">−</button>
+                        <input type="number" id="form-estimation" step="0.1" min="0" value="1.0" required>
+                        <button type="button" onclick="document.getElementById('form-estimation').stepUp()">+</button>
+                    </div>
+                    <div class="nr-hint">Heures décimales autorisées (ex : 1,5)</div>
                 </div>
-                <div id="group-estimation" class="form-group">
-                    <label for="form-estimation">Temps de vol estimé (heures) :</label>
-                    <input type="number" id="form-estimation" step="0.1" min="0" placeholder="Ex: 1.5" required>
+                <div id="group-commentaires" class="nr-section">
+                    <div class="nr-section-title">COMMENTAIRES & CONTACTS VI</div>
+                    <textarea id="form-commentaires" class="nr-textarea" rows="3" placeholder="Coordonnées du passager, remarques..."></textarea>
                 </div>
-                <div id="group-commentaires" class="form-group">
-                    <label id="label-commentaires" for="form-commentaires">Commentaires & Contacts VI :</label>
-                    <textarea id="form-commentaires" rows="3" placeholder="Coordonnées du passager, remarques..."></textarea>
+                <div id="group-passager" class="nr-section" style="display:none">
+                    <div class="nr-section-title">NOM DU PASSAGER</div>
+                    <input type="text" id="form-passager" class="nr-input" placeholder="Ex: Marie Dupont">
                 </div>
-                <div id="group-passager" class="form-group" style="display:none">
-                    <label for="form-passager">Nom du passager :</label>
-                    <input type="text" id="form-passager" placeholder="Ex: Marie Dupont">
+                <div id="group-telephone" class="nr-section" style="display:none">
+                    <div class="nr-section-title">TÉLÉPHONE DU PASSAGER</div>
+                    <input type="tel" id="form-telephone" class="nr-input" placeholder="Ex: 06 12 34 56 78">
                 </div>
-                <div id="group-telephone" class="form-group" style="display:none">
-                    <label for="form-telephone">Téléphone du passager :</label>
-                    <input type="tel" id="form-telephone" placeholder="Ex: 06 12 34 56 78">
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn-submit">Enregistrer</button>
+                <div class="nr-footer">
+                    <button type="button" class="nr-btn-cancel" onclick="document.getElementById('reservation-modal').style.display='none'">Annuler</button>
+                    <button type="submit" class="nr-btn-save" id="btn-save-reservation"><span class="nr-icon-save">💾</span> Enregistrer</button>
                     <button type="button" id="btn-delete-reservation" style="display: none;">Supprimer</button>
                 </div>
             </form>
@@ -1196,7 +1206,7 @@
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=84"></script>
     <script src="presences.js?v=83"></script>
-    <script src="planning.js?v=110"></script>
+    <script src="planning.js?v=111"></script>
     <script src="calendrier.js?v=87"></script>
     <script src="comptes.js?v=100"></script>
     <script src="aeronefs.js?v=94"></script>
