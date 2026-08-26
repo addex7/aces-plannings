@@ -31,8 +31,12 @@ async function peuplerSelectInstructeurSuivi() {
     const sel = document.getElementById('select-instructeur-suivi');
     if (!sel) return;
     if (typeof chargerListeInstructeurs === 'function') await chargerListeInstructeurs();
-    const instructeurs = (typeof listeInstructeursCache !== 'undefined') ? listeInstructeursCache : [];
-    let html = '';
+    let instructeurs = (typeof listeInstructeursCache !== 'undefined') ? listeInstructeursCache : [];
+    if (!instructeurs.length && typeof estInstructeur === 'function' && estInstructeur() && currentUser) {
+        const nomComplet = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+        if (nomComplet) instructeurs = [{ nomComplet }];
+    }
+    let html = '<option value="">-- Sélectionner un instructeur --</option>';
     instructeurs.forEach(u => {
         html += `<option value="${u.nomComplet}" ${u.nomComplet === instructeurSelectionne ? 'selected' : ''}>${u.nomComplet}</option>`;
     });
