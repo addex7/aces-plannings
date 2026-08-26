@@ -330,16 +330,23 @@ async function chargerSuiviAeronef() {
     tbody.innerHTML = "<tr><td colspan='2' style='padding:15px;'>Chargement des données...</td></tr>";
 
     try {
-        const [resMachines, resReservations, resCarnet] = await Promise.all([
+        const [resMachines, resReservations, resCarnet, resPilotes] = await Promise.all([
             fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}`, { headers }),
             fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}`, { headers }),
-            fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route Pilotes')}`, { headers })
+            fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route Pilotes')}`, { headers }),
+            fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Utilisateurs')}`, { headers })
         ]);
 
         const dataMachines = await resMachines.json();
         const dataReservations = await resReservations.json();
         const dataCarnet = await resCarnet.json();
+        const dataPilotes = await resPilotes.json();
         const carnetsPilotes = dataCarnet.records || [];
+        const piloteMap = (dataPilotes.records || []).reduce((acc, p) => {
+            const nom = `${p.fields['Prénom'] || ''} ${p.fields['Nom'] || ''}`.trim();
+            if (p.id) acc[p.id] = nom;
+            return acc;
+        }, {});
 
         let maintenanceRecords = [];
         try {
@@ -544,7 +551,8 @@ async function chargerSuiviAeronef() {
                 potentielCourant -= dureeUtilisee;
 
                 if (duree > 0) {
-                    const piloteNom = vol.fields['Pilote'] || '';
+                    const piloteId = Array.isArray(vol.fields['Pilote']) ? vol.fields['Pilote'][0] : (vol.fields['Pilote'] || '');
+                    const piloteNom = piloteMap[piloteId] || piloteId;
                     const piloteFormate = formaterNomPilote(piloteNom);
                     const barresDiv = document.createElement('div');
                     
@@ -742,7 +750,8 @@ async function chargerSuiviAeronef() {
                         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
                         box-sizing: border-box;
                     `;
-                    const pilote = f['Pilote'] || '';
+                    const pId = Array.isArray(f['Pilote']) ? f['Pilote'][0] : (f['Pilote'] || '');
+                    const pilote = piloteMap[pId] || pId;
                     const piloteFormate = formaterNomPilote(pilote);
                     const hd = f['Heure départ'] || '';
                     const ha = f['Heure arrivée'] || '';
