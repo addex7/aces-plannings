@@ -313,11 +313,9 @@ async function chargerDernierVol() {
             return cB - cA;
         });
 
-        for (const r of records) {
-            const f = r.fields || {};
-            const p = f['Pilote'];
-            const arr = Array.isArray(p) ? p : [p];
-            const match = arr.some(v => {
+        const correspond = (field) => {
+            const arr = Array.isArray(field) ? field : [field];
+            return arr.some(v => {
                 if (v === id) return true;
                 if (typeof v === 'string') {
                     const vl = v.toLowerCase();
@@ -326,6 +324,11 @@ async function chargerDernierVol() {
                 }
                 return false;
             });
+        };
+
+        for (const r of records) {
+            const f = r.fields || {};
+            const match = correspond(f['Pilote']) || correspond(f['Instructeur']);
             if (match && estUnVol(f)) {
                 const duree = dureeVolMinutesAccueil(f);
                 const h = Math.floor(duree / 60);
