@@ -191,16 +191,6 @@ async function chargerAccueilPilote() {
         });
     });
 
-    container.querySelectorAll('.ap-message-row').forEach(row => {
-        row.addEventListener('click', () => {
-            const id = row.dataset.id;
-            if (!id) return;
-            const t = document.getElementById('tab-messagerie');
-            if (t) t.click();
-            if (typeof voirMessage === 'function') voirMessage(id);
-        });
-    });
-
     const btnNew = container.querySelector('#ap-btn-new-msg');
     const formMsg = container.querySelector('#ap-message-form');
     const btnCancel = container.querySelector('#ap-msg-cancel');
@@ -659,16 +649,17 @@ function renderMessagesClub(records) {
         const date = f['Date'] ? formaterDateAccueil(f['Date']) : '';
         const expediteur = f['Expéditeur'] || '';
         const objet = f['Objet'] || '(sans objet)';
-        const lu = f['Lu'];
-        return { id: r.id, date, expediteur, objet, lu };
+        const corps = f['Corps'] || '';
+        return { id: r.id, date, expediteur, objet, corps };
     });
     const list = messages.length ? messages.map(m => `
-        <div class="ap-message-row" data-id="${escHtml(m.id)}" style="cursor:pointer; padding:8px 0; border-bottom:1px solid #e2e8f0;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong style="color:#1e3d59; font-size:13px;">${escHtml(m.expediteur)}</strong>
-                <span style="font-size:12px; color:#64748b;">${escHtml(m.date)}</span>
+        <div class="ap-message-item" style="padding:10px 0; border-bottom:1px solid #e2e8f0;">
+            <div class="ap-message-title">${escHtml(m.objet)}</div>
+            <div class="ap-message-meta">
+                <span>${escHtml(m.expediteur)}</span>
+                <span>${escHtml(m.date)}</span>
             </div>
-            <div style="font-size:13px; color:#334155; margin-top:2px;">${m.lu ? '' : '<span style="color:#dc2626; font-weight:bold;">●</span> '}${escHtml(m.objet)}</div>
+            <div class="ap-message-body">${escHtml(m.corps).replace(/\n/g, '<br>')}</div>
         </div>
     `).join('') : '<p class="carnet-empty">Aucun message.</p>';
     const afficherForm = peutEcrireMessagesClub();

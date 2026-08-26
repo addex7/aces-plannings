@@ -2358,6 +2358,29 @@ body {
     flex-direction: column;
     gap: 6px;
 }
+.ap-message-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+.ap-message-title {
+    font-weight: 700;
+    color: #1e3d59;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+.ap-message-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+.ap-message-body {
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
 .ap-card-header {
     display: flex;
     justify-content: space-between;
