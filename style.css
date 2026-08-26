@@ -2292,6 +2292,67 @@ body {
 .ap-card-messages p {
     color: #1e3d59;
 }
+.ap-messages-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.ap-btn-new-msg {
+    background: #1e3d59;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ap-message-form {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ap-msg-input,
+.ap-msg-textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+.ap-msg-textarea {
+    resize: vertical;
+}
+.ap-msg-actions {
+    display: flex;
+    gap: 8px;
+}
+.ap-msg-submit,
+.ap-msg-cancel {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+}
+.ap-msg-submit {
+    background: #1e3d59;
+    color: #fff;
+}
+.ap-msg-cancel {
+    background: #e2e8f0;
+    color: #1e3d59;
+}
 .ap-messages-list {
     display: flex;
     flex-direction: column;

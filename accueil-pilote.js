@@ -200,6 +200,32 @@ async function chargerAccueilPilote() {
             if (typeof voirMessage === 'function') voirMessage(id);
         });
     });
+
+    const btnNew = container.querySelector('#ap-btn-new-msg');
+    const formMsg = container.querySelector('#ap-message-form');
+    const btnCancel = container.querySelector('#ap-msg-cancel');
+
+    if (btnNew && formMsg) {
+        btnNew.addEventListener('click', () => {
+            formMsg.style.display = formMsg.style.display === 'none' ? 'block' : 'none';
+        });
+    }
+
+    if (btnCancel && formMsg) {
+        btnCancel.addEventListener('click', () => {
+            formMsg.style.display = 'none';
+            formMsg.reset();
+        });
+    }
+
+    if (formMsg) {
+        formMsg.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const titre = container.querySelector('#ap-msg-titre')?.value || '';
+            const corps = container.querySelector('#ap-msg-corps')?.value || '';
+            posterMessageClub(titre, corps);
+        });
+    }
 }
 
 function ouvrirModaleSignalements(immat, items) {
@@ -577,7 +603,7 @@ async function chargerMessagesClub() {
     const nom = typeof nomCompletCourant === 'function' ? nomCompletCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
     if (!nom) return [];
     try {
-        const formula = `OR(FIND('Tous', {Destinataire}) > 0, FIND('${nom.replace(/'/g, "\\'")}', {Destinataire}) > 0)`;
+        const formula = `FIND('Tous', {Destinataire}) > 0`;
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=5`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
@@ -585,6 +611,45 @@ async function chargerMessagesClub() {
     } catch (err) {
         console.error('Erreur chargement messages club:', err);
         return [];
+    }
+}
+
+function peutEcrireMessagesClub() {
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
+    const banal = ['Membre', 'Pilote', 'Aucun', ''];
+    const roles = currentUser.roles || [];
+    if (roles.length === 0) return false;
+    return roles.some(r => r && !banal.includes(r));
+}
+
+async function posterMessageClub(titre, corps) {
+    if (!titre.trim() || !corps.trim()) return;
+    const table = typeof TABLE_MESSAGERIE !== 'undefined' ? TABLE_MESSAGERIE : 'Messagerie';
+    const expediteur = typeof nomCompletCourant === 'function' ? nomCompletCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    const date = new Date().toISOString().split('T')[0];
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                records: [{
+                    fields: {
+                        'Date': date,
+                        'Expéditeur': expediteur,
+                        'Destinataire': 'Tous',
+                        'Objet': titre.trim(),
+                        'Corps': corps.trim(),
+                        'Lu': false
+                    }
+                }]
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        if (typeof chargerAccueilPilote === 'function') await chargerAccueilPilote();
+    } catch (err) {
+        console.error('Erreur publication message club:', err);
+        alert('Impossible de publier le message.');
     }
 }
 
@@ -606,12 +671,25 @@ function renderMessagesClub(records) {
             <div style="font-size:13px; color:#334155; margin-top:2px;">${m.lu ? '' : '<span style="color:#dc2626; font-weight:bold;">●</span> '}${escHtml(m.objet)}</div>
         </div>
     `).join('') : '<p class="carnet-empty">Aucun message.</p>';
+    const afficherForm = peutEcrireMessagesClub();
     return `
         <div class="ap-card ap-card-white ap-card-messages">
-            <h3>Messages club</h3>
+            <h3 class="ap-messages-header">
+                <span>Messages club</span>
+                ${afficherForm ? '<button type="button" id="ap-btn-new-msg" class="ap-btn-new-msg" title="Nouveau message">+</button>' : ''}
+            </h3>
             <div class="ap-messages-list" style="max-height:220px; overflow-y:auto;">
                 ${list}
             </div>
+            ${afficherForm ? `
+            <form id="ap-message-form" class="ap-message-form" style="display:none;">
+                <input type="text" id="ap-msg-titre" class="ap-msg-input" placeholder="Titre" required>
+                <textarea id="ap-msg-corps" class="ap-msg-textarea" placeholder="Corps du message..." required rows="3"></textarea>
+                <div class="ap-msg-actions">
+                    <button type="submit" class="ap-msg-submit">Publier</button>
+                    <button type="button" id="ap-msg-cancel" class="ap-msg-cancel">Annuler</button>
+                </div>
+            </form>` : ''}
         </div>`;
 }
 
