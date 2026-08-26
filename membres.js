@@ -44,6 +44,7 @@ function updateUIRoles() {
     if (tabMembres) tabMembres.style.display = currentUser ? 'block' : 'none';
     if (tabAudit) tabAudit.style.display = superAdmin ? 'block' : 'none';
     if (tabMessagerie) tabMessagerie.style.display = currentUser ? 'block' : 'none';
+    if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
 }
 
 function genererToken() {

@@ -165,9 +165,11 @@ async function envoyerMessage(e) {
         if (file) await uploadPieceJointe(record.id, file);
 
         alert('Message envoyé.');
-        document.getElementById('message-form')?.reset();
+        const messageForm = document.getElementById('message-form');
+        if (messageForm) messageForm.reset();
         if (fileName) fileName.textContent = '';
-        document.getElementById('message-form-section')?.style.display = 'none';
+        const messageFormSection = document.getElementById('message-form-section');
+        if (messageFormSection) messageFormSection.style.display = 'none';
         if (typeof chargerMessagerie === 'function' && select.value === expediteur) chargerMessagerie();
     } catch (err) {
         console.error(err);
@@ -240,11 +242,29 @@ async function marquerLu(id) {
         const r = messagesCache.find(x => x.id === id);
         if (r) r.fields[FIELDS_MESSAGE.LU] = true;
         afficherMessages(messagesCache);
+        if (typeof compterMessagesNonLus === 'function') await compterMessagesNonLus();
     } catch (err) {
         console.error('Erreur marquer lu:', err);
     }
 }
 
+async function compterMessagesNonLus() {
+    const badge = document.getElementById('messagerie-badge');
+    if (!badge) return;
+    const destinataire = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    if (!destinataire) { badge.style.display = 'none'; return; }
+    const formula = `AND({Destinataire}='${destinataire.replace(/'/g, "\\'")}', {Lu}=FALSE())`;
+    try {
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        const count = (data.records || []).length;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+    } catch (err) {
+        console.error('Erreur compteur messages:', err);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('view-messagerie')) initMessagerie();
+    if (document.getElementById('view-messagerie')) { initMessagerie(); compterMessagesNonLus(); }
 });

@@ -698,6 +698,7 @@ function initNavigationTabs() {
     const tabDocuments = document.getElementById('tab-documents');
     const tabComptes = document.getElementById('tab-comptes');
     const tabAudit = document.getElementById('tab-audit');
+    const tabMessagerie = document.getElementById('tab-messagerie');
     const viewPlanning = document.getElementById('view-planning');
     const viewAeronefs = document.getElementById('view-aeronefs');
     const viewInitiation = document.getElementById('view-initiation');
