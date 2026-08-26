@@ -2326,11 +2326,18 @@ body {
     color: #fff;
     border: none;
 }
+.ap-card-signalements {
+    min-height: unset;
+}
+.ap-card-signalements h3 {
+    font-size: 15px;
+    margin-bottom: 10px;
+}
 .ap-signalements-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
 }
 .ap-signalement-row {
     display: flex;

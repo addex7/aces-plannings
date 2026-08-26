@@ -8,27 +8,7 @@ const ACCUEIL_TABLE_AERONEFS = 'Aéronefs';
 
 function initAccueilPilote() {
     const tab = document.getElementById('tab-accueil');
-    const btnPlanning = document.getElementById('accueil-btn-planning');
-    const btnCarnet = document.getElementById('accueil-btn-carnet');
-    const btnCompte = document.getElementById('accueil-btn-compte');
-
     if (tab) tab.addEventListener('click', chargerAccueilPilote);
-    if (btnPlanning) btnPlanning.addEventListener('click', () => {
-        dateAffichee = new Date();
-        dateAffichee.setHours(12, 0, 0, 0);
-        mettreAJourDateAffichee();
-        chargerDonneesPlanning();
-        const t = document.getElementById('tab-planning');
-        if (t) t.click();
-    });
-    if (btnCarnet) btnCarnet.addEventListener('click', () => {
-        const t = document.getElementById('tab-carnet');
-        if (t) t.click();
-    });
-    if (btnCompte) btnCompte.addEventListener('click', () => {
-        const t = document.getElementById('tab-comptes');
-        if (t) t.click();
-    });
 }
 
 function formaterDateAccueil(str) {
@@ -81,7 +61,7 @@ async function chargerAccueilPilote() {
     container.innerHTML = '<p class="carnet-empty">Chargement du tableau de bord...</p>';
 
     const [resas, solde, signalements, validites] = await Promise.all([
-        chargerReservationsAccueil().catch(() => 0),
+        chargerProchaineJournee().catch(() => ({ text: '-', date: null, label: 'Aucune inscription' })),
         chargerSoldeAccueil().catch(() => 0),
         chargerSignalementsAccueil().catch(() => []),
         chargerValiditesAccueil().catch(() => null)
@@ -92,11 +72,11 @@ async function chargerAccueilPilote() {
     const htmlResas = `
         <div class="ap-card ap-card-green">
             <div class="ap-card-header">
-                <div class="ap-card-number">${resas}</div>
+                <div class="ap-card-number">${resas.text}</div>
                 <div class="ap-card-icon">📅</div>
             </div>
-            <div class="ap-card-label">Réservation(s) à venir</div>
-            <button type="button" id="accueil-btn-planning" class="btn-primary" style="width:100%; margin-top:12px;">Planning du jour</button>
+            <div class="ap-card-label">${resas.label}</div>
+            <button type="button" id="accueil-btn-planning" class="btn-primary" style="width:100%; margin-top:12px;">Voir le planning</button>
         </div>`;
 
     const htmlVols = `
@@ -107,7 +87,6 @@ async function chargerAccueilPilote() {
             </div>
             <div class="ap-card-label">Aucun vol connu</div>
             <button type="button" id="accueil-btn-carnet-retour" class="btn-primary" style="width:100%; margin-top:8px;">Retour de vol</button>
-            <button type="button" id="accueil-btn-carnet" class="btn-secondary" style="width:100%; margin-top:8px;">Mes derniers vols</button>
         </div>`;
 
     const soldeClasse = solde >= 0 ? 'ap-card-blue' : (solde >= -300 ? 'ap-card-orange' : 'ap-card-red');
@@ -125,8 +104,8 @@ async function chargerAccueilPilote() {
         </div>`;
 
     const htmlSignalements = `
-        <div class="ap-card ap-card-white ap-card-wide">
-            <h3>Signalements aéronefs en cours</h3>
+        <div class="ap-card ap-card-white ap-card-signalements">
+            <h3>Signalements en cours</h3>
             ${signalements.length ? `
                 <div class="ap-signalements-list">
                     ${signalements.map(s => `
@@ -163,20 +142,20 @@ async function chargerAccueilPilote() {
 
     const btnPlanning = document.getElementById('accueil-btn-planning');
     if (btnPlanning) btnPlanning.addEventListener('click', () => {
-        dateAffichee = new Date();
-        dateAffichee.setHours(12, 0, 0, 0);
+        if (resas.date) {
+            dateAffichee = new Date(resas.date);
+            dateAffichee.setHours(12, 0, 0, 0);
+        } else {
+            dateAffichee = new Date();
+            dateAffichee.setHours(12, 0, 0, 0);
+        }
         mettreAJourDateAffichee();
         chargerDonneesPlanning();
         const t = document.getElementById('tab-planning');
         if (t) t.click();
     });
 
-    const btnCarnet = document.getElementById('accueil-btn-carnet');
     const btnCarnetRetour = document.getElementById('accueil-btn-carnet-retour');
-    if (btnCarnet) btnCarnet.addEventListener('click', () => {
-        const t = document.getElementById('tab-carnet');
-        if (t) t.click();
-    });
     if (btnCarnetRetour) btnCarnetRetour.addEventListener('click', () => {
         const t = document.getElementById('tab-carnet');
         if (t) t.click();
@@ -190,20 +169,56 @@ async function chargerAccueilPilote() {
     });
 }
 
-async function chargerReservationsAccueil() {
-    const id = currentUser ? currentUser.id : '';
-    if (!id) return 0;
-    try {
-        const formula = `AND(IS_AFTER({Date de fin}, NOW()), FIND('${id}', ARRAYJOIN({Pilote}, ',')) > 0)`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(ACCUEIL_TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message);
-        return (data.records || []).length;
-    } catch (err) {
-        console.error('Erreur chargement réservations accueil:', err);
-        return 0;
+async function chargerProchaineJournee() {
+    if (!currentUser) return { text: '-', date: null, label: 'Aucune inscription' };
+    const id = currentUser.id;
+    const nom = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    const sources = [
+        { table: 'Réservations', dateField: 'Date de début', presence: (f) => {
+            const p = f['Pilote'] || [];
+            const ids = Array.isArray(p) ? p : [p];
+            return ids.some(v => v === id);
+        }},
+        { table: 'Présences Planeur', dateField: 'Date', presence: (f) => {
+            const p = f['Nom du pilote'] || [];
+            const ids = Array.isArray(p) ? p : [p];
+            return ids.some(v => v === id);
+        }},
+        { table: 'Présences Club', dateField: 'Date', presence: (f) => {
+            const p = f['Nom du pilote'] || [];
+            const ids = Array.isArray(p) ? p : [p];
+            return ids.some(v => v === id);
+        }},
+        { table: 'Événements', dateField: 'Date début', presence: (f) => {
+            const inscrits = (f['Inscrits'] || '').toString();
+            return nom && inscrits.toLowerCase().includes(nom.toLowerCase());
+        }}
+    ];
+    const matches = [];
+    for (const s of sources) {
+        try {
+            const nowFormula = s.table === 'Réservations'
+                ? `IS_AFTER({${s.dateField}}, NOW())`
+                : `IS_AFTER({${s.dateField}}, DATEADD(NOW(), -1, 'days'))`;
+            const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(s.table)}?filterByFormula=${encodeURIComponent(nowFormula)}&sort[0][field]=${encodeURIComponent(s.dateField)}&sort[0][direction]=asc&pageSize=10`;
+            const res = await cachedFetch(url, { headers });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message);
+            (data.records || []).forEach(r => {
+                if (s.presence(r.fields || {})) {
+                    const dateStr = r.fields[s.dateField];
+                    const d = new Date(dateStr);
+                    if (!isNaN(d.getTime())) matches.push({ date: d, dateStr, source: s.table });
+                }
+            });
+        } catch (err) {
+            console.warn('Prochaine journée', s.table, err);
+        }
     }
+    matches.sort((a, b) => a.date - b.date);
+    const next = matches[0];
+    if (!next) return { text: '-', date: null, label: 'Aucune inscription' };
+    return { text: formaterDateAccueil(next.dateStr), date: next.dateStr, label: 'Prochaine journée', source: next.source };
 }
 
 async function chargerSoldeAccueil() {
