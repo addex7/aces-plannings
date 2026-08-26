@@ -1119,7 +1119,7 @@ function actualiserLigneHeureCourante() {
     }
     line.style.display = 'block';
     const heureDec = now.getHours() + (now.getMinutes() / 60);
-    line.style.left = `${positionHeure(heureDec)}%`;
+    line.style.left = `calc(90px + (100% - 90px) * ${positionHeure(heureDec) / 100})`;
 }
 
 function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations', record = null) {
