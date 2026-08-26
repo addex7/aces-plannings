@@ -208,24 +208,34 @@ function ouvrirModaleSignalements(immat, items) {
 async function chargerProchaineJournee() {
     if (!currentUser) return { text: '-', date: null, label: 'Aucune inscription' };
     const id = currentUser.id;
-    const nom = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    const prenom = (currentUser.prenom || '').trim();
+    const nom = (currentUser.nom || '').trim();
+    const prenomLower = prenom.toLowerCase();
     const nomLower = nom.toLowerCase();
+    const fullLower = `${prenomLower} ${nomLower}`.trim();
     const appartient = (field) => {
         const arr = Array.isArray(field) ? field : [field];
         return arr.some(v => {
             if (v === id) return true;
-            if (typeof v === 'string' && v.toLowerCase().includes(nomLower)) return true;
+            if (typeof v === 'string') {
+                const vl = v.toLowerCase();
+                if (fullLower && vl.includes(fullLower)) return true;
+                if (prenomLower && vl.includes(prenomLower)) return true;
+                if (nomLower && vl.includes(nomLower)) return true;
+            }
             return false;
         });
+    };
+    const inscritEv = (text) => {
+        const t = (text || '').toString().toLowerCase();
+        if (!t) return false;
+        return (fullLower && t.includes(fullLower)) || (prenomLower && t.includes(prenomLower)) || (nomLower && t.includes(nomLower));
     };
     const sources = [
         { table: 'Réservations', dateField: 'Date de début', presence: (f) => appartient(f['Pilote']) || appartient(f['Pilote (texte)']) },
         { table: 'Présences Planeur', dateField: 'Date', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
         { table: 'Présences Club', dateField: 'Date', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
-        { table: 'Événements', dateField: 'Date début', presence: (f) => {
-            const inscrits = (f['Inscrits'] || '').toString();
-            return nom && inscrits.toLowerCase().includes(nomLower);
-        }}
+        { table: 'Événements', dateField: 'Date début', presence: (f) => inscritEv(f['Inscrits']) }
     ];
     const matches = [];
     for (const s of sources) {
@@ -233,7 +243,7 @@ async function chargerProchaineJournee() {
             const nowFormula = s.table === 'Réservations'
                 ? `IS_AFTER({${s.dateField}}, NOW())`
                 : `IS_AFTER({${s.dateField}}, DATEADD(NOW(), -1, 'days'))`;
-            const pageSize = s.table === 'Réservations' ? 100 : 50;
+            const pageSize = 100;
             const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(s.table)}?filterByFormula=${encodeURIComponent(nowFormula)}&sort[0][field]=${encodeURIComponent(s.dateField)}&sort[0][direction]=asc&pageSize=${pageSize}`;
             const res = await cachedFetch(url, { headers });
             const data = await res.json();
