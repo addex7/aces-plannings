@@ -131,7 +131,7 @@ async function chargerAccueilPilote() {
 
     const htmlValidites = `
         <div class="ap-card ap-card-white">
-            <h3><span class="ap-title-icon">🆔</span> Mes validités & qualifications</h3>
+            <h3><span class="ap-title-icon">🛡️</span> Mes validités & qualifications</h3>
             <div class="ap-validites-list">
                 ${renderValidites(validites)}
             </div>
@@ -140,10 +140,6 @@ async function chargerAccueilPilote() {
     const htmlMessagesClub = renderMessagesClub(messagesClub);
 
     container.innerHTML = `
-        <div class="accueil-pilote-header">
-            <h2>Accueil pilote</h2>
-            <p>Tableau de bord pilote de <strong id="accueil-pilote-nom">${escHtml(piloteNom)}</strong></p>
-        </div>
         <div class="accueil-pilote-grid">
             ${htmlResas}
             ${htmlVols}
