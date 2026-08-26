@@ -209,25 +209,22 @@ async function chargerProchaineJournee() {
     if (!currentUser) return { text: '-', date: null, label: 'Aucune inscription' };
     const id = currentUser.id;
     const nom = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    const nomLower = nom.toLowerCase();
+    const appartient = (field) => {
+        const arr = Array.isArray(field) ? field : [field];
+        return arr.some(v => {
+            if (v === id) return true;
+            if (typeof v === 'string' && v.toLowerCase().includes(nomLower)) return true;
+            return false;
+        });
+    };
     const sources = [
-        { table: 'Réservations', dateField: 'Date de début', presence: (f) => {
-            const p = f['Pilote'] || [];
-            const ids = Array.isArray(p) ? p : [p];
-            return ids.some(v => v === id);
-        }},
-        { table: 'Présences Planeur', dateField: 'Date', presence: (f) => {
-            const p = f['Nom du pilote'] || [];
-            const ids = Array.isArray(p) ? p : [p];
-            return ids.some(v => v === id);
-        }},
-        { table: 'Présences Club', dateField: 'Date', presence: (f) => {
-            const p = f['Nom du pilote'] || [];
-            const ids = Array.isArray(p) ? p : [p];
-            return ids.some(v => v === id);
-        }},
+        { table: 'Réservations', dateField: 'Date de début', presence: (f) => appartient(f['Pilote']) || appartient(f['Pilote (texte)']) },
+        { table: 'Présences Planeur', dateField: 'Date', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
+        { table: 'Présences Club', dateField: 'Date', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
         { table: 'Événements', dateField: 'Date début', presence: (f) => {
             const inscrits = (f['Inscrits'] || '').toString();
-            return nom && inscrits.toLowerCase().includes(nom.toLowerCase());
+            return nom && inscrits.toLowerCase().includes(nomLower);
         }}
     ];
     const matches = [];
@@ -236,7 +233,8 @@ async function chargerProchaineJournee() {
             const nowFormula = s.table === 'Réservations'
                 ? `IS_AFTER({${s.dateField}}, NOW())`
                 : `IS_AFTER({${s.dateField}}, DATEADD(NOW(), -1, 'days'))`;
-            const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(s.table)}?filterByFormula=${encodeURIComponent(nowFormula)}&sort[0][field]=${encodeURIComponent(s.dateField)}&sort[0][direction]=asc&pageSize=10`;
+            const pageSize = s.table === 'Réservations' ? 100 : 50;
+            const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(s.table)}?filterByFormula=${encodeURIComponent(nowFormula)}&sort[0][field]=${encodeURIComponent(s.dateField)}&sort[0][direction]=asc&pageSize=${pageSize}`;
             const res = await cachedFetch(url, { headers });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error?.message);

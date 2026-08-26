@@ -50,6 +50,8 @@ function gererClicMiniCalendrier(e) {
 }
 
 async function allerADateAffichee() {
+    const tabPlanning = document.getElementById('tab-planning');
+    if (tabPlanning) tabPlanning.click();
     if (typeof mettreAJourDateAffichee === 'function') mettreAJourDateAffichee();
     await Promise.all([
         (typeof chargerDonneesPlanning === 'function' ? chargerDonneesPlanning() : Promise.resolve()),
