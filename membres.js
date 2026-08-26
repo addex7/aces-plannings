@@ -37,11 +37,13 @@ function updateUIRoles() {
     const logoutBtn = document.getElementById('btn-logout');
     const tabMembres = document.getElementById('tab-membres');
     const tabAudit = document.getElementById('tab-audit');
+    const tabMessagerie = document.getElementById('tab-messagerie');
     const superAdmin = isSuperAdmin();
     if (profile) profile.textContent = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : 'Pilote Connecté';
     if (logoutBtn) logoutBtn.style.display = currentUser ? 'inline-block' : 'none';
     if (tabMembres) tabMembres.style.display = currentUser ? 'block' : 'none';
     if (tabAudit) tabAudit.style.display = superAdmin ? 'block' : 'none';
+    if (tabMessagerie) tabMessagerie.style.display = currentUser ? 'block' : 'none';
 }
 
 function genererToken() {
