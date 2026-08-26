@@ -3,7 +3,7 @@
    ========================================================================== */
 
 const ACCUEIL_TABLE_RESERVATIONS = 'Réservations';
-const ACCUEIL_TABLE_MAINTENANCE = 'Maintenance';
+const ACCUEIL_TABLE_SIGN = 'Signalements';
 const ACCUEIL_TABLE_AERONEFS = 'Aéronefs';
 
 function initAccueilPilote() {
@@ -111,7 +111,8 @@ async function chargerAccueilPilote() {
                     ${signalements.map(s => `
                         <div class="ap-signalement-row">
                             <span class="ap-signalement-machine">${escHtml(s.immat)}</span>
-                            <span class="ap-signalement-count">${s.count} signalement(s)</span>
+                            <span class="ap-signalement-desc">${escHtml(s.description)}</span>
+                            <span class="ap-signalement-etat">${escHtml(s.etat)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -232,36 +233,29 @@ async function chargerSoldeAccueil() {
 
 async function chargerSignalementsAccueil() {
     try {
-        const [resMachines, resMaintenance] = await Promise.all([
+        const [resMachines, resSignalements] = await Promise.all([
             cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(ACCUEIL_TABLE_AERONEFS)}?pageSize=100`, { headers }),
-            cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(ACCUEIL_TABLE_MAINTENANCE)}?pageSize=100`, { headers })
+            cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(ACCUEIL_TABLE_SIGN)}?pageSize=100`, { headers })
         ]);
-        const dataMachines = await resMachines.json();
-        const dataMaintenance = await resMaintenance.json();
-        if (!resMachines.ok || !resMaintenance.ok) throw new Error('Erreur');
-        const machines = dataMachines.records || [];
-        const maintenance = dataMaintenance.records || [];
+        const dataMachines = resMachines.ok ? (await resMachines.json()).records || [] : [];
+        const dataSignalements = resSignalements.ok ? (await resSignalements.json()).records || [] : [];
 
-        const counts = {};
-        maintenance.forEach(m => {
-            const f = m.fields || {};
-            const statut = (f['Statut'] || '').toString().trim().toLowerCase();
-            if (statut === 'résolu' || statut === 'clôturé' || statut === 'resolu' || statut === 'cloture') return;
-            const machine = f['Machine'];
-            const ids = Array.isArray(machine) ? machine : (machine ? [machine] : []);
-            ids.forEach(mid => {
-                if (!counts[mid]) counts[mid] = 0;
-                counts[mid]++;
-            });
+        const actifs = dataSignalements.filter(r => {
+            const f = r.fields || {};
+            const statut = (f['Statut'] || f['État'] || f['Etat'] || '').toString().trim().toLowerCase();
+            return statut !== 'résolu' && statut !== 'clôturé' && statut !== 'resolu' && statut !== 'cloture' && statut !== 'résolue' && statut !== 'cloturé';
         });
 
-        const signalements = [];
-        Object.keys(counts).forEach(mid => {
-            const avion = machines.find(a => a.id === mid || (a.fields['Immatriculation'] || '').toString().trim().toUpperCase() === mid.toUpperCase());
-            const immat = avion ? (avion.fields['Immatriculation'] || avion.fields['Nom'] || mid) : mid;
-            signalements.push({ immat, count: counts[mid] });
-        });
-        return signalements.sort((a, b) => a.immat.localeCompare(b.immat));
+        return actifs.map(r => {
+            const f = r.fields || {};
+            const aeronef = f['Aéronef'] || f['Aéronefs'] || f['Machine'] || [];
+            const ids = Array.isArray(aeronef) ? aeronef : (aeronef ? [aeronef] : []);
+            const avion = dataMachines.find(a => ids.includes(a.id) || ids.includes(a.fields['Immatriculation']));
+            const immat = avion ? (avion.fields['Immatriculation'] || avion.fields['Nom'] || ids[0] || '?') : (ids[0] || '?');
+            const description = f['Description'] || f['Titre'] || f['Titre du signalement'] || 'Signalement';
+            const etat = f['Statut'] || f['État'] || f['Etat'] || 'En cours';
+            return { immat, description, etat };
+        }).sort((a, b) => a.immat.localeCompare(b.immat));
     } catch (err) {
         console.error('Erreur chargement signalements accueil:', err);
         return [];

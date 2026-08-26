@@ -2341,19 +2341,31 @@ body {
 }
 .ap-signalement-row {
     display: flex;
-    justify-content: space-between;
-    padding: 10px 12px;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 13px;
 }
 .ap-signalement-machine {
     font-weight: 600;
     color: #1e3d59;
+    white-space: nowrap;
+    min-width: 60px;
 }
-.ap-signalement-count {
+.ap-signalement-desc {
+    flex: 1;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ap-signalement-etat {
     color: #64748b;
+    font-size: 12px;
+    white-space: nowrap;
 }
 .ap-validites-list {
     display: flex;
