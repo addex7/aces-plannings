@@ -671,8 +671,11 @@
                 <div id="message-form-section" style="display:none; background:white; border-radius:12px; padding:15px; margin:15px 0; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
                     <form id="message-form">
                         <div class="form-group">
-                            <label for="message-destinataire">Destinataire *</label>
-                            <select id="message-destinataire" class="form-control" required></select>
+                            <label>Destinataires *</label>
+                            <div id="message-destinataires-chips" style="display:flex; flex-wrap:wrap; gap:6px; padding:6px; border:1px solid #cbd5e1; border-radius:6px; min-height:36px; align-items:center; background:#f8fafc;"></div>
+                            <input type="text" id="message-destinataires-input" class="form-control" placeholder="Taper un nom..." autocomplete="off" style="margin-top:8px;">
+                            <div id="message-destinataires-suggestions" style="display:none; border:1px solid #e2e8f0; border-radius:6px; max-height:150px; overflow-y:auto; background:white; margin-top:4px;"></div>
+                            <button type="button" id="message-destinataires-tous" class="btn-secondary" style="margin-top:8px;">Tout le monde</button>
                         </div>
                         <div class="form-group">
                             <label for="message-objet">Objet *</label>
@@ -1163,7 +1166,7 @@
     <script src="membres.js?v=87"></script>
     <script src="instructeurs.js?v=83"></script>
     <script src="instructeur-planning.js?v=82"></script>
-    <script src="messagerie.js?v=2"></script>
+    <script src="messagerie.js?v=3"></script>
     <script src="membre-home.js?v=82"></script>
     <!-- Fenêtre Modale : Lecture d'un message -->
     <div id="message-read-modal" class="modal" style="display:none;">

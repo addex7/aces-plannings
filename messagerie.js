@@ -16,6 +16,7 @@ const FIELDS_MESSAGE = {
 
 let messagesCache = [];
 let utilisateursMessagerieCache = [];
+let destinatairesSelectionnes = [];
 
 function initMessagerie() {
     const form = document.getElementById('message-form');
@@ -23,6 +24,9 @@ function initMessagerie() {
     const fileName = document.getElementById('message-piece-name');
     const nouveauBtn = document.getElementById('btn-nouveau-message');
     const close = document.getElementById('message-read-close');
+    const input = document.getElementById('message-destinataires-input');
+    const suggestions = document.getElementById('message-destinataires-suggestions');
+    const tousBtn = document.getElementById('message-destinataires-tous');
 
     if (fileInput) {
         fileInput.addEventListener('change', () => {
@@ -46,32 +50,98 @@ function initMessagerie() {
         const modal = document.getElementById('message-read-modal');
         if (modal && e.target === modal) modal.style.display = 'none';
     });
-    document.getElementById('messages-list')?.addEventListener('click', (e) => {
-        const item = e.target.closest('.message-item');
-        if (item) voirMessage(item.dataset.id);
-    });
-    const select = document.getElementById('message-destinataire');
-    if (select) chargerDestinataires(select);
+    const messagesList = document.getElementById('messages-list');
+    if (messagesList) {
+        messagesList.addEventListener('click', (e) => {
+            const item = e.target.closest('.message-item');
+            if (item) voirMessage(item.dataset.id);
+        });
+    }
+    if (input) {
+        input.addEventListener('input', () => filtrerDestinataires(input.value));
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+    }
+    if (suggestions) {
+        suggestions.addEventListener('click', (e) => {
+            const el = e.target.closest('.destinataire-suggestion');
+            if (el) ajouterDestinataire(el.dataset.nom);
+        });
+    }
+    if (tousBtn) tousBtn.addEventListener('click', ajouterTousLesDestinataires);
+    chargerDestinataires();
 }
 
-async function chargerDestinataires(select) {
+function renderDestinatairesChips() {
+    const container = document.getElementById('message-destinataires-chips');
+    if (!container) return;
+    if (destinatairesSelectionnes.length === 0) {
+        container.innerHTML = '<span style="color:#94a3b8; font-size:13px;">Aucun destinataire sélectionné</span>';
+        return;
+    }
+    container.innerHTML = destinatairesSelectionnes.map(nom => `
+        <span style="display:inline-flex; align-items:center; gap:4px; background:#1e3d59; color:white; padding:4px 8px; border-radius:12px; font-size:13px;">
+            ${escHtml(nom)}
+            <button type="button" data-nom="${escHtml(nom)}" class="retirer-destinataire" style="background:none; border:none; color:white; cursor:pointer; font-weight:bold; line-height:1;">×</button>
+        </span>
+    `).join('');
+    container.querySelectorAll('.retirer-destinataire').forEach(btn => {
+        btn.addEventListener('click', () => retirerDestinataire(btn.dataset.nom));
+    });
+}
+
+function filtrerDestinataires(value) {
+    const suggestions = document.getElementById('message-destinataires-suggestions');
+    if (!suggestions) return;
+    const v = (value || '').trim().toLowerCase();
+    if (!v) { suggestions.style.display = 'none'; return; }
+    const current = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    const matches = (utilisateursMessagerieCache || []).filter(r => {
+        const f = r.fields || {};
+        const nom = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+        if (!nom || nom === current || destinatairesSelectionnes.includes(nom)) return false;
+        return nom.toLowerCase().includes(v);
+    });
+    if (matches.length === 0) { suggestions.style.display = 'none'; return; }
+    suggestions.innerHTML = matches.map(r => {
+        const f = r.fields || {};
+        const nom = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+        return `<div class="destinataire-suggestion" data-nom="${escHtml(nom)}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #f1f5f9; color:#334155;">${escHtml(nom)}</div>`;
+    }).join('');
+    suggestions.style.display = 'block';
+}
+
+function ajouterDestinataire(nom) {
+    if (!nom || destinatairesSelectionnes.includes(nom)) return;
+    destinatairesSelectionnes = destinatairesSelectionnes.filter(n => n !== 'Tous');
+    destinatairesSelectionnes.push(nom);
+    const input = document.getElementById('message-destinataires-input');
+    if (input) input.value = '';
+    const suggestions = document.getElementById('message-destinataires-suggestions');
+    if (suggestions) suggestions.style.display = 'none';
+    renderDestinatairesChips();
+}
+
+function retirerDestinataire(nom) {
+    destinatairesSelectionnes = destinatairesSelectionnes.filter(n => n !== nom);
+    renderDestinatairesChips();
+}
+
+function ajouterTousLesDestinataires() {
+    destinatairesSelectionnes = ['Tous'];
+    const input = document.getElementById('message-destinataires-input');
+    if (input) input.value = '';
+    const suggestions = document.getElementById('message-destinataires-suggestions');
+    if (suggestions) suggestions.style.display = 'none';
+    renderDestinatairesChips();
+}
+
+async function chargerDestinataires() {
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS_MESSAGERIE)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        const records = data.records || [];
-        utilisateursMessagerieCache = records;
-        const current = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
-        select.innerHTML = '<option value="">Choisir un destinataire</option>';
-        records.forEach(r => {
-            const f = r.fields || {};
-            const nom = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
-            if (!nom || nom === current) return;
-            const opt = document.createElement('option');
-            opt.value = nom;
-            opt.textContent = nom;
-            select.appendChild(opt);
-        });
+        utilisateursMessagerieCache = data.records || [];
+        renderDestinatairesChips();
     } catch (err) {
         console.error('Erreur chargement destinataires:', err);
     }
@@ -86,7 +156,7 @@ async function chargerMessagerie() {
         container.innerHTML = '<p class="carnet-empty">Connectez-vous pour voir vos messages.</p>';
         return;
     }
-    const formula = `{Destinataire}='${destinataire.replace(/'/g, "\\'")}'`;
+    const formula = `OR(FIND('Tous', {Destinataire}), FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire}))`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=50`, { headers });
         const data = await res.json();
@@ -108,8 +178,8 @@ function afficherMessages(records) {
     }
     container.innerHTML = records.map(r => {
         const f = r.fields || {};
-        const d = f[FIELDS_MESSAGE.DATE] ? new Date(f[FIELDS_MESSAGE.DATE]) : null;
-        const date = d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '';
+        const d = f[FIELDS_MESSAGE.DATE] ? new Date(f[FIELDS_MESSAGE.DATE] + 'T00:00:00') : null;
+        const date = d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '';
         const lu = f[FIELDS_MESSAGE.LU];
         const expediteur = f[FIELDS_MESSAGE.EXPEDITEUR] || '';
         const objet = f[FIELDS_MESSAGE.OBJET] || '(sans objet)';
@@ -126,25 +196,24 @@ function afficherMessages(records) {
 
 async function envoyerMessage(e) {
     e.preventDefault();
-    const select = document.getElementById('message-destinataire');
     const objet = document.getElementById('message-objet');
     const corps = document.getElementById('message-corps');
     const fileInput = document.getElementById('message-piece');
     const fileName = document.getElementById('message-piece-name');
-    if (!select || !objet || !corps) return;
+    if (!objet || !corps) return;
 
-    const destinataire = select.value;
     const objetVal = objet.value.trim();
     const corpsVal = corps.value.trim();
-    if (!destinataire || !objetVal || !corpsVal) { alert('Destinataire, objet et corps sont requis.'); return; }
+    if (destinatairesSelectionnes.length === 0) { alert('Veuillez choisir au moins un destinataire.'); return; }
+    if (!objetVal || !corpsVal) { alert('Objet et corps sont requis.'); return; }
 
     const expediteur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
     if (!expediteur) { alert('Vous devez être connecté.'); return; }
 
     const fields = {
-        [FIELDS_MESSAGE.DATE]: new Date().toISOString(),
+        [FIELDS_MESSAGE.DATE]: new Date().toISOString().slice(0, 10),
         [FIELDS_MESSAGE.EXPEDITEUR]: expediteur,
-        [FIELDS_MESSAGE.DESTINATAIRE]: destinataire,
+        [FIELDS_MESSAGE.DESTINATAIRE]: destinatairesSelectionnes.join('; '),
         [FIELDS_MESSAGE.OBJET]: objetVal,
         [FIELDS_MESSAGE.CORPS]: corpsVal,
         [FIELDS_MESSAGE.LU]: false
@@ -170,7 +239,6 @@ async function envoyerMessage(e) {
         if (fileName) fileName.textContent = '';
         const messageFormSection = document.getElementById('message-form-section');
         if (messageFormSection) messageFormSection.style.display = 'none';
-        if (typeof chargerMessagerie === 'function' && select.value === expediteur) chargerMessagerie();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'envoi : ' + (err.message || 'inconnue'));
@@ -213,8 +281,8 @@ function voirMessage(id) {
     const content = document.getElementById('message-read-content');
     if (!modal || !content) return;
 
-    const d = f[FIELDS_MESSAGE.DATE] ? new Date(f[FIELDS_MESSAGE.DATE]) : null;
-    const date = d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '';
+    const d = f[FIELDS_MESSAGE.DATE] ? new Date(f[FIELDS_MESSAGE.DATE] + 'T00:00:00') : null;
+    const date = d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '';
     const pieces = Array.isArray(f[FIELDS_MESSAGE.PIECE]) ? f[FIELDS_MESSAGE.PIECE] : [];
     const piecesHtml = pieces.length
         ? `<div style="margin-top:15px;"><strong>Pièce(s) jointe(s) :</strong><br>` +
@@ -253,7 +321,7 @@ async function compterMessagesNonLus() {
     if (!badge) return;
     const destinataire = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
     if (!destinataire) { badge.style.display = 'none'; return; }
-    const formula = `AND({Destinataire}='${destinataire.replace(/'/g, "\\'")}', {Lu}=FALSE())`;
+    const formula = `AND(OR(FIND('Tous', {Destinataire}), FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire})), {Lu}=FALSE())`;
     try {
         const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`, { headers });
         const data = await res.json();
