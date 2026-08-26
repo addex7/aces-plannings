@@ -231,12 +231,21 @@ async function envoyerMessage(e) {
         if (!record) throw new Error('Aucune réponse Airtable');
 
         const file = fileInput && fileInput.files[0];
-        if (file) await uploadPieceJointe(record.id, file);
+        if (file) {
+            try {
+                await uploadPieceJointe(record.id, file);
+            } catch (pjErr) {
+                console.error('Échec pièce jointe :', pjErr);
+                alert('Message envoyé, mais la pièce jointe n\'a pas pu être ajoutée.');
+            }
+        }
 
         alert('Message envoyé.');
         const messageForm = document.getElementById('message-form');
         if (messageForm) messageForm.reset();
         if (fileName) fileName.textContent = '';
+        destinatairesSelectionnes = [];
+        renderDestinatairesChips();
         const messageFormSection = document.getElementById('message-form-section');
         if (messageFormSection) messageFormSection.style.display = 'none';
     } catch (err) {
@@ -254,7 +263,8 @@ async function uploadPieceJointe(recordId, file) {
             if (comma === -1) { reject(new Error('Lecture fichier impossible')); return; }
             const base64 = dataUrl.slice(comma + 1);
             try {
-                const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(recordId)}/${encodeURIComponent(FIELDS_MESSAGE.PIECE)}/uploadAttachment`, {
+                const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(recordId)}/${encodeURIComponent(FIELDS_MESSAGE.PIECE)}/uploadAttachment`;
+                const res = await fetch(url, {
                     method: 'POST',
                     headers,
                     body: JSON.stringify({
@@ -264,7 +274,10 @@ async function uploadPieceJointe(recordId, file) {
                     })
                 });
                 const data = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(data.error?.message || 'Échec upload pièce jointe');
+                if (!res.ok) {
+                    console.error('Upload PJ', res.status, url, data);
+                    throw new Error(data.error?.message || `Échec upload pièce jointe (${res.status})`);
+                }
                 resolve(data);
             } catch (err) { reject(err); }
         };
