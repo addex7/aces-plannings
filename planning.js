@@ -479,7 +479,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
     volsVIP.forEach(vol => {
         if (!vol.fields) return;
         const nom = (vol.fields['Nom'] || '').toString().trim();
-        const pilote = (vol.fields['Pilote'] || '').toString().trim();
+        const pilote = nomUtilisateurDepuisId(vol.fields['Pilote'], listeMembresCache);
         const debutRaw = vol.fields['Date de début'];
         const finRaw = vol.fields['Date de fin'];
         if (debutRaw && finRaw) {
@@ -565,6 +565,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
     rowsContainer.innerHTML = "<div class='loading'>Mise à jour du planning...</div>";
     const debutJour = dateAffichee.toISOString().split('T')[0];
     try {
+        await chargerListeMembresCache();
         if (forceRefresh || listeAvionsCache.length === 0) {
             const resAvions = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}`, { headers });
             const dataAvions = await resAvions.json();
@@ -770,7 +771,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             const barresInfos = [];
             volsAvion.forEach(vol => {
                 if (!vol.fields) return;
-                const piloteNom = vol.fields['Pilote'] || '';
+                const piloteNom = nomUtilisateurDepuisId(vol.fields['Pilote'], listeMembresCache);
                 const piloteFormate = formaterNomPilote(piloteNom);
                 const typeVol = vol.fields['Type de vol'] || 'Vol Classique';
                 const debutRaw = vol.fields['Date de début'];
@@ -798,7 +799,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             barresDiv.classList.add('short-reservation');
                         }
                         const passagerNom = (vol.fields['Passager'] || '').toString().trim();
-                        const instructeurNom = (vol.fields['Instructeur'] || '').toString().trim();
+                        const instructeurNom = nomUtilisateurDepuisId(vol.fields['Instructeur'], listeMembresCache);
                         const typesVol = Array.isArray(typeVol) ? typeVol : [typeVol];
                         const isVIMoteur = typesVol.includes('VI Moteur');
                         const isAncienVI = typesVol.includes("Vol d'Initiation") || typesVol.includes("Vol d'Initiation (VI)");
@@ -927,7 +928,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
                             box-sizing: border-box;
                         `;
-                        const pilote = f['Pilote'] || '';
+                        const pilote = nomUtilisateurDepuisId(f['Pilote'], listeMembresCache);
                         const piloteFormate = formaterNomPilote(pilote);
                         const hd = f['Heure départ'] || '';
                         const ha = f['Heure arrivée'] || '';
@@ -1067,6 +1068,31 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
         sel.value = monId;
         group.style.display = 'none';
     }
+}
+
+async function chargerListeMembresCache(force = false) {
+    if (!force && listeMembresCache.length) return;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        listeMembresCache = data.records || [];
+    } catch (err) {
+        console.error('Erreur chargement membres:', err);
+    }
+}
+
+function nomUtilisateurDepuisId(field, cache = []) {
+    if (!field) return '';
+    const ids = Array.isArray(field) ? field : [field];
+    const id = ids[0];
+    if (typeof id !== 'string' || !id.startsWith('rec')) return String(id).trim();
+    const membre = cache.find(r => r.id === id);
+    if (membre) {
+        const f = membre.fields || {};
+        return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || String(id);
+    }
+    return String(id).trim();
 }
 
 function actualiserLigneHeureCourante() {
@@ -2014,7 +2040,7 @@ function ouvrirModaleInformation(vol) {
     const content = document.getElementById('reservation-info-content');
     if (!infoModal || !content || !vol || !vol.fields) return;
     const f = vol.fields;
-    const pilote = Array.isArray(f['Pilote']) ? f['Pilote'].join(', ') : (f['Pilote'] || '—');
+    const pilote = nomUtilisateurDepuisId(f['Pilote'], listeMembresCache) || '—';
     let machine = f['Machine'] || '—';
     if (Array.isArray(machine) && machine.length > 0) {
         const raw = machine[0];
