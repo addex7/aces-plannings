@@ -2254,8 +2254,14 @@ body {
 }
 .accueil-pilote-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 20px;
+    width: 100%;
+}
+@media (max-width: 900px) {
+    .accueil-pilote-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
 }
 .ap-card {
     border-radius: 10px;
@@ -2496,6 +2502,10 @@ body {
     border-radius: 50%;
     flex-shrink: 0;
 }
+.ap-pastille.pastille-verte { background: #22c55e; }
+.ap-pastille.pastille-rouge { background: #ef4444; }
+.ap-pastille.pastille-orange { background: #f59e0b; }
+.ap-pastille.pastille-grise { background: #94a3b8; }
 .ap-validite-label {
     flex: 1;
     font-weight: 500;
