@@ -636,5 +636,5 @@ async function getSoldePilote(piloteNom) {
 
 async function pilotePeutReserver(piloteNom) {
     const solde = await getSoldePilote(piloteNom);
-    return solde >= 0;
+    return solde > -500;
 }

@@ -252,8 +252,26 @@ async function sauvegarderReservation() {
     if (piloteNom && typeof pilotePeutReserver === 'function') {
         const peutReserver = await pilotePeutReserver(piloteNom);
         if (!peutReserver) {
-            alert('Le compte pilote de ' + piloteNom + ' est négatif. Réservation impossible.');
+            const solde = typeof getSoldePilote === 'function' ? await getSoldePilote(piloteNom) : null;
+            const soldeText = solde !== null ? solde.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+            alert('Le compte pilote de ' + piloteNom + ' est à ' + soldeText + ' € (plafond autorisé : -500 €). Réservation impossible avant de recréditer le compte.');
             return;
+        }
+    }
+
+    // Avertissement si des validités sont invalides
+    if (typeof chargerValiditesAccueil === 'function') {
+        try {
+            const validites = await chargerValiditesAccueil();
+            if (validites && validites.items) {
+                const invalides = validites.items.filter(i => i.ok === false);
+                if (invalides.length) {
+                    const liste = invalides.map(i => '• ' + i.label).join('\n');
+                    alert('Attention, les validités suivantes ne sont pas à jour :\n' + liste);
+                }
+            }
+        } catch (err) {
+            console.warn('Vérification des validités avant réservation:', err);
         }
     }
 
