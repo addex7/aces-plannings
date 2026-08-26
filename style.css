@@ -2825,6 +2825,13 @@ img, table, video, iframe, svg {
     font-weight: 600;
     color: #1e3d59;
     background: #fff;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+.nr-stepper input::-webkit-outer-spin-button,
+.nr-stepper input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 .nr-hint {
     font-size: 12px;
