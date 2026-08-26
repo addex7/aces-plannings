@@ -13,6 +13,7 @@ let listeVolsInitiationCache = [];
 let listeReservationsConflits = [];
 let filtreInitiationActif = 'apourvoir';
 let filtreTypesInitiation = ['VIP', 'VIULM', 'VIA'];
+let listeMembresCache = [];
 
 function parseTempsDeVol(tempsStr) {
     if (!tempsStr) return NaN;
@@ -175,10 +176,9 @@ async function ouvrirModaleModification(reservationId) {
     form['form-fin'].value = reservation.fields['Date de fin'] ? formaterDateHeureLocal(new Date(reservation.fields['Date de fin'])) : '';
 
     // Remplir le pilote
-    if (reservation.fields['Pilote'] && form['form-pilote']) {
-        form['form-pilote'].value = Array.isArray(reservation.fields['Pilote'])
-            ? reservation.fields['Pilote'].join(', ')
-            : reservation.fields['Pilote'].toString().trim();
+    if (typeof peuplerPiloteSelect === 'function') {
+        const piloteId = Array.isArray(reservation.fields['Pilote']) ? reservation.fields['Pilote'][0] : reservation.fields['Pilote'];
+        await peuplerPiloteSelect(piloteId || null);
     }
 
     // Remplir la machine
@@ -240,8 +240,15 @@ async function sauvegarderReservation() {
     const selectMachine = document.getElementById('form-machine');
     const avionId = selectMachine.value;
 
-    // Récupérer le pilote (si c'est un nouveau pilote, il faudra le créer)
-    const piloteNom = reservationData['form-pilote'];
+    // Récupérer le pilote
+    const selPilote = document.getElementById('form-pilote');
+    let piloteId = currentUser ? currentUser.id : '';
+    let piloteNom = nomPiloteCourant();
+    if (selPilote && selPilote.value) {
+        const selected = selPilote.options[selPilote.selectedIndex];
+        piloteId = selPilote.value;
+        piloteNom = selected ? selected.textContent.trim() : piloteNom;
+    }
     if (piloteNom && typeof pilotePeutReserver === 'function') {
         const peutReserver = await pilotePeutReserver(piloteNom);
         if (!peutReserver) {
@@ -249,10 +256,6 @@ async function sauvegarderReservation() {
             return;
         }
     }
-    let piloteId = null;
-
-    // TODO: Ajouter la logique pour créer un nouveau pilote si nécessaire
-    piloteId = "recPilote123"; // À remplacer par la logique réelle
 
     // Calculer la durée du vol en heures
     const heureDebut = new Date(reservationData['form-debut']);
@@ -1013,11 +1016,57 @@ function peutBougerReservations() {
 function estProprietaireReservation(record) {
     if (typeof currentUser === 'undefined' || !currentUser || !record || !record.fields) return false;
     const piloteRecord = record.fields['Pilote'];
-    const pilote = Array.isArray(piloteRecord) ? piloteRecord.join(' ') : (piloteRecord || '').toString();
+    const piloteIds = Array.isArray(piloteRecord) ? piloteRecord : (piloteRecord ? [piloteRecord] : []);
+    if (currentUser.id && piloteIds.some(id => id === currentUser.id)) return true;
+    const pilote = piloteIds.join(' ').toString().trim();
     const moi = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
     return (typeof correspondanceNom === 'function' && correspondanceNom(pilote, moi))
         || (typeof correspondanceNom === 'function' && correspondanceNom(nomPiloteCourant(), pilote))
         || pilote.trim().toLowerCase() === nomPiloteCourant().toLowerCase();
+}
+
+async function peuplerPiloteSelect(piloteSelectionne = null) {
+    const sel = document.getElementById('form-pilote');
+    const group = document.getElementById('group-pilote');
+    if (!sel || !group) return;
+    const roles = (typeof currentUser !== 'undefined' && currentUser ? currentUser.roles || [] : []);
+    const autorise = (typeof isSuperAdmin === 'function' && isSuperAdmin()) ||
+        roles.some(r => ['Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'].includes(r));
+    const monId = (currentUser || {}).id || '';
+    const monNom = `${(currentUser || {}).prenom || ''} ${(currentUser || {}).nom || ''}`.trim() || 'Moi';
+    if (!autorise) {
+        sel.innerHTML = `<option value="${escapeHtml(monId)}">${escapeHtml(monNom)}</option>`;
+        sel.value = monId;
+        group.style.display = 'none';
+        return;
+    }
+    try {
+        if (!listeMembresCache.length) {
+            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+            listeMembresCache = data.records || [];
+        }
+        sel.innerHTML = '<option value="">-- Choisir un pilote --</option>';
+        listeMembresCache.forEach(r => {
+            const f = r.fields || {};
+            const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Membre';
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = nomComplet;
+            if (piloteSelectionne && (r.id === piloteSelectionne || nomComplet === piloteSelectionne)) opt.selected = true;
+            else if (!piloteSelectionne && r.id === monId) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        if (piloteSelectionne) sel.value = piloteSelectionne;
+        else if (monId) sel.value = monId;
+        group.style.display = 'flex';
+    } catch (err) {
+        console.error('Erreur chargement membres:', err);
+        sel.innerHTML = `<option value="${escapeHtml(monId)}">${escapeHtml(monNom)}</option>`;
+        sel.value = monId;
+        group.style.display = 'none';
+    }
 }
 
 function actualiserLigneHeureCourante() {
@@ -1630,10 +1679,7 @@ function initGestionnaireModale() {
             if (document.getElementById('form-fin')) document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T11:00`;
             if (document.getElementById('form-estimation')) document.getElementById('form-estimation').value = '1.0';
             if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
-            const affichage = document.getElementById('affichage-pilote');
-            const pilote = nomPiloteCourant();
-            if (document.getElementById('form-pilote')) document.getElementById('form-pilote').value = pilote;
-            if (affichage) affichage.textContent = pilote;
+            if (typeof peuplerPiloteSelect === 'function') await peuplerPiloteSelect();
             appliquerEtatFormulaire();
             modal.style.display = 'flex';
         });
@@ -1871,10 +1917,7 @@ function ouvrirModaleCreationDepuisGrille(avionId, heureDebutClic) {
     document.getElementById('form-debut').value = `${annee}-${mois}-${jour}T${heureDebutClic.toString().padStart(2, '0')}:00`;
     document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T${((heureDebutClic + 2) % 24).toString().padStart(2, '0')}:00`;
     document.getElementById('form-estimation').value = '1.0';
-    const affichage = document.getElementById('affichage-pilote');
-    const pilote = nomPiloteCourant();
-    if (document.getElementById('form-pilote')) document.getElementById('form-pilote').value = pilote;
-    if (affichage) affichage.textContent = pilote;
+    if (typeof peuplerPiloteSelect === 'function') peuplerPiloteSelect();
     modal.style.display = 'flex';
 }
 
@@ -1910,10 +1953,10 @@ async function ouvrirModaleEdition(vol, avionIdOuImmat) {
         const match = nom && options.find(o => o.value && typeof correspondanceNom === 'function' && correspondanceNom(o.value, nom));
         sel.value = match ? match.value : (options.some(o => o.value === nom) ? nom : '');
     }
-    const affichage = document.getElementById('affichage-pilote');
-    const pilote = vol.fields['Pilote'] || nomPiloteCourant();
-    document.getElementById('form-pilote').value = pilote;
-    if (affichage) affichage.textContent = pilote;
+    if (typeof peuplerPiloteSelect === 'function') {
+        const piloteId = Array.isArray(vol.fields['Pilote']) ? vol.fields['Pilote'][0] : vol.fields['Pilote'];
+        await peuplerPiloteSelect(piloteId || null);
+    }
     let idTargetMachine = null;
     if (vol.fields && vol.fields['Machine'] && vol.fields['Machine'].length > 0) {
         const rawMachine = vol.fields['Machine'][0];
@@ -1962,10 +2005,7 @@ function ouvrirModaleCreationDepuisGrilleDate(avionId, heureDebutClic, dateCible
     document.getElementById('form-debut').value = `${annee}-${mois}-${jour}T${heureDebutClic.toString().padStart(2, '0')}:00`;
     document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T${((heureDebutClic + 2) % 24).toString().padStart(2, '0')}:00`;
     document.getElementById('form-estimation').value = '1.0';
-    const affichage = document.getElementById('affichage-pilote');
-    const pilote = nomPiloteCourant();
-    if (document.getElementById('form-pilote')) document.getElementById('form-pilote').value = pilote;
-    if (affichage) affichage.textContent = pilote;
+    if (typeof peuplerPiloteSelect === 'function') peuplerPiloteSelect();
     modal.style.display = 'flex';
 }
 

@@ -728,10 +728,11 @@
                         <!-- Populé dynamiquement -->
                     </div>
                 </div>
-                <div class="form-group" style="display:none; align-items:center; gap:8px;">
-                    <label style="font-weight:bold;">Pilote :</label>
-                    <strong id="affichage-pilote" style="color:#1e3d59; font-size:15px;"></strong>
-                    <input type="hidden" id="form-pilote">
+                <div id="group-pilote" class="form-group" style="display:none; align-items:center; gap:8px;">
+                    <label for="form-pilote" style="font-weight:bold;">Pilote :</label>
+                    <select id="form-pilote" class="form-control" style="width:100%;">
+                        <option value="">-- Choisir un pilote --</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="form-instructeur">Instructeur (optionnel) :</label>
@@ -1177,7 +1178,7 @@
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=83"></script>
     <script src="presences.js?v=83"></script>
-    <script src="planning.js?v=105"></script>
+    <script src="planning.js?v=106"></script>
     <script src="calendrier.js?v=85"></script>
     <script src="comptes.js?v=99"></script>
     <script src="aeronefs.js?v=93"></script>
