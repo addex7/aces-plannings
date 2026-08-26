@@ -196,15 +196,6 @@ function afficherMessages(records) {
     }).join('');
 }
 
-function lireFichier(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Erreur lecture fichier'));
-        reader.readAsDataURL(file);
-    });
-}
-
 async function envoyerMessage(e) {
     e.preventDefault();
     const objet = document.getElementById('message-objet');
@@ -225,15 +216,12 @@ async function envoyerMessage(e) {
     const file = fileInput && fileInput.files[0];
     if (file) {
         try {
-            const dataUrl = await lireFichier(file);
-            const payload = JSON.stringify({ filename: file.name, data: dataUrl });
-            if (payload.length > 95000) {
-                alert('Le fichier est trop volumineux pour être envoyé dans Airtable (limite ~70 Ko).');
-                return;
-            }
-            pieceJointe = payload;
+            const uploader = typeof uploaderFichierDocument === 'function' ? uploaderFichierDocument : null;
+            if (!uploader) throw new Error('Uploader non disponible');
+            pieceJointe = await uploader(file);
         } catch (err) {
-            alert('Erreur lors de la lecture du fichier.');
+            console.error(err);
+            alert('Erreur lors de l\'upload de la pièce jointe : ' + (err.message || 'inconnue'));
             return;
         }
     }
@@ -290,13 +278,17 @@ function voirMessage(id) {
           pieceVal.map(p => `<a href="${escHtml(p.url)}" target="_blank" style="display:inline-block; margin-top:4px;">${escHtml(p.filename || p.url)}</a>`).join('<br>') +
           `</div>`;
     } else if (typeof pieceVal === 'string' && pieceVal.trim()) {
-        try {
-            const pj = JSON.parse(pieceVal);
-            if (pj && pj.data && pj.filename) {
-                piecesHtml = `<div style="margin-top:15px;"><a href="${escHtml(pj.data)}" download="${escHtml(pj.filename)}" style="display:inline-block; background:#1e3d59; color:white; padding:8px 12px; border-radius:6px; text-decoration:none;">📎 Télécharger ${escHtml(pj.filename)}</a></div>`;
+        if (pieceVal.startsWith('http')) {
+            piecesHtml = `<div style="margin-top:15px;"><a href="${escHtml(pieceVal)}" target="_blank" style="display:inline-block; background:#1e3d59; color:white; padding:8px 12px; border-radius:6px; text-decoration:none;">📎 Ouvrir la pièce jointe</a></div>`;
+        } else {
+            try {
+                const pj = JSON.parse(pieceVal);
+                if (pj && pj.data && pj.filename) {
+                    piecesHtml = `<div style="margin-top:15px;"><a href="${escHtml(pj.data)}" download="${escHtml(pj.filename)}" style="display:inline-block; background:#1e3d59; color:white; padding:8px 12px; border-radius:6px; text-decoration:none;">📎 Télécharger ${escHtml(pj.filename)}</a></div>`;
+                }
+            } catch (e) {
+                piecesHtml = '';
             }
-        } catch (e) {
-            piecesHtml = '';
         }
     }
 
