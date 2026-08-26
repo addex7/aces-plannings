@@ -31,6 +31,7 @@ function setCurrentUser(user) {
     if (typeof appliquerAccesComptes === 'function') appliquerAccesComptes();
     if (typeof chargerNotifications === 'function') chargerNotifications();
     if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
+    if (typeof renderMiniCalendrier === 'function') renderMiniCalendrier();
 }
 
 function updateUIRoles() {
