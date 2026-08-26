@@ -1005,9 +1005,20 @@ function peutBougerReservations() {
     return roles.some(r => allowed.includes((r || '').toString().toLowerCase().trim()));
 }
 
+function estProprietaireReservation(record) {
+    if (typeof currentUser === 'undefined' || !currentUser || !record || !record.fields) return false;
+    const piloteRecord = record.fields['Pilote'];
+    const pilote = Array.isArray(piloteRecord) ? piloteRecord.join(' ') : (piloteRecord || '').toString();
+    const moi = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    return (typeof correspondanceNom === 'function' && correspondanceNom(pilote, moi))
+        || (typeof correspondanceNom === 'function' && correspondanceNom(nomPiloteCourant(), pilote))
+        || pilote.trim().toLowerCase() === nomPiloteCourant().toLowerCase();
+}
+
 function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations', record = null) {
     e.preventDefault();
-    if (tableName !== 'Maintenance' && !peutBougerReservations()) return;
+    const resa = record || (listeReservationsCache || []).find(r => r.id === volId);
+    if (tableName !== 'Maintenance' && !peutBougerReservations() && !estProprietaireReservation(resa)) return;
     let aBouge = false;
     let ghost = null;
     const rectGrid = gridBg.getBoundingClientRect();
@@ -1067,7 +1078,8 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
 
 function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutInitiale, hFinInitiale, dateCibleVol, tableName = 'Réservations', record = null) {
     e.preventDefault();
-    if (tableName !== 'Maintenance' && !peutBougerReservations()) return;
+    const resa = record || (listeReservationsCache || []).find(r => r.id === reservationId);
+    if (tableName !== 'Maintenance' && !peutBougerReservations() && !estProprietaireReservation(resa)) return;
     isResizing = true;
     barElement.style.opacity = '0.3';
     document.body.style.userSelect = 'none';
