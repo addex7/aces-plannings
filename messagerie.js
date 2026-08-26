@@ -140,7 +140,7 @@ async function chargerMessagerie() {
     }
     const formula = `OR(FIND('Tous', {Destinataire}) > 0, FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire}) > 0)`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=50`, { headers });
+        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=50`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         messagesCache = data.records || [];
@@ -225,6 +225,7 @@ async function envoyerMessage(e) {
         const record = (data.records || [])[0];
         if (!record) throw new Error('Aucune réponse Airtable');
 
+        if (typeof viderApiCache === 'function') viderApiCache();
         alert('Message envoyé.');
         const messageForm = document.getElementById('message-form');
         if (messageForm) messageForm.reset();
