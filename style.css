@@ -378,6 +378,10 @@ body {
     background-color: #8e44ad;
     border-left: 4px solid #5b2c6f;
 }
+.reservation-bar.ma-reservation {
+    background-color: #10b981 !important;
+    border-left: 5px solid #047857 !important;
+}
 .timeline-row.vi-planeur-row {
     background-color: #f8f0fc;
 }

@@ -479,13 +479,23 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
                 const barresDiv = document.createElement('div');
                 const type = (vol.fields['Type'] || 'VI');
                 const isCreneau = vol._table === 'VI Créneaux';
+                const estMoi = estUtilisateurCourant(pilote);
                 const classePilote = pilote ? 'vi-avec-pilote' : 'vi-sans-pilote';
-                barresDiv.className = `reservation-bar ${classePilote}`;
+                barresDiv.className = `reservation-bar ${classePilote}${estMoi ? ' ma-reservation' : ''}`;
                 barresDiv.style.left = `${positionHeure(heureDebut)}%`;
                 barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
                 const libelle = pilote ? `🎯 ${type} (${formaterNomPilote(pilote)})` : `🎯 ${type} DISPONIBLE`;
                 barresDiv.innerHTML = `<strong>${libelle}</strong>`;
-                barresDiv.title = vol.fields['Commentaire'] || '';
+                const debutStr = convertirHeureEnHHMM(heureDebut);
+                const finStr = convertirHeureEnHHMM(heureFin);
+                barresDiv.title = [
+                    `Type : ${type}`,
+                    `Nom : ${nom}`,
+                    `Pilote : ${formaterNomPilote(pilote) || '—'}`,
+                    `Horaires : ${debutStr} - ${finStr}`,
+                    `Téléphone : ${vol.fields['Téléphone'] || '—'}`,
+                    `Commentaire : ${vol.fields['Commentaire'] || '—'}`
+                ].join('\n');
                 if (!isCreneau) {
                     const handleLeft = document.createElement('div');
                     handleLeft.className = 'resize-handle resize-handle-left';
@@ -506,12 +516,13 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
                         e.stopPropagation();
                         initierDeplacementBarre(e, vol.id, null, gridBg, barresDiv, heureDebut, duree, null, 'VI Planeur');
                     });
-                    barresDiv.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (isResizing || isDraggingBar) return;
-                        ouvrirModaleEditionVIPlaneur(vol);
-                    });
                 }
+                barresDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (isResizing || isDraggingBar) return;
+                    const tabInitiation = document.getElementById('tab-initiation');
+                    if (tabInitiation) tabInitiation.click();
+                });
                 barresDiv.addEventListener('mouseenter', () => { barresDiv.style.zIndex = '100'; });
                 barresDiv.addEventListener('mouseleave', () => { barresDiv.style.zIndex = '5'; });
                 gridBg.appendChild(barresDiv);
@@ -767,6 +778,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const isAncienVI = typesVol.includes("Vol d'Initiation") || typesVol.includes("Vol d'Initiation (VI)");
                         const isCreneau = vol._table === 'VI Créneaux';
                         const isInstruction = typesVol.includes('Instruction');
+                        const estMoi = estUtilisateurCourant(piloteNom) || estUtilisateurCourant(instructeurNom);
+                        if (estMoi) barresDiv.classList.add('ma-reservation');
                         let libelleEntete = piloteFormate || 'Pilote non défini';
                         if (instructeurNom) {
                             barresDiv.classList.add('reservation-avec-instructeur');
@@ -1907,6 +1920,15 @@ function getNomMachine(machineId) {
     if (!machineId) return '';
     const avion = (listeAvionsCache || []).find(a => a.id === machineId);
     return avion ? (avion.fields['Immatriculation'] || avion.fields['Nom'] || 'Inconnu') : '';
+}
+
+function estUtilisateurCourant(nom) {
+    if (!nom || typeof currentUser === 'undefined' || !currentUser) return false;
+    const n = nom.toString().trim();
+    const current = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    if (!current) return false;
+    const formater = typeof formaterNomPilote === 'function' ? formaterNomPilote : x => x;
+    return formater(n).toLowerCase() === current.toLowerCase();
 }
 
 function normaliserVolsInitiation() {
