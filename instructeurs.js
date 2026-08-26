@@ -207,6 +207,10 @@ async function supprimerDisponibilite(record) {
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}/${record.id}`, { method: 'DELETE', headers });
         if (!res.ok) throw new Error('Erreur Airtable');
+        if (typeof enregistrerAudit === 'function') {
+            const nom = f['Instructeur'] || '';
+            await enregistrerAudit('Suppression disponibilité', nom, `Instructeur : ${nom} | Date : ${f['Date'] || ''} | ${f['Heure début'] || ''} - ${f['Heure fin'] || ''} | Machine : ${f['Machine'] || ''}`, 'Instructeur');
+        }
         if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
         if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
         await ouvrirModaleGererDispos();
@@ -309,6 +313,10 @@ async function enregistrerDisponibilite(e) {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method, headers, body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        if (typeof enregistrerAudit === 'function') {
+            const action = dispoId ? 'Modification disponibilité' : 'Création disponibilité';
+            await enregistrerAudit(action, nom, `Instructeur : ${nom} | Date : ${date} | ${debut} - ${fin} | Machine : ${machine}`, 'Instructeur');
+        }
         fermerModaleDisponibilite();
         if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
         if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();

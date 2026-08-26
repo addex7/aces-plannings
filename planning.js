@@ -1282,6 +1282,12 @@ function initGestionnaireModaleVIPlaneur() {
                     headers: headers
                 });
                 if (response.ok) {
+                    if (typeof enregistrerAudit === 'function') {
+                        const pilote = volVIModale?.pilote || '';
+                        const dateVol = volVIModale?.debut ? volVIModale.debut.slice(0,16).replace('T',' ') : '';
+                        const finVol = volVIModale?.fin ? volVIModale.fin.slice(0,16).replace('T',' ') : '';
+                        await enregistrerAudit('Suppression VI Planeur', 'VI Planeur', `Pilote : ${pilote} | ${dateVol} - ${finVol}`, 'Initiation');
+                    }
                     modal.style.display = 'none';
                     form.reset();
                     idVIModale = null;
@@ -1400,6 +1406,11 @@ function initGestionnaireModaleVIPlaneur() {
                         headers: headers,
                         body: JSON.stringify({ records: [recordData] })
                     });
+                }
+                if (typeof enregistrerAudit === 'function') {
+                    const action = idVIModale ? 'Modification' : 'Création';
+                    const typeCible = table === 'VI Créneaux' ? 'Créneau VI' : 'VI Planeur';
+                    await enregistrerAudit(`${action} ${typeCible}`, typeCible, `Pilote : ${pilote} | Passager : ${nomComplet} | ${dateDebut.slice(0,16).replace('T',' ')} - ${dateFin.slice(0,16).replace('T',' ')}`, 'Initiation');
                 }
                 modal.style.display = 'none';
                 form.reset();
@@ -2248,6 +2259,12 @@ async function reserverVolInitiation(id, source) {
             body: JSON.stringify({ records: [{ id, fields: { "Pilote": nomPilote.trim() } }] })
         });
         if (response.ok) {
+            const vol = (listeVolsInitiationCache || []).find(v => v.id === id);
+            const dateVol = vol?.debut ? vol.debut.slice(0,16).replace('T',' ') : '';
+            const finVol = vol?.fin ? vol.fin.slice(0,16).replace('T',' ') : '';
+            if (typeof enregistrerAudit === 'function') {
+                await enregistrerAudit('Inscription vol d\'initiation', source, `Pilote : ${nomPilote} | ${dateVol} - ${finVol}`, 'Initiation');
+            }
             chargerVolsInitiation();
             chargerDonneesPlanning(true);
         } else {
@@ -2341,6 +2358,10 @@ async function creerCreneauxVI(e) {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        }
+        if (typeof enregistrerAudit === 'function') {
+            const pilote = nomPiloteCourant();
+            await enregistrerAudit('Création créneaux VI', type, `Pilote : ${pilote} | Date : ${date} | Nombre : ${records.length} | ${debut} - ${fin}`, 'Initiation');
         }
         alert(`${records.length} créneau(x) créé(s).`);
         document.getElementById('form-creneaux-vi').reset();

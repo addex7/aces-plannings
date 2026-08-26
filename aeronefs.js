@@ -213,6 +213,12 @@ async function enregistrerMaintenance(e) {
             throw new Error(await resAvion.text());
         }
 
+        if (typeof enregistrerAudit === 'function') {
+            const action = maintenanceId ? 'Modification maintenance' : 'Création maintenance';
+            const dateStr = isoDate.slice(0,16).replace('T',' ');
+            await enregistrerAudit(action, immat, `Date : ${dateStr} | Durée : ${duree}h | Butée : ${nouvelleButee}`, 'Maintenance');
+        }
+
         await notifierReservationsSurMaintenance(immat, dateTime, duree);
         fermerModaleMaintenance();
         chargerSuiviAeronef();

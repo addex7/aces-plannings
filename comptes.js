@@ -509,7 +509,7 @@ async function validerRecetteManuelle(piloteNom, montant, dateIso) {
 
     const record = (data.records || [])[0];
     if (record) {
-        await supprimerRecetteManuelle(record.id);
+        await supprimerRecetteManuelle(record.id, false);
     }
     return false;
 }
@@ -582,6 +582,9 @@ async function enregistrerRecetteManuelle(e) {
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
 
         // Recette enregistrée sans alerte
+        if (typeof enregistrerAudit === 'function') {
+            await enregistrerAudit('Versement compte pilote', piloteNom, `Pilote : ${piloteNom} | Date : ${date} | Montant : ${montant.toFixed(2).replace('.', ',')} € | ${desc}`, 'Comptes');
+        }
         e.target.reset();
         await chargerComptesPilotes();
     } catch (err) {
@@ -590,14 +593,28 @@ async function enregistrerRecetteManuelle(e) {
     }
 }
 
-async function supprimerRecetteManuelle(recordId) {
+async function supprimerRecetteManuelle(recordId, audit = true) {
     const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}/${recordId}`;
+    let record = null;
+    if (audit) {
+        try {
+            const recRes = await fetch(url, { headers });
+            if (recRes.ok) record = await recRes.json();
+        } catch (_) {}
+    }
     const res = await fetch(url, { method: 'DELETE', headers });
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error?.message || 'Erreur suppression.');
     }
     await res.json().catch(() => {});
+    if (audit && record && typeof enregistrerAudit === 'function') {
+        const f = record.fields || {};
+        const montant = (parseFloat(f['Crédit']) || 0).toFixed(2).replace('.', ',');
+        const pilote = f['Pilote'] || '';
+        const date = f['Date'] || '';
+        await enregistrerAudit('Suppression versement', pilote, `Pilote : ${pilote} | Date : ${date} | Montant : ${montant} €`, 'Comptes');
+    }
 }
 
 async function getSoldePilote(piloteNom) {
