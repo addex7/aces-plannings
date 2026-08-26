@@ -1967,12 +1967,20 @@ function normaliserVolsInitiation() {
 function afficherVolsInitiation() {
     const container = document.getElementById('initiation-list');
     if (!container) return;
-    const vols = normaliserVolsInitiation().filter(v => v.categorie === filtreInitiationActif && filtreTypesInitiation.includes(v.type));
+    const maintenant = new Date();
+    const vols = normaliserVolsInitiation().filter(v => {
+        if (filtreInitiationActif === 'archives') {
+            return new Date(v.debut) < maintenant && filtreTypesInitiation.includes(v.type);
+        }
+        return v.categorie === filtreInitiationActif && filtreTypesInitiation.includes(v.type);
+    });
+    const estArchive = filtreInitiationActif === 'archives';
     if (vols.length === 0) {
         const messages = {
             apourvoir: 'Aucun vol d\'initiation à pourvoir.',
             pris: 'Aucun vol d\'initiation déjà pris.',
-            creneaux: 'Aucun créneau disponible.'
+            creneaux: 'Aucun créneau disponible.',
+            archives: 'Aucun créneau passé.'
         };
         const message = messages[filtreInitiationActif] || 'Aucun vol.';
         container.innerHTML = `<div class="initiation-empty">${message}</div>`;
@@ -2000,7 +2008,7 @@ function afficherVolsInitiation() {
             nomClient = vol.passager || 'Passager non renseigné';
         }
         const machineText = vol.source === 'moteur' && vol.machineName ? `🛩️ ${vol.machineName}<br>` : '';
-        const peutSInscrire = isAPourvoir && (vol.source === 'creneau' ? hasRolePiloteVI() : !!nomPiloteCourant());
+        const peutSInscrire = !estArchive && isAPourvoir && (vol.source === 'creneau' ? hasRolePiloteVI() : !!nomPiloteCourant());
         const boutonSInscrire = peutSInscrire ? `<button class="btn-reserver-initiation" data-id="${vol.id}" data-source="${vol.source}">S'inscrire</button>` : '';
         const card = document.createElement('div');
         card.className = `initiation-card ${vol.classe}`;
@@ -2136,13 +2144,14 @@ function initGestionnaireVolsInitiation() {
     const btnDispos = document.getElementById('btn-initiation-dispos');
     const btnPris = document.getElementById('btn-initiation-pris');
     const btnCreneaux = document.getElementById('btn-initiation-creneaux');
+    const btnArchives = document.getElementById('btn-initiation-archives');
     const list = document.getElementById('initiation-list');
     if (btnCreneaux && hasRoleGestionVI()) btnCreneaux.style.display = 'inline-block';
 
     function setFiltre(valeur) {
         filtreInitiationActif = valeur;
         document.querySelectorAll('.initiation-tab').forEach(b => b.classList.remove('active'));
-        const map = { apourvoir: 'btn-initiation-dispos', pris: 'btn-initiation-pris', creneaux: 'btn-initiation-creneaux' };
+        const map = { apourvoir: 'btn-initiation-dispos', pris: 'btn-initiation-pris', creneaux: 'btn-initiation-creneaux', archives: 'btn-initiation-archives' };
         const activeBtn = document.getElementById(map[valeur] || '');
         if (activeBtn) activeBtn.classList.add('active');
         afficherVolsInitiation();
@@ -2151,6 +2160,7 @@ function initGestionnaireVolsInitiation() {
     if (btnDispos) btnDispos.addEventListener('click', () => setFiltre('apourvoir'));
     if (btnPris) btnPris.addEventListener('click', () => setFiltre('pris'));
     if (btnCreneaux) btnCreneaux.addEventListener('click', () => setFiltre('creneaux'));
+    if (btnArchives) btnArchives.addEventListener('click', () => setFiltre('archives'));
 
     function setFiltreTypes() {
         filtreTypesInitiation = Array.from(document.querySelectorAll('input[name="initiation-type-filtre"]:checked')).map(cb => cb.value);
