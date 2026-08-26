@@ -232,28 +232,19 @@ async function chargerSoldeAccueil() {
 }
 
 async function chargerSignalementsAccueil() {
+    const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
     try {
-        const [resMachines, resSignalements] = await Promise.all([
-            cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(ACCUEIL_TABLE_AERONEFS)}?pageSize=100`, { headers }),
-            cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(ACCUEIL_TABLE_SIGN)}?pageSize=100`, { headers })
-        ]);
-        const dataMachines = resMachines.ok ? (await resMachines.json()).records || [] : [];
-        const dataSignalements = resSignalements.ok ? (await resSignalements.json()).records || [] : [];
+        const formula = `AND(TRIM({Observations}) != '', {Statut observation} != 'Observation traitée')`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
+        const res = await cachedFetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message);
 
-        const actifs = dataSignalements.filter(r => {
+        return (data.records || []).map(r => {
             const f = r.fields || {};
-            const statut = (f['Statut'] || f['État'] || f['Etat'] || '').toString().trim().toLowerCase();
-            return statut !== 'résolu' && statut !== 'clôturé' && statut !== 'resolu' && statut !== 'cloture' && statut !== 'résolue' && statut !== 'cloturé';
-        });
-
-        return actifs.map(r => {
-            const f = r.fields || {};
-            const aeronef = f['Aéronef'] || f['Aéronefs'] || f['Machine'] || [];
-            const ids = Array.isArray(aeronef) ? aeronef : (aeronef ? [aeronef] : []);
-            const avion = dataMachines.find(a => ids.includes(a.id) || ids.includes(a.fields['Immatriculation']));
-            const immat = avion ? (avion.fields['Immatriculation'] || avion.fields['Nom'] || ids[0] || '?') : (ids[0] || '?');
-            const description = f['Description'] || f['Titre'] || f['Titre du signalement'] || 'Signalement';
-            const etat = f['Statut'] || f['État'] || f['Etat'] || 'En cours';
+            const immat = (f['Machine'] || '').toString().trim() || '?';
+            const description = (f['Observations'] || '').toString().trim() || 'Signalement';
+            const etat = (f['Statut observation'] || 'Non pris en compte').toString().trim();
             return { immat, description, etat };
         }).sort((a, b) => a.immat.localeCompare(b.immat));
     } catch (err) {
