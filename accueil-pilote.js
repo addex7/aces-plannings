@@ -113,14 +113,6 @@ async function chargerAccueilPilote() {
                             <span class="ap-signalement-machine">${escHtml(s.immat)}</span>
                             <span class="ap-signalement-count">${s.items.length} Signalement${s.items.length > 1 ? 's' : ''}</span>
                         </div>
-                        <div class="ap-signalement-detail" style="display:none;">
-                            ${s.items.map(i => `
-                                <div class="ap-signalement-detail-item">
-                                    <span class="ap-signalement-detail-desc">${escHtml(i.description)}</span>
-                                    <span class="ap-signalement-detail-etat">${escHtml(i.etat)}</span>
-                                </div>
-                            `).join('')}
-                        </div>
                     `).join('')}
                 </div>
             ` : '<p class="carnet-empty">Aucun signalement en cours.</p>'}
@@ -178,12 +170,39 @@ async function chargerAccueilPilote() {
 
     container.querySelectorAll('.ap-signalement-row').forEach(row => {
         row.addEventListener('click', () => {
-            const detail = row.nextElementSibling;
-            if (detail && detail.classList.contains('ap-signalement-detail')) {
-                detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
-            }
+            const immat = row.dataset.immat;
+            const grp = signalements.find(sg => sg.immat === immat);
+            if (grp) ouvrirModaleSignalements(grp.immat, grp.items);
         });
     });
+}
+
+function ouvrirModaleSignalements(immat, items) {
+    const existing = document.getElementById('ap-modal-signalements');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ap-modal-signalements';
+    overlay.className = 'ap-modal-signalements';
+    overlay.innerHTML = `
+        <div class="ap-modal-signalements-content" role="dialog" aria-modal="true">
+            <div class="ap-modal-signalements-header">
+                <h3>Signalements — ${escHtml(immat)}</h3>
+                <button type="button" class="ap-modal-signalements-close" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="ap-modal-signalements-list">
+                ${items.map(i => `
+                    <div class="ap-modal-signalements-item">
+                        <span class="ap-modal-signalements-desc">${escHtml(i.description)}</span>
+                        <span class="ap-modal-signalements-etat">${escHtml(i.etat)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector('.ap-modal-signalements-close').addEventListener('click', () => overlay.remove());
 }
 
 async function chargerProchaineJournee() {
