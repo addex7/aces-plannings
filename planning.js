@@ -998,7 +998,16 @@ function populerSelectAvions(avions) {
     }
 }
 
+function peutBougerReservations() {
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
+    const roles = currentUser.roles || [];
+    const allowed = ['super admin', 'instructeur avion', 'instructeur planeur', 'instructeur ulm'];
+    return roles.some(r => allowed.includes((r || '').toString().toLowerCase().trim()));
+}
+
 function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations', record = null) {
+    e.preventDefault();
+    if (tableName !== 'Maintenance' && !peutBougerReservations()) return;
     let aBouge = false;
     let ghost = null;
     const rectGrid = gridBg.getBoundingClientRect();
@@ -1058,6 +1067,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
 
 function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutInitiale, hFinInitiale, dateCibleVol, tableName = 'Réservations', record = null) {
     e.preventDefault();
+    if (tableName !== 'Maintenance' && !peutBougerReservations()) return;
     isResizing = true;
     barElement.style.opacity = '0.3';
     document.body.style.userSelect = 'none';
