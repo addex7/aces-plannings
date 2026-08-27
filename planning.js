@@ -1717,6 +1717,15 @@ function initGestionnaireModale() {
             }
         });
     }
+    const instructeurSelect = document.getElementById('form-instructeur');
+    if (instructeurSelect) {
+        instructeurSelect.addEventListener('change', (e) => {
+            if (e.target.value && e.target.value.trim() !== '') {
+                cocherTypeVol('Instruction');
+                appliquerEtatFormulaire();
+            }
+        });
+    }
     if (btnOpenModal && modal) {
         btnOpenModal.addEventListener('click', async () => {
             idReservationEnEdition = null;
