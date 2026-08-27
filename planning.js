@@ -1721,8 +1721,11 @@ function initGestionnaireModale() {
     if (instructeurSelect) {
         instructeurSelect.addEventListener('change', (e) => {
             if (e.target.value && e.target.value.trim() !== '') {
-                cocherTypeVol('Instruction');
-                appliquerEtatFormulaire();
+                const hasTypeVol = document.querySelector('input[name="form-type-vol"]:checked');
+                if (!hasTypeVol) {
+                    cocherTypeVol('Instruction');
+                    appliquerEtatFormulaire();
+                }
             }
         });
     }
