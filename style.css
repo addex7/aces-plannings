@@ -1961,6 +1961,16 @@ img, table, video, iframe, svg {
     margin: 0;
     font-size: 18px;
     color: #1e3d59;
+    white-space: nowrap;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.comptes-list-header {
+    flex-wrap: nowrap;
+}
+.comptes-export-btn {
+    flex-shrink: 0;
 }
 .comptes-export-btn {
     background: transparent;
