@@ -1406,6 +1406,20 @@ function appliquerEtatFormulaire() {
     const isVIMoteur = typeSelectionne.includes('VI Moteur');
     const isVI = isVIPlaneur || isVIMoteur;
 
+    const machineId = getMachineSelectionnee();
+    const avionSelectionne = (listeAvionsCache || []).find(a => a.id === machineId);
+    const immatSelectionnee = (avionSelectionne && avionSelectionne.fields ? (avionSelectionne.fields['Immatriculation'] || avionSelectionne.fields['Nom'] || '').toString().trim().toUpperCase() : '');
+    const showRemorquage = ['F-BLIO', 'F-JVIO'].includes(immatSelectionnee);
+    const showVolDeNuit = !['F-BLIO', 'F-JVIO'].includes(immatSelectionnee);
+    document.querySelectorAll('input[name="form-type-vol"][value="Remorquage"]').forEach(cb => {
+        if (cb.parentElement) cb.parentElement.style.display = showRemorquage ? '' : 'none';
+        if (!showRemorquage) cb.checked = false;
+    });
+    document.querySelectorAll('input[name="form-type-vol"][value="Vol de nuit"]').forEach(cb => {
+        if (cb.parentElement) cb.parentElement.style.display = showVolDeNuit ? '' : 'none';
+        if (!showVolDeNuit) cb.checked = false;
+    });
+
     if (groupMachine) groupMachine.style.display = isVIPlaneur ? 'none' : 'block';
     if (groupEstimation) groupEstimation.style.display = isVI ? 'none' : 'block';
     if (groupPassager) groupPassager.style.display = isVI ? 'block' : 'none';
@@ -1724,6 +1738,7 @@ function initGestionnaireModale() {
             if (e.target.checked) {
                 document.querySelectorAll('input[name="form-machine"]').forEach(cb => { if (cb !== e.target) cb.checked = false; });
             }
+            appliquerEtatFormulaire();
         });
     }
     const instructeurSelect = document.getElementById('form-instructeur');
