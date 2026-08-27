@@ -777,10 +777,6 @@
                     </div>
                     <div class="nr-hint">Heures décimales autorisées (ex : 1,5)</div>
                 </div>
-                <div id="group-commentaires" class="nr-section">
-                    <div class="nr-section-title">COMMENTAIRES & CONTACTS VI</div>
-                    <textarea id="form-commentaires" class="nr-textarea" rows="3" placeholder="Coordonnées du passager, remarques..."></textarea>
-                </div>
                 <div id="group-passager" class="nr-section" style="display:none">
                     <div class="nr-section-title">NOM DU PASSAGER</div>
                     <input type="text" id="form-passager" class="nr-input" placeholder="Ex: Marie Dupont">
@@ -788,6 +784,10 @@
                 <div id="group-telephone" class="nr-section" style="display:none">
                     <div class="nr-section-title">TÉLÉPHONE DU PASSAGER</div>
                     <input type="tel" id="form-telephone" class="nr-input" placeholder="Ex: 06 12 34 56 78">
+                </div>
+                <div id="group-commentaires" class="nr-section">
+                    <div class="nr-section-title" id="label-commentaires">COMMENTAIRES</div>
+                    <textarea id="form-commentaires" class="nr-textarea" rows="3" placeholder="Coordonnées du passager, remarques..."></textarea>
                 </div>
                 <div class="nr-footer">
                     <button type="button" class="nr-btn-cancel" onclick="document.getElementById('reservation-modal').style.display='none'">Annuler</button>
@@ -1207,7 +1207,7 @@
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=85"></script>
     <script src="presences.js?v=83"></script>
-    <script src="planning.js?v=114"></script>
+    <script src="planning.js?v=115"></script>
     <script src="calendrier.js?v=87"></script>
     <script src="comptes.js?v=101"></script>
     <script src="aeronefs.js?v=95"></script>

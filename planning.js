@@ -1432,7 +1432,7 @@ function appliquerEtatFormulaire() {
             inputPilote.placeholder = 'Ex: Jean Dupont';
             inputPilote.required = false;
         }
-        if (labelCommentaires) labelCommentaires.textContent = 'Commentaire :';
+        if (labelCommentaires) labelCommentaires.textContent = 'COMMENTAIRES';
         if (groupCommentaires) groupCommentaires.style.display = 'block';
         if (inputEstimation) inputEstimation.required = false;
         return;
@@ -1443,7 +1443,7 @@ function appliquerEtatFormulaire() {
         inputPilote.placeholder = 'Ex: Jean Dupont';
         inputPilote.required = true;
     }
-    if (labelCommentaires) labelCommentaires.textContent = 'Commentaires & Contacts VI :';
+    if (labelCommentaires) labelCommentaires.textContent = 'COMMENTAIRES';
     if (groupCommentaires) groupCommentaires.style.display = 'none';
     if (inputEstimation) inputEstimation.required = true;
 }
@@ -1704,6 +1704,15 @@ function initGestionnaireModale() {
                     document.querySelectorAll('input[name="form-type-vol"][value="Navigation"]').forEach(cb => cb.checked = false);
                 } else if (value === 'Navigation') {
                     document.querySelectorAll('input[name="form-type-vol"][value="Local"]').forEach(cb => cb.checked = false);
+                }
+            }
+            if (value === 'VI Moteur') {
+                const debutInput = document.getElementById('form-debut');
+                const finInput = document.getElementById('form-fin');
+                if (debutInput && finInput && debutInput.value) {
+                    const d = new Date(debutInput.value);
+                    d.setHours(d.getHours() + 1);
+                    finInput.value = formaterPourInput(d);
                 }
             }
             appliquerEtatFormulaire();
