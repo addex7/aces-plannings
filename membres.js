@@ -1,6 +1,6 @@
 const TABLE_UTILISATEURS = 'Utilisateurs';
 
-const EMAILJS_SERVICE_ID = 'service_g8c1da8';
+const EMAILJS_SERVICE_ID = 'service_mzemfef';
 const EMAILJS_TEMPLATE_ID = 'template_1esjy9a';
 const EMAILJS_RESET_TEMPLATE_ID = ''; // ID du template EmailJS dédié au reset ; laisser vide pour utiliser le template d'invitation
 const EMAILJS_PUBLIC_KEY = 'V_q5vuIMURlLXAaVC';
