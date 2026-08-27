@@ -326,20 +326,22 @@ const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur pl
 async function chargerUtilisateurs() {
     const tbody = document.getElementById('membres-list');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Chargement...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Chargement...</td></tr>';
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const records = data.records || [];
-        if (records.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Aucun utilisateur.</td></tr>'; return; }
+        if (records.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Aucun utilisateur.</td></tr>'; return; }
         tbody.innerHTML = '';
         records.forEach(r => {
             const f = r.fields || {};
             const prenom = f['Prénom'] || '';
             const nom = f['Nom'] || '';
+            const nomComplet = `${prenom} ${nom}`.trim();
             const rolesActuels = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
             const rolesText = rolesActuels.join(', ') || '-';
+            const canDelete = isSuperAdmin();
             const tr = document.createElement('tr');
             tr.className = 'ligne-membre';
             tr.innerHTML = `
@@ -348,13 +350,16 @@ async function chargerUtilisateurs() {
                 <td>${f['Téléphone'] || ''}</td>
                 <td class="roles-cell">${rolesText}</td>
                 <td>${f['Identifiant'] || ''}</td>
+                <td class="membre-actions">${canDelete ? `<button type="button" class="membre-delete" data-id="${r.id}" title="Supprimer">&times;</button>` : ''}</td>
             `;
             tr.addEventListener('click', () => ouvrirSuiviMembre(r.id));
+            const delBtn = tr.querySelector('.membre-delete');
+            if (delBtn) delBtn.addEventListener('click', (e) => { e.stopPropagation(); supprimerMembreDepuisListe(r.id, nomComplet); });
             tbody.appendChild(tr);
         });
     } catch (err) {
         console.error(err);
-        tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Erreur de chargement.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Erreur de chargement.</td></tr>';
     }
 }
 
@@ -535,15 +540,21 @@ async function supprimerMembre() {
     if (!confirm('Confirmer la suppression de ce membre ?')) return;
     const prenom = document.getElementById('edit-membre-prenom')?.value?.trim() || '';
     const nom = document.getElementById('edit-membre-nom')?.value?.trim() || '';
+    await supprimerMembreDepuisListe(idMembreEnEdition, `${prenom} ${nom}`.trim());
+    fermerModaleMembre();
+}
+
+async function supprimerMembreDepuisListe(recordId, nomComplet = '') {
+    if (!recordId) return;
+    if (!confirm(nomComplet ? `Confirmer la suppression de ${nomComplet} ?` : 'Confirmer la suppression de ce membre ?')) return;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, { method: 'DELETE', headers });
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { method: 'DELETE', headers });
         if (!res.ok) {
             const data = await res.json();
             throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);
         }
-        fermerModaleMembre();
         await chargerUtilisateurs();
-        if (typeof enregistrerAudit === 'function') enregistrerAudit('Suppression de membre', `${prenom} ${nom}`.trim(), '', 'Membres');
+        if (typeof enregistrerAudit === 'function') enregistrerAudit('Suppression de membre', nomComplet, '', 'Membres');
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la suppression.');

@@ -1999,7 +1999,8 @@ img, table, video, iframe, svg {
     font-weight: 700;
     white-space: nowrap;
 }
-.comptes-montant .comptes-delete {
+.comptes-montant .comptes-delete,
+.membre-actions .membre-delete {
     background: none;
     border: none;
     color: #94a3b8;
@@ -2009,6 +2010,7 @@ img, table, video, iframe, svg {
     padding: 0 4px;
     line-height: 1;
 }
+.membre-actions .membre-delete:hover { color: #dc2626; }
 .comptes-list-footer {
     text-align: center;
     margin-top: 14px;
