@@ -278,7 +278,7 @@ function afficherTransactions(records, container, piloteNom, showAll = comptesSh
             <button type="button" class="comptes-export-btn" id="comptes-export-csv">Exporter en CSV</button>
         </div>
         <table class="comptes-table">
-            <thead><tr><th>Date</th><th>Description</th><th>Référence</th><th>Montant</th></tr></thead>
+            <thead><tr><th>Date</th><th>Description</th><th>Référence</th><th class="comptes-montant">Montant</th></tr></thead>
             <tbody>${rows}</tbody>
         </table>
         ${hasMore ? `<div class="comptes-list-footer"><button type="button" class="comptes-voir-toutes" id="comptes-toggle-rows">Voir toutes les transactions <span>&#8595;</span></button></div>` : ''}

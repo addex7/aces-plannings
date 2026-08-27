@@ -1954,6 +1954,7 @@ img, table, video, iframe, svg {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
     margin-bottom: 16px;
 }
 .comptes-list-title {
@@ -1969,6 +1970,7 @@ img, table, video, iframe, svg {
     border-radius: 8px;
     font-size: 13px;
     cursor: pointer;
+    white-space: nowrap;
 }
 .comptes-export-btn:hover { background: #f8fafc; }
 .comptes-table {
@@ -1983,6 +1985,7 @@ img, table, video, iframe, svg {
     font-weight: 600;
     border-bottom: 2px solid #e2e8f0;
 }
+.comptes-table th.comptes-montant { text-align: right; }
 .comptes-table td {
     padding: 10px;
     border-bottom: 1px solid #f1f5f9;
