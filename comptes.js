@@ -70,7 +70,7 @@ function isTresorier() {
 
 async function chargerUtilisateursComptes() {
     if (utilisateursComptesCache.length) return;
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&filterByFormula=%7BActif%7D%3D1&pageSize%3D100`;
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&pageSize%3D100`;
     const res = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Erreur lors du chargement des pilotes.');
@@ -117,7 +117,7 @@ async function chargerComptesPilotes() {
 function peuplerSelectPilotes(select) {
     if (!select) return;
     const val = select.value;
-    select.innerHTML = '<option value="">Choisir un pilote</option>';
+    select.innerHTML = '';
     const noms = new Set();
     utilisateursComptesCache.forEach(r => {
         const f = r.fields || {};
