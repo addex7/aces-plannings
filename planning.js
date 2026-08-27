@@ -34,6 +34,33 @@ function escapeHtml(text) {
         .replace(/'/g, '&#039;');
 }
 
+function afficherModaleAlerte(titre, messageHtml, icone = '⚠️') {
+    const existing = document.getElementById('planning-alert-modal');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'planning-alert-modal';
+    overlay.className = 'modal';
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '20000';
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-width: 420px; text-align: left;">
+            <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
+            <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                <span style="font-size:28px;">${icone}</span>
+                <span>${escapeHtml(titre)}</span>
+            </h3>
+            <div style="margin-top:15px; line-height:1.6; font-size:15px; color:#334155;">${messageHtml}</div>
+            <div style="text-align:right; margin-top:20px;">
+                <button type="button" class="btn-primary" id="planning-alert-close">Fermer</button>
+            </div>
+        </div>
+    `;
+    overlay.querySelector('.close-modal').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#planning-alert-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+}
+
 function formaterDateISO(date) {
     const y = date.getFullYear();
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -249,12 +276,12 @@ async function sauvegarderReservation() {
         piloteId = selPilote.value;
         piloteNom = selected ? selected.textContent.trim() : piloteNom;
     }
-    if (piloteNom && typeof pilotePeutReserver === 'function') {
-        const peutReserver = await pilotePeutReserver(piloteNom);
-        if (!peutReserver) {
-            const solde = typeof getSoldePilote === 'function' ? await getSoldePilote(piloteNom) : null;
-            const soldeText = solde !== null ? solde.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
-            alert('Le compte pilote de ' + piloteNom + ' est à ' + soldeText + ' € (plafond autorisé : -500 €). Réservation impossible avant de recréditer le compte.');
+    if (piloteNom && typeof getSoldePilote === 'function') {
+        const solde = await getSoldePilote(piloteNom);
+        if (solde <= -500) {
+            const soldeText = solde.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const msg = `<p>Le compte pilote de <strong>${escapeHtml(piloteNom)}</strong> est à <strong>${escapeHtml(soldeText)} €</strong>.</p><p style="margin-top:8px;">Le plafond autorisé est de <strong>-500 €</strong>. La réservation est impossible avant de recréditer le compte.</p>`;
+            afficherModaleAlerte('Compte pilote insuffisant', msg, '💳');
             return;
         }
     }
@@ -266,8 +293,9 @@ async function sauvegarderReservation() {
             if (validites && validites.items) {
                 const invalides = validites.items.filter(i => i.ok === false);
                 if (invalides.length) {
-                    const liste = invalides.map(i => '• ' + i.label).join('\n');
-                    alert('Attention, les validités suivantes ne sont pas à jour :\n' + liste);
+                    const liste = invalides.map(i => `<li>${escapeHtml(i.label)}</li>`).join('');
+                    const msg = `<p>Les validités suivantes ne sont pas à jour :</p><ul style="margin:10px 0; padding-left:20px;">${liste}</ul>`;
+                    afficherModaleAlerte('Validités à mettre à jour', msg, '🛡️');
                 }
             }
         } catch (err) {
@@ -1782,12 +1810,15 @@ function initGestionnaireModale() {
             const telephone = document.getElementById('form-telephone') ? document.getElementById('form-telephone').value.trim() : '';
 
             // Vérification solde et validités
-            if (piloteNom && typeof pilotePeutReserver === 'function') {
-                const peutReserver = await pilotePeutReserver(piloteNom);
-                if (!peutReserver) {
-                    const solde = typeof getSoldePilote === 'function' ? await getSoldePilote(piloteNom) : null;
-                    const soldeText = solde !== null ? solde.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
-                    alert('Le compte pilote de ' + piloteNom + ' est à ' + soldeText + ' € (plafond autorisé : -500 €). Réservation impossible avant de recréditer le compte.');
+            const selPiloteEdit = document.getElementById('form-pilote');
+            const piloteNomEdit = (selPiloteEdit && selPiloteEdit.selectedIndex >= 0) ? (selPiloteEdit.options[selPiloteEdit.selectedIndex].textContent || '').trim() : '';
+            const piloteIdEdit = selPiloteEdit ? selPiloteEdit.value.trim() : '';
+            if (piloteNomEdit && typeof getSoldePilote === 'function') {
+                const solde = await getSoldePilote(piloteNomEdit);
+                if (solde <= -500) {
+                    const soldeText = solde.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const msg = `<p>Le compte pilote de <strong>${escapeHtml(piloteNomEdit)}</strong> est à <strong>${escapeHtml(soldeText)} €</strong>.</p><p style="margin-top:8px;">Le plafond autorisé est de <strong>-500 €</strong>. La modification est impossible avant de recréditer le compte.</p>`;
+                    afficherModaleAlerte('Compte pilote insuffisant', msg, '💳');
                     return;
                 }
             }
@@ -1797,8 +1828,9 @@ function initGestionnaireModale() {
                     if (validites && validites.items) {
                         const invalides = validites.items.filter(i => i.ok === false);
                         if (invalides.length) {
-                            const liste = invalides.map(i => '• ' + i.label).join('\n');
-                            alert('Attention, les validités suivantes ne sont pas à jour :\n' + liste);
+                            const liste = invalides.map(i => `<li>${escapeHtml(i.label)}</li>`).join('');
+                            const msg = `<p>Les validités suivantes ne sont pas à jour :</p><ul style="margin:10px 0; padding-left:20px;">${liste}</ul>`;
+                            afficherModaleAlerte('Validités à mettre à jour', msg, '🛡️');
                         }
                     }
                 } catch (err) {
