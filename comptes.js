@@ -105,7 +105,7 @@ async function chargerComptesPilotes() {
         afficherResume(records, summary, piloteNom);
         afficherTransactions(records, container, piloteNom);
 
-        const isCurrent = !select || select.value === nomPiloteComptes(currentUser);
+        const isCurrent = !select || !select.value || select.value === nomPiloteComptes(currentUser);
         const canEdit = isCurrent || isTresorier();
         if (form) form.style.display = canEdit ? 'block' : 'none';
         if (container) container.style.gridColumn = canEdit ? '' : '1 / -1';
