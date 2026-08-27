@@ -321,7 +321,7 @@ async function envoyerReset() {
     }
 }
 
-const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Élève planeur', 'Pilote planeur', 'Documentaliste', 'Super admin'];
+const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Eleve planeur', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier'];
 
 async function chargerUtilisateurs() {
     const tbody = document.getElementById('membres-list');

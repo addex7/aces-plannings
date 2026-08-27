@@ -169,7 +169,7 @@ function renderAccueilMembre(fields) {
     if (rolesEl) {
         const roles = membreSelectionne.roles || [];
         if (isSuperAdmin()) {
-            const liste = (typeof ROLES_MEMBRES !== 'undefined' ? ROLES_MEMBRES : ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Élève planeur', 'Pilote planeur', 'Documentaliste', 'Super admin']);
+            const liste = (typeof ROLES_MEMBRES !== 'undefined' ? ROLES_MEMBRES : ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Eleve planeur', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier']);
             const cases = liste.map(role => {
                 const checked = roles.includes(role) ? 'checked' : '';
                 return `<label class="role-tag" title="${role}"><input type="checkbox" data-role="${role}" ${checked}> ${role}</label>`;
