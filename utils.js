@@ -221,7 +221,8 @@ async function cachedFetch(url, options = {}, ttl = API_CACHE_TTL, force = false
             return {
                 ok: true,
                 status: 200,
-                json: () => Promise.resolve(entry.data)
+                json: () => Promise.resolve(entry.data),
+                text: () => Promise.resolve(typeof entry.data === 'string' ? entry.data : JSON.stringify(entry.data))
             };
         }
     }
@@ -229,5 +230,10 @@ async function cachedFetch(url, options = {}, ttl = API_CACHE_TTL, force = false
     const res = await fetch(url, options);
     const data = await res.json();
     if (method === 'GET' && res.ok) API_CACHE[url] = { data, ts: Date.now() };
-    return { ok: res.ok, status: res.status, json: () => Promise.resolve(data) };
+    return {
+        ok: res.ok,
+        status: res.status,
+        json: () => Promise.resolve(data),
+        text: () => Promise.resolve(typeof data === 'string' ? data : JSON.stringify(data))
+    };
 }

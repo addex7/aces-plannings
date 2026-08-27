@@ -248,7 +248,10 @@ async function validerSetup() {
             headers,
             body: JSON.stringify({ fields })
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);
+        }
         const record = await res.json();
         const f = record.fields || {};
         currentUser = {
@@ -363,7 +366,10 @@ async function mettreAJourRolesMembre(recordId, checkboxes) {
             headers,
             body: JSON.stringify({ fields: { 'Rôles': roles } })
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);
+        }
         if (typeof enregistrerAudit === 'function') enregistrerAudit('Modification des rôles', recordId, `Rôles : ${(roles || []).join(', ')}`, 'Rôles');
     } catch (err) {
         console.error('Erreur mise à jour des rôles :', err);
@@ -404,7 +410,10 @@ async function ajouterUtilisateur(event) {
             headers,
             body: JSON.stringify({ fields })
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);
+        }
         const record = await res.json();
         afficherInvitation(record, mail);
         await chargerUtilisateurs();
@@ -508,7 +517,10 @@ async function sauvegarderMembre(event) {
             headers,
             body: JSON.stringify({ fields })
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);
+        }
         fermerModaleMembre();
         await chargerUtilisateurs();
         if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', `${prenom} ${nom}`, `Rôles : ${(roles || []).join(', ')}`, 'Membres');
@@ -525,7 +537,10 @@ async function supprimerMembre() {
     const nom = document.getElementById('edit-membre-nom')?.value?.trim() || '';
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, { method: 'DELETE', headers });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);
+        }
         fermerModaleMembre();
         await chargerUtilisateurs();
         if (typeof enregistrerAudit === 'function') enregistrerAudit('Suppression de membre', `${prenom} ${nom}`.trim(), '', 'Membres');
