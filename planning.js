@@ -495,6 +495,10 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
     const machineCell = document.createElement('div');
     machineCell.className = 'machine-cell';
     machineCell.textContent = 'VI Planeur';
+    machineCell.style.cursor = 'pointer';
+    machineCell.addEventListener('click', () => {
+        if (typeof ouvrirModaleNouvelleReservation === 'function') ouvrirModaleNouvelleReservation({ type: 'VI Planeur', dureeMinutes: 45 });
+    });
     rowDiv.appendChild(machineCell);
 
     const gridBg = document.createElement('div');
@@ -1789,25 +1793,42 @@ function initGestionnaireModale() {
             }
         });
     }
+    async function ouvrirModaleNouvelleReservation(options = {}) {
+        idReservationEnEdition = null;
+        if (titleModal) titleModal.textContent = "Nouvelle Réservation";
+        if (btnDelete) btnDelete.style.display = 'none';
+        if (groupCommentaires) groupCommentaires.style.display = 'none';
+        if (formReservation) formReservation.reset();
+        if (listeAvionsCache.length > 0) populerMachinesCases(listeAvionsCache);
+        const annee = dateAffichee.getFullYear();
+        const mois = (dateAffichee.getMonth() + 1).toString().padStart(2, '0');
+        const jour = dateAffichee.getDate().toString().padStart(2, '0');
+        const dateBase = `${annee}-${mois}-${jour}`;
+        if (document.getElementById('form-debut')) document.getElementById('form-debut').value = `${dateBase}T09:00`;
+        if (document.getElementById('form-fin')) {
+            const d = new Date(`${dateBase}T09:00`);
+            d.setMinutes(d.getMinutes() + (options.dureeMinutes || 120));
+            document.getElementById('form-fin').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+        if (document.getElementById('form-estimation')) document.getElementById('form-estimation').value = '1.0';
+        if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
+        if (typeof peuplerPiloteSelect === 'function') await peuplerPiloteSelect();
+        if (options.type) {
+            document.querySelectorAll('input[name="form-type-vol"]').forEach(cb => { cb.checked = cb.value === options.type; });
+        }
+        if (options.instructeur) {
+            const sel = document.getElementById('form-instructeur');
+            if (sel) {
+                const match = Array.from(sel.options).find(o => o.value === options.instructeur || correspondanceNom(o.value, options.instructeur));
+                if (match) sel.value = match.value;
+            }
+        }
+        appliquerEtatFormulaire();
+        modal.style.display = 'flex';
+    }
+
     if (btnOpenModal && modal) {
-        btnOpenModal.addEventListener('click', async () => {
-            idReservationEnEdition = null;
-            if (titleModal) titleModal.textContent = "Nouvelle Réservation";
-            if (btnDelete) btnDelete.style.display = 'none';
-            if (groupCommentaires) groupCommentaires.style.display = 'none';
-            if (formReservation) formReservation.reset();
-            if (listeAvionsCache.length > 0) populerMachinesCases(listeAvionsCache);
-            const annee = dateAffichee.getFullYear();
-            const mois = (dateAffichee.getMonth() + 1).toString().padStart(2, '0');
-            const jour = dateAffichee.getDate().toString().padStart(2, '0');
-            if (document.getElementById('form-debut')) document.getElementById('form-debut').value = `${annee}-${mois}-${jour}T09:00`;
-            if (document.getElementById('form-fin')) document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T11:00`;
-            if (document.getElementById('form-estimation')) document.getElementById('form-estimation').value = '1.0';
-            if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
-            if (typeof peuplerPiloteSelect === 'function') await peuplerPiloteSelect();
-            appliquerEtatFormulaire();
-            modal.style.display = 'flex';
-        });
+        btnOpenModal.addEventListener('click', () => ouvrirModaleNouvelleReservation());
     }
     if (btnCloseModal) btnCloseModal.addEventListener('click', () => modal.style.display = 'none');
     window.addEventListener('click', (e) => { if (modal && e.target === modal) modal.style.display = 'none'; });

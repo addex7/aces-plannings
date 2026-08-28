@@ -382,8 +382,9 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
                 dateInstructeurSuivi = new Date(dateAffichee || new Date());
                 dateInstructeurSuivi.setHours(12, 0, 0, 0);
             }
-            const tab = document.getElementById('tab-instructeur');
-            if (tab) tab.click();
+            if (typeof ouvrirModaleNouvelleReservation === 'function') {
+                ouvrirModaleNouvelleReservation({ type: 'Instruction', instructeur: nom });
+            }
         });
         machineCell.appendChild(nomSpan);
         rowDiv.appendChild(machineCell);
