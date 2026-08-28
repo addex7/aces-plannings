@@ -323,17 +323,19 @@ function afficherBoutonsInscrireAutre() {
     });
 }
 
-const btnValiderInscrireAutre = document.getElementById('btn-valider-inscrire-autre');
-if (btnValiderInscrireAutre) btnValiderInscrireAutre.addEventListener('click', inscrireAutreMembre);
-const closeModalInscrireAutre = document.querySelector('.close-modal-inscrire-autre');
-if (closeModalInscrireAutre) {
-    closeModalInscrireAutre.addEventListener('click', () => {
+document.addEventListener('DOMContentLoaded', () => {
+    const btnValiderInscrireAutre = document.getElementById('btn-valider-inscrire-autre');
+    if (btnValiderInscrireAutre) btnValiderInscrireAutre.addEventListener('click', inscrireAutreMembre);
+    const closeModalInscrireAutre = document.querySelector('.close-modal-inscrire-autre');
+    if (closeModalInscrireAutre) {
+        closeModalInscrireAutre.addEventListener('click', () => {
+            const modal = document.getElementById('modal-inscrire-autre');
+            if (modal) modal.style.display = 'none';
+        });
+    }
+    window.addEventListener('click', (e) => {
         const modal = document.getElementById('modal-inscrire-autre');
-        if (modal) modal.style.display = 'none';
+        if (modal && e.target === modal) modal.style.display = 'none';
     });
-}
-window.addEventListener('click', (e) => {
-    const modal = document.getElementById('modal-inscrire-autre');
-    if (modal && e.target === modal) modal.style.display = 'none';
 });
 afficherBoutonsInscrireAutre();
