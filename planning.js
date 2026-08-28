@@ -2579,6 +2579,28 @@ function editerVolInitiation(vol) {
     }
 }
 
+async function supprimerCreneauVI(vol) {
+    if (!vol || !vol.id) return;
+    const table = vol._table || 'VI Créneaux';
+    if (!confirm('Es-tu sûr de vouloir supprimer ce créneau ?')) return;
+    try {
+        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?records[]=${vol.id}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        if (response.ok) {
+            const modal = document.getElementById('vi-choix-modifier');
+            if (modal) modal.style.display = 'none';
+            if (typeof chargerVolsInitiation === 'function') await chargerVolsInitiation();
+            if (typeof chargerDonneesPlanning === 'function') await chargerDonneesPlanning();
+            volChoixCreneau = null;
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Erreur lors de la suppression.');
+    }
+}
+
 function ouvrirModaleChoixModifierCreneau(vol) {
     const modal = document.getElementById('vi-choix-modifier');
     if (!modal) return;
@@ -2592,6 +2614,7 @@ function initGestionnaireChoixModifier() {
     const modal = document.getElementById('vi-choix-modifier');
     const btnPassager = document.getElementById('btn-modifier-comme-passager');
     const btnException = document.getElementById('btn-modifier-exception');
+    const btnSupprimer = document.getElementById('btn-supprimer-creneau');
     const btnClose = document.querySelector('.close-modal-vi-choix');
     if (btnClose && modal) btnClose.addEventListener('click', () => modal.style.display = 'none');
     if (window && modal) window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
@@ -2609,6 +2632,11 @@ function initGestionnaireChoixModifier() {
         btnException.addEventListener('click', () => {
             if (modal) modal.style.display = 'none';
             if (volChoixCreneau) ouvrirModaleEditionVICreneau(volChoixCreneau);
+        });
+    }
+    if (btnSupprimer) {
+        btnSupprimer.addEventListener('click', () => {
+            if (volChoixCreneau) supprimerCreneauVI(volChoixCreneau);
         });
     }
 }
