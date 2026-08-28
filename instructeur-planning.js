@@ -157,7 +157,9 @@ function ajouterFondNuit(cellule, dateJour) {
     cellule.insertAdjacentHTML('afterbegin', genererFondNuitHTML(dateJour));
 }
 
-async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom) {
+async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, conserverRestes = false) {
+    const selStart = hDebut * 60;
+    const selEnd = (hFin + 1) * 60;
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
@@ -173,8 +175,6 @@ async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom) {
             const [he, me] = String(f['Heure fin'] || '00:00').split(':').map(Number);
             const startMin = hs * 60 + (ms || 0);
             const endMin = (he * 60 + (me || 0)) || 1440;
-            const selStart = hDebut * 60;
-            const selEnd = (hFin + 1) * 60;
             return !(endMin <= selStart || startMin >= selEnd);
         });
         const ids = records.map(r => r.id);
@@ -183,6 +183,35 @@ async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom) {
             const query = batch.map(id => `records[]=${encodeURIComponent(id)}`).join('&');
             await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?${query}`, { method: 'DELETE', headers });
         }
+        if (conserverRestes) {
+            const aConserver = [];
+            records.forEach(r => {
+                const f = r.fields || {};
+                const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
+                if (!estDispo) return;
+                const [hs, ms] = String(f['Heure début'] || '00:00').split(':').map(Number);
+                const [he, me] = String(f['Heure fin'] || '00:00').split(':').map(Number);
+                const recStart = hs * 60 + (ms || 0);
+                const recEnd = (he * 60 + (me || 0)) || 1440;
+                if (recStart < selStart) aConserver.push({ start: recStart, end: Math.min(selStart, recEnd) });
+                if (recEnd > selEnd) aConserver.push({ start: Math.max(selEnd, recStart), end: recEnd });
+            });
+            if (aConserver.length) {
+                const newRecords = aConserver.map(iv => {
+                    const hStart = Math.floor(iv.start / 60);
+                    const mStart = iv.start % 60;
+                    const hEnd = Math.floor(iv.end / 60);
+                    const mEnd = iv.end % 60;
+                    const debut = `${String(hStart).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`;
+                    const fin = iv.end === 1440 ? '00:00' : `${String(hEnd).padStart(2, '0')}:${String(mEnd).padStart(2, '0')}`;
+                    return { fields: { 'Date': dateStr, 'Heure début': debut, 'Heure fin': fin, 'Machine': '', 'Disponible': true, 'Instructeur': nom } };
+                });
+                for (let i = 0; i < newRecords.length; i += 10) {
+                    const batch = newRecords.slice(i, i + 10);
+                    await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: batch }) });
+                }
+            }
+        }
     } catch (err) { console.error('[SUPPRIMER DISPOS]', err); }
 }
 
@@ -190,7 +219,7 @@ async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo) {
     if (!instructeurSelectionne && typeof nomPiloteCourant === 'function') instructeurSelectionne = nomPiloteCourant();
     if (!instructeurSelectionne) { alert('Aucun instructeur sélectionné.'); return; }
     const nom = instructeurSelectionne;
-    await supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom);
+    await supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, !dispo);
     if (!dispo) {
         if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
         if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
