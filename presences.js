@@ -11,22 +11,37 @@ function peutSupprimerPresence(nom) {
     return typeof correspondanceNom === 'function' ? correspondanceNom(nom, nomUtilisateur) : nom === nomUtilisateur;
 }
 
+function peutModifierCommentaire(nom) {
+    if (!currentUser) return false;
+    if (Array.isArray(currentUser.roles) && currentUser.roles.includes('Super admin')) return true;
+    const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    return typeof correspondanceNom === 'function' ? correspondanceNom(nom, nomUtilisateur) : nom === nomUtilisateur;
+}
+
 function creerLignePresence(nom, commentaire, recordId, tableName) {
     const commentaireEscaped = commentaire.replace(/"/g, '&quot;');
+    const nomEscaped = nom.replace(/"/g, '&quot;').replace(/'/g, "\\'");
     const btnSupprimer = peutSupprimerPresence(nom)
         ? `<button class="btn-remove-presence" onclick="desinscrire${tableName === 'Présences Club' ? 'Club' : 'Planeur'}('${recordId}')">❌</button>`
+        : '';
+    const btnCommentaire = peutModifierCommentaire(nom)
+        ? `<button class="btn-comment" onclick="modifierCommentaire('${recordId}', '${tableName}', '${commentaireEscaped}', '${nomEscaped}')" title="Ajouter/Modifier un commentaire">💬</button>`
         : '';
     return `
         <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow:hidden;">
             <span style="white-space:nowrap;">- ${nom}</span>
-            <button class="btn-comment" onclick="modifierCommentaire('${recordId}', '${tableName}', '${commentaireEscaped}')" title="Ajouter/Modifier un commentaire">💬</button>
+            ${btnCommentaire}
             <span class="comment-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${commentaireEscaped}</span>
         </div>
         ${btnSupprimer}
     `;
 }
 
-async function modifierCommentaire(recordId, tableName, commentaireActuel) {
+async function modifierCommentaire(recordId, tableName, commentaireActuel, nom = '') {
+    if (!peutModifierCommentaire(nom)) {
+        alert("Tu ne peux modifier que ton propre commentaire.");
+        return;
+    }
     const nouveauCommentaire = prompt("Ajouter un commentaire :", commentaireActuel || "");
     if (nouveauCommentaire === null) return;
     try {
