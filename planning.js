@@ -497,7 +497,8 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
     machineCell.textContent = 'VI Planeur';
     machineCell.style.cursor = 'pointer';
     machineCell.addEventListener('click', () => {
-        if (typeof ouvrirModaleNouvelleReservation === 'function') ouvrirModaleNouvelleReservation({ type: 'VI Planeur', dureeMinutes: 45 });
+        console.log('[VI PLANEUR CLICK]', typeof window.ouvrirModaleNouvelleReservation);
+        if (typeof window.ouvrirModaleNouvelleReservation === 'function') window.ouvrirModaleNouvelleReservation({ type: 'VI Planeur', dureeMinutes: 45 });
     });
     rowDiv.appendChild(machineCell);
 
@@ -1794,6 +1795,7 @@ function initGestionnaireModale() {
         });
     }
     window.ouvrirModaleNouvelleReservation = async function(options = {}) {
+        console.log('[PLANNING] ouvrir appelée', options);
         idReservationEnEdition = null;
         if (titleModal) titleModal.textContent = "Nouvelle Réservation";
         if (btnDelete) btnDelete.style.display = 'none';
@@ -1824,7 +1826,8 @@ function initGestionnaireModale() {
             }
         }
         appliquerEtatFormulaire();
-        modal.style.display = 'flex';
+        console.log('[PLANNING] modal', modal);
+        if (modal) modal.style.display = 'flex';
     }
 
     if (btnOpenModal && modal) {
