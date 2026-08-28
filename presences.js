@@ -73,6 +73,7 @@ async function modifierCommentaire(recordId, tableName, commentaireActuel, nom =
 }
 
 async function chargerPresencesClub() {
+    if (typeof chargerListeMembresCache === 'function') await chargerListeMembresCache();
     const listAtelier = document.getElementById('list-atelier');
     const listSalle = document.getElementById('list-salle');
     if (!listAtelier || !listSalle) return;
@@ -158,6 +159,7 @@ async function desinscrireClub(recordId) {
 }
 
 async function chargerPresencesPlaneur() {
+    if (typeof chargerListeMembresCache === 'function') await chargerListeMembresCache();
     const listInst = document.getElementById('list-instructeurs');
     const listElev = document.getElementById('list-eleves');
     const listPilo = document.getElementById('list-pilotes'); 
