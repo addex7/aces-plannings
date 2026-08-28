@@ -2422,7 +2422,7 @@ function afficherVolsInitiation() {
             nomClient = vol.passager || 'Passager non renseigné';
         }
         const machineText = vol.source === 'moteur' && vol.machineName ? `🛩️ ${vol.machineName}<br>` : '';
-        const peutSInscrire = !estArchive && isAPourvoir && (vol.source === 'creneau' ? hasRolePiloteVI() : !!nomPiloteCourant());
+        const peutSInscrire = !estArchive && isAPourvoir && hasRolePiloteVI();
         const boutonSInscrire = peutSInscrire ? `<button class="btn-reserver-initiation" data-id="${vol.id}" data-source="${vol.source}">S'inscrire</button>` : '';
         const card = document.createElement('div');
         card.className = `initiation-card ${vol.classe}`;
