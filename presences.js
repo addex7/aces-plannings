@@ -143,7 +143,9 @@ async function chargerPresencesPlaneur() {
 async function sinscrirePlaneur(role) {
     const roles = (currentUser && currentUser.roles) || [];
     const roleRequis = { 'Instructeur': 'Instructeur planeur', 'Élève': 'Élève planeur', 'Pilote': 'Pilote planeur' }[role];
-    if (roleRequis && !roles.includes(roleRequis) && !roles.includes('Super admin')) {
+    const normalise = typeof normaliserNom === 'function' ? normaliserNom : (s => String(s || '').toLowerCase());
+    const aLeRole = roleRequis && (roles.includes('Super admin') || roles.some(r => normalise(r) === normalise(roleRequis)));
+    if (roleRequis && !aLeRole) {
         alert(`Tu dois avoir le rôle "${roleRequis}" pour t'inscrire en tant que ${role}.`);
         return;
     }
