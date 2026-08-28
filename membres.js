@@ -32,6 +32,10 @@ function setCurrentUser(user) {
     if (typeof chargerNotifications === 'function') chargerNotifications();
     if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
     if (typeof renderMiniCalendrier === 'function') renderMiniCalendrier();
+    if (user && document.readyState === 'complete') {
+        if (typeof chargerPresencesClub === 'function') chargerPresencesClub();
+        if (typeof chargerPresencesPlaneur === 'function') chargerPresencesPlaneur();
+    }
 }
 
 function updateUIRoles() {
