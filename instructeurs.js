@@ -422,12 +422,14 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
 
         const resasPerso = reservations.filter(r => {
             const f = r.fields || {};
-            return correspondanceNom(f['Instructeur'], nom) || correspondanceNom(f['Pilote'], nom);
+            const nomInstructeur = (typeof nomUtilisateurDepuisId === 'function') ? nomUtilisateurDepuisId(f['Instructeur'], listeMembresCache) : (f['Instructeur'] || '');
+            const nomPilote = (typeof nomUtilisateurDepuisId === 'function') ? nomUtilisateurDepuisId(f['Pilote'], listeMembresCache) : (f['Pilote'] || '');
+            return correspondanceNom(nomInstructeur, nom) || correspondanceNom(nomPilote, nom);
         });
         const barresInfos = [];
         resasPerso.forEach(r => {
             const f = r.fields || {};
-            const isInstructeur = correspondanceNom(f['Instructeur'], nom);
+            const isInstructeur = correspondanceNom((typeof nomUtilisateurDepuisId === 'function') ? nomUtilisateurDepuisId(f['Instructeur'], listeMembresCache) : (f['Instructeur'] || ''), nom);
             const machineIds = Array.isArray(f['Machine']) ? f['Machine'] : [f['Machine']].filter(Boolean);
             const machineId = machineIds[0];
             const avion = (typeof listeAvionsCache !== 'undefined' ? listeAvionsCache : []).find(a => a.id === machineId);
@@ -452,7 +454,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             if (duree <= 1) barresDiv.classList.add('short-reservation');
             barresDiv.style.left = `${positionHeure(heureDebut)}%`;
             barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
-            const pilote = (f['Pilote'] || '').toString().trim();
+            const pilote = (typeof nomUtilisateurDepuisId === 'function') ? nomUtilisateurDepuisId(f['Pilote'], listeMembresCache) : ((f['Pilote'] || '').toString().trim());
             barresDiv.title = `${pilote} — ${immat}${isInstructeur ? ' (Instruction)' : ''}`.trim();
             const libelle = duree > 1 ? `${immat}${isInstructeur ? ' (Ins)' : ''}` : '';
             barresDiv.innerHTML = `<strong>${libelle}</strong>`;
