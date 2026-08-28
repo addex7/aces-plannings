@@ -600,6 +600,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
                         id: vol.id,
                         passager: nom,
                         pilote: pilote,
+                        auteur: vol.fields['Auteur'] || '',
                         telephone: vol.fields['Téléphone'] || '',
                         debut: vol.fields['Date de début'],
                         fin: vol.fields['Date de fin'],
@@ -1524,6 +1525,11 @@ function initGestionnaireModaleVIPlaneur() {
     if (btnDeleteVI) {
         btnDeleteVI.addEventListener('click', async () => {
             if (!idVIModale || tableVIModale !== 'VI Planeur') return;
+            const auteur = volVIModale?.fields?.['Auteur'] || '';
+            if (!hasRoleGestionVI() && !estUtilisateurCourant(auteur)) {
+                alert("Tu n'as pas le droit de supprimer ce VI Planeur.");
+                return;
+            }
             if (!confirm("Es-tu sûr de vouloir supprimer ce VI Planeur ?")) return;
             try {
                 const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?records[]=${idVIModale}`, {
@@ -1817,6 +1823,18 @@ function initGestionnaireModale() {
         if (document.getElementById('form-estimation')) document.getElementById('form-estimation').value = '1.0';
         if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
         if (typeof peuplerPiloteSelect === 'function') await peuplerPiloteSelect();
+        if (options.type === 'VI Planeur') {
+            const sel = document.getElementById('form-pilote');
+            if (sel) {
+                if (!Array.from(sel.options).some(o => o.value === '')) {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = '-- Aucun --';
+                    sel.insertBefore(opt, sel.firstChild);
+                }
+                sel.value = '';
+            }
+        }
         if (options.type) {
             document.querySelectorAll('input[name="form-type-vol"]').forEach(cb => { cb.checked = cb.value === options.type; });
         }
@@ -1903,7 +1921,8 @@ function initGestionnaireModale() {
                 }
                 const commentaire = document.getElementById('form-commentaires').value.trim();
                 if (isVIPlaneur) {
-                    const recordData = { fields: { "Nom": passagerNom, "Pilote": piloteNom, "Téléphone": telephone, "Date de début": dateDebut, "Date de fin": dateFin, "Commentaire": commentaire } };
+                    const auteurNom = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
+                    const recordData = { fields: { "Nom": passagerNom, "Pilote": piloteNom, "Auteur": auteurNom, "Téléphone": telephone, "Date de début": dateDebut, "Date de fin": dateFin, "Commentaire": commentaire } };
                     try {
                         const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}`, {
                             method: 'POST',
@@ -2580,13 +2599,14 @@ function initGestionnaireVolsInitiation() {
 }
 
 function editerVolInitiation(vol) {
-    if (!hasRoleGestionVI()) return;
+    if (!hasRoleGestionVI() && !estUtilisateurCourant(vol.auteur)) return;
     if (vol.source === 'planeur') {
         const volEdit = {
             id: vol.id,
             fields: {
                 'Nom': vol.passager,
                 'Pilote': vol.pilote,
+                'Auteur': vol.auteur,
                 'Téléphone': vol.telephone,
                 'Date de début': vol.debut,
                 'Date de fin': vol.fin,
