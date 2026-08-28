@@ -157,10 +157,45 @@ function ajouterFondNuit(cellule, dateJour) {
     cellule.insertAdjacentHTML('afterbegin', genererFondNuitHTML(dateJour));
 }
 
+async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom) {
+    const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        const records = (data.records || []).filter(r => {
+            const f = r.fields || {};
+            const nomOk = typeof correspondanceNom === 'function'
+                ? correspondanceNom(f['Instructeur'], nom)
+                : (f['Instructeur'] || '').toString().trim() === nom;
+            if (!nomOk) return false;
+            const [hs, ms] = String(f['Heure début'] || '00:00').split(':').map(Number);
+            const [he, me] = String(f['Heure fin'] || '00:00').split(':').map(Number);
+            const startMin = hs * 60 + (ms || 0);
+            const endMin = (he * 60 + (me || 0)) || 1440;
+            const selStart = hDebut * 60;
+            const selEnd = (hFin + 1) * 60;
+            return !(endMin <= selStart || startMin >= selEnd);
+        });
+        const ids = records.map(r => r.id);
+        for (let i = 0; i < ids.length; i += 10) {
+            const batch = ids.slice(i, i + 10);
+            const query = batch.map(id => `records[]=${encodeURIComponent(id)}`).join('&');
+            await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?${query}`, { method: 'DELETE', headers });
+        }
+    } catch (err) { console.error('[SUPPRIMER DISPOS]', err); }
+}
+
 async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo) {
     if (!instructeurSelectionne && typeof nomPiloteCourant === 'function') instructeurSelectionne = nomPiloteCourant();
     if (!instructeurSelectionne) { alert('Aucun instructeur sélectionné.'); return; }
     const nom = instructeurSelectionne;
+    await supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom);
+    if (!dispo) {
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+        if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
+        return;
+    }
     const debut = `${String(hDebut).padStart(2, '0')}:00`;
     const fin = hFin < 23 ? `${String(hFin + 1).padStart(2, '0')}:00` : '23:59';
     const fields = { 'Date': dateStr, 'Heure début': debut, 'Heure fin': fin, 'Machine': '', 'Disponible': dispo, 'Instructeur': nom };
@@ -168,7 +203,7 @@ async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo) {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] }) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        if (typeof enregistrerAudit === 'function') await enregistrerAudit('Bascule plage dispo', nom, `Instructeur : ${nom} | Date : ${dateStr} | ${debut} - ${fin} | ${dispo ? 'Disponible' : 'Indisponible'}`, 'Instructeur');
+        if (typeof enregistrerAudit === 'function') await enregistrerAudit('Création disponibilité', nom, `Instructeur : ${nom} | Date : ${dateStr} | ${debut} - ${fin} | Disponible`, 'Instructeur');
         if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
         if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
     } catch (err) {
