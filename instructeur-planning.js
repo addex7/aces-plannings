@@ -36,7 +36,7 @@ async function peuplerSelectInstructeurSuivi() {
         const nomComplet = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
         if (nomComplet) instructeurs = [{ nomComplet }];
     }
-    let html = '<option value="">-- Sélectionner un instructeur --</option>';
+    let html = '';
     instructeurs.forEach(u => {
         html += `<option value="${u.nomComplet}" ${u.nomComplet === instructeurSelectionne ? 'selected' : ''}>${u.nomComplet}</option>`;
     });
@@ -51,6 +51,11 @@ function initPlanningInstructeur() {
     const sel = document.getElementById('select-instructeur-suivi');
 
     if (!btnPrev || !btnNext || !dateEl || !sel) return;
+
+    if (!instructeurSelectionne && currentUser && typeof estInstructeur === 'function' && estInstructeur()) {
+        const nomComplet = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+        if (nomComplet) instructeurSelectionne = nomComplet;
+    }
 
     genererFriseHeuresInstructeur();
     mettreAJourDateInstructeur();
@@ -179,6 +184,14 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         const d = document.createElement('div');
         d.className = 'grid-hour-block';
         d.style.flex = LARGEURS_HEURES[h];
+        d.style.cursor = 'pointer';
+        d.dataset.date = dateStr;
+        d.dataset.heure = h;
+        d.dataset.dispo = blocks[h];
+        d.addEventListener('click', (e) => {
+            e.stopPropagation();
+            basculerDisponibiliteHeure(d.dataset.date, parseInt(d.dataset.heure, 10), d.dataset.dispo === 'green');
+        });
         const overlay = document.createElement('div');
         overlay.className = `dispo-hour-overlay dispo-${blocks[h]}`;
         d.appendChild(overlay);
@@ -233,6 +246,27 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
     afficherConflitsReservations(barresInfos);
 
     tr.appendChild(tdCell);
+}
+
+async function basculerDisponibiliteHeure(dateStr, heure, estDisponible) {
+    if (!instructeurSelectionne && typeof nomPiloteCourant === 'function') instructeurSelectionne = nomPiloteCourant();
+    if (!instructeurSelectionne) { alert('Aucun instructeur sélectionné.'); return; }
+    const nom = instructeurSelectionne;
+    const debut = `${String(heure).padStart(2, '0')}:00`;
+    const fin = heure < 23 ? `${String(heure + 1).padStart(2, '0')}:00` : '23:59';
+    const dispo = !estDisponible;
+    const fields = { 'Date': dateStr, 'Heure début': debut, 'Heure fin': fin, 'Machine': '', 'Disponible': dispo, 'Instructeur': nom };
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        if (typeof enregistrerAudit === 'function') await enregistrerAudit('Bascule disponibilité', nom, `Instructeur : ${nom} | Date : ${dateStr} | ${debut} - ${fin} | ${dispo ? 'Disponible' : 'Indisponible'}`, 'Instructeur');
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+        if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur : ' + (err.message || ''));
+    }
 }
 
 async function chargerSuiviInstructeur() {
