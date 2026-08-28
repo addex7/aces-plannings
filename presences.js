@@ -97,6 +97,7 @@ async function chargerPresencesClub() {
     } catch (error) {
         console.error(error);
     }
+    afficherBoutonsInscrireAutre();
 }
 
 async function sinscrireClub(lieu) {
@@ -182,6 +183,7 @@ async function chargerPresencesPlaneur() {
     } catch (error) {
         console.error(error);
     }
+    afficherBoutonsInscrireAutre();
 }
 
 async function sinscrirePlaneur(role) {
