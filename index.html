@@ -107,7 +107,7 @@
                     <div class="nav-group nav-group-standalone">
                         <ul class="nav-sub">
                             <li id="tab-carnet">📖 Carnet de route</li>
-                            <li id="tab-documents">📄 Base documentaire</li>
+                            <li id="tab-documents">📄 Bibliotèque</li>
                             <li id="tab-membres" style="display:none;">👥 Membres</li>
                             <li id="tab-comptes" style="display:none;">💳 Compte pilote</li>
                             <li id="tab-audit" style="display:none;">📋 Journal d'audit</li>
@@ -515,7 +515,7 @@
             </section>
 
             <section id="view-documents" class="view-section" style="display: none;">
-                <h2 style="margin-top:0;">Base documentaire</h2>
+                <h2 style="margin-top:0;">Bibliotèque</h2>
                 <div id="documents-toolbar" style="display:none; margin-bottom:15px; gap:10px; flex-wrap:wrap;">
                     <button id="btn-new-dossier" class="btn-primary" type="button">+ Nouveau dossier</button>
                     <button id="btn-new-pdf" class="btn-primary" type="button">+ Ajouter un document</button>
@@ -770,7 +770,7 @@
                     </div>
                 </div>
                 <div id="group-estimation" class="nr-section">
-                    <div class="nr-section-title">DURÉE ESTIMÉE (HEURES)</div>
+                    <div class="nr-section-title">TEMPS MOTEUR ESTIMÉ (HEURES)</div>
                     <div class="nr-stepper">
                         <button type="button" onclick="document.getElementById('form-estimation').stepDown()">−</button>
                         <input type="number" id="form-estimation" step="0.1" min="0" value="1.0" required>
