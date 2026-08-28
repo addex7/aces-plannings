@@ -187,18 +187,21 @@
                             <h4>Instructeurs</h4>
                             <ul id="list-instructeurs" class="presence-list"></ul>
                             <button class="btn-inscription" onclick="sinscrirePlaneur('Instructeur')">+ S'inscrire</button>
+                            <button class="btn-inscription btn-inscription-autre" style="display:none;" onclick="ouvrirInscrireAutre('Présences Planeur', 'Instructeur')">+ Inscrire autre</button>
                         </div>
                         <!-- Carte Élèves -->
                         <div class="presence-card">
                             <h4>Élèves</h4>
                             <ul id="list-eleves" class="presence-list"></ul>
                             <button class="btn-inscription" onclick="sinscrirePlaneur('Élève')">+ S'inscrire</button>
+                            <button class="btn-inscription btn-inscription-autre" style="display:none;" onclick="ouvrirInscrireAutre('Présences Planeur', 'Élève')">+ Inscrire autre</button>
                         </div>
                         <!-- Carte Pilotes Autonomes -->
                         <div class="presence-card">
                             <h4>Pilotes</h4>
                             <ul id="list-pilotes" class="presence-list"></ul>
                             <button class="btn-inscription" onclick="sinscrirePlaneur('Pilote')">+ S'inscrire</button>
+                            <button class="btn-inscription btn-inscription-autre" style="display:none;" onclick="ouvrirInscrireAutre('Présences Planeur', 'Pilote')">+ Inscrire autre</button>
                         </div>
                     </div>
                 </section>
@@ -213,12 +216,14 @@
                                 <h4>Atelier Alain Bernage</h4>
                                 <ul id="list-atelier" class="presence-list"></ul>
                                 <button class="btn-inscription" onclick="sinscrireClub('Atelier Alain Bernage')">+ S'inscrire</button>
+                                <button class="btn-inscription btn-inscription-autre" style="display:none;" onclick="ouvrirInscrireAutre('Présences Club', 'Atelier Alain Bernage')">+ Inscrire autre</button>
                             </div>
                             <!-- Carte Salle Ernest Meyer -->
                             <div class="presence-card">
                                 <h4>Salle Ernest Meyer</h4>
                                 <ul id="list-salle" class="presence-list"></ul>
                                 <button class="btn-inscription" onclick="sinscrireClub('Salle Ernest Meyer')">+ S'inscrire</button>
+                                <button class="btn-inscription btn-inscription-autre" style="display:none;" onclick="ouvrirInscrireAutre('Présences Club', 'Salle Ernest Meyer')">+ Inscrire autre</button>
                             </div>
                         </div>
                     </section>
@@ -1211,7 +1216,7 @@
     <script src="evenements.js?v=83"></script>
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=85"></script>
-    <script src="presences.js?v=88"></script>
+    <script src="presences.js?v=89"></script>
     <script src="planning.js?v=130"></script>
     <script src="calendrier.js?v=87"></script>
     <script src="comptes.js?v=105"></script>
@@ -1231,6 +1236,15 @@
         <div class="modal-content" style="max-width:600px;">
             <span class="close-modal" id="message-read-close">&times;</span>
             <div id="message-read-content"></div>
+        </div>
+    </div>
+    <!-- Modal Inscrire quelqu'un d'autre -->
+    <div id="modal-inscrire-autre" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:400px;">
+            <span class="close-modal-inscrire-autre" style="cursor:pointer;float:right;font-size:24px;">&times;</span>
+            <h3>Inscrire quelqu'un d'autre</h3>
+            <select id="select-inscrire-autre" class="nr-select"></select>
+            <button id="btn-valider-inscrire-autre" class="btn-primary" style="margin-top:15px;width:100%;">Inscrire</button>
         </div>
     </div>
 </body>

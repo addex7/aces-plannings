@@ -2,18 +2,26 @@
    PRÉSENCES PLANEUR - GESTION DES INSCRIPTIONS
    ========================================================================== */
 
+function normaliserRole(role) {
+    return String(role || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function roleAutorise(rolesAutorises) {
+    if (!currentUser || !Array.isArray(currentUser.roles)) return false;
+    return currentUser.roles.some(r => rolesAutorises.some(role => normaliserRole(r) === normaliserRole(role)));
+}
+
 function peutSupprimerPresence(nom) {
     if (!currentUser) return false;
     const rolesAutorises = ['Super admin', 'Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'];
-    const aRoleAutorise = Array.isArray(currentUser.roles) && currentUser.roles.some(r => rolesAutorises.includes(r));
-    if (aRoleAutorise) return true;
+    if (roleAutorise(rolesAutorises)) return true;
     const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
     return typeof correspondanceNom === 'function' ? correspondanceNom(nom, nomUtilisateur) : nom === nomUtilisateur;
 }
 
 function peutModifierCommentaire(nom) {
     if (!currentUser) return false;
-    if (Array.isArray(currentUser.roles) && currentUser.roles.includes('Super admin')) return true;
+    if (roleAutorise(['Super admin'])) return true;
     const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
     return typeof correspondanceNom === 'function' ? correspondanceNom(nom, nomUtilisateur) : nom === nomUtilisateur;
 }
@@ -127,7 +135,7 @@ async function desinscrireClub(recordId) {
         const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
         const estProprietaire = typeof correspondanceNom === 'function' ? correspondanceNom(nomInscrit, nomUtilisateur) : nomInscrit === nomUtilisateur;
         const rolesAutorises = ['Super admin', 'Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'];
-        const aRoleAutorise = currentUser && Array.isArray(currentUser.roles) && currentUser.roles.some(r => rolesAutorises.includes(r));
+        const aRoleAutorise = roleAutorise(rolesAutorises);
         if (!estProprietaire && !aRoleAutorise) {
             alert("Tu n'as pas le droit de supprimer cette inscription.");
             return;
@@ -220,7 +228,7 @@ async function desinscrirePlaneur(recordId) {
         const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
         const estProprietaire = typeof correspondanceNom === 'function' ? correspondanceNom(nomInscrit, nomUtilisateur) : nomInscrit === nomUtilisateur;
         const rolesAutorises = ['Super admin', 'Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'];
-        const aRoleAutorise = currentUser && Array.isArray(currentUser.roles) && currentUser.roles.some(r => rolesAutorises.includes(r));
+        const aRoleAutorise = roleAutorise(rolesAutorises);
         if (!estProprietaire && !aRoleAutorise) {
             alert("Tu n'as pas le droit de supprimer cette inscription.");
             return;
@@ -240,3 +248,90 @@ async function desinscrirePlaneur(recordId) {
         console.error(error);
     }
 }
+
+function ouvrirInscrireAutre(table, valeur) {
+    const modal = document.getElementById('modal-inscrire-autre');
+    const select = document.getElementById('select-inscrire-autre');
+    if (!modal || !select) return;
+    if (typeof chargerListeMembresCache === 'function') chargerListeMembresCache();
+    select.innerHTML = '';
+    const membres = (typeof listeMembresCache !== 'undefined' ? listeMembresCache : []);
+    membres.sort((a, b) => {
+        const fa = a.fields || {};
+        const fb = b.fields || {};
+        const na = `${fa['Prénom'] || ''} ${fa['Nom'] || ''}`.trim();
+        const nb = `${fb['Prénom'] || ''} ${fb['Nom'] || ''}`.trim();
+        return na.localeCompare(nb);
+    });
+    membres.forEach(m => {
+        const f = m.fields || {};
+        const nom = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Membre';
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = nom;
+        select.appendChild(opt);
+    });
+    modal.dataset.table = table;
+    modal.dataset.valeur = valeur;
+    modal.style.display = 'flex';
+}
+
+async function inscrireAutreMembre() {
+    const modal = document.getElementById('modal-inscrire-autre');
+    const select = document.getElementById('select-inscrire-autre');
+    if (!modal || !select || !select.value) return;
+    if (!roleAutorise(['Super admin'])) {
+        alert("Réservé aux Super admin.");
+        return;
+    }
+    const table = modal.dataset.table;
+    const valeur = modal.dataset.valeur;
+    const membre = (typeof listeMembresCache !== 'undefined' ? listeMembresCache : []).find(m => m.id === select.value);
+    if (!membre) return;
+    const f = membre.fields || {};
+    const nomPilote = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Membre';
+    const dateStr = dateAffichee.toISOString().split('T')[0];
+    const tableName = table === 'Présences Club' ? 'Présences Club' : 'Présences Planeur';
+    const fields = table === 'Présences Club'
+        ? { 'Nom du pilote': nomPilote, 'Lieu': valeur, 'Date': dateStr }
+        : { 'Nom du pilote': nomPilote, 'Rôle': valeur, 'Date': dateStr };
+    try {
+        const payload = { records: [{ fields: fields }] };
+        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+            modal.style.display = 'none';
+            if (table === 'Présences Club') await chargerPresencesClub();
+            else await chargerPresencesPlaneur();
+        } else {
+            const result = await response.json();
+            alert(`Erreur : ${(result.error && result.error.message) || JSON.stringify(result)}`);
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+function afficherBoutonsInscrireAutre() {
+    document.querySelectorAll('.btn-inscription-autre').forEach(btn => {
+        btn.style.display = roleAutorise(['Super admin']) ? 'inline-block' : 'none';
+    });
+}
+
+const btnValiderInscrireAutre = document.getElementById('btn-valider-inscrire-autre');
+if (btnValiderInscrireAutre) btnValiderInscrireAutre.addEventListener('click', inscrireAutreMembre);
+const closeModalInscrireAutre = document.querySelector('.close-modal-inscrire-autre');
+if (closeModalInscrireAutre) {
+    closeModalInscrireAutre.addEventListener('click', () => {
+        const modal = document.getElementById('modal-inscrire-autre');
+        if (modal) modal.style.display = 'none';
+    });
+}
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('modal-inscrire-autre');
+    if (modal && e.target === modal) modal.style.display = 'none';
+});
+afficherBoutonsInscrireAutre();
