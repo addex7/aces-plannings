@@ -2745,7 +2745,7 @@ function hasRoleGestionVI() {
 function hasRolePiloteVI() {
     if (!currentUser) return false;
     const roles = currentUser.roles || [];
-    return roles.includes('Pilote VI') || roles.includes('Super admin') || roles.includes('Gestion VI');
+    return roles.includes('Pilote VI');
 }
 
 function updateGestionVI() {
