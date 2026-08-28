@@ -331,6 +331,11 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
     const barresInfos = [];
     reservationsJour.forEach(r => {
         const f = r.fields || {};
+        const type = (f['Type'] || f['Type de vol'] || 'Vol Classique');
+        const typesVol = Array.isArray(type) ? type : [type];
+        const piloteNom = (typeof nomUtilisateurDepuisId === 'function') ? nomUtilisateurDepuisId(f['Pilote'], listeMembresCache) : (f['Pilote'] || '');
+        const instructeurNom = (typeof nomUtilisateurDepuisId === 'function') ? nomUtilisateurDepuisId(f['Instructeur'], listeMembresCache) : (f['Instructeur'] || '');
+        const passagerNom = (f['Passager'] || f['Nom'] || '').toString().trim();
         const debut = new Date(f['Date de début']);
         const fin = new Date(f['Date de fin']);
         if (isNaN(debut.getTime()) || isNaN(fin.getTime())) return;
@@ -343,27 +348,47 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         const duree = heureFin - heureDebut;
         if (duree <= 0) return;
 
-        const isInstructeur = typeof correspondanceNom === 'function' && correspondanceNom(f['Instructeur'], nom);
         const machineIds = Array.isArray(f['Machine']) ? f['Machine'] : [f['Machine']].filter(Boolean);
         const machineId = machineIds[0];
         const avion = (typeof listeAvionsCache !== 'undefined' ? listeAvionsCache : []).find(a => a.id === machineId);
         const immat = (avion && (avion.fields['Immatriculation'] || avion.fields['Nom'] || '')) || machineId || '';
-        const pilote = (f['Pilote'] || '').toString().trim();
+        const piloteFormate = (typeof formaterNomPilote === 'function') ? formaterNomPilote(piloteNom) : piloteNom;
+        const isVIMoteur = typesVol.includes('VI Moteur');
+        const isAncienVI = typesVol.includes("Vol d'Initiation") || typesVol.includes("Vol d'Initiation (VI)");
+        const isInstruction = typesVol.includes('Instruction');
+        const isCreneau = r._table === 'VI Créneaux';
+        const estMoi = (typeof estUtilisateurCourant === 'function') && (estUtilisateurCourant(piloteNom) || estUtilisateurCourant(instructeurNom));
 
         const barresDiv = document.createElement('div');
         barresDiv.className = 'reservation-bar';
-        if (isInstructeur) {
+        if (duree <= 2) barresDiv.classList.add('short-reservation');
+        if (estMoi) barresDiv.classList.add('ma-reservation');
+        let libelleEntete = piloteFormate || 'Pilote non défini';
+        if (instructeurNom) {
             barresDiv.classList.add('reservation-avec-instructeur');
-            barresDiv.classList.add('reservation-instruction');
+            const trigramme = trouverTrigrammeInstructeur(instructeurNom);
+            if (trigramme) libelleEntete += ` — ${trigramme}`;
+            libelleEntete += ' (Instruction)';
         }
-        if (duree <= 1) barresDiv.classList.add('short-reservation');
+        if (isVIMoteur || isAncienVI) {
+            if (!piloteNom || piloteNom.trim() === '') {
+                barresDiv.classList.add('vi-sans-pilote');
+                const suffix = passagerNom || 'dispo';
+                libelleEntete = isVIMoteur ? `🎯 VI Moteur — ${suffix}` : `🎯 VI — ${suffix}`;
+            } else {
+                barresDiv.classList.add('vi-avec-pilote');
+                libelleEntete = isVIMoteur ? `🎯 VI Moteur (${piloteFormate})` : `🎯 VI (${piloteFormate})`;
+            }
+        } else if (isCreneau || (f['Type'] && !isInstruction)) {
+            barresDiv.classList.add('vi-avec-pilote');
+            libelleEntete = piloteFormate ? `🎯 ${type} (${piloteFormate})` : `🎯 ${type} DISPONIBLE`;
+        }
         barresDiv.style.left = `${positionHeure(heureDebut)}%`;
         barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
         barresDiv.style.top = '8px';
         barresDiv.style.height = '30px';
-        barresDiv.title = `${pilote} — ${immat}${isInstructeur ? ' (Instruction)' : ''}`;
-        const libelle = duree > 1 ? `${immat}` : '';
-        barresDiv.innerHTML = `<strong>${libelle}</strong>`;
+        barresDiv.title = `${libelleEntete} — ${immat}`;
+        barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
         barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
         inner.appendChild(barresDiv);
         barresInfos.push({ bar: barresDiv, debut: heureDebut, fin: heureFin });
