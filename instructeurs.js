@@ -376,17 +376,6 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
         const nomSpan = document.createElement('span');
         nomSpan.className = 'instructeur-nom';
         nomSpan.textContent = nom;
-        nomSpan.addEventListener('click', () => {
-            if (typeof instructeurSelectionne !== 'undefined') instructeurSelectionne = nom;
-            if (typeof dateInstructeurSuivi !== 'undefined') {
-                dateInstructeurSuivi = new Date(dateAffichee || new Date());
-                dateInstructeurSuivi.setHours(12, 0, 0, 0);
-            }
-            console.log('[INSTRUCTEUR CLICK]', nom, typeof window.ouvrirModaleNouvelleReservation);
-            if (typeof window.ouvrirModaleNouvelleReservation === 'function') {
-                window.ouvrirModaleNouvelleReservation({ type: 'Instruction', instructeur: nom });
-            }
-        });
         machineCell.appendChild(nomSpan);
         rowDiv.appendChild(machineCell);
         const gridBg = document.createElement('div');
@@ -416,9 +405,17 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             const block = document.createElement('div');
             block.className = 'grid-hour-block';
             block.style.flex = LARGEURS_HEURES[h];
+            block.style.cursor = 'pointer';
             const overlay = document.createElement('div');
             overlay.className = `dispo-hour-overlay dispo-${dispoParHeure[h]}`;
             block.appendChild(overlay);
+            block.addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('[INSTRUCTEUR CELL CLICK]', nom, h, typeof window.ouvrirModaleNouvelleReservation);
+                if (typeof window.ouvrirModaleNouvelleReservation === 'function') {
+                    window.ouvrirModaleNouvelleReservation({ type: 'Instruction', instructeur: nom, heureDebut: h });
+                }
+            });
             gridBg.appendChild(block);
         }
 

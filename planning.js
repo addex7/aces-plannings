@@ -495,11 +495,6 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
     const machineCell = document.createElement('div');
     machineCell.className = 'machine-cell';
     machineCell.textContent = 'VI Planeur';
-    machineCell.style.cursor = 'pointer';
-    machineCell.addEventListener('click', () => {
-        console.log('[VI PLANEUR CLICK]', typeof window.ouvrirModaleNouvelleReservation);
-        if (typeof window.ouvrirModaleNouvelleReservation === 'function') window.ouvrirModaleNouvelleReservation({ type: 'VI Planeur', dureeMinutes: 45 });
-    });
     rowDiv.appendChild(machineCell);
 
     const gridBg = document.createElement('div');
@@ -534,6 +529,12 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
         const gridBlock = document.createElement('div');
         gridBlock.className = 'grid-hour-block';
         gridBlock.style.flex = LARGEURS_HEURES[h];
+        gridBlock.style.cursor = 'pointer';
+        gridBlock.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log('[VI PLANEUR CELL CLICK]', h, typeof window.ouvrirModaleNouvelleReservation);
+            if (typeof window.ouvrirModaleNouvelleReservation === 'function') window.ouvrirModaleNouvelleReservation({ type: 'VI Planeur', dureeMinutes: 45, heureDebut: h });
+        });
         gridBg.appendChild(gridBlock);
     }
 
@@ -1806,9 +1807,10 @@ function initGestionnaireModale() {
         const mois = (dateAffichee.getMonth() + 1).toString().padStart(2, '0');
         const jour = dateAffichee.getDate().toString().padStart(2, '0');
         const dateBase = `${annee}-${mois}-${jour}`;
-        if (document.getElementById('form-debut')) document.getElementById('form-debut').value = `${dateBase}T09:00`;
+        const heureDebut = options.heureDebut !== undefined ? String(options.heureDebut).padStart(2, '0') : '09';
+        if (document.getElementById('form-debut')) document.getElementById('form-debut').value = `${dateBase}T${heureDebut}:00`;
         if (document.getElementById('form-fin')) {
-            const d = new Date(`${dateBase}T09:00`);
+            const d = new Date(`${dateBase}T${heureDebut}:00`);
             d.setMinutes(d.getMinutes() + (options.dureeMinutes || 120));
             document.getElementById('form-fin').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
         }
