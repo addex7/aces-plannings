@@ -6,6 +6,7 @@ const TABLE_RESERVATIONS = 'Réservations';
 
 let dateInstructeurSuivi = new Date();
 let instructeurSelectionne = '';
+let dragDispo = null;
 
 function genererFriseHeuresInstructeur() {
     const container = document.getElementById('timeline-hours-instructeur');
@@ -104,6 +105,11 @@ function initPlanningInstructeur() {
         sel.dataset.ready = '1';
     }
 
+    if (!window.__dragDispoInit) {
+        window.addEventListener('mouseup', finaliserDragDisponibilite);
+        window.__dragDispoInit = true;
+    }
+
     peuplerSelectInstructeurSuivi().then(() => {
         if (!instructeurSelectionne && sel.options.length > 0) {
             sel.value = sel.options[0].value;
@@ -151,6 +157,55 @@ function ajouterFondNuit(cellule, dateJour) {
     cellule.insertAdjacentHTML('afterbegin', genererFondNuitHTML(dateJour));
 }
 
+async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo) {
+    if (!instructeurSelectionne && typeof nomPiloteCourant === 'function') instructeurSelectionne = nomPiloteCourant();
+    if (!instructeurSelectionne) { alert('Aucun instructeur sélectionné.'); return; }
+    const nom = instructeurSelectionne;
+    const debut = `${String(hDebut).padStart(2, '0')}:00`;
+    const fin = hFin < 23 ? `${String(hFin + 1).padStart(2, '0')}:00` : '23:59';
+    const fields = { 'Date': dateStr, 'Heure début': debut, 'Heure fin': fin, 'Machine': '', 'Disponible': dispo, 'Instructeur': nom };
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        if (typeof enregistrerAudit === 'function') await enregistrerAudit('Bascule plage dispo', nom, `Instructeur : ${nom} | Date : ${dateStr} | ${debut} - ${fin} | ${dispo ? 'Disponible' : 'Indisponible'}`, 'Instructeur');
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+        if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur : ' + (err.message || ''));
+    }
+}
+
+function mettreAJourSurlignementDrag() {
+    if (!dragDispo || !dragDispo.actif) return;
+    const hStart = parseInt(dragDispo.start.dataset.heure, 10);
+    const hEnd = parseInt(dragDispo.end.dataset.heure, 10);
+    const date = dragDispo.start.dataset.date;
+    const hMin = Math.min(hStart, hEnd);
+    const hMax = Math.max(hStart, hEnd);
+    document.querySelectorAll('.grid-hour-block').forEach(el => {
+        const h = parseInt(el.dataset.heure, 10);
+        const isIn = el.dataset.date === date && h >= hMin && h <= hMax;
+        el.style.outline = isIn ? '2px solid #1e3d59' : '';
+    });
+}
+
+function finaliserDragDisponibilite() {
+    if (!dragDispo || !dragDispo.actif) return;
+    const start = dragDispo.start;
+    const end = dragDispo.end;
+    const dispo = dragDispo.dispo;
+    dragDispo = null;
+    document.querySelectorAll('.grid-hour-block').forEach(el => { el.style.outline = ''; });
+    if (start.dataset.date !== end.dataset.date) return;
+    const hStart = parseInt(start.dataset.heure, 10);
+    const hEnd = parseInt(end.dataset.heure, 10);
+    const hDebut = Math.min(hStart, hEnd);
+    const hFin = Math.max(hStart, hEnd);
+    enregistrerPlageDisponibilite(start.dataset.date, hDebut, hFin, dispo);
+}
+
 function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom) {
     const dateStr = `${dateJour.getFullYear()}-${String(dateJour.getMonth() + 1).padStart(2, '0')}-${String(dateJour.getDate()).padStart(2, '0')}`;
     const tdDate = document.createElement('td');
@@ -185,12 +240,19 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         d.className = 'grid-hour-block';
         d.style.flex = LARGEURS_HEURES[h];
         d.style.cursor = 'pointer';
+        d.style.userSelect = 'none';
         d.dataset.date = dateStr;
         d.dataset.heure = h;
         d.dataset.dispo = blocks[h];
-        d.addEventListener('click', (e) => {
-            e.stopPropagation();
-            basculerDisponibiliteHeure(d.dataset.date, parseInt(d.dataset.heure, 10), d.dataset.dispo === 'green');
+        d.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            dragDispo = { start: d, end: d, actif: true, dispo: d.dataset.dispo !== 'green' };
+            mettreAJourSurlignementDrag();
+        });
+        d.addEventListener('mouseenter', () => {
+            if (!dragDispo || !dragDispo.actif) return;
+            dragDispo.end = d;
+            mettreAJourSurlignementDrag();
         });
         const overlay = document.createElement('div');
         overlay.className = `dispo-hour-overlay dispo-${blocks[h]}`;
