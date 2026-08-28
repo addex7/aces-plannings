@@ -14,7 +14,6 @@ let listeReservationsConflits = [];
 let filtreInitiationActif = 'apourvoir';
 let filtreTypesInitiation = ['VIP', 'VIULM', 'VIA'];
 let listeMembresCache = [];
-let ouvrirModaleNouvelleReservation;
 
 function parseTempsDeVol(tempsStr) {
     if (!tempsStr) return NaN;
@@ -1794,7 +1793,7 @@ function initGestionnaireModale() {
             }
         });
     }
-    ouvrirModaleNouvelleReservation = async function(options = {}) {
+    window.ouvrirModaleNouvelleReservation = async function(options = {}) {
         idReservationEnEdition = null;
         if (titleModal) titleModal.textContent = "Nouvelle Réservation";
         if (btnDelete) btnDelete.style.display = 'none';
@@ -1829,7 +1828,7 @@ function initGestionnaireModale() {
     }
 
     if (btnOpenModal && modal) {
-        btnOpenModal.addEventListener('click', () => ouvrirModaleNouvelleReservation());
+        btnOpenModal.addEventListener('click', () => window.ouvrirModaleNouvelleReservation());
     }
     if (btnCloseModal) btnCloseModal.addEventListener('click', () => modal.style.display = 'none');
     window.addEventListener('click', (e) => { if (modal && e.target === modal) modal.style.display = 'none'; });
