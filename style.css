@@ -112,12 +112,10 @@ img, table, video, iframe, svg {
     font-size: 13px;
     font-weight: bold;
     border-top: 1px solid rgba(255,255,255,0.1);
-    padding-top: 15px;
+    padding: 15px 0 10px;
     white-space: nowrap;
-    position: sticky;
-    bottom: 0;
     background-color: #1e3d59;
-    z-index: 1;
+    flex-shrink: 0;
 }
 /* Zone principale */
 .main-content {
