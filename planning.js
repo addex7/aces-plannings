@@ -394,6 +394,16 @@ async function supprimerReservation() {
     const resa = cache.find(r => r.id === idReservationEnEdition);
     const resaMachine = (resa && resa.fields && resa.fields['Machine'] || [])[0];
     const resaDate = resa && resa.fields && resa.fields['Date de début'] ? formaterDateISO(new Date(resa.fields['Date de début'])) : null;
+    const piloteNom = resa ? nomUtilisateurDepuisId(resa.fields['Pilote'], listeMembresCache) : '';
+    const instructeurNom = resa ? nomUtilisateurDepuisId(resa.fields['Instructeur'], listeMembresCache) : '';
+    const estProprietaire = typeof estUtilisateurCourant === 'function' && (estUtilisateurCourant(piloteNom) || estUtilisateurCourant(instructeurNom));
+    const rolesAutorises = ['Super admin', 'Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'];
+    const aRoleAutorise = (currentUser && Array.isArray(currentUser.roles) && currentUser.roles.some(r => rolesAutorises.includes(r))) || false;
+    if (!estProprietaire && !aRoleAutorise) {
+        alert("Tu n'as pas le droit de supprimer cette réservation.");
+        return;
+    }
+
     if (!confirm("Es-tu sûr de vouloir supprimer cette réservation ?")) return;
 
     try {
