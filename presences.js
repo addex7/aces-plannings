@@ -2,15 +2,27 @@
    PRÉSENCES PLANEUR - GESTION DES INSCRIPTIONS
    ========================================================================== */
 
+function peutSupprimerPresence(nom) {
+    if (!currentUser) return false;
+    const rolesAutorises = ['Super admin', 'Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'];
+    const aRoleAutorise = Array.isArray(currentUser.roles) && currentUser.roles.some(r => rolesAutorises.includes(r));
+    if (aRoleAutorise) return true;
+    const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    return typeof correspondanceNom === 'function' ? correspondanceNom(nom, nomUtilisateur) : nom === nomUtilisateur;
+}
+
 function creerLignePresence(nom, commentaire, recordId, tableName) {
     const commentaireEscaped = commentaire.replace(/"/g, '&quot;');
+    const btnSupprimer = peutSupprimerPresence(nom)
+        ? `<button class="btn-remove-presence" onclick="desinscrire${tableName === 'Présences Club' ? 'Club' : 'Planeur'}('${recordId}')">❌</button>`
+        : '';
     return `
         <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow:hidden;">
             <span style="white-space:nowrap;">- ${nom}</span>
             <button class="btn-comment" onclick="modifierCommentaire('${recordId}', '${tableName}', '${commentaireEscaped}')" title="Ajouter/Modifier un commentaire">💬</button>
             <span class="comment-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${commentaireEscaped}</span>
         </div>
-        <button class="btn-remove-presence" onclick="desinscrire${tableName === 'Présences Club' ? 'Club' : 'Planeur'}('${recordId}')">❌</button>
+        ${btnSupprimer}
     `;
 }
 
