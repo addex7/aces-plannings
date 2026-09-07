@@ -790,6 +790,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             rowDiv.appendChild(machineCell);
             const gridBg = document.createElement('div');
             gridBg.className = 'hours-grid-background';
+            gridBg.dataset.avionId = avionId;
             const aubeAeroPercent = (Math.max(0, soleil.aubeAero) / 24) * 100;
             const leverPercent = (Math.max(0, soleil.leverSoleil) / 24) * 100;
             const coucherPercent = (Math.min(24, soleil.coucherSoleil) / 24) * 100;
@@ -1191,6 +1192,8 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
     if (tableName !== 'Maintenance' && !peutBougerReservations() && !estProprietaireReservation(resa)) return;
     let aBouge = false;
     let ghost = null;
+    let avionIdCible = avionId;
+    let gridCible = gridBg;
     const rectGrid = gridBg.getBoundingClientRect();
     document.body.style.userSelect = 'none';
     document.body.style.webkitUserSelect = 'none';
@@ -1216,6 +1219,16 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
         if (nouvelleHeureDebut + dureeVol > 24) {
             nouvelleHeureDebut = 24 - dureeVol;
         }
+        if (tableName === 'Réservations') {
+            const el = document.elementFromPoint(evt.clientX, evt.clientY);
+            const row = el && el.closest ? el.closest('.timeline-row') : null;
+            const grid = row ? row.querySelector('.hours-grid-background') : null;
+            if (grid && grid.dataset.avionId) {
+                avionIdCible = grid.dataset.avionId;
+                gridCible = grid;
+                if (ghost && ghost.parentNode !== grid) grid.appendChild(ghost);
+            }
+        }
         ghost.style.left = `${positionHeure(nouvelleHeureDebut)}%`;
         const hDebutStr = convertirHeureEnHHMM(nouvelleHeureDebut);
         const hFinStr = convertirHeureEnHHMM(nouvelleHeureDebut + dureeVol);
@@ -1232,7 +1245,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             let heureFinale = Math.round(positionHeureInverse(pourcentageFin * 100) * 4) / 4;
             if (heureFinale + dureeVol > 24) heureFinale = 24 - dureeVol;
             if (typeof sauvegarderDeplacementVol === 'function') {
-                sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, callbackMiseAJour);
+                sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, callbackMiseAJour, avionIdCible);
             }
         }
         setTimeout(() => {
@@ -1368,7 +1381,7 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
     }
 }
 
-async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dureeVol, tableName = 'Réservations', record = null, dateCible = null) {
+async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dureeVol, tableName = 'Réservations', record = null, dateCible = null, nouvelAvionId = null) {
     const ref = dateCible ? new Date(dateCible) : dateAffichee;
     const annee = ref.getFullYear();
     const mois = ref.getMonth();
@@ -1396,6 +1409,7 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
         fieldsPatch = { "Date": nouvelleDateDebut.toISOString(), "durée": dureeVol };
     } else {
         fieldsPatch = { "Date de début": nouvelleDateDebut.toISOString(), "Date de fin": nouvelleDateFin.toISOString() };
+        if (nouvelAvionId && nouvelAvionId !== avionId) fieldsPatch['Machine'] = [nouvelAvionId];
     }
     try {
         const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
@@ -1408,7 +1422,7 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
             const resaId = resData.records?.[0]?.id || volId || '';
             const resa = (listeReservationsCache || []).find(r => r.id === volId);
             const pilote = Array.isArray(resa?.fields?.['Pilote']) ? resa.fields['Pilote'][0] : (resa?.fields?.['Pilote'] || '');
-            const machine = Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || avionId);
+            const machine = nouvelAvionId || (Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || avionId));
             const avion = (listeAvionsCache || []).find(a => a.id === machine);
             const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machine;
             const ancienDebut = resa?.fields?.['Date de début'] || '';
