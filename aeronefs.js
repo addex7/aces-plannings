@@ -969,6 +969,7 @@ const TYPES_DOCUMENTS_AERONEFS = [
     { code: 'Autre', nom: 'Autre', dateRequise: false }
 ];
 let documentsAeronefsParMachine = {};
+let machineDocumentsCourante = '';
 
 function peutGererMaintenanceEtDocuments() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
@@ -1133,9 +1134,10 @@ function fermerModaleDocumentsAeronef() {
     if (btnNouveau) btnNouveau.style.display = 'inline-block';
 }
 
-async function ouvrirModaleDocumentsAeronef() {
+async function ouvrirModaleDocumentsAeronef(immatParam) {
     const selectMachine = document.getElementById('select-machine-suivi');
-    const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+    const immat = immatParam || (selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '');
+    machineDocumentsCourante = immat;
     const modal = document.getElementById('documents-aeronef-modal');
     const title = document.getElementById('documents-aeronef-modal-title');
     if (title) title.textContent = `Documents – ${immat}`;
@@ -1147,7 +1149,7 @@ async function ouvrirModaleDocumentsAeronef() {
 function ouvrirFormulaireDocumentAeronef(record = null) {
     const form = document.getElementById('form-document-aeronef');
     const selectMachine = document.getElementById('select-machine-suivi');
-    const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+    const immat = machineDocumentsCourante || (selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '');
     if (!form) return;
     form.style.display = 'block';
     document.getElementById('doc-aeronef-id').value = record ? record.id : '';
@@ -1207,9 +1209,9 @@ async function chargerDocumentsAeronef(machine, forceRefresh = false) {
     }
 }
 
-function afficherRecapDocumentsAeronef(machine) {
-    const recap = document.getElementById('documents-aeronef-list');
-    const container = document.getElementById('documents-aeronef-recap');
+function afficherRecapDocumentsAeronef(machine, listId = 'documents-aeronef-list', containerId = 'documents-aeronef-recap') {
+    const recap = document.getElementById(listId);
+    const container = document.getElementById(containerId);
     if (!recap || !container) return;
     const records = (documentsAeronefsParMachine[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
     if (records.length === 0) {
@@ -1322,7 +1324,7 @@ async function enregistrerDocumentAeronef(e) {
         const res = await cachedFetch(url, { method, headers, body });
         if (!res.ok) throw new Error(await res.text());
         const selectMachine = document.getElementById('select-machine-suivi');
-        const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+        const immat = machineDocumentsCourante || (selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '');
         await chargerDocumentsAeronef(immat, true);
         afficherListeDocumentsAeronef(immat);
         afficherRecapDocumentsAeronef(immat);
@@ -1342,7 +1344,7 @@ async function supprimerDocumentAeronef(record) {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}/${record.id}`, { method: 'DELETE', headers });
         if (!res.ok) throw new Error('Erreur Airtable');
         const selectMachine = document.getElementById('select-machine-suivi');
-        const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+        const immat = machineDocumentsCourante || (selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '');
         await chargerDocumentsAeronef(immat, true);
         afficherListeDocumentsAeronef(immat);
         afficherRecapDocumentsAeronef(immat);
@@ -1358,7 +1360,7 @@ async function toggleActifDocumentAeronef(record, actif) {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}/${record.id}`, { method: 'PATCH', headers, body: JSON.stringify({ fields }) });
         if (!res.ok) throw new Error('Erreur Airtable');
         const selectMachine = document.getElementById('select-machine-suivi');
-        const immat = selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '';
+        const immat = machineDocumentsCourante || (selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '');
         await chargerDocumentsAeronef(immat, true);
         afficherListeDocumentsAeronef(immat);
         afficherRecapDocumentsAeronef(immat);

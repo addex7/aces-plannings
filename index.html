@@ -433,10 +433,16 @@
                             <option value="PLANEUR">Planeur</option>
                         </select>
                         <button id="btn-ouvrir-carnet" class="btn-primary">+ Saisir un vol</button>
+                        <button id="btn-documents-carnet" class="btn-primary">Suivi documentation machine</button>
                     </div>
                 </header>
 
                 <div id="carnet-observation-alarme" style="display: none;"></div>
+
+                <div id="documents-carnet-recap" style="background: white; border-radius: 12px; padding: 12px 20px; margin: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none;">
+                    <h4 style="margin: 0 0 8px; color: #1e3d59; font-size: 13px;">Documents machine</h4>
+                    <div id="documents-carnet-list" style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px;"></div>
+                </div>
 
                 <div class="carnet-table-container">
                     <table class="carnet-table">
@@ -1230,9 +1236,9 @@
     <script src="planning.js?v=130"></script>
     <script src="calendrier.js?v=87"></script>
     <script src="comptes.js?v=105"></script>
-    <script src="aeronefs.js?v=95"></script>
-    <script src="carnet.js?v=89"></script>
-    <script src="documents.js?v=82"></script>
+    <script src="aeronefs.js?v=96"></script>
+    <script src="carnet.js?v=90"></script>
+    <script src="documents.js?v=83"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=4"></script>
     <script src="membres.js?v=96"></script>

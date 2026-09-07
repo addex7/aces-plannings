@@ -378,12 +378,16 @@ async function chargerCarnetRoute() {
     const tableContainer = document.querySelector('.carnet-table-container');
     const planeurContainer = document.getElementById('carnet-planeur-container');
     const btnOuvrir = document.getElementById('btn-ouvrir-carnet');
+    const btnDocs = document.getElementById('btn-documents-carnet');
+    const recapDocs = document.getElementById('documents-carnet-recap');
     const alarme = document.getElementById('carnet-observation-alarme');
 
     if (machineCarnetSelectionnee === 'PLANEUR') {
         if (tableContainer) tableContainer.style.display = 'none';
         if (planeurContainer) planeurContainer.style.display = 'block';
         if (btnOuvrir) btnOuvrir.style.display = 'none';
+        if (btnDocs) btnDocs.style.display = 'none';
+        if (recapDocs) recapDocs.style.display = 'none';
         if (tbody) tbody.innerHTML = '';
         try {
             const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc`;
@@ -406,6 +410,7 @@ async function chargerCarnetRoute() {
     if (tableContainer) tableContainer.style.display = 'block';
     if (planeurContainer) planeurContainer.style.display = 'none';
     if (btnOuvrir) btnOuvrir.style.display = 'inline-block';
+    if (btnDocs) btnDocs.style.display = 'inline-block';
     if (alarme) alarme.style.display = 'none';
     if (tbody) tbody.innerHTML = '<tr><td colspan="15" class="carnet-empty">Chargement du carnet de route...</td></tr>';
     try {
@@ -422,6 +427,10 @@ async function chargerCarnetRoute() {
             afficherCarnet(volsMachine);
             afficherAlarmeObservation(volsMachine);
             await synchroniserHorametreAeronef(machineCarnetSelectionnee, volsMachine);
+            if (typeof chargerDocumentsAeronef === 'function' && typeof afficherRecapDocumentsAeronef === 'function') {
+                await chargerDocumentsAeronef(machineCarnetSelectionnee);
+                afficherRecapDocumentsAeronef(machineCarnetSelectionnee, 'documents-carnet-list', 'documents-carnet-recap');
+            }
         } else {
             console.error(data);
             if (tbody) tbody.innerHTML = '<tr><td colspan="15" class="carnet-empty">Erreur lors du chargement du carnet.</td></tr>';
@@ -723,6 +732,10 @@ function initCarnetRoute() {
     genererGrillesPlaneur();
 
     if (btnOuvrir) btnOuvrir.addEventListener('click', () => ouvrirModaleCarnet());
+    const btnDocs = document.getElementById('btn-documents-carnet');
+    if (btnDocs) btnDocs.addEventListener('click', () => {
+        if (typeof ouvrirModaleDocumentsAeronef === 'function') ouvrirModaleDocumentsAeronef(machineCarnetSelectionnee);
+    });
     if (btnFermer) btnFermer.addEventListener('click', fermerModaleCarnet);
     if (btnDelete) btnDelete.addEventListener('click', supprimerCarnetRoute);
     if (modal) {

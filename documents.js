@@ -8,6 +8,7 @@ const UPLOADCARE_PUBLIC_KEY = '6877913652d895abcd04';
 const UPLOADCARE_CDN_BASE = 'https://2y553dp2sx.ucarecd.net/';
 let documentsCache = [];
 let dossiersCache = [];
+let documentsAeronefsBibliothequeCache = {};
 
 function isDocumentaliste() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
@@ -134,6 +135,25 @@ async function enregistrerDossier(e) {
     }
 }
 
+async function chargerDocumentsAeronefsBibliotheque() {
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?pageSize=100`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        const records = data.records || [];
+        documentsAeronefsBibliothequeCache = records.reduce((acc, rec) => {
+            const machine = rec.fields && rec.fields['Machine'];
+            if (!machine) return acc;
+            if (!acc[machine]) acc[machine] = [];
+            acc[machine].push(rec);
+            return acc;
+        }, {});
+    } catch (err) {
+        console.error(err);
+        documentsAeronefsBibliothequeCache = {};
+    }
+}
+
 async function chargerDocuments() {
     const list = document.getElementById('documents-list');
     if (!list) return;
@@ -143,6 +163,7 @@ async function chargerDocuments() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         documentsCache = data.records || [];
+        await chargerDocumentsAeronefsBibliotheque();
         afficherDocuments(documentsCache);
     } catch (err) {
         console.error(err);
@@ -154,7 +175,8 @@ function afficherDocuments(records) {
     const list = document.getElementById('documents-list');
     if (!list) return;
     const recordsVisibles = records.filter(rec => !estDocumentMembre(rec));
-    if (!recordsVisibles.length) {
+    const machines = Object.keys(documentsAeronefsBibliothequeCache || {}).sort();
+    if (!recordsVisibles.length && !machines.length) {
         list.innerHTML = '<p>Aucun document pour le moment.</p>';
         return;
     }
@@ -164,7 +186,7 @@ function afficherDocuments(records) {
         acc[dossier].push(rec);
         return acc;
     }, {});
-    list.innerHTML = Object.keys(grouped).sort().map(dossier => {
+    let html = Object.keys(grouped).sort().map(dossier => {
         const records = grouped[dossier];
         const subGrouped = records.reduce((acc, rec) => {
             const sous = rec.fields['Sous-dossier'] || 'Sans sous-dossier';
@@ -192,6 +214,45 @@ function afficherDocuments(records) {
             </details>
         `;
     }).join('');
+
+    const now = new Date();
+    const dans3mois = new Date();
+    dans3mois.setMonth(dans3mois.getMonth() + 3);
+    const aujourdhui = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    machines.forEach(machine => {
+        const docs = (documentsAeronefsBibliothequeCache[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
+        if (!docs.length) return;
+        const cartes = docs.map(r => {
+            const f = r.fields || {};
+            const type = (typeof TYPES_DOCUMENTS_AERONEFS !== 'undefined' ? TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) : null) || { nom: f['Type de document'] };
+            let couleur = '#10b981';
+            let dateTxt = '';
+            if (f['Date de validité']) {
+                const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
+                dateTxt = ` – ${dateValid.toLocaleDateString('fr-FR')}`;
+                if (dateValid < aujourdhui) couleur = '#dc2626';
+                else if (dateValid < dans3mois) couleur = '#f97316';
+            }
+            const label = f['Lien']
+                ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#0f172a; text-decoration:underline;">${type.nom}${dateTxt}</a>`
+                : `<span style="color:#0f172a;">${type.nom}${dateTxt}</span>`;
+            return `
+                <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block;"></span>
+                    ${label}
+                </div>
+            `;
+        }).join('');
+        html += `
+            <details style="margin-bottom:20px;">
+                <summary style="color:#1e3d59; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:10px; cursor:pointer; font-size:1.17em; font-weight:bold;">${machine}</summary>
+                <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px;">
+                    ${cartes}
+                </div>
+            </details>
+        `;
+    });
+    list.innerHTML = html;
 }
 
 function creerCarteDocument(rec) {
