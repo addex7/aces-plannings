@@ -620,15 +620,20 @@ async function supprimerRecetteManuelle(recordId, audit = true) {
     }
 }
 
-async function getSoldePilote(piloteNom) {
+async function getSoldePilote(piloteNom, inclureEnAttente = true) {
     if (!piloteNom) return 0;
     try {
         const records = await fetchComptes(piloteNom);
         return records.reduce((s, r) => {
             const f = r.fields || {};
-            if ((f['Statut'] || 'Validé') !== 'Validé') return s;
+            const statut = f['Statut'] || 'Validé';
+            const source = f['Source'] || '';
             const debit = parseMontantCompte(f['Débit']);
             const credit = parseMontantCompte(f['Crédit']);
+            if (inclureEnAttente && statut === 'En attente' && source === 'Saisie pilote' && credit > 0) {
+                return s + credit;
+            }
+            if (statut !== 'Validé') return s;
             return s + credit - debit;
         }, 0);
     } catch (err) {
@@ -638,6 +643,6 @@ async function getSoldePilote(piloteNom) {
 }
 
 async function pilotePeutReserver(piloteNom) {
-    const solde = await getSoldePilote(piloteNom);
+    const solde = await getSoldePilote(piloteNom, false);
     return solde > -500;
 }
