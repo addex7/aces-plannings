@@ -622,10 +622,10 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
 }
 
 // --- FONCTION POUR CHARGER ET AFFICHER LES DONNÉES DU PLANNING ---
-async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = true) {
+async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = true, silencieux = false) {
     const rowsContainer = document.getElementById('timeline-rows');
     if (!rowsContainer) return;
-    rowsContainer.innerHTML = "<div class='loading'>Mise à jour du planning...</div>";
+    if (!silencieux) rowsContainer.innerHTML = "<div class='loading'>Mise à jour du planning...</div>";
     const debutJour = dateAffichee.toISOString().split('T')[0];
     try {
         await chargerListeMembresCache();
