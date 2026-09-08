@@ -1367,7 +1367,7 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
                     await enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning');
                 }
             }
-            await chargerDonneesPlanning(true);
+            await chargerDonneesPlanning(true, true, true);
             const viewAeronefs = document.getElementById('view-aeronefs');
             if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                 chargerSuiviAeronef();
@@ -1435,7 +1435,7 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
                     await enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning');
                 }
             }
-            await chargerDonneesPlanning(true);
+            await chargerDonneesPlanning(true, true, true);
             const viewAeronefs = document.getElementById('view-aeronefs');
             if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                 chargerSuiviAeronef();
