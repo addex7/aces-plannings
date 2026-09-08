@@ -1244,8 +1244,16 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             let pourcentageFin = Math.max(0, Math.min(1, xPosFinal / rectGrid.width));
             let heureFinale = Math.round(positionHeureInverse(pourcentageFin * 100) * 4) / 4;
             if (heureFinale + dureeVol > 24) heureFinale = 24 - dureeVol;
+            barresDiv.style.left = `${positionHeure(heureFinale)}%`;
+            barresDiv.style.width = `${positionHeure(heureFinale + dureeVol) - positionHeure(heureFinale)}%`;
+            if (avionIdCible && avionIdCible !== avionId && gridCible && gridCible !== gridBg) {
+                gridCible.appendChild(barresDiv);
+            }
             if (typeof sauvegarderDeplacementVol === 'function') {
-                sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, callbackMiseAJour, avionIdCible);
+                sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, callbackMiseAJour, avionIdCible).catch(err => {
+                    console.error(err);
+                    chargerDonneesPlanning(true, true, true);
+                });
             }
         }
         setTimeout(() => {
@@ -1301,7 +1309,12 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
         barElement.style.opacity = '1';
         if (ghostBar.parentNode) ghostBar.parentNode.removeChild(ghostBar);
         if (hDebFinale !== hDebutInitiale || hFinFinale !== hFinInitiale) {
-            await appliquerChangementDuree(reservationId, hDebFinale, hFinFinale, dateCibleVol, tableName, record);
+            barElement.style.left = `${positionHeure(hDebFinale)}%`;
+            barElement.style.width = `${positionHeure(hFinFinale) - positionHeure(hDebFinale)}%`;
+            appliquerChangementDuree(reservationId, hDebFinale, hFinFinale, dateCibleVol, tableName, record).catch(err => {
+                console.error(err);
+                chargerDonneesPlanning(true, true, true);
+            });
         }
         setTimeout(() => {
             isResizing = false;
