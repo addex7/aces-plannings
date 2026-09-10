@@ -216,6 +216,13 @@ async function chargerAccueilPilote() {
             posterMessageClub(titre, corps);
         });
     }
+
+    container.querySelectorAll('.ap-message-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            retirerMessageClub(btn.dataset.id);
+        });
+    });
 }
 
 function ouvrirModaleSignalements(immat, items) {
@@ -643,6 +650,68 @@ async function posterMessageClub(titre, corps) {
     }
 }
 
+async function chargerNomsMembresActifs() {
+    const table = typeof TABLE_UTILISATEURS !== 'undefined' ? TABLE_UTILISATEURS : 'Utilisateurs';
+    const all = [];
+    let offset = '';
+    do {
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&fields%5B%5D=Actif&pageSize=100${offset ? '&offset=' + encodeURIComponent(offset) : ''}`;
+        const res = await cachedFetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        all.push(...(data.records || []));
+        offset = data.offset || '';
+    } while (offset);
+    return all.map(r => {
+        const f = r.fields || {};
+        if (f.Actif === false) return null;
+        return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+    }).filter(Boolean);
+}
+
+function parseDestinataires(str) {
+    return (str || '').toString().split(';').map(s => s.trim()).filter(Boolean);
+}
+
+async function retirerMessageClub(recordId) {
+    if (!peutEcrireMessagesClub()) { alert('Seuls les super-administrateurs peuvent retirer un message club.'); return; }
+    if (!confirm('Retirer ce message du Messages club ?\nIl restera dans les boîtes mail des membres.')) return;
+    const table = typeof TABLE_MESSAGERIE !== 'undefined' ? TABLE_MESSAGERIE : 'Messagerie';
+    try {
+        const getRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${recordId}`, { headers });
+        const record = await getRes.json();
+        if (!getRes.ok) throw new Error(record.error?.message || 'Erreur');
+
+        const destArray = parseDestinataires(record.fields?.['Destinataire']);
+        const hasTous = destArray.some(d => d.toLowerCase() === 'tous');
+        if (!hasTous) {
+            alert('Ce message n\'est pas un message club global.');
+            return;
+        }
+
+        const autres = destArray.filter(d => d.toLowerCase() !== 'tous');
+        const membres = await chargerNomsMembresActifs();
+        const noms = Array.from(new Set([...autres, ...membres]));
+        if (noms.length === 0) {
+            alert('Aucun membre actif trouvé pour conserver le message.');
+            return;
+        }
+
+        const patchRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${recordId}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ fields: { 'Destinataire': noms.join('; ') } })
+        });
+        const data = await patchRes.json();
+        if (!patchRes.ok) throw new Error(data.error?.message || 'Erreur');
+        if (typeof viderApiCache === 'function') viderApiCache();
+        if (typeof chargerAccueilPilote === 'function') await chargerAccueilPilote();
+    } catch (err) {
+        console.error('Erreur retrait message club:', err);
+        alert('Impossible de retirer le message.');
+    }
+}
+
 function renderMessagesClub(records) {
     const messages = (records || []).map(r => {
         const f = r.fields || {};
@@ -652,9 +721,13 @@ function renderMessagesClub(records) {
         const corps = f['Corps'] || '';
         return { id: r.id, date, expediteur, objet, corps };
     });
+    const afficherForm = peutEcrireMessagesClub();
     const list = messages.length ? messages.map(m => `
-        <div class="ap-message-item" style="padding:10px 0; border-bottom:1px solid #e2e8f0;">
-            <div class="ap-message-title">${escHtml(m.objet)}</div>
+        <div class="ap-message-item" data-id="${escHtml(m.id)}" style="padding:10px 0; border-bottom:1px solid #e2e8f0;">
+            <div class="ap-message-title" style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                <span style="flex:1; min-width:0;">${escHtml(m.objet)}</span>
+                ${afficherForm ? `<button type="button" class="ap-message-remove" data-id="${escHtml(m.id)}" title="Retirer du Messages club" style="background:transparent; border:none; color:#dc2626; font-size:18px; line-height:1; cursor:pointer; padding:0 2px; flex-shrink:0;">×</button>` : ''}
+            </div>
             <div class="ap-message-meta">
                 <span>${escHtml(m.expediteur)}</span>
                 <span>${escHtml(m.date)}</span>
@@ -662,7 +735,6 @@ function renderMessagesClub(records) {
             <div class="ap-message-body">${escHtml(m.corps).replace(/\n/g, '<br>')}</div>
         </div>
     `).join('') : '<p class="carnet-empty">Aucun message.</p>';
-    const afficherForm = peutEcrireMessagesClub();
     return `
         <div class="ap-card ap-card-white ap-card-messages">
             <h3 class="ap-messages-header">
