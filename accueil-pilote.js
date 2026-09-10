@@ -608,13 +608,11 @@ async function chargerMessagesClub() {
 
 function peutEcrireMessagesClub() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
-    const banal = ['Membre', 'Pilote', 'Aucun', ''];
-    const roles = currentUser.roles || [];
-    if (roles.length === 0) return false;
-    return roles.some(r => r && !banal.includes(r));
+    return (currentUser.roles || []).includes('Super admin');
 }
 
 async function posterMessageClub(titre, corps) {
+    if (!peutEcrireMessagesClub()) { alert('Seuls les super-administrateurs peuvent publier un message club.'); return; }
     if (!titre.trim() || !corps.trim()) return;
     const table = typeof TABLE_MESSAGERIE !== 'undefined' ? TABLE_MESSAGERIE : 'Messagerie';
     const expediteur = typeof nomCompletCourant === 'function' ? nomCompletCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
