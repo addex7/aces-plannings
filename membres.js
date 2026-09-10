@@ -59,6 +59,12 @@ function genererToken() {
     return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+async function hacherMotDePasse(mdp) {
+    const data = new TextEncoder().encode('aces-planning-salt-v1:' + mdp);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function initAuth() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
@@ -201,9 +207,21 @@ async function seConnecter() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const record = (data.records || [])[0];
-        if (!record || (record.fields['Mot de passe'] || '').toString() !== motDePasse) {
+        const stocke = record ? (record.fields['Mot de passe'] || '').toString() : '';
+        const hashSaisi = await hacherMotDePasse(motDePasse);
+        if (!record || (stocke !== hashSaisi && stocke !== motDePasse)) {
             alert('Identifiant ou mot de passe incorrect.');
             return;
+        }
+        // Migration : remplace un mot de passe stocké en clair par son empreinte
+        if (stocke === motDePasse && stocke !== hashSaisi) {
+            try {
+                await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${record.id}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({ fields: { 'Mot de passe': hashSaisi } })
+                });
+            } catch (e) { console.error('Migration hash mot de passe', e); }
         }
         const f = record.fields || {};
         currentUser = {
@@ -241,7 +259,7 @@ async function validerSetup() {
     if (!motDePasse) { alert('Mot de passe requis.'); return; }
     if (mode === 'setup' && !identifiant) { alert('Identifiant requis.'); return; }
     if (motDePasse !== confirmation) { alert('Les mots de passe ne correspondent pas.'); return; }
-    const fields = { 'Mot de passe': motDePasse };
+    const fields = { 'Mot de passe': await hacherMotDePasse(motDePasse) };
     if (mode === 'setup') {
         fields['Identifiant'] = identifiant;
         fields['Actif'] = true;
@@ -326,6 +344,18 @@ async function envoyerReset() {
 }
 
 const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Eleve planeur', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier'];
+
+function initialiserCheckboxesRoles() {
+    const rendre = (containerId, name) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = ROLES_MEMBRES.map(role =>
+            `<label style="margin-right:10px;"><input type="checkbox" name="${name}" value="${role}"> ${role}</label>`
+        ).join('');
+    };
+    rendre('membre-roles-container', 'membre-roles');
+    rendre('edit-membre-roles-container', 'edit-membre-roles');
+}
 
 async function chargerUtilisateurs() {
     const tbody = document.getElementById('membres-list');
@@ -426,12 +456,56 @@ async function ajouterUtilisateur(event) {
         const record = await res.json();
         afficherInvitation(record, mail);
         await chargerUtilisateurs();
+        if (typeof carnetPilotesCache !== 'undefined') carnetPilotesCache = [];
+        if (typeof carnetInstructeursCache !== 'undefined') carnetInstructeursCache = [];
+        await lierVolsCarnetANouveauMembre(prenom, nom);
         if (typeof enregistrerAudit === 'function') enregistrerAudit('Création de membre', `${prenom} ${nom}`, `Rôles : ${(roles || []).join(', ')}`, 'Membres');
         event.target.reset();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la création : ' + (err.message || 'Vérifiez la console.'));
     }
+}
+
+async function lierVolsCarnetANouveauMembre(prenom, nom) {
+    const nomComplet = `${prenom} ${nom}`.trim();
+    if (!nomComplet || !prenom || !nom) return;
+    const table = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
+    const prenomEsc = (prenom || '').replace(/"/g, '\\"');
+    const nomEsc = (nom || '').replace(/"/g, '\\"');
+    const formula = `AND({Pilote} != '', OR(FIND(UPPER("${prenomEsc}"), UPPER({Pilote})) > 0, FIND(UPPER("${nomEsc}"), UPPER({Pilote})) > 0))`;
+    const baseUrl = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+    const records = [];
+    let offset = '';
+    try {
+        do {
+            const url = baseUrl + (offset ? `&offset=${encodeURIComponent(offset)}` : '');
+            const res = await cachedFetch(url, { headers });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+            records.push(...(data.records || []));
+            offset = data.offset || '';
+        } while (offset);
+    } catch (err) {
+        console.error('Erreur recherche vols à lier:', err);
+        return;
+    }
+    const pNorm = normaliserNom(prenom);
+    const nNorm = normaliserNom(nom);
+    const maxLongueur = pNorm.length + nNorm.length + 4;
+    const matches = records.filter(r => {
+        const pilote = (r.fields || {})['Pilote'] || '';
+        const pilotNorm = normaliserNom(pilote);
+        return pilotNorm && pilotNorm.length <= maxLongueur && pilotNorm.includes(pNorm) && pilotNorm.includes(nNorm);
+    });
+    if (!matches.length) return;
+    const patchBase = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`;
+    await Promise.all(matches.map(r => cachedFetch(`${patchBase}/${r.id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ fields: { 'Pilote': nomComplet } })
+    })));
+    console.log(`[membres] ${matches.length} vol(s) lié(s) à ${nomComplet}`);
 }
 
 function afficherInvitation(record, email) {
@@ -477,7 +551,9 @@ function ouvrirModaleMembre(record) {
     document.getElementById('edit-membre-mail').value = f['Mail'] || '';
     document.getElementById('edit-membre-telephone').value = f['Téléphone'] || '';
     document.getElementById('edit-membre-identifiant').value = f['Identifiant'] || '';
-    document.getElementById('edit-membre-password').value = f['Mot de passe'] || '';
+    const pwdInput = document.getElementById('edit-membre-password');
+    pwdInput.value = '';
+    pwdInput.placeholder = 'Laisser vide pour ne pas changer';
     document.getElementById('edit-membre-trigramme').value = f['Trigramme'] || '';
     const dateNaissance = f['Date de naissance'];
     const dateInput = document.getElementById('edit-membre-date-naissance');
@@ -517,7 +593,7 @@ async function sauvegarderMembre(event) {
     if (!prenom || !nom || !mail || !identifiant) { alert('Prénom, Nom, Mail et Identifiant sont requis.'); return; }
     const fields = { 'Prénom': prenom, 'Nom': nom, 'Mail': mail, 'Téléphone': telephone, 'Identifiant': identifiant, 'Rôles': roles };
     if (trigramme) fields['Trigramme'] = trigramme;
-    if (motDePasse) fields['Mot de passe'] = motDePasse;
+    if (motDePasse) fields['Mot de passe'] = await hacherMotDePasse(motDePasse);
     if (dateNaissance) fields['Date de naissance'] = dateNaissance;
     fields['Autorisation parentale'] = age !== null && age < 18;
     try {
@@ -532,6 +608,8 @@ async function sauvegarderMembre(event) {
         }
         fermerModaleMembre();
         await chargerUtilisateurs();
+        if (typeof carnetPilotesCache !== 'undefined') carnetPilotesCache = [];
+        if (typeof carnetInstructeursCache !== 'undefined') carnetInstructeursCache = [];
         if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', `${prenom} ${nom}`, `Rôles : ${(roles || []).join(', ')}`, 'Membres');
     } catch (err) {
         console.error(err);
@@ -558,6 +636,8 @@ async function supprimerMembreDepuisListe(recordId, nomComplet = '') {
             throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);
         }
         await chargerUtilisateurs();
+        if (typeof carnetPilotesCache !== 'undefined') carnetPilotesCache = [];
+        if (typeof carnetInstructeursCache !== 'undefined') carnetInstructeursCache = [];
         if (typeof enregistrerAudit === 'function') enregistrerAudit('Suppression de membre', nomComplet, '', 'Membres');
     } catch (err) {
         console.error(err);
@@ -589,6 +669,7 @@ function initMembres() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initialiserCheckboxesRoles();
     initMembres();
     initAuth();
 });

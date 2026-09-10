@@ -8,6 +8,11 @@ let dateInstructeurSuivi = new Date();
 let instructeurSelectionne = '';
 let dragDispo = null;
 
+function peutModifierDisposInstructeur() {
+    if (!instructeurSelectionne) return false;
+    return typeof estUtilisateurCourant === 'function' && estUtilisateurCourant(instructeurSelectionne);
+}
+
 function genererFriseHeuresInstructeur() {
     const container = document.getElementById('timeline-hours-instructeur');
     if (!container) return;
@@ -218,6 +223,7 @@ async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, conserve
 async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo) {
     if (!instructeurSelectionne && typeof nomPiloteCourant === 'function') instructeurSelectionne = nomPiloteCourant();
     if (!instructeurSelectionne) { alert('Aucun instructeur sélectionné.'); return; }
+    if (!peutModifierDisposInstructeur()) { alert("Seul l'instructeur concerné peut modifier ses disponibilités."); return; }
     const nom = instructeurSelectionne;
     await supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, !dispo);
     if (!dispo) {
@@ -299,25 +305,28 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         }
     });
 
+    const peutModifier = peutModifierDisposInstructeur();
     for (let h = 0; h < 24; h++) {
         const d = document.createElement('div');
         d.className = 'grid-hour-block';
         d.style.flex = LARGEURS_HEURES[h];
-        d.style.cursor = 'pointer';
+        d.style.cursor = peutModifier ? 'pointer' : 'default';
         d.style.userSelect = 'none';
         d.dataset.date = dateStr;
         d.dataset.heure = h;
         d.dataset.dispo = blocks[h];
-        d.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            dragDispo = { start: d, end: d, actif: true, dispo: d.dataset.dispo !== 'green' };
-            mettreAJourSurlignementDrag();
-        });
-        d.addEventListener('mouseenter', () => {
-            if (!dragDispo || !dragDispo.actif) return;
-            dragDispo.end = d;
-            mettreAJourSurlignementDrag();
-        });
+        if (peutModifier) {
+            d.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                dragDispo = { start: d, end: d, actif: true, dispo: d.dataset.dispo !== 'green' };
+                mettreAJourSurlignementDrag();
+            });
+            d.addEventListener('mouseenter', () => {
+                if (!dragDispo || !dragDispo.actif) return;
+                dragDispo.end = d;
+                mettreAJourSurlignementDrag();
+            });
+        }
         const overlay = document.createElement('div');
         overlay.className = `dispo-hour-overlay dispo-${blocks[h]}`;
         d.appendChild(overlay);
@@ -402,6 +411,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
 async function basculerDisponibiliteHeure(dateStr, heure, estDisponible) {
     if (!instructeurSelectionne && typeof nomPiloteCourant === 'function') instructeurSelectionne = nomPiloteCourant();
     if (!instructeurSelectionne) { alert('Aucun instructeur sélectionné.'); return; }
+    if (!peutModifierDisposInstructeur()) { alert("Seul l'instructeur concerné peut modifier ses disponibilités."); return; }
     const nom = instructeurSelectionne;
     const debut = `${String(heure).padStart(2, '0')}:00`;
     const fin = heure < 23 ? `${String(heure + 1).padStart(2, '0')}:00` : '23:59';

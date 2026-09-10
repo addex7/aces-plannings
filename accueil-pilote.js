@@ -437,6 +437,8 @@ async function chargerValiditesAccueil() {
 
         const laplActive = estSuivi('LAPL');
         const initiationActive = estSuivi('Pilote vol initiation avion');
+        const recentActive = estSuivi('1 vol / 3 mois');
+        const passagerActive = estSuivi('Emport de passager');
 
         const experiences = await chargerExperiencesAccueil(!!f['Pilote CPL']);
 
@@ -446,8 +448,8 @@ async function chargerValiditesAccueil() {
                 { label: 'Licence assurance', ok: assuranceOk, date: assuranceDates[0] },
                 { label: 'Médical', ok: medicalOk, date: f['Médical'] },
                 { label: 'Licence SEP', ok: licenceOk, date: f['Licence SEP'], actif: licenceActive },
-                { label: 'Expérience récente (1 vol / 3 mois)', ok: experiences.recent, detail: experiences.recentDetail },
-                { label: 'Emport de passager (3 décollages / 3 atterrissages)', ok: experiences.passager, detail: experiences.passagerDetail },
+                { label: 'Expérience récente (1 vol / 3 mois)', ok: recentActive ? experiences.recent : null, detail: experiences.recentDetail, actif: recentActive },
+                { label: 'Emport de passager avion (3 décollages / 3 atterrissages)', ok: passagerActive ? experiences.passager : null, detail: experiences.passagerDetail, actif: passagerActive },
                 { label: 'LAPL', ok: laplActive ? experiences.lapl : null, detail: experiences.laplDetail, actif: laplActive },
                 { label: 'Vol d\'initiation', ok: initiationActive ? experiences.initiation : null, detail: experiences.initiationDetail, actif: initiationActive },
             ],

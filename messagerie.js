@@ -14,6 +14,49 @@ const FIELDS_MESSAGE = {
     LU: 'Lu'
 };
 
+function threadKey(objet) {
+    return (objet || '').toString().replace(/^(re|ré)\s*:?\s*/i, '').trim().toLowerCase();
+}
+
+function formaterDateMessage(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d)) return dateStr;
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+function aPieceJointe(pieceVal) {
+    if (Array.isArray(pieceVal) && pieceVal.length) return true;
+    if (typeof pieceVal === 'string' && pieceVal.trim()) {
+        if (pieceVal.startsWith('http')) return true;
+        try {
+            const pj = JSON.parse(pieceVal);
+            if (pj && pj.data && pj.filename) return true;
+        } catch (e) {}
+    }
+    return false;
+}
+
+function renderPieceJointe(pieceVal) {
+    if (Array.isArray(pieceVal) && pieceVal.length) {
+        return `<div class="message-attachments"><strong>Pièce(s) jointe(s) :</strong><br>` +
+          pieceVal.map(p => `<a href="${escHtml(p.url)}" target="_blank">${escHtml(p.filename || p.url)}</a>`).join('<br>') +
+          `</div>`;
+    } else if (typeof pieceVal === 'string' && pieceVal.trim()) {
+        if (pieceVal.startsWith('http')) {
+            return `<div class="message-attachments"><a href="${escHtml(pieceVal)}" target="_blank">📎 Ouvrir la pièce jointe</a></div>`;
+        } else {
+            try {
+                const pj = JSON.parse(pieceVal);
+                if (pj && pj.data && pj.filename) {
+                    return `<div class="message-attachments"><a href="${escHtml(pj.data)}" download="${escHtml(pj.filename)}">📎 Télécharger ${escHtml(pj.filename)}</a></div>`;
+                }
+            } catch (e) {}
+        }
+    }
+    return '';
+}
+
 let messagesCache = [];
 let utilisateursMessagerieCache = [];
 let destinatairesSelectionnes = [];
@@ -134,21 +177,33 @@ async function chargerDestinataires() {
     }
 }
 
+async function chargerMessagesAvecOffset(formula) {
+    const all = [];
+    let offset = '';
+    do {
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100${offset ? '&offset=' + encodeURIComponent(offset) : ''}`;
+        const res = await fetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        all.push(...(data.records || []));
+        offset = data.offset || '';
+    } while (offset);
+    return all;
+}
+
 async function chargerMessagerie() {
     const container = document.getElementById('messages-list');
     if (!container) return;
     container.innerHTML = '<div class="loading">Chargement...</div>';
-    const destinataire = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
-    if (!destinataire) {
+    const nom = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    if (!nom) {
         container.innerHTML = '<p class="carnet-empty">Connectez-vous pour voir vos messages.</p>';
         return;
     }
-    const formula = `OR(FIND('Tous', {Destinataire}) > 0, FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire}) > 0)`;
+    const escaped = nom.replace(/'/g, "\\'");
+    const formula = `OR(FIND('Tous', {Destinataire}) > 0, FIND('${escaped}', {Destinataire}) > 0, {Expéditeur}='${escaped}')`;
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=50`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        messagesCache = data.records || [];
+        messagesCache = await chargerMessagesAvecOffset(formula);
         afficherMessages(messagesCache);
     } catch (err) {
         console.error(err);
@@ -156,29 +211,69 @@ async function chargerMessagerie() {
     }
 }
 
+function grouperParThread(records) {
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    const groups = {};
+    records.forEach(r => {
+        const f = r.fields || {};
+        const key = threadKey(f[FIELDS_MESSAGE.OBJET]);
+        if (!groups[key]) {
+            groups[key] = { key, messages: [], participants: new Set(), hasPiece: false, unread: false };
+        }
+        const g = groups[key];
+        g.messages.push(r);
+        [f[FIELDS_MESSAGE.EXPEDITEUR], f[FIELDS_MESSAGE.DESTINATAIRE]].forEach(v => {
+            if (typeof v === 'string') {
+                v.split(';').forEach(n => {
+                    n = n.trim();
+                    if (n) g.participants.add(n);
+                });
+            }
+        });
+        g.hasPiece = g.hasPiece || aPieceJointe(f[FIELDS_MESSAGE.PIECE]);
+        if (!f[FIELDS_MESSAGE.LU] && f[FIELDS_MESSAGE.EXPEDITEUR] !== current) g.unread = true;
+    });
+    Object.values(groups).forEach(g => {
+        g.messages.sort((a, b) => new Date(a.fields[FIELDS_MESSAGE.DATE]) - new Date(b.fields[FIELDS_MESSAGE.DATE]));
+        g.lastMessage = g.messages[g.messages.length - 1];
+        g.subject = (g.lastMessage.fields[FIELDS_MESSAGE.OBJET] || '').replace(/^(re|ré)\s*:?\s*/i, '').trim() || '(sans objet)';
+        g.participants = Array.from(g.participants).filter(Boolean);
+    });
+    return Object.values(groups).sort((a, b) => new Date(b.lastMessage.fields[FIELDS_MESSAGE.DATE]) - new Date(a.lastMessage.fields[FIELDS_MESSAGE.DATE]));
+}
+
+function formatParticipants(participants) {
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    const others = participants.filter(n => n !== current);
+    if (others.length === 0) return 'Moi';
+    let txt = others.slice(0, 2).join(', ');
+    if (others.length > 2) txt += ` +${others.length - 2}`;
+    return txt;
+}
+
 function afficherMessages(records) {
     const container = document.getElementById('messages-list');
     if (!container) return;
-    if (records.length === 0) {
+    if (!records.length) {
         container.innerHTML = '<p class="carnet-empty">Aucun message.</p>';
         return;
     }
-    container.innerHTML = records.map(r => {
-        const f = r.fields || {};
-        const d = f[FIELDS_MESSAGE.DATE] ? new Date(f[FIELDS_MESSAGE.DATE] + 'T00:00:00') : null;
-        const date = d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '';
-        const lu = f[FIELDS_MESSAGE.LU];
-        const expediteur = f[FIELDS_MESSAGE.EXPEDITEUR] || '';
-        const objet = f[FIELDS_MESSAGE.OBJET] || '(sans objet)';
-        const pieceVal = f[FIELDS_MESSAGE.PIECE];
-        const aPiece = Array.isArray(pieceVal) ? pieceVal.length > 0 : (typeof pieceVal === 'string' && pieceVal.trim().length > 0);
-        const piece = aPiece ? '📎' : '';
-        return `<div class="message-item ${lu ? 'message-lu' : 'message-non-lu'}" data-id="${escHtml(r.id)}" style="cursor:pointer; padding:10px 12px; border-bottom:1px solid #e2e8f0;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong style="color:#1e3d59;">${escHtml(expediteur)}</strong>
-                <span style="font-size:12px; color:#64748b;">${escHtml(date)}</span>
+    const threads = grouperParThread(records);
+    container.innerHTML = threads.map(t => {
+        const expediteur = t.lastMessage.fields[FIELDS_MESSAGE.EXPEDITEUR] || '';
+        const preview = (t.lastMessage.fields[FIELDS_MESSAGE.CORPS] || '').replace(/\s+/g, ' ').trim().substring(0, 80);
+        const date = formaterDateMessage(t.lastMessage.fields[FIELDS_MESSAGE.DATE]);
+        const piece = t.hasPiece ? '<span class="message-thread-piece">📎</span>' : '';
+        return `<div class="message-item message-thread-item ${t.unread ? 'message-thread-unread' : ''}" data-id="${escHtml(t.lastMessage.id)}" title="${escHtml(t.subject)}">
+            <div class="message-thread-main">
+                <span class="message-thread-sender">${escHtml(formatParticipants(t.participants))}</span>
+                <span class="message-thread-subject">${escHtml(t.subject)} ${piece}</span>
+                <span class="message-thread-preview">${escHtml(preview)}${preview.length >= 80 ? '…' : ''}</span>
             </div>
-            <div style="margin-top:4px;">${lu ? '' : '<span style="color:#dc2626; font-weight:bold;">●</span> '}<span style="color:#334155;">${escHtml(objet)}</span> ${piece}</div>
+            <div class="message-thread-meta">
+                <span class="message-thread-date">${escHtml(date)}</span>
+                ${t.unread ? '<span class="message-thread-dot"></span>' : ''}
+            </div>
         </div>`;
     }).join('');
 }
@@ -247,43 +342,49 @@ async function envoyerMessage(e) {
     }
 }
 
-function voirMessage(id) {
+function trouverThreadParMessageId(id) {
     const record = messagesCache.find(r => r.id === id);
-    if (!record) return;
-    const f = record.fields || {};
+    if (!record) return null;
+    const key = threadKey(record.fields[FIELDS_MESSAGE.OBJET]);
+    return grouperParThread(messagesCache).find(t => t.key === key);
+}
+
+function voirMessage(id) {
+    const thread = trouverThreadParMessageId(id);
+    if (!thread) return;
+    afficherThread(thread);
+}
+
+function afficherThread(thread) {
     const modal = document.getElementById('message-read-modal');
     const content = document.getElementById('message-read-content');
     if (!modal || !content) return;
 
-    const d = f[FIELDS_MESSAGE.DATE] ? new Date(f[FIELDS_MESSAGE.DATE] + 'T00:00:00') : null;
-    const date = d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '';
-    const pieceVal = f[FIELDS_MESSAGE.PIECE];
-    let piecesHtml = '';
-    if (Array.isArray(pieceVal) && pieceVal.length) {
-        piecesHtml = `<div style="margin-top:15px;"><strong>Pièce(s) jointe(s) :</strong><br>` +
-          pieceVal.map(p => `<a href="${escHtml(p.url)}" target="_blank" style="display:inline-block; margin-top:4px;">${escHtml(p.filename || p.url)}</a>`).join('<br>') +
-          `</div>`;
-    } else if (typeof pieceVal === 'string' && pieceVal.trim()) {
-        if (pieceVal.startsWith('http')) {
-            piecesHtml = `<div style="margin-top:15px;"><a href="${escHtml(pieceVal)}" target="_blank" style="display:inline-block; background:#1e3d59; color:white; padding:8px 12px; border-radius:6px; text-decoration:none;">📎 Ouvrir la pièce jointe</a></div>`;
-        } else {
-            try {
-                const pj = JSON.parse(pieceVal);
-                if (pj && pj.data && pj.filename) {
-                    piecesHtml = `<div style="margin-top:15px;"><a href="${escHtml(pj.data)}" download="${escHtml(pj.filename)}" style="display:inline-block; background:#1e3d59; color:white; padding:8px 12px; border-radius:6px; text-decoration:none;">📎 Télécharger ${escHtml(pj.filename)}</a></div>`;
-                }
-            } catch (e) {
-                piecesHtml = '';
-            }
-        }
-    }
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    const messagesHtml = thread.messages.map(r => {
+        const f = r.fields || {};
+        const date = formaterDateMessage(f[FIELDS_MESSAGE.DATE]);
+        const expediteur = f[FIELDS_MESSAGE.EXPEDITEUR] || '';
+        const isMe = expediteur === current;
+        const body = escHtml(f[FIELDS_MESSAGE.CORPS] || '');
+        const pieceHtml = renderPieceJointe(f[FIELDS_MESSAGE.PIECE]);
+        return `<div class="message-bubble ${isMe ? 'message-bubble-me' : 'message-bubble-other'}">
+            <div class="message-bubble-header">
+                <span class="message-bubble-sender">${escHtml(expediteur) || 'Expéditeur'}</span>
+                <span>${escHtml(date)}</span>
+            </div>
+            <div class="message-bubble-body">${body}</div>
+            ${pieceHtml}
+        </div>`;
+    }).join('');
 
     content.innerHTML = `
-        <h3>${escHtml(f[FIELDS_MESSAGE.OBJET] || '')}</h3>
-        <div style="color:#64748b; font-size:13px; margin-bottom:10px;">De : ${escHtml(f[FIELDS_MESSAGE.EXPEDITEUR] || '')} — ${escHtml(date)}</div>
-        <div style="white-space:pre-wrap; color:#334155;">${escHtml(f[FIELDS_MESSAGE.CORPS] || '')}</div>
-        ${piecesHtml}
-        <div class="message-reply-actions" style="margin-top:20px; padding-top:15px; border-top:1px solid #e2e8f0; display:flex; gap:10px; flex-wrap:wrap;">
+        <div class="message-thread-header">
+            <h3>${escHtml(thread.subject)}</h3>
+            <div class="message-thread-participants">Avec : ${escHtml(formatParticipants(thread.participants))}</div>
+        </div>
+        <div class="message-thread-messages">${messagesHtml}</div>
+        <div class="message-thread-actions">
             <button type="button" class="btn-secondary message-reply-expediteur" style="flex:1; min-width:140px;">Répondre à l'expéditeur</button>
             <button type="button" class="btn-secondary message-reply-destinataires" style="flex:1; min-width:140px;">Répondre aux destinataires</button>
             <button type="button" class="btn-secondary message-reply-tous" style="flex:1; min-width:140px;">Répondre à tout le monde</button>
@@ -294,27 +395,46 @@ function voirMessage(id) {
     const btnExp = content.querySelector('.message-reply-expediteur');
     const btnDest = content.querySelector('.message-reply-destinataires');
     const btnTous = content.querySelector('.message-reply-tous');
-    if (btnExp) btnExp.addEventListener('click', () => repondreMessage(record, 'expediteur'));
-    if (btnDest) btnDest.addEventListener('click', () => repondreMessage(record, 'destinataires'));
-    if (btnTous) btnTous.addEventListener('click', () => repondreMessage(record, 'tous'));
+    if (btnExp) btnExp.addEventListener('click', () => repondreMessageThread(thread, 'expediteur'));
+    if (btnDest) btnDest.addEventListener('click', () => repondreMessageThread(thread, 'destinataires'));
+    if (btnTous) btnTous.addEventListener('click', () => repondreMessageThread(thread, 'tous'));
 
-    if (!f[FIELDS_MESSAGE.LU]) marquerLu(id);
+    const ids = thread.messages.filter(r => !r.fields[FIELDS_MESSAGE.LU] && r.fields[FIELDS_MESSAGE.EXPEDITEUR] !== current).map(r => r.id);
+    if (ids.length) marquerMessagesLus(ids);
 }
 
-async function marquerLu(id) {
+async function marquerMessagesLus(ids) {
+    if (!ids || !ids.length) return;
     try {
-        await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}/${id}`, {
+        await Promise.all(ids.map(id => fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}/${id}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { [FIELDS_MESSAGE.LU]: true } })
+        })));
+        ids.forEach(id => {
+            const r = messagesCache.find(x => x.id === id);
+            if (r) r.fields[FIELDS_MESSAGE.LU] = true;
         });
-        const r = messagesCache.find(x => x.id === id);
-        if (r) r.fields[FIELDS_MESSAGE.LU] = true;
         afficherMessages(messagesCache);
         if (typeof compterMessagesNonLus === 'function') await compterMessagesNonLus();
     } catch (err) {
-        console.error('Erreur marquer lu:', err);
+        console.error('Erreur marquer messages lus:', err);
     }
+}
+
+function repondreMessageThread(thread, mode) {
+    const lastRecord = thread.lastMessage;
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    const expediteur = lastRecord.fields[FIELDS_MESSAGE.EXPEDITEUR] || '';
+    let destinataires = [];
+    if (mode === 'expediteur') {
+        const full = trouverNomComplet(expediteur);
+        destinataires = [full].filter(Boolean);
+    } else {
+        const others = thread.participants.filter(n => n && n !== current);
+        destinataires = others.length ? others : nomsDestinatairesPossibles();
+    }
+    ouvrirReponse(lastRecord, destinataires);
 }
 
 async function compterMessagesNonLus() {

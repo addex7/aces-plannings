@@ -584,12 +584,35 @@ img, table, video, iframe, svg {
     color: #64748b;
 }
 #carnet-modal .modal-content {
-    max-height: 90vh;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
     overflow-y: auto;
+    box-sizing: border-box;
 }
 #carnet-modal {
-    align-items: flex-start;
-    padding-top: 5vh;
+    align-items: center;
+    justify-content: center;
+    left: var(--carnet-modal-left, 170px);
+    width: calc(100% - var(--carnet-modal-left, 170px));
+    padding: 10px;
+    box-sizing: border-box;
+}
+#carnet-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+#carnet-modal .modal-header h3 {
+    margin: 0;
+}
+#carnet-modal .modal-header .close-modal-carnet {
+    position: static;
+    top: auto;
+    right: auto;
 }
 .form-group {
     margin-bottom: 15px;
@@ -1003,13 +1026,31 @@ img, table, video, iframe, svg {
     padding: 30px;
     font-style: italic;
 }
-#carnet-modal .form-row {
-    display: flex;
+#carnet-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 15px;
+    align-content: start;
+    align-items: start;
 }
-#carnet-modal .form-row .form-group {
-    flex: 1;
-    min-width: 0;
+#carnet-form .form-group,
+#carnet-form .form-actions {
+    margin: 0;
+}
+#carnet-form .form-row {
+    display: contents;
+}
+#carnet-form .full-width {
+    grid-column: 1 / -1;
+}
+#carnet-form .select-recherche {
+    display: block;
+    width: 100%;
+}
+@media (max-width: 700px) {
+    #carnet-form {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* --- MINI CALENDRIER --- */
@@ -1088,7 +1129,7 @@ img, table, video, iframe, svg {
     background: #93c5fd;
 }
 .cal-day.user-activity .cal-dot {
-    background: #1e3d59;
+    background: #f59e0b;
 }
 .cal-day.today {
     background: #fee2e2;
@@ -2198,6 +2239,21 @@ img, table, video, iframe, svg {
     font-weight: 700;
     letter-spacing: 0.5px;
 }
+.btn-doc-planeur {
+    margin-top: 12px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e3d59;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-doc-planeur:hover {
+    background: #cbd5e1;
+}
 
 /* --- MODALE OBSERVATION PLANEUR --- */
 #carnet-form[data-mode="observation"] .form-group:not(.observation-only),
@@ -2892,4 +2948,179 @@ img, table, video, iframe, svg {
 }
 .nr-icon-save {
     font-size: 14px;
+}
+
+/* --- MESSAGERIE STYLE EMAIL --- */
+#messages-list {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+.message-thread-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    cursor: pointer;
+    transition: background 0.15s;
+    gap: 12px;
+}
+.message-thread-item:hover {
+    background: #f8fafc;
+}
+.message-thread-item:last-child {
+    border-bottom: none;
+}
+.message-thread-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.message-thread-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.message-thread-sender {
+    font-size: 14px;
+    color: #1e3d59;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.message-thread-subject {
+    font-size: 14px;
+    color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.message-thread-preview {
+    font-size: 13px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.message-thread-date {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+}
+.message-thread-piece {
+    margin-left: 4px;
+}
+.message-thread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #dc2626;
+}
+.message-thread-unread .message-thread-sender,
+.message-thread-unread .message-thread-subject {
+    font-weight: 700;
+}
+#message-read-modal .modal-content {
+    width: 90vw;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.message-read-modal-content {
+    display: flex;
+    flex-direction: column;
+}
+.message-thread-header {
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+}
+.message-thread-header h3 {
+    margin: 0 0 6px;
+    color: #1e3d59;
+}
+.message-thread-participants {
+    font-size: 13px;
+    color: #64748b;
+}
+.message-thread-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.message-bubble {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    background: #fff;
+    max-width: 85%;
+    align-self: flex-start;
+}
+.message-bubble-me {
+    background: #e0f2fe;
+    border-color: #bae6fd;
+    align-self: flex-end;
+}
+.message-bubble-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #64748b;
+    gap: 12px;
+}
+.message-bubble-sender {
+    font-weight: 600;
+    color: #1e3d59;
+}
+.message-bubble-body {
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.message-attachments {
+    margin-top: 12px;
+}
+.message-attachments a {
+    display: inline-block;
+    background: #1e3d59;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    margin-top: 4px;
+}
+.message-thread-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+}
+@media (max-width: 700px) {
+    .message-thread-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .message-thread-meta {
+        flex-direction: row;
+        align-items: center;
+        width: 100%;
+        justify-content: space-between;
+    }
+    .message-bubble {
+        max-width: 100%;
+    }
 }

@@ -237,3 +237,212 @@ async function cachedFetch(url, options = {}, ttl = API_CACHE_TTL, force = false
         text: () => Promise.resolve(typeof data === 'string' ? data : JSON.stringify(data))
     };
 }
+
+// --- RECHERCHE PAR FRAPPE DANS LES <select> ---
+// Tapez les premières lettres d'une option pour y sauter directement.
+(function initRechercheSelects() {
+    let buffer = '';
+    let resetTimer = null;
+    let changeTimer = null;
+    const RESET_DELAY = 1200;
+    const CHANGE_DELAY = 400;
+
+    const normaliser = (s) => (s || '').toString().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
+    const mots = (s) => (s || '').toString().trim().split(/\s+/).filter(Boolean);
+    const matchNom = (text, recherche) => {
+        const words = mots(text);
+        // Plusieurs mots : on cherche dans le(s) mot(s) suivant(s) le premier (nom de famille)
+        const cibles = words.length > 1 ? words.slice(1) : words;
+        return cibles.some(w => normaliser(w).startsWith(recherche));
+    };
+
+    document.addEventListener('keydown', (e) => {
+        const select = e.target;
+        if (!(select instanceof HTMLSelectElement)) return;
+        if (select.multiple || select.disabled) return;
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
+
+        const key = e.key;
+        if (key === 'Backspace' || key === 'Delete') {
+            e.preventDefault();
+            buffer = buffer.slice(0, -1);
+        } else if (key.length === 1 && key !== ' ') {
+            e.preventDefault();
+            buffer += key;
+        } else {
+            return;
+        }
+
+        const recherche = normaliser(buffer);
+        const options = Array.from(select.options);
+        if (recherche && options.length) {
+            const idx = options.findIndex(o => matchNom(o.text, recherche));
+            if (idx >= 0 && select.selectedIndex !== idx) {
+                select.selectedIndex = idx;
+                clearTimeout(changeTimer);
+                changeTimer = setTimeout(() => {
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                }, CHANGE_DELAY);
+            }
+        }
+
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => { buffer = ''; }, RESET_DELAY);
+    }, true);
+})();
+
+// --- SELECT PERSONNALISE AVEC RECHERCHE (liste complète + champ filtre) ---
+function rendreSelectRecherchable(select, allowCustom = false) {
+    if (typeof select === 'string') select = document.getElementById(select);
+    if (!select || select.dataset.searchReady) return;
+    if (select.multiple || select.size > 1) return;
+    select.dataset.searchReady = '1';
+    select.removeAttribute('required');
+    select.style.display = 'none';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'select-recherche';
+    wrap.style.cssText = 'position:relative; display:inline-block; min-width:200px; max-width:100%;';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.style.cssText = 'width:100%; padding:8px 28px 8px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#1e3d59; font-size:14px; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+
+    const caret = document.createElement('span');
+    caret.textContent = '▾';
+    caret.style.cssText = 'position:absolute; right:10px; top:50%; transform:translateY(-50%); opacity:.5; pointer-events:none;';
+    btn.appendChild(caret);
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); left:0; min-width:100%; width:max-content; max-width:320px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden;';
+
+    const search = document.createElement('input');
+    search.type = 'text';
+    search.placeholder = 'Rechercher...';
+    search.autocomplete = 'off';
+    search.style.cssText = 'width:100%; padding:8px 12px; border:none; border-bottom:1px solid #e2e8f0; font-size:14px; box-sizing:border-box; outline:none;';
+
+    const list = document.createElement('div');
+    list.style.cssText = 'max-height:240px; overflow-y:auto;';
+
+    panel.appendChild(search);
+    panel.appendChild(list);
+    select.parentElement.insertBefore(wrap, select);
+    wrap.appendChild(btn);
+    wrap.appendChild(panel);
+    wrap.appendChild(select);
+
+    const norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    const label = () => {
+        const o = select.options[select.selectedIndex];
+        return o ? o.text : '— Choisir —';
+    };
+    const majBtn = () => {
+        const text = document.createTextNode(label() + ' ');
+        const span = document.createElement('span');
+        span.textContent = '▾';
+        span.style.cssText = 'float:right; opacity:.5;';
+        btn.innerHTML = '';
+        btn.appendChild(text);
+        btn.appendChild(span);
+        btn.disabled = select.disabled;
+    };
+
+    const renderList = (filtre = '') => {
+        const f = norm(filtre);
+        list.innerHTML = '';
+        let count = 0;
+        [...select.options].forEach(o => {
+            const txt = o.text;
+            if (f && !norm(txt).includes(f)) return;
+            const item = document.createElement('div');
+            item.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:14px; color:#1e3d59; white-space:nowrap;';
+            item.textContent = txt;
+            if (o.value === select.value) item.style.background = '#eff6ff';
+            item.addEventListener('mouseenter', () => { if (o.value !== select.value) item.style.background = '#f1f5f9'; });
+            item.addEventListener('mouseleave', () => { item.style.background = (o.value === select.value) ? '#eff6ff' : ''; });
+            item.addEventListener('click', () => {
+                select.value = o.value;
+                majBtn();
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                fermer();
+            });
+            list.appendChild(item);
+            count++;
+        });
+        if (allowCustom && filtre.trim()) {
+            const exact = [...select.options].some(o => norm(o.text) === f);
+            if (!exact) {
+                const addItem = document.createElement('div');
+                addItem.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:14px; color:#1e3d59; white-space:nowrap; border-top:1px solid #e2e8f0; font-style:italic;';
+                addItem.textContent = `+ "${filtre.trim()}"`;
+                addItem.addEventListener('mouseenter', () => { addItem.style.background = '#f1f5f9'; });
+                addItem.addEventListener('mouseleave', () => { addItem.style.background = ''; });
+                addItem.addEventListener('click', () => {
+                    const val = filtre.trim();
+                    let opt = [...select.options].find(o => o.value === val);
+                    if (!opt) {
+                        opt = document.createElement('option');
+                        opt.value = val;
+                        opt.textContent = val;
+                        select.appendChild(opt);
+                    }
+                    select.value = val;
+                    majBtn();
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    fermer();
+                });
+                list.appendChild(addItem);
+                count++;
+            }
+        }
+        if (!count) list.innerHTML = '<div data-empty="1" style="padding:10px 12px; color:#94a3b8; font-size:13px;">Aucun résultat</div>';
+    };
+
+    const ouvrir = () => { panel.style.display = 'block'; search.value = ''; renderList(); setTimeout(() => search.focus(), 0); };
+    const fermer = () => { panel.style.display = 'none'; };
+
+    btn.addEventListener('click', (e) => { e.stopPropagation(); panel.style.display === 'none' ? ouvrir() : fermer(); });
+    search.addEventListener('input', () => renderList(search.value));
+    search.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); fermer(); btn.focus(); }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const first = list.querySelector('div');
+            if (first && !first.dataset.empty) first.click();
+        }
+    });
+    document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) fermer(); });
+    select.addEventListener('change', majBtn);
+    new MutationObserver(majBtn).observe(select, { childList: true });
+    majBtn();
+}
+
+// Appliquer la recherche aux selects de noms dans les principaux onglets
+(function initSelectsRecherche() {
+    const ids = [
+        'comptes-pilote-select',
+        'accueil-select-membre',
+        'select-inscrire-autre',
+        'form-pilote',
+        'form-instructeur',
+        'carnet-pilote',
+        'carnet-instructeur',
+        'select-instructeur-suivi'
+    ];
+
+    function essayer() {
+        ids.forEach(id => rendreSelectRecherchable(id, id === 'carnet-pilote'));
+        if (ids.some(id => document.getElementById(id) && !document.getElementById(id).dataset.searchReady)) {
+            setTimeout(essayer, 500);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', essayer);
+    } else {
+        essayer();
+    }
+})();

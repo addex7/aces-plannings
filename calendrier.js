@@ -207,6 +207,34 @@ async function chargerDonneesCalendrier(annee, mois) {
             if (isUser) info.hasUser = true;
         });
     } catch (err) { console.error('Erreur calendrier Présences Club:', err); }
+
+    // Événements club
+    try {
+        const formulaEvt = `AND(DATETIME_FORMAT({Date début},'YYYY-MM-DD')<='${finStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${debutStr}')`;
+        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Événements')}?filterByFormula=${encodeURIComponent(formulaEvt)}&pageSize=100`;
+        const res = await cachedFetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        (data.records || []).forEach(r => {
+            const f = r.fields || {};
+            const dStart = f['Date début'] ? new Date(f['Date début'] + 'T00:00:00') : null;
+            const dEnd = f['Date de fin'] ? new Date(f['Date de fin'] + 'T00:00:00') : dStart;
+            if (!dStart || !dEnd) return;
+            const inscrits = (typeof parseInscrits === 'function' ? parseInscrits(f['Inscrits'] || '') : []);
+            const isUser = inscrits.some(i => {
+                const ns = (i.nom || '').toString().trim();
+                return ns && (correspondanceNom(ns, userName) || correspondanceNom(ns, userFullName));
+            });
+            for (let t = dStart.getTime(); t <= dEnd.getTime(); t += 86400000) {
+                const d = new Date(t);
+                if (d < debutMois || d > finMois) continue;
+                const iso = d.toISOString().split('T')[0];
+                const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
+                info.has = true;
+                if (isUser) info.hasUser = true;
+            }
+        });
+    } catch (err) { console.error('Erreur calendrier Événements:', err); }
 }
 
 function rafraichirMiniCalendrier() {

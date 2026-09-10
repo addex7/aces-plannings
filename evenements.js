@@ -174,9 +174,11 @@ function renderEvenement(record) {
     const listeInscrits = inscrits.map(i => {
         const nom = escapeHtml(i.nom);
         const commentaire = escapeHtml(i.commentaire || '');
-        const removable = i.nom === nomConnecte || createur === nomConnecte || (currentUser && currentUser.roles && currentUser.roles.includes('Super admin'));
+        const estSuperAdmin = currentUser && currentUser.roles && currentUser.roles.includes('Super admin');
+        const removable = i.nom === nomConnecte || createur === nomConnecte || estSuperAdmin;
         const btnSup = removable ? `<button class="btn-remove-inscrit" onclick="desinscrireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}')" title="Supprimer">×</button>` : '';
-        const btnComment = `<button class="btn-comment" onclick="modifierCommentaireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}', '${commentaire.replace(/'/g, "\\'")}')" title="Ajouter/Modifier un commentaire">💬</button>`;
+        const peutCommenter = i.nom === nomConnecte || estSuperAdmin;
+        const btnComment = peutCommenter ? `<button class="btn-comment" onclick="modifierCommentaireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}', '${commentaire.replace(/'/g, "\\'")}')" title="Ajouter/Modifier un commentaire">💬</button>` : '';
         const commentText = i.commentaire ? `<span class="comment-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${commentaire}</span>` : '';
         return `<div class="inscrit-ligne" style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow:hidden;">
             <span style="white-space:nowrap;">- ${nom}</span>
@@ -280,6 +282,12 @@ async function supprimerEvenement(recordId) {
 }
 
 async function modifierCommentaireEvenement(recordId, nom, commentaireActuel) {
+    const nomConnecte = nomPiloteCourant() || '';
+    const estSuperAdmin = currentUser && currentUser.roles && currentUser.roles.includes('Super admin');
+    if (nom !== nomConnecte && !estSuperAdmin) {
+        alert("Tu ne peux modifier le commentaire que de ta propre inscription.");
+        return;
+    }
     const nouveauCommentaire = prompt("Commentaire :", commentaireActuel || "");
     if (nouveauCommentaire === null) return;
     try {
@@ -340,6 +348,8 @@ async function chargerProchainsEvenements() {
 function allerAEvenement(dateStr) {
     if (!dateStr) return;
     dateAffichee = new Date(dateStr + 'T12:00:00');
+    const tabPlanning = document.getElementById('tab-planning');
+    if (tabPlanning) tabPlanning.click();
     mettreAJourDateAffichee();
     chargerDonneesPlanning();
     if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();

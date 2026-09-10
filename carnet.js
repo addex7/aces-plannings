@@ -9,8 +9,8 @@ const TABLE_CARNET_ROUTE = 'Carnet de route Pilotes';
 let listeVolsCarnetCache = [];
 let idCarnetEnEdition = null;
 let machineCarnetSelectionnee = 'F-GASB';
-const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CEQJ', 'F-CDVN', 'F-CFRK', 'F-CHDT', 'F-CEQZ', 'F-CESL'];
-const REMOQUES_PLANEURS = IMMATS_PLANEURS.map(i => `Remorque ${i}`);
+const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CEQJ', 'F-CDVN', 'F-CFRK', 'F-CHDT', 'F-CEQZ', 'F-CESL', 'F-CGOV'];
+const REMOQUES_PLANEURS = [...IMMATS_PLANEURS.map(i => `Remorque ${i}`), 'Remorque SP98', 'Remorque 100LL'];
 const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS];
 
 function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee) {
@@ -54,8 +54,6 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const heureArrivee = document.getElementById('carnet-heure-arrivee');
     const decollages = document.getElementById('carnet-decollages');
     const atterrissages = document.getElementById('carnet-atterrissages');
-    const piloteInput = document.getElementById('carnet-pilote');
-    const piloteLabel = document.getElementById('carnet-pilote-label');
     if (titre) titre.textContent = recordId ? 'Modifier un vol' : (machineImmat ? 'Nouvelle observation' : 'Saisir un vol');
     if (btnDelete) btnDelete.style.display = recordId ? 'inline-block' : 'none';
     if (dateInput) dateInput.value = new Date().toLocaleDateString('en-CA');
@@ -63,8 +61,8 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     if (arriveeInput) arriveeInput.value = 'LFOY';
 
     const piloteDefaut = (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
-    if (piloteInput) piloteInput.value = piloteDefaut;
-    if (piloteLabel) piloteLabel.textContent = piloteDefaut;
+    const piloteCible = recordId ? (listeVolsCarnetCache.find(r => r.id === recordId)?.fields['Pilote'] || '') : piloteDefaut;
+    await peuplerPilotesSelect(piloteCible);
 
     await peuplerInstructeursSelect(recordId ? (listeVolsCarnetCache.find(r => r.id === recordId)?.fields['Instructeur'] || '') : '');
 
@@ -90,6 +88,9 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     } else if (selectMachine && form.dataset.mode !== 'observation') {
         mettreAJourDonneesDepartDefaut(selectMachine.value);
     }
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 170;
+    modal.style.setProperty('--carnet-modal-left', `${sidebarWidth}px`);
     modal.style.display = 'flex';
 }
 
@@ -106,8 +107,6 @@ function remplirFormulaireCarnet(f) {
     document.getElementById('carnet-date').value = f['Date'] ? (f['Date'].split('T')[0] || '') : '';
     const piloteInput = document.getElementById('carnet-pilote');
     if (piloteInput) piloteInput.value = pilote;
-    const piloteLabel = document.getElementById('carnet-pilote-label');
-    if (piloteLabel) piloteLabel.textContent = pilote;
     const instSel = document.getElementById('carnet-instructeur');
     if (instSel) instSel.value = f['Instructeur'] || '';
     document.getElementById('carnet-machine').value = f['Machine'] || 'F-GASB';
@@ -134,6 +133,50 @@ function remplirFormulaireCarnet(f) {
 }
 
 let carnetInstructeursCache = [];
+let carnetPilotesCache = [];
+
+async function peuplerPilotesSelect(pilote = '') {
+    const sel = document.getElementById('carnet-pilote');
+    if (!sel) return;
+    const defaut = pilote || (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
+    const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
+    const peutChoisir = currentUser && Array.isArray(currentUser.roles) && (
+        currentUser.roles.includes('Super admin') ||
+        currentUser.roles.some(r => ROLES_INSTRUCTEUR.includes(r))
+    );
+    try {
+        if (peutChoisir && !carnetPilotesCache.length) {
+            const table = typeof TABLE_UTILISATEURS !== 'undefined' ? TABLE_UTILISATEURS : 'Utilisateurs';
+            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message);
+            carnetPilotesCache = (data.records || []).map(r => {
+                const f = r.fields || {};
+                return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+            }).filter(Boolean);
+        }
+        const noms = peutChoisir ? [...carnetPilotesCache] : [];
+        if (defaut && !noms.some(n => normaliserNom(n) === normaliserNom(defaut))) noms.push(defaut);
+        sel.innerHTML = '';
+        noms.forEach(nom => {
+            const opt = document.createElement('option');
+            opt.value = nom;
+            opt.textContent = nom;
+            sel.appendChild(opt);
+        });
+        sel.disabled = !peutChoisir;
+        if (defaut) sel.value = defaut;
+    } catch (err) {
+        console.error('Erreur chargement pilotes:', err);
+        sel.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = defaut;
+        opt.textContent = defaut;
+        sel.appendChild(opt);
+        sel.disabled = !peutChoisir;
+        sel.value = defaut;
+    }
+}
 
 async function peuplerInstructeursSelect(instructeur = '') {
     const sel = document.getElementById('carnet-instructeur');
@@ -691,6 +734,12 @@ async function nettoyerCarnetRouteMaintenance(machineImmat) {
     } catch (e) { console.error(e); }
 }
 
+function formaterImmatPlaneur(immat) {
+    const parts = (immat || '').split(/\s(.+)/);
+    if (parts.length < 2) return escHtml(immat);
+    return `${escHtml(parts[0])} <span style="white-space:nowrap;">${escHtml(parts[1])}</span>`;
+}
+
 function genererGrillesPlaneur() {
     const container = document.getElementById('carnet-planeur-container');
     if (!container) return;
@@ -701,8 +750,18 @@ function genererGrillesPlaneur() {
             const box = document.createElement('div');
             box.className = 'planeur-box';
             box.dataset.immat = immat;
-            box.innerHTML = `<h3>${immat}</h3>`;
+            box.innerHTML = `
+                <h3>${formaterImmatPlaneur(immat)}</h3>
+                <button type="button" class="btn-doc-planeur" title="Suivi documentaire">Docs</button>
+            `;
             box.addEventListener('click', () => ouvrirModaleCarnet(null, immat));
+            const btnDoc = box.querySelector('.btn-doc-planeur');
+            if (btnDoc) {
+                btnDoc.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (typeof ouvrirModaleDocumentsAeronef === 'function') ouvrirModaleDocumentsAeronef(immat);
+                });
+            }
             grid.appendChild(box);
         });
         return grid;

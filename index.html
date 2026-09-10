@@ -8,14 +8,14 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=116">
+    <link rel="stylesheet" href="style.css?v=124">
 </head>
 <body>
 
     <!-- LOGIN OVERLAY -->
     <div id="login-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; align-items: center; justify-content: center; flex-direction: column; background: linear-gradient(rgba(30,61,89,0.65), rgba(30,61,89,0.45)), url('https://2y553dp2sx.ucarecd.net/844a0820-1a60-4f99-8be6-9a909130596f/-/preview/1000x750/') center/cover no-repeat; color: #fff;">
         <h1 style="margin: 0 24px 24px; padding: 0 16px; font-size: 32px; font-weight: 700; text-align: center; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.5); max-width: calc(100% - 48px); box-sizing: border-box;">Bienvenue sur le site de réservation de l'ACES</h1>
-        <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 360px;">
+        <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 360px; color: #1e3d59;">
             <h2 style="margin-top:0; color:#1e3d59;">Connexion</h2>
             <div class="form-group">
                 <label for="login-identifiant">Identifiant ou Email</label>
@@ -110,7 +110,7 @@
                     <div class="nav-group nav-group-standalone">
                         <ul class="nav-sub">
                             <li id="tab-carnet">📖 Carnet de route</li>
-                            <li id="tab-documents">📄 Bibliotèque</li>
+                            <li id="tab-documents">📄 Bibliothèque</li>
                             <li id="tab-membres" style="display:none;">👥 Membres</li>
                             <li id="tab-comptes" style="display:none;">💳 Compte pilote</li>
                             <li id="tab-audit" style="display:none;">📋 Journal d'audit</li>
@@ -121,6 +121,7 @@
             <div class="user-profile" style="display:flex; flex-direction:column; align-items:center; gap:6px;">
                 <span id="user-profile-name">Pilote Connecté</span>
                 <button id="btn-logout" style="display:none; color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; border-radius:4px; padding:4px 12px; font-size:12px; cursor:pointer;">Déconnexion</button>
+                <span id="app-version" style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:4px;"></span>
             </div>
         </aside>
         <div id="notifications-panel" class="notifications-panel" style="display:none;">
@@ -506,15 +507,7 @@
                     </div>
                     <div style="margin:10px 0;">
                         <label style="margin-right:15px; font-weight:500;">Rôles :</label>
-                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Mécanicien"> Mécanicien</label>
-                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Gestion VI"> Gestion VI</label>
-                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Pilote VI"> Pilote VI</label>
-                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Instructeur planeur"> Instructeur planeur</label>
-                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Instructeur avion"> Instructeur avion</label>
-                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Instructeur ULM"> Instructeur ULM</label>
-                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Eleve planeur"> Eleve planeur</label>
-                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Pilote planeur"> Pilote planeur</label>
-                        <label style="margin-right:10px;"><input type="checkbox" name="membre-roles" value="Documentaliste"> Documentaliste</label>
+                        <span id="membre-roles-container"></span>
                     </div>
                     <button type="submit" class="btn-primary">Créer l'utilisateur</button>
                 </form>
@@ -539,7 +532,7 @@
             </section>
 
             <section id="view-documents" class="view-section" style="display: none;">
-                <h2 style="margin-top:0;">Bibliotèque</h2>
+                <h2 style="margin-top:0;">Bibliothèque</h2>
                 <div id="documents-toolbar" style="display:none; margin-bottom:15px; gap:10px; flex-wrap:wrap;">
                     <button id="btn-new-dossier" class="btn-primary" type="button">+ Nouveau dossier</button>
                     <button id="btn-new-pdf" class="btn-primary" type="button">+ Ajouter un document</button>
@@ -895,8 +888,10 @@
     <!-- Fenêtre Modale : Saisie Carnet de Route -->
     <div id="carnet-modal" class="modal" style="display: none;">
         <div class="modal-content">
-            <span class="close-modal-carnet">&times;</span>
-            <h3>Saisir un vol</h3>
+            <div class="modal-header">
+                <h3>Saisir un vol</h3>
+                <span class="close-modal-carnet">&times;</span>
+            </div>
             <form id="carnet-form">
                 <input type="hidden" id="carnet-id">
                 <div class="form-group">
@@ -905,8 +900,7 @@
                 </div>
                 <div class="form-group">
                     <label for="carnet-pilote">Pilote :</label>
-                    <p id="carnet-pilote-label" style="margin:0; font-weight:600; color:#1e3d59;"></p>
-                    <input type="hidden" id="carnet-pilote" required>
+                    <select id="carnet-pilote" required></select>
                 </div>
                 <div class="form-group">
                     <label for="carnet-instructeur">Instructeur (si instruction) :</label>
@@ -923,7 +917,7 @@
                         <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="FE"> FE - Examinateur</label>
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group full-width">
                     <label for="carnet-machine">Machine :</label>
                     <select id="carnet-machine" required>
                         <option value="F-GASB">F-GASB</option>
@@ -940,6 +934,7 @@
                         <option value="F-CHDT">F-CHDT</option>
                         <option value="F-CEQZ">F-CEQZ</option>
                         <option value="F-CESL">F-CESL</option>
+                        <option value="F-CGOV">F-CGOV</option>
                         <option value="Remorque F-CEJX">Remorque F-CEJX</option>
                         <option value="Remorque F-CDYX">Remorque F-CDYX</option>
                         <option value="Remorque F-CITT">Remorque F-CITT</option>
@@ -951,6 +946,9 @@
                         <option value="Remorque F-CHDT">Remorque F-CHDT</option>
                         <option value="Remorque F-CEQZ">Remorque F-CEQZ</option>
                         <option value="Remorque F-CESL">Remorque F-CESL</option>
+                        <option value="Remorque F-CGOV">Remorque F-CGOV</option>
+                        <option value="Remorque SP98">Remorque SP98</option>
+                        <option value="Remorque 100LL">Remorque 100LL</option>
                     </select>
                 </div>
                 <div class="form-row">
@@ -973,7 +971,7 @@
                         <input type="time" id="carnet-heure-arrivee" required>
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group full-width">
                     <label for="carnet-nature">Nature du vol :</label>
                     <select id="carnet-nature" required>
                         <option value="Autre">Autre</option>
@@ -1021,11 +1019,11 @@
                         <input type="number" id="carnet-horametre-arrivee" step="0.01" min="0" placeholder="Ex: 5523.77">
                     </div>
                 </div>
-                <div class="form-group observation-only">
+                <div class="form-group observation-only full-width">
                     <label for="carnet-observations">Observations :</label>
                     <textarea id="carnet-observations" rows="2" placeholder="Remarques éventuelles..."></textarea>
                 </div>
-                <div class="form-actions">
+                <div class="form-actions full-width">
                     <button type="button" id="btn-delete-carnet" style="display:none;">Supprimer</button>
                     <button type="submit" class="btn-submit">Enregistrer</button>
                 </div>
@@ -1124,16 +1122,7 @@
                 </div>
                 <div style="margin:15px 0;">
                     <label style="margin-right:15px; font-weight:500;">Rôles :</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Mécanicien"> Mécanicien</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Gestion VI"> Gestion VI</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Pilote VI"> Pilote VI</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Super admin"> Super admin</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Instructeur planeur"> Instructeur planeur</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Instructeur avion"> Instructeur avion</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Instructeur ULM"> Instructeur ULM</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Élève planeur"> Élève planeur</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Pilote planeur"> Pilote planeur</label>
-                    <label style="margin-right:10px;"><input type="checkbox" name="edit-membre-roles" value="Documentaliste"> Documentaliste</label>
+                    <span id="edit-membre-roles-container"></span>
                 </div>
                 <div class="form-actions">
                     <button type="button" id="btn-delete-membre" class="btn-delete">Supprimer</button>
@@ -1229,27 +1218,28 @@
     </div>
 
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="evenements.js?v=83"></script>
+    <script src="evenements.js?v=85"></script>
+    <script src="version.js?v=20260910191154"></script>
     <script src="app.js?v=84"></script>
-    <script src="utils.js?v=85"></script>
+    <script src="utils.js?v=91"></script>
     <script src="presences.js?v=92"></script>
     <script src="planning.js?v=134"></script>
-    <script src="calendrier.js?v=87"></script>
-    <script src="comptes.js?v=106"></script>
+    <script src="calendrier.js?v=88"></script>
+    <script src="comptes.js?v=108"></script>
     <script src="aeronefs.js?v=96"></script>
-    <script src="carnet.js?v=90"></script>
+    <script src="carnet.js?v=98"></script>
     <script src="documents.js?v=83"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=4"></script>
-    <script src="membres.js?v=96"></script>
+    <script src="membres.js?v=99"></script>
     <script src="instructeurs.js?v=92"></script>
-    <script src="instructeur-planning.js?v=88"></script>
-    <script src="messagerie.js?v=13"></script>
-    <script src="membre-home.js?v=83"></script>
-    <script src="accueil-pilote.js?v=16"></script>
+    <script src="instructeur-planning.js?v=89"></script>
+    <script src="messagerie.js?v=14"></script>
+    <script src="membre-home.js?v=90"></script>
+    <script src="accueil-pilote.js?v=18"></script>
     <!-- Fenêtre Modale : Lecture d'un message -->
     <div id="message-read-modal" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width:600px;">
+        <div class="modal-content message-read-modal-content">
             <span class="close-modal" id="message-read-close">&times;</span>
             <div id="message-read-content"></div>
         </div>

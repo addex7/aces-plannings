@@ -414,7 +414,7 @@ function parserCSVComptes(text) {
             extraits.push(courant);
             inTransactions = false;
             const nomLigne = lignes[i + 1] || '';
-            courant.nom = nomLigne.replace(/\s+/g, ' ').trim();
+            courant.nom = (nomLigne.split(';').pop() || '').replace(/\s+/g, ' ').trim();
         } else if (l.startsWith('Date;')) {
             inTransactions = true;
         } else if (l.startsWith('Solde avant le')) {
@@ -465,18 +465,27 @@ function parserCSVComptes(text) {
     return extraits;
 }
 
+function normaliserNomCompte(n) {
+    return (n || '')
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function trouverPiloteParNom(csvNom) {
     if (!csvNom) return null;
-    const parts = csvNom.split(/[\s;]+/).filter(Boolean).map(p => p.toLowerCase().trim());
-    if (parts.length < 1) return null;
+    const csvMots = normaliserNomCompte(csvNom).split(' ').filter(Boolean);
+    if (!csvMots.length) return null;
     return utilisateursComptesCache.find(r => {
         const f = r.fields || {};
-        const prenom = (f['Prénom'] || '').toLowerCase().trim();
-        const nom = (f['Nom'] || '').toLowerCase().trim();
-        if (!prenom || !nom) return false;
-        const nomOK = parts.includes(nom);
-        const prenomOK = parts.includes(prenom) || parts.some(p => p[0] === prenom[0]);
-        return nomOK && prenomOK;
+        const membre = normaliserNomCompte(`${f['Prénom'] || ''} ${f['Nom'] || ''}`);
+        const membreMots = membre.split(' ').filter(Boolean);
+        if (!membreMots.length) return false;
+        return membreMots.every(m => csvMots.includes(m));
     });
 }
 

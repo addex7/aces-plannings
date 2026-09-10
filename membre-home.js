@@ -17,7 +17,8 @@ const MEMBRE_FIELDS = {
     AUTORISATION_PARENTALE: 'Autorisation parentale',
     AUTORISATION_PARENTALE_DATE: 'Date de validité autorisation parentale',
     CPL: 'Pilote CPL',
-    INSTRUCTEUR: 'Date de validité instructeur'
+    INSTRUCTEUR: 'Date de validité instructeur',
+    INSTRUCTEUR_ULM: 'Date de validité instructeur ULM'
 };
 
 const VALIDITES = [
@@ -28,7 +29,8 @@ const VALIDITES = [
     { label: 'Médical', field: MEMBRE_FIELDS.MEDICAL },
     { label: 'Licence SEP', field: MEMBRE_FIELDS.LICENCE_SEP },
     { label: 'Autorisation parentale', field: MEMBRE_FIELDS.AUTORISATION_PARENTALE_DATE },
-    { label: 'Instructeur', field: MEMBRE_FIELDS.INSTRUCTEUR }
+    { label: 'Instructeur avion', field: MEMBRE_FIELDS.INSTRUCTEUR, dataLabel: 'Instructeur avion', suiviLabels: ['Instructeur', 'Instructeur avion'] },
+    { label: 'Instructeur ULM', field: MEMBRE_FIELDS.INSTRUCTEUR_ULM, dataLabel: 'Instructeur ULM', suiviLabels: ['Instructeur ULM'] }
 ];
 
 const TYPES_DOCUMENTS = ['Médical', 'SEP', 'Autorisation parentale', 'Brevet ULM'];
@@ -67,9 +69,10 @@ function calcAutorisationParentale(dob, saved) {
     return false;
 }
 
-function estSuiviActif(fields, label) {
+function estSuiviActif(fields, labelOrLabels) {
     const actifList = Array.isArray(fields[SUIVIS_ACTIFS]) ? fields[SUIVIS_ACTIFS] : (fields[SUIVIS_ACTIFS] ? [fields[SUIVIS_ACTIFS]] : []);
-    return actifList.length ? actifList.includes(label) : true;
+    const labels = Array.isArray(labelOrLabels) ? labelOrLabels : [labelOrLabels];
+    return actifList.length ? labels.some(l => actifList.includes(l)) : true;
 }
 
 function dureeVolMinutes(f) {
@@ -198,15 +201,18 @@ function renderAccueilMembre(fields) {
     const cpl = fields[MEMBRE_FIELDS.CPL] === true;
     const actifLAPL = estActif('LAPL');
     const actifInitiation = estActif('Pilote vol initiation avion');
+    const actifRecent = estActif('1 vol / 3 mois');
+    const actifPassager = estActif('Emport de passager');
     let grid = VALIDITES.map(item => {
         const val = fields[item.field];
         const ok = estValideJusqua(val);
         const iso = val ? new Date(val).toISOString().split('T')[0] : '';
-        const actif = item.label === 'Autorisation parentale' ? (autorisation && estActif(item.label)) : estActif(item.label);
+        const labelsActifs = item.suiviLabels || [item.label];
+        const actif = item.label === 'Autorisation parentale' ? (autorisation && estActif(labelsActifs)) : estActif(labelsActifs);
         if (item.label === 'Autorisation parentale' && !autorisation) return '';
         if (!peutEditer && !actif) return '';
         const input = peutEditer ? `<input type="date" class="validite-input" data-field="${item.field}" value="${iso}">` : '';
-        const activer = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="${item.label}" ${actif ? 'checked' : ''}> Actif</label>` : '';
+        const activer = peutEditer ? `<label class="activer-suivi" title="Activer/désactiver ce suivi"><input type="checkbox" class="activer-suivi-cb" data-label="${item.dataLabel || item.label}" ${actif ? 'checked' : ''}> Actif</label>` : '';
         const disabledClass = actif ? '' : 'suivi-inactif';
         return `
             <div class="validite-card ${disabledClass}" data-label="${item.label}">
@@ -220,7 +226,10 @@ function renderAccueilMembre(fields) {
     const docTypeOptions = TYPES_DOCUMENTS.map(t => `<option value="${t}">${t}</option>`).join('');
     const docForm = peutEditer ? `
         <div class="accueil-documents" id="accueil-documents">
-            <h3>Documents du membre</h3>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                <h3 style="margin:0;">Documents du membre</h3>
+                <span style="font-size:13px; color:#64748b; text-align:right;">Pour les pilotes ayant un compte Gesasso, retrouvez les documents sur <a href="https://moncompte.ffvp.fr/auth/realms/heva/protocol/openid-connect/auth?client_id=gesasso&amp;redirect_uri=https%3A%2F%2Fgesasso.ffvp.fr%2Fauth%2Fcallback&amp;state=df83886c-203f-4bc5-bd65-b6e881458f8a&amp;response_type=code&amp;response_mode=query&amp;code_challenge=wAx65brpcl57rOiQsfO0oHYUtOJ_7bFKAiqelhK--sI&amp;code_challenge_method=S256" target="_blank" rel="noopener noreferrer" style="color:#1e3d59; text-decoration:underline;">leur profil Gesasso</a></span>
+            </div>
             <form id="accueil-doc-form" class="accueil-doc-form" style="display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
                 <div class="form-group" style="flex:1; min-width:120px; margin:0; display:flex; flex-direction:column;">
                     <label for="accueil-doc-type" style="margin-bottom:4px; font-size:13px;">Type</label>
@@ -236,7 +245,10 @@ function renderAccueilMembre(fields) {
         </div>
     ` : `
         <div class="accueil-documents" id="accueil-documents">
-            <h3>Documents du membre</h3>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                <h3 style="margin:0;">Documents du membre</h3>
+                <span style="font-size:13px; color:#64748b; text-align:right;">Pour les pilotes ayant un compte Gesasso, retrouvez les documents sur <a href="https://moncompte.ffvp.fr/auth/realms/heva/protocol/openid-connect/auth?client_id=gesasso&amp;redirect_uri=https%3A%2F%2Fgesasso.ffvp.fr%2Fauth%2Fcallback&amp;state=df83886c-203f-4bc5-bd65-b6e881458f8a&amp;response_type=code&amp;response_mode=query&amp;code_challenge=wAx65brpcl57rOiQsfO0oHYUtOJ_7bFKAiqelhK--sI&amp;code_challenge_method=S256" target="_blank" rel="noopener noreferrer" style="color:#1e3d59; text-decoration:underline;">leur profil Gesasso</a></span>
+            </div>
             <div class="accueil-doc-list" id="accueil-doc-list"><p>Chargement...</p></div>
         </div>
     `;
@@ -245,16 +257,20 @@ function renderAccueilMembre(fields) {
             <div class="validite-grid">${grid}</div>
         </form>
         <div class="validite-card validite-experience">
-            <div class="validite-label">Expériences récentes</div>
+            <div class="validite-label">Expériences récentes moteur</div>
             <div class="experience-list" id="accueil-experiences">
-                <div class="experience-row" data-exp="recent">
+                ${peutEditer || actifRecent ? `
+                <div class="experience-row ${actifRecent ? '' : 'suivi-inactif'}" data-exp="recent">
                     <span class="experience-titre">1 vol dans les 3 derniers mois</span>
                     <span class="validite-pill" id="accueil-exp-recent">${pastille(false, null, 'Chargement...')}</span>
-                </div>
-                <div class="experience-row" data-exp="passager">
-                    <span class="experience-titre">Emport de passager (3 décollages / 3 atterrissages sur 3 mois)</span>
+                    ${peutEditer ? `<label class="activer-suivi"><input type="checkbox" class="activer-suivi-cb" data-label="1 vol / 3 mois" ${actifRecent ? 'checked' : ''}> Suivi actif</label>` : ''}
+                </div>` : ''}
+                ${peutEditer || actifPassager ? `
+                <div class="experience-row ${actifPassager ? '' : 'suivi-inactif'}" data-exp="passager">
+                    <span class="experience-titre">Emport de passager avion (3 décollages / 3 atterrissages sur 3 mois)</span>
                     <span class="validite-pill" id="accueil-exp-passager">${pastille(false, null, 'Chargement...')}</span>
-                </div>
+                    ${peutEditer ? `<label class="activer-suivi"><input type="checkbox" class="activer-suivi-cb" data-label="Emport de passager" ${actifPassager ? 'checked' : ''}> Suivi actif</label>` : ''}
+                </div>` : ''}
                 ${peutEditer || actifLAPL ? `
                 <div class="experience-row ${actifLAPL ? '' : 'suivi-inactif'}" data-exp="lapl">
                     <span class="experience-titre">LAPL (12 h / 1 h instructeur / 12 décollages / 12 atterrissages sur 24 mois)</span>
@@ -486,8 +502,26 @@ async function sauvegarderValidites() {
             updatedFields = { ...updatedFields, ...(data.fields || {}) };
         }
         if (suivisActifs) {
-            const data = await patchMembre(membreSelectionne.id, { [SUIVIS_ACTIFS]: suivisActifs });
-            updatedFields = { ...updatedFields, ...(data.fields || {}) };
+            let aEnvoyer = suivisActifs.slice();
+            const refuses = [];
+            while (true) {
+                try {
+                    const data = await patchMembre(membreSelectionne.id, { [SUIVIS_ACTIFS]: aEnvoyer });
+                    updatedFields = { ...updatedFields, ...(data.fields || {}) };
+                    break;
+                } catch (err) {
+                    const m = (err.message || '').match(/select option\s*['"]+([^'"]+)['"]+/i);
+                    if (m && aEnvoyer.includes(m[1])) {
+                        refuses.push(m[1]);
+                        aEnvoyer = aEnvoyer.filter(l => l !== m[1]);
+                        continue;
+                    }
+                    throw err;
+                }
+            }
+            if (refuses.length) {
+                alert(`Option(s) manquante(s) dans le champ Airtable "Suivis actifs" : ${refuses.join(', ')}.\nAjoute-les dans les options du champ pour activer ces suivis.`);
+            }
         }
         renderAccueilMembre(updatedFields);
     } catch (err) {
