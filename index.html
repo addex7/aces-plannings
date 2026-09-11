@@ -1221,7 +1221,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=85"></script>
-    <script src="version.js?v=20260911152438"></script>
+    <script src="version.js?v=20260911174135"></script>
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=92"></script>
     <script src="presences.js?v=92"></script>
@@ -1237,7 +1237,7 @@
     <script src="instructeurs.js?v=93"></script>
     <script src="instructeur-planning.js?v=90"></script>
     <script src="messagerie.js?v=14"></script>
-    <script src="membre-home.js?v=90"></script>
+    <script src="membre-home.js?v=91"></script>
     <script src="accueil-pilote.js?v=19"></script>
     <!-- Fenêtre Modale : Lecture d'un message -->
     <div id="message-read-modal" class="modal" style="display:none;">
@@ -1253,6 +1253,36 @@
             <h3>Inscrire quelqu'un d'autre</h3>
             <select id="select-inscrire-autre" class="nr-select"></select>
             <button id="btn-valider-inscrire-autre" class="btn-primary" style="margin-top:15px;width:100%;">Inscrire</button>
+        </div>
+    </div>
+
+    <!-- Modale : Annuaire des membres -->
+    <div id="annuaire-membres-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="width:90vw; max-width:900px; max-height:90vh; overflow-y:auto; padding:0;">
+            <div style="padding:20px 25px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0; color:#1e3d59;">Annuaire des membres</h3>
+                <span class="close-modal" id="close-annuaire-membres" style="position:static; cursor:pointer; font-size:24px; color:#64748b;">&times;</span>
+            </div>
+            <div style="padding:20px 25px;">
+                <div class="form-group" style="margin-bottom:15px;">
+                    <input type="text" id="annuaire-membres-search" class="form-control" placeholder="Rechercher un membre..." style="width:100%; max-width:300px;">
+                </div>
+                <div class="carnet-table-container" style="margin:0; padding:0;">
+                    <table class="carnet-table" style="min-width:unset;">
+                        <thead>
+                            <tr>
+                                <th>Membre</th>
+                                <th>Mail</th>
+                                <th>Téléphone</th>
+                                <th>Rôles</th>
+                            </tr>
+                        </thead>
+                        <tbody id="annuaire-membres-body">
+                            <tr><td colspan="4" class="carnet-empty">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </body>

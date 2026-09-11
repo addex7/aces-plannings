@@ -289,6 +289,13 @@ function renderAccueilMembre(fields) {
         </div>
         <p class="accueil-disclaimer">Le pilote reste responsable de la validité de ses qualifications et de ses licences. Ce système est informatif.</p>
         ${docForm}
+        <div class="accueil-documents" style="margin-top:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                <h3 style="margin:0;">Annuaire des membres</h3>
+                <button type="button" id="btn-annuaire-membres" class="btn-primary">Voir l'annuaire</button>
+            </div>
+            <p style="font-size:13px; color:#64748b; margin:0;">Consulter les coordonnées (mail, téléphone) des membres du club.</p>
+        </div>
     `;
     renderPhoto(fields);
     chargerExperiences();
@@ -697,6 +704,69 @@ function attacherListenersAccueil() {
     }
 }
 
+async function ouvrirAnnuaireMembres() {
+    const modal = document.getElementById('annuaire-membres-modal');
+    if (!modal) return;
+    const tbody = document.getElementById('annuaire-membres-body');
+    const search = document.getElementById('annuaire-membres-search');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="carnet-empty">Chargement...</td></tr>';
+    modal.style.display = 'flex';
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        const records = (data.records || []).filter(r => r.fields && r.fields['Actif'] !== false);
+        window.annuaireMembresCache = records;
+        afficherAnnuaireMembres(records);
+        if (search) {
+            search.value = '';
+            search.oninput = () => {
+                const q = search.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                const filtered = window.annuaireMembresCache.filter(r => {
+                    const f = r.fields || {};
+                    const text = `${f['Prénom'] || ''} ${f['Nom'] || ''} ${f['Mail'] || ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    return text.includes(q);
+                });
+                afficherAnnuaireMembres(filtered);
+            };
+        }
+    } catch (err) {
+        console.error(err);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="carnet-empty">Erreur de chargement.</td></tr>';
+    }
+}
+
+function afficherAnnuaireMembres(records) {
+    const tbody = document.getElementById('annuaire-membres-body');
+    if (!tbody) return;
+    if (!records || records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="carnet-empty">Aucun membre trouvé.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = records.map(r => {
+        const f = r.fields || {};
+        const prenom = f['Prénom'] || '';
+        const nom = f['Nom'] || '';
+        const nomComplet = `${prenom} ${nom}`.trim() || 'Membre';
+        const mail = f['Mail'] || '-';
+        const telephone = f['Téléphone'] || '-';
+        const roles = Array.isArray(f['Rôles']) ? f['Rôles'].join(', ') : (f['Rôles'] || '-');
+        return `
+            <tr>
+                <td>${nomComplet}</td>
+                <td>${mail}</td>
+                <td>${telephone}</td>
+                <td>${roles}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function fermerAnnuaireMembres() {
+    const modal = document.getElementById('annuaire-membres-modal');
+    if (modal) modal.style.display = 'none';
+}
+
 function initAccueilMembre() {
     const input = document.getElementById('accueil-photo-input');
     if (input) input.addEventListener('change', uploaderPhoto);
@@ -704,6 +774,10 @@ function initAccueilMembre() {
     if (select) select.addEventListener('change', () => chargerAccueilMembre(select.value));
     const btnModifier = document.getElementById('accueil-btn-modifier');
     if (btnModifier) btnModifier.addEventListener('click', ouvrirModaleMembreSelectionne);
+    const btnAnnuaire = document.getElementById('btn-annuaire-membres');
+    if (btnAnnuaire) btnAnnuaire.addEventListener('click', ouvrirAnnuaireMembres);
+    const closeAnnuaire = document.getElementById('close-annuaire-membres');
+    if (closeAnnuaire) closeAnnuaire.addEventListener('click', fermerAnnuaireMembres);
 }
 
 document.addEventListener('DOMContentLoaded', initAccueilMembre);
