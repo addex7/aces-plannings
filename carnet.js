@@ -453,7 +453,8 @@ async function chargerCarnetRoute() {
     if (tableContainer) tableContainer.style.display = 'block';
     if (planeurContainer) planeurContainer.style.display = 'none';
     if (btnOuvrir) btnOuvrir.style.display = 'inline-block';
-    if (btnDocs) btnDocs.style.display = 'inline-block';
+    const peutGererDocs = (typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef());
+    if (btnDocs) btnDocs.style.display = peutGererDocs ? 'inline-block' : 'none';
     if (alarme) alarme.style.display = 'none';
     if (tbody) tbody.innerHTML = '<tr><td colspan="15" class="carnet-empty">Chargement du carnet de route...</td></tr>';
     try {
@@ -743,6 +744,7 @@ function formaterImmatPlaneur(immat) {
 function genererGrillesPlaneur() {
     const container = document.getElementById('carnet-planeur-container');
     if (!container) return;
+    const peutGererDocs = (typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef());
     const createGrid = (items) => {
         const grid = document.createElement('div');
         grid.className = 'planeur-grid';
@@ -752,7 +754,7 @@ function genererGrillesPlaneur() {
             box.dataset.immat = immat;
             box.innerHTML = `
                 <h3>${formaterImmatPlaneur(immat)}</h3>
-                <button type="button" class="btn-doc-planeur" title="Suivi documentaire">Docs</button>
+                <button type="button" class="btn-doc-planeur" title="Suivi documentaire" style="display:${peutGererDocs ? '' : 'none'};">Docs</button>
             `;
             box.addEventListener('click', () => ouvrirModaleCarnet(null, immat));
             const btnDoc = box.querySelector('.btn-doc-planeur');
