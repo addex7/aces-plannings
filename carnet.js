@@ -43,8 +43,8 @@ function genererHeaderCarnet(isJVIO) {
             <tr>
                 <th rowspan="2">Date</th>
                 <th colspan="2" class="sub-header">Équipage</th>
-                <th rowspan="2">Fonction</th>
-                <th rowspan="2">Nature du vol</th>
+                <th rowspan="2" style="white-space: normal;">Fonction<br><small>P = Pilote<br>PCdB = PIL.+CdB<br>PAX = Passager<br>EP = Élève Pilote<br>I = Instructeur<br>ICdB = Instr.+CdB<br>EX = Examinateur...</small></th>
+                <th rowspan="2" style="white-space: normal;">Nature du vol<br><small>local, voyage, REV, Instruction, VLO, VLD, Activité Particulière : (préciser laquelle), autre,...</small></th>
                 <th colspan="2" class="sub-header">Lieu<br><small>(LFxxxx ou OACI)</small></th>
                 <th colspan="2" class="sub-header">Heures<br><small>(HH:mm en H.Loc)</small></th>
                 <th colspan="2" class="sub-header">Cumul heures</th>
