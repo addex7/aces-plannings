@@ -712,7 +712,7 @@ async function ouvrirAnnuaireMembres() {
     if (!modal) return;
     const tbody = document.getElementById('annuaire-membres-body');
     const search = document.getElementById('annuaire-membres-search');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="carnet-empty">Chargement...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="carnet-empty">Chargement...</td></tr>';
     modal.style.display = 'flex';
     try {
         const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
@@ -735,7 +735,7 @@ async function ouvrirAnnuaireMembres() {
         }
     } catch (err) {
         console.error(err);
-        if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="carnet-empty">Erreur de chargement.</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="carnet-empty">Erreur de chargement.</td></tr>';
     }
 }
 
@@ -743,7 +743,7 @@ function afficherAnnuaireMembres(records) {
     const tbody = document.getElementById('annuaire-membres-body');
     if (!tbody) return;
     if (!records || records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="carnet-empty">Aucun membre trouvé.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="carnet-empty">Aucun membre trouvé.</td></tr>';
         return;
     }
     tbody.innerHTML = records.map(r => {
@@ -753,13 +753,11 @@ function afficherAnnuaireMembres(records) {
         const nomComplet = `${prenom} ${nom}`.trim() || 'Membre';
         const mail = f['Mail'] || '-';
         const telephone = f['Téléphone'] || '-';
-        const roles = Array.isArray(f['Rôles']) ? f['Rôles'].join(', ') : (f['Rôles'] || '-');
         return `
             <tr>
                 <td>${nomComplet}</td>
                 <td>${mail}</td>
                 <td>${telephone}</td>
-                <td>${roles}</td>
             </tr>
         `;
     }).join('');
