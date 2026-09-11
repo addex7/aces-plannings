@@ -1012,6 +1012,13 @@ img, table, video, iframe, svg {
     border-bottom: 2px solid #e2e8f0;
     white-space: nowrap;
 }
+.carnet-table thead th small {
+    display: block;
+    font-size: 10px;
+    line-height: 1.25;
+    font-weight: 400;
+    opacity: 0.9;
+}
 .carnet-table tbody tr {
     border-bottom: 1px solid #e2e8f0;
 }
