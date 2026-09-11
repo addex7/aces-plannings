@@ -1141,7 +1141,6 @@ function fermerModaleDocumentsAeronef() {
 }
 
 async function ouvrirModaleDocumentsAeronef(immatParam) {
-    if (!peutGererDocumentsAeronef()) { alert("Tu n'as pas le droit d'accéder au suivi des documents machine."); return; }
     const selectMachine = document.getElementById('select-machine-suivi');
     const immat = immatParam || (selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '');
     machineDocumentsCourante = immat;
@@ -1154,6 +1153,7 @@ async function ouvrirModaleDocumentsAeronef(immatParam) {
 }
 
 function ouvrirFormulaireDocumentAeronef(record = null) {
+    if (!peutGererDocumentsAeronef()) { alert("Tu n'as pas le droit de modifier les documents machine."); return; }
     const form = document.getElementById('form-document-aeronef');
     const selectMachine = document.getElementById('select-machine-suivi');
     const immat = machineDocumentsCourante || (selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '');

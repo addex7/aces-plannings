@@ -744,7 +744,6 @@ function formaterImmatPlaneur(immat) {
 function genererGrillesPlaneur() {
     const container = document.getElementById('carnet-planeur-container');
     if (!container) return;
-    const peutGererDocs = (typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef());
     const createGrid = (items) => {
         const grid = document.createElement('div');
         grid.className = 'planeur-grid';
@@ -754,7 +753,7 @@ function genererGrillesPlaneur() {
             box.dataset.immat = immat;
             box.innerHTML = `
                 <h3>${formaterImmatPlaneur(immat)}</h3>
-                <button type="button" class="btn-doc-planeur" title="Suivi documentaire" style="display:${peutGererDocs ? '' : 'none'};">Docs</button>
+                <button type="button" class="btn-doc-planeur" title="Consulter les documents">Docs</button>
             `;
             box.addEventListener('click', () => ouvrirModaleCarnet(null, immat));
             const btnDoc = box.querySelector('.btn-doc-planeur');
