@@ -37,6 +37,57 @@ function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heur
     return `${String(hrs).padStart(2, '0')}h${String(mins).padStart(2, '0')}`;
 }
 
+function genererHeaderCarnet(isJVIO) {
+    if (isJVIO) {
+        return `
+            <tr>
+                <th rowspan="2">Date</th>
+                <th colspan="2" class="sub-header">Équipage</th>
+                <th rowspan="2">Fonction</th>
+                <th rowspan="2">Nature du vol</th>
+                <th colspan="2" class="sub-header">Lieu<br><small>(LFxxxx ou OACI)</small></th>
+                <th colspan="2" class="sub-header">Heures<br><small>(HH:mm en H.Loc)</small></th>
+                <th colspan="2" class="sub-header">Cumul heures</th>
+            </tr>
+            <tr>
+                <th>Nom 1</th>
+                <th>Nom 2</th>
+                <th>Départ</th>
+                <th>Arrivée</th>
+                <th>Départ</th>
+                <th>Arrivée</th>
+                <th>Horamètre arrivée</th>
+                <th>Report</th>
+            </tr>
+        `;
+    }
+    return `
+        <tr>
+            <th rowspan="2">Date</th>
+            <th rowspan="2">Équipage</th>
+            <th rowspan="2">Fonction</th>
+            <th colspan="2" class="sub-header">Lieu</th>
+            <th colspan="2" class="sub-header">Heures</th>
+            <th rowspan="2">Temps</th>
+            <th rowspan="2">Nature</th>
+            <th colspan="2" class="sub-header">Carburant</th>
+            <th colspan="2" class="sub-header">Huile</th>
+            <th rowspan="2">Observations</th>
+            <th rowspan="2">Horamètre</th>
+        </tr>
+        <tr>
+            <th>départ</th>
+            <th>arrivée</th>
+            <th>départ</th>
+            <th>arrivée</th>
+            <th>Départ</th>
+            <th>Arr.</th>
+            <th>Départ</th>
+            <th>Arr.</th>
+        </tr>
+    `;
+}
+
 async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const modal = document.getElementById('carnet-modal');
     const form = document.getElementById('carnet-form');
@@ -297,40 +348,61 @@ function mettreAJourNatureParFonction() {
 function afficherCarnet(records) {
     const tbody = document.getElementById('carnet-body');
     if (!tbody) return;
+    const isJVIO = machineCarnetSelectionnee === 'F-JVIO';
+    const table = tbody.closest('table');
+    const thead = table ? table.querySelector('thead') : null;
+    if (table) table.style.minWidth = isJVIO ? '950px' : '1100px';
+    if (thead) thead.innerHTML = genererHeaderCarnet(isJVIO);
     if (!records || records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="15" class="carnet-empty">Aucun vol enregistré dans le carnet de route.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${isJVIO ? 11 : 15}" class="carnet-empty">Aucun vol enregistré dans le carnet de route.</td></tr>`;
         return;
     }
     tbody.innerHTML = '';
     records.forEach(record => {
         const f = record.fields || {};
-        const equipage = [f['Pilote'], f['Instructeur']].filter(Boolean).join(' / ') || '-';
         const temps = f['Temps de vol'] || calculerTempsDeVol(f['Horamètre départ'], f['Horamètre arrivée'], f['Heure départ'], f['Heure arrivée']);
         const dateObj = f['Date'] ? new Date(f['Date']) : null;
         const dateStr = dateObj ? dateObj.toLocaleDateString('fr-FR') : '-';
-        const carburant = [formaterNombre(f['Carburant départ']), formaterNombre(f['Carburant arrivée'])].filter(v => v !== '').join(' / ') || '-';
-        const huile = [formaterNombre(f['Huile départ']), formaterNombre(f['Huile arrivée'])].filter(v => v !== '').join(' / ') || '-';
-        const horametre = [formaterNombre(f['Horamètre départ']), formaterNombre(f['Horamètre arrivée'])].filter(v => v !== '').join(' / ') || '-';
 
         const tr = document.createElement('tr');
         tr.dataset.id = record.id;
-        tr.innerHTML = `
-            <td>${dateStr}</td>
-            <td>${equipage}</td>
-            <td>${f['Fonction'] || '-'}</td>
-            <td>${f['Départ'] || '-'}</td>
-            <td>${f['Arrivée'] || '-'}</td>
-            <td>${f['Heure départ'] || ''}</td>
-            <td>${f['Heure arrivée'] || ''}</td>
-            <td>${temps || '-'}</td>
-            <td>${f['Nature'] || '-'}</td>
-            <td>${afficherCarburant(f['Carburant départ'])}</td>
-            <td>${afficherCarburant(f['Carburant arrivée'])}</td>
-            <td>${formaterNombre(f['Huile départ']) || '-'}</td>
-            <td>${formaterNombre(f['Huile arrivée']) || '-'}</td>
-            <td>${(f['Observations'] || '').trim() || '-'}</td>
-            <td>${horametre}</td>
-        `;
+        if (isJVIO) {
+            tr.innerHTML = `
+                <td>${dateStr}</td>
+                <td>${f['Pilote'] || '-'}</td>
+                <td>${f['Instructeur'] || '-'}</td>
+                <td>${f['Fonction'] || '-'}</td>
+                <td>${f['Nature'] || '-'}</td>
+                <td>${f['Départ'] || '-'}</td>
+                <td>${f['Arrivée'] || '-'}</td>
+                <td>${f['Heure départ'] || ''}</td>
+                <td>${f['Heure arrivée'] || ''}</td>
+                <td>${formaterNombre(f['Horamètre arrivée']) || '-'}</td>
+                <td>${temps || '-'}</td>
+            `;
+        } else {
+            const equipage = [f['Pilote'], f['Instructeur']].filter(Boolean).join(' / ') || '-';
+            const carburant = [formaterNombre(f['Carburant départ']), formaterNombre(f['Carburant arrivée'])].filter(v => v !== '').join(' / ') || '-';
+            const huile = [formaterNombre(f['Huile départ']), formaterNombre(f['Huile arrivée'])].filter(v => v !== '').join(' / ') || '-';
+            const horametre = [formaterNombre(f['Horamètre départ']), formaterNombre(f['Horamètre arrivée'])].filter(v => v !== '').join(' / ') || '-';
+            tr.innerHTML = `
+                <td>${dateStr}</td>
+                <td>${equipage}</td>
+                <td>${f['Fonction'] || '-'}</td>
+                <td>${f['Départ'] || '-'}</td>
+                <td>${f['Arrivée'] || '-'}</td>
+                <td>${f['Heure départ'] || ''}</td>
+                <td>${f['Heure arrivée'] || ''}</td>
+                <td>${temps || '-'}</td>
+                <td>${f['Nature'] || '-'}</td>
+                <td>${afficherCarburant(f['Carburant départ'])}</td>
+                <td>${afficherCarburant(f['Carburant arrivée'])}</td>
+                <td>${formaterNombre(f['Huile départ']) || '-'}</td>
+                <td>${formaterNombre(f['Huile arrivée']) || '-'}</td>
+                <td>${(f['Observations'] || '').trim() || '-'}</td>
+                <td>${horametre}</td>
+            `;
+        }
         tr.addEventListener('click', () => ouvrirModaleCarnet(record.id));
         tbody.appendChild(tr);
     });
@@ -424,6 +496,8 @@ async function chargerCarnetRoute() {
     const btnDocs = document.getElementById('btn-documents-carnet');
     const recapDocs = document.getElementById('documents-carnet-recap');
     const alarme = document.getElementById('carnet-observation-alarme');
+    const isJVIO = machineCarnetSelectionnee === 'F-JVIO';
+    const colspan = isJVIO ? 11 : 15;
 
     if (machineCarnetSelectionnee === 'PLANEUR') {
         if (tableContainer) tableContainer.style.display = 'none';
@@ -456,7 +530,11 @@ async function chargerCarnetRoute() {
     const peutGererDocs = (typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef());
     if (btnDocs) btnDocs.style.display = peutGererDocs ? 'inline-block' : 'none';
     if (alarme) alarme.style.display = 'none';
-    if (tbody) tbody.innerHTML = '<tr><td colspan="15" class="carnet-empty">Chargement du carnet de route...</td></tr>';
+    const table = tbody ? tbody.closest('table') : null;
+    const thead = table ? table.querySelector('thead') : null;
+    if (table) table.style.minWidth = isJVIO ? '950px' : '1100px';
+    if (thead) thead.innerHTML = genererHeaderCarnet(isJVIO);
+    if (tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" class="carnet-empty">Chargement du carnet de route...</td></tr>`;
     try {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc`;
         const response = await cachedFetch(url, { headers });
@@ -477,11 +555,11 @@ async function chargerCarnetRoute() {
             }
         } else {
             console.error(data);
-            if (tbody) tbody.innerHTML = '<tr><td colspan="15" class="carnet-empty">Erreur lors du chargement du carnet.</td></tr>';
+            if (tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" class="carnet-empty">Erreur lors du chargement du carnet.</td></tr>`;
         }
     } catch (error) {
         console.error(error);
-        if (tbody) tbody.innerHTML = '<tr><td colspan="15" class="carnet-empty">Erreur lors du chargement du carnet.</td></tr>';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" class="carnet-empty">Erreur lors du chargement du carnet.</td></tr>`;
     }
 }
 
