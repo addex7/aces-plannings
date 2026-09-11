@@ -901,18 +901,18 @@
                     <input type="date" id="carnet-date" required>
                 </div>
                 <div class="form-group">
-                    <label for="carnet-pilote">Pilote :</label>
+                    <label for="carnet-pilote" id="carnet-pilote-label">Pilote :</label>
                     <select id="carnet-pilote" required></select>
                 </div>
                 <div class="form-group">
-                    <label for="carnet-instructeur">Instructeur (si instruction) :</label>
+                    <label for="carnet-instructeur" id="carnet-instructeur-label">Instructeur (si instruction) :</label>
                     <select id="carnet-instructeur">
                         <option value="">-- Aucun --</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Fonction(s) à bord :</label>
-                    <div class="checkbox-group">
+                    <label id="carnet-fonction-label">Fonction(s) à bord :</label>
+                    <div class="checkbox-group" id="carnet-fonction-group">
                         <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="P"> P - Pilote</label>
                         <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="EP"> EP - Élève pilote</label>
                         <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="FI"> FI - Instructeur</label>
@@ -965,11 +965,11 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="carnet-heure-depart">Heure de départ (UTC) :</label>
+                        <label for="carnet-heure-depart" id="carnet-heure-depart-label">Heure de départ (UTC) :</label>
                         <input type="time" id="carnet-heure-depart" required>
                     </div>
                     <div class="form-group">
-                        <label for="carnet-heure-arrivee">Heure d'arrivée (UTC) :</label>
+                        <label for="carnet-heure-arrivee" id="carnet-heure-arrivee-label">Heure d'arrivée (UTC) :</label>
                         <input type="time" id="carnet-heure-arrivee" required>
                     </div>
                 </div>
@@ -981,17 +981,13 @@
                         <option value="Examen">Examen</option>
                     </select>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="carnet-decollages">Décollages réalisés :</label>
-                        <input type="number" id="carnet-decollages" min="0" step="1" value="1" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="carnet-atterrissages">Atterrissages réalisés :</label>
-                        <input type="number" id="carnet-atterrissages" min="0" step="1" value="1" required>
+                <div class="form-row" style="max-width:220px; margin-left:auto; margin-right:auto;">
+                    <div class="form-group" style="flex:1;">
+                        <label for="carnet-decol-atterr">Décollages / Atterrissages :</label>
+                        <input type="number" id="carnet-decol-atterr" min="0" step="1" value="1" required>
                     </div>
                 </div>
-                <div class="form-row">
+                <div class="form-row" id="carnet-carburant-row">
                     <div class="form-group">
                         <label for="carnet-carburant-depart">Carburant ajouté au départ (L) :</label>
                         <input type="text" id="carnet-carburant-depart" inputmode="decimal" placeholder="Ex: 130 ou 130 + PC">
@@ -1001,7 +997,7 @@
                         <input type="text" id="carnet-carburant-arrivee" inputmode="decimal" placeholder="Ex: 130 ou 130 + PC">
                     </div>
                 </div>
-                <div class="form-row">
+                <div class="form-row" id="carnet-huile-row">
                     <div class="form-group">
                         <label for="carnet-huile-depart">Huile ajoutée au départ (L) :</label>
                         <input type="number" id="carnet-huile-depart" step="0.1" min="0" placeholder="0">
@@ -1221,7 +1217,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=85"></script>
-    <script src="version.js?v=20260911175127"></script>
+    <script src="version.js?v=20260911183833"></script>
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=92"></script>
     <script src="presences.js?v=92"></script>
@@ -1229,7 +1225,7 @@
     <script src="calendrier.js?v=88"></script>
     <script src="comptes.js?v=108"></script>
     <script src="aeronefs.js?v=98"></script>
-    <script src="carnet.js?v=103"></script>
+    <script src="carnet.js?v=104"></script>
     <script src="documents.js?v=83"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=4"></script>

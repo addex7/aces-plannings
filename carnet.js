@@ -103,8 +103,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const arriveeInput = document.getElementById('carnet-arrivee');
     const heureDepart = document.getElementById('carnet-heure-depart');
     const heureArrivee = document.getElementById('carnet-heure-arrivee');
-    const decollages = document.getElementById('carnet-decollages');
-    const atterrissages = document.getElementById('carnet-atterrissages');
+    const decAt = document.getElementById('carnet-decol-atterr');
     if (titre) titre.textContent = recordId ? 'Modifier un vol' : (machineImmat ? 'Nouvelle observation' : 'Saisir un vol');
     if (btnDelete) btnDelete.style.display = recordId ? 'inline-block' : 'none';
     if (dateInput) dateInput.value = new Date().toLocaleDateString('en-CA');
@@ -121,9 +120,9 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         form.dataset.mode = 'observation';
         if (heureDepart) heureDepart.value = '00:00';
         if (heureArrivee) heureArrivee.value = '00:00';
-        if (decollages) decollages.value = '0';
-        if (atterrissages) atterrissages.value = '0';
+        if (decAt) decAt.value = '0';
         if (selectMachine && selectMachine.querySelector(`option[value="${machineImmat}"]`)) selectMachine.value = machineImmat;
+        if (selectMachine) adapterFormulaireCarnet(machineImmat);
         const obs = document.getElementById('carnet-observations');
         setTimeout(() => { if (obs) obs.focus(); }, 50);
     } else {
@@ -131,6 +130,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         if (selectMachine && selectFiltre && selectMachine.querySelector(`option[value="${selectFiltre.value}"]`)) {
             selectMachine.value = selectFiltre.value;
         }
+        if (selectMachine) adapterFormulaireCarnet(selectMachine.value);
     }
     document.getElementById('carnet-id').value = recordId || '';
     if (recordId) {
@@ -156,25 +156,30 @@ function fermerModaleCarnet() {
 function remplirFormulaireCarnet(f) {
     const pilote = f['Pilote'] || (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
     document.getElementById('carnet-date').value = f['Date'] ? (f['Date'].split('T')[0] || '') : '';
+    const machine = f['Machine'] || 'F-GASB';
+    document.getElementById('carnet-machine').value = machine;
+    adapterFormulaireCarnet(machine);
     const piloteInput = document.getElementById('carnet-pilote');
     if (piloteInput) piloteInput.value = pilote;
     const instSel = document.getElementById('carnet-instructeur');
     if (instSel) instSel.value = f['Instructeur'] || '';
-    document.getElementById('carnet-machine').value = f['Machine'] || 'F-GASB';
     document.getElementById('carnet-depart').value = f['Départ'] || 'LFOY';
     document.getElementById('carnet-arrivee').value = f['Arrivée'] || 'LFOY';
     document.getElementById('carnet-heure-depart').value = f['Heure départ'] || '';
     document.getElementById('carnet-heure-arrivee').value = f['Heure arrivée'] || '';
-    document.getElementById('carnet-nature').value = f['Nature'] || 'Autre';
-    document.getElementById('carnet-carburant-depart').value = f['Carburant départ'] || '';
-    document.getElementById('carnet-carburant-arrivee').value = f['Carburant arrivée'] || '';
-    document.getElementById('carnet-huile-depart').value = f['Huile départ'] || '';
-    document.getElementById('carnet-huile-arrivee').value = f['Huile arrivée'] || '';
+    const nature = document.getElementById('carnet-nature');
+    if (nature) nature.value = f['Nature'] || 'Autre';
+    if (machine !== 'F-JVIO') {
+        document.getElementById('carnet-carburant-depart').value = f['Carburant départ'] || '';
+        document.getElementById('carnet-carburant-arrivee').value = f['Carburant arrivée'] || '';
+        document.getElementById('carnet-huile-depart').value = f['Huile départ'] || '';
+        document.getElementById('carnet-huile-arrivee').value = f['Huile arrivée'] || '';
+    }
     document.getElementById('carnet-horametre-depart').value = f['Horamètre départ'] || '';
     document.getElementById('carnet-horametre-arrivee').value = f['Horamètre arrivée'] || '';
     document.getElementById('carnet-observations').value = f['Observations'] || '';
-    document.getElementById('carnet-decollages').value = (f['Décollages'] === 0 || f['Décollages']) ? f['Décollages'] : '1';
-    document.getElementById('carnet-atterrissages').value = (f['Atterrissages'] === 0 || f['Atterrissages']) ? f['Atterrissages'] : '1';
+    const decAt = document.getElementById('carnet-decol-atterr');
+    if (decAt) decAt.value = (f['Décollages'] === 0 || f['Décollages']) ? f['Décollages'] : '1';
     const fonctions = (f['Fonction'] || '').split('/').map(x => x.trim());
     document.querySelectorAll('input[name="carnet-fonction"]').forEach(cb => {
         cb.checked = fonctions.includes(cb.value);
@@ -341,8 +346,75 @@ function mettreAJourNatureParFonction() {
     const select = document.getElementById('carnet-nature');
     if (!select) return;
     const checked = Array.from(document.querySelectorAll('input[name="carnet-fonction"]:checked')).map(cb => cb.value);
-    if (checked.includes('FE')) select.value = 'Examen';
-    else if (checked.includes('FI')) select.value = 'Instruction';
+    if (checked.includes('FE') || checked.includes('EX')) {
+        if (select.querySelector('option[value="Examen"]')) select.value = 'Examen';
+    } else if (checked.includes('FI') || checked.includes('I')) {
+        if (select.querySelector('option[value="Instruction"]')) select.value = 'Instruction';
+    }
+}
+
+const CARNET_JVIO_FONCTIONS = [
+    { value: 'P', label: 'P = Pilote' },
+    { value: 'PCdB', label: 'PCdB = PIL.+CdB' },
+    { value: 'PAX', label: 'PAX = Passager' },
+    { value: 'EP', label: 'EP = Élève pilote' },
+    { value: 'I', label: 'I = Instructeur' },
+    { value: 'ICdB', label: 'ICdB = Instr.+CdB' },
+    { value: 'EX', label: 'EX = Examinateur' }
+];
+
+const CARNET_STD_FONCTIONS = [
+    { value: 'P', label: 'P - Pilote' },
+    { value: 'EP', label: 'EP - Élève pilote' },
+    { value: 'FI', label: 'FI - Instructeur' },
+    { value: 'FE', label: 'FE - Examinateur' }
+];
+
+const CARNET_JVIO_NATURES = ['Autre', 'local', 'voyage', 'REV', 'Instruction', 'VLO', 'VLD', 'Activité Particulière'];
+const CARNET_STD_NATURES = ['Autre', 'Instruction', 'Examen'];
+
+function adapterFormulaireCarnet(machine) {
+    const isJVIO = machine === 'F-JVIO';
+    const piloteLabel = document.getElementById('carnet-pilote-label');
+    const instLabel = document.getElementById('carnet-instructeur-label');
+    const hDepLabel = document.getElementById('carnet-heure-depart-label');
+    const hArrLabel = document.getElementById('carnet-heure-arrivee-label');
+    const fonctionGroup = document.getElementById('carnet-fonction-group');
+    const fonctionLabel = document.getElementById('carnet-fonction-label');
+    const nature = document.getElementById('carnet-nature');
+    const carbuRow = document.getElementById('carnet-carburant-row');
+    const huileRow = document.getElementById('carnet-huile-row');
+
+    if (piloteLabel) piloteLabel.textContent = isJVIO ? 'Équipage 1 :' : 'Pilote :';
+    if (instLabel) instLabel.textContent = isJVIO ? 'Équipage 2 :' : 'Instructeur (si instruction) :';
+    if (hDepLabel) hDepLabel.textContent = isJVIO ? 'Heure de départ (H.Loc) :' : 'Heure de départ (UTC) :';
+    if (hArrLabel) hArrLabel.textContent = isJVIO ? 'Heure d\'arrivée (H.Loc) :' : 'Heure d\'arrivée (UTC) :';
+    if (fonctionLabel) fonctionLabel.textContent = 'Fonction(s) à bord :';
+
+    if (nature) {
+        const options = isJVIO ? CARNET_JVIO_NATURES : CARNET_STD_NATURES;
+        nature.innerHTML = options.map(v => `<option value="${v}">${v}</option>`).join('');
+    }
+
+    if (fonctionGroup) {
+        const fonctions = isJVIO ? CARNET_JVIO_FONCTIONS : CARNET_STD_FONCTIONS;
+        fonctionGroup.innerHTML = fonctions.map(f =>
+            `<label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="${f.value}"> ${f.label}</label>`
+        ).join('');
+        fonctionGroup.querySelectorAll('input[name="carnet-fonction"]').forEach(cb => {
+            cb.addEventListener('change', mettreAJourNatureParFonction);
+        });
+    }
+
+    if (carbuRow) carbuRow.style.display = isJVIO ? 'none' : '';
+    if (huileRow) huileRow.style.display = isJVIO ? 'none' : '';
+
+    if (isJVIO) {
+        ['carnet-carburant-depart', 'carnet-carburant-arrivee', 'carnet-huile-depart', 'carnet-huile-arrivee'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+    }
 }
 
 function afficherCarnet(records) {
@@ -600,8 +672,9 @@ async function soumettreCarnetRoute(event) {
     const date = document.getElementById('carnet-date').value;
     const pilote = document.getElementById('carnet-pilote').value.trim();
     const instructeur = document.getElementById('carnet-instructeur').value.trim();
-    const decollages = parseInt(document.getElementById('carnet-decollages').value, 10) || 0;
-    const atterrissages = parseInt(document.getElementById('carnet-atterrissages').value, 10) || 0;
+    const decAt = parseInt(document.getElementById('carnet-decol-atterr').value, 10) || 0;
+    const decollages = decAt;
+    const atterrissages = decAt;
     const fonction = Array.from(document.querySelectorAll('input[name="carnet-fonction"]:checked')).map(cb => cb.value).join('/');
     const machine = document.getElementById('carnet-machine').value;
     const depart = document.getElementById('carnet-depart').value.trim();
@@ -894,9 +967,11 @@ function initCarnetRoute() {
         if (el) el.addEventListener('input', mettreAJourHorametreArrivee);
     });
 
-    document.querySelectorAll('input[name="carnet-fonction"]').forEach(cb => {
-        cb.addEventListener('change', mettreAJourNatureParFonction);
-    });
+    const selectMachine = document.getElementById('carnet-machine');
+    if (selectMachine) {
+        selectMachine.addEventListener('change', () => adapterFormulaireCarnet(selectMachine.value));
+        adapterFormulaireCarnet(selectMachine.value);
+    }
 
     chargerCarnetRoute();
 }
