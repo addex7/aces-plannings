@@ -253,6 +253,13 @@ function renderAccueilMembre(fields) {
         </div>
     `;
     container.innerHTML = `
+        <div class="accueil-documents" style="margin-top:0; margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                <h3 style="margin:0;">Annuaire des membres</h3>
+                <button type="button" id="btn-annuaire-membres" class="btn-primary">Voir l'annuaire</button>
+            </div>
+            <p style="font-size:13px; color:#64748b; margin:0;">Consulter les coordonnées (mail, téléphone) des membres du club.</p>
+        </div>
         <form id="accueil-validites-form">
             <div class="validite-grid">${grid}</div>
         </form>
@@ -289,13 +296,6 @@ function renderAccueilMembre(fields) {
         </div>
         <p class="accueil-disclaimer">Le pilote reste responsable de la validité de ses qualifications et de ses licences. Ce système est informatif.</p>
         ${docForm}
-        <div class="accueil-documents" style="margin-top:15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-                <h3 style="margin:0;">Annuaire des membres</h3>
-                <button type="button" id="btn-annuaire-membres" class="btn-primary">Voir l'annuaire</button>
-            </div>
-            <p style="font-size:13px; color:#64748b; margin:0;">Consulter les coordonnées (mail, téléphone) des membres du club.</p>
-        </div>
     `;
     renderPhoto(fields);
     chargerExperiences();
@@ -683,6 +683,9 @@ async function uploaderPhoto(event) {
 function attacherListenersAccueil() {
     const formDoc = document.getElementById('accueil-doc-form');
     if (formDoc) formDoc.addEventListener('submit', uploaderDocumentMembre);
+
+    const btnAnnuaire = document.getElementById('btn-annuaire-membres');
+    if (btnAnnuaire) btnAnnuaire.addEventListener('click', ouvrirAnnuaireMembres);
 
     if (!isSuperAdmin()) return;
 
