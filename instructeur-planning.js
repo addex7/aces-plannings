@@ -287,7 +287,8 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
     tdCell.style.cssText = 'padding: 4px; height: 46px; vertical-align: middle;';
 
     const inner = document.createElement('div');
-    inner.style.cssText = 'display: flex; position: relative; height: 100%; width: 100%;';
+    inner.style.cssText = 'display: block; position: relative; height: 100%; width: 100%;';
+    const gridCells = creerWrapperCellulesGrille(inner);
 
     const blocks = [];
     for (let h = 0; h < 24; h++) blocks.push('red');
@@ -330,7 +331,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         const overlay = document.createElement('div');
         overlay.className = `dispo-hour-overlay dispo-${blocks[h]}`;
         d.appendChild(overlay);
-        inner.appendChild(d);
+        gridCells.appendChild(d);
     }
 
     ajouterFondNuit(inner, dateJour);

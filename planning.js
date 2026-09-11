@@ -525,6 +525,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
     divNuitSoir.style.width = `${100 - crepusculeAeroPercent}%`;
     gridBg.appendChild(divNuitSoir);
 
+    const gridCells = creerWrapperCellulesGrille(gridBg);
     for (let h = 0; h < 24; h++) {
         const gridBlock = document.createElement('div');
         gridBlock.className = 'grid-hour-block';
@@ -535,7 +536,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
             console.log('[VI PLANEUR CELL CLICK]', h, typeof window.ouvrirModaleNouvelleReservation);
             if (typeof window.ouvrirModaleNouvelleReservation === 'function') window.ouvrirModaleNouvelleReservation({ type: 'VI Planeur', dureeMinutes: 45, heureDebut: h });
         });
-        gridBg.appendChild(gridBlock);
+        gridCells.appendChild(gridBlock);
     }
 
     volsVIP.forEach(vol => {
@@ -815,6 +816,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             divNuitSoir.style.left = `${crepusculeAeroPercent}%`;
             divNuitSoir.style.width = `${100 - crepusculeAeroPercent}%`;
             gridBg.appendChild(divNuitSoir);
+            const gridCells = creerWrapperCellulesGrille(gridBg);
             for (let h = 0; h < 24; h++) {
                 const gridBlock = document.createElement('div');
                 gridBlock.className = 'grid-hour-block';
@@ -826,7 +828,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                     }
                     ouvrirModaleCreationDepuisGrille(avionId, h);
                 });
-                gridBg.appendChild(gridBlock);
+                gridCells.appendChild(gridBlock);
             }
             const contentWrapper = document.createElement('div');
             contentWrapper.style.cssText = 'display: flex; flex-direction: column; flex: 1;';

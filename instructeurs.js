@@ -386,6 +386,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
         ajouterZoneNuit(gridBg, `${coucherPercent}%`, `${crepusculeAeroPercent - coucherPercent}%`, 'night-civil');
         ajouterZoneNuit(gridBg, `${crepusculeAeroPercent}%`, `${100 - crepusculeAeroPercent}%`, 'night-aero');
 
+        const gridCells = creerWrapperCellulesGrille(gridBg);
         const dispoParHeure = new Array(24).fill('red');
         disposPerso.forEach(d => {
             const f = d.fields || {};
@@ -416,7 +417,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
                     window.ouvrirModaleNouvelleReservation({ type: 'Instruction', instructeur: nom, heureDebut: h });
                 }
             });
-            gridBg.appendChild(block);
+            gridCells.appendChild(block);
         }
 
         const resasPerso = reservations.filter(r => {
