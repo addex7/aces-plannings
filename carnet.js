@@ -13,28 +13,46 @@ const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CE
 const REMOQUES_PLANEURS = [...IMMATS_PLANEURS.map(i => `Remorque ${i}`), 'Remorque SP98', 'Remorque 100LL'];
 const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS];
 
-function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee) {
-    // Priorité aux horamètres si les deux sont renseignés
+function horametreVersMinutes(val) {
+    const total = parseFloat(val);
+    if (isNaN(total)) return null;
+    const h = Math.floor(total);
+    const m = Math.round((total - h) * 100);
+    return h * 60 + m;
+}
+
+function formaterDureeMinutes(minutes) {
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${String(hrs).padStart(2, '0')}h${String(mins).padStart(2, '0')}`;
+}
+
+function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee, machine) {
+    // F-JVIO : horamètre au format H.MM (ex. 1154.17 = 1154 h 17 min)
+    if (horametreDepart && horametreArrivee && machine === 'F-JVIO') {
+        const dep = horametreVersMinutes(horametreDepart);
+        const arr = horametreVersMinutes(horametreArrivee);
+        if (dep !== null && arr !== null && arr >= dep) {
+            return formaterDureeMinutes(arr - dep);
+        }
+    }
+    // Priorité aux horamètres si les deux sont renseignés (format décimal pour les autres machines)
     if (horametreDepart && horametreArrivee) {
         const dep = parseFloat(horametreDepart);
         const arr = parseFloat(horametreArrivee);
         if (!isNaN(dep) && !isNaN(arr) && arr >= dep) {
             const minutes = Math.round((arr - dep) * 60);
-            const hrs = Math.floor(minutes / 60);
-            const mins = minutes % 60;
-            return `${String(hrs).padStart(2, '0')}h${String(mins).padStart(2, '0')}`;
+            return formaterDureeMinutes(minutes);
         }
     }
-    // Sinon, calcul à partir des heures UTC
+    // Sinon, calcul à partir des heures
     if (!heureDepart || !heureArrivee) return '';
     const [hD, mD] = heureDepart.split(':').map(Number);
     const [hA, mA] = heureArrivee.split(':').map(Number);
     if (isNaN(hD) || isNaN(mD) || isNaN(hA) || isNaN(mA)) return '';
     let minutes = (hA * 60 + mA) - (hD * 60 + mD);
     if (minutes < 0) minutes += 24 * 60;
-    const hrs = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${String(hrs).padStart(2, '0')}h${String(mins).padStart(2, '0')}`;
+    return formaterDureeMinutes(minutes);
 }
 
 function genererHeaderCarnet(isJVIO) {
@@ -432,7 +450,9 @@ function afficherCarnet(records) {
     tbody.innerHTML = '';
     records.forEach(record => {
         const f = record.fields || {};
-        const temps = f['Temps de vol'] || calculerTempsDeVol(f['Horamètre départ'], f['Horamètre arrivée'], f['Heure départ'], f['Heure arrivée']);
+        const temps = machineCarnetSelectionnee === 'F-JVIO' || !f['Temps de vol']
+            ? calculerTempsDeVol(f['Horamètre départ'], f['Horamètre arrivée'], f['Heure départ'], f['Heure arrivée'], machineCarnetSelectionnee)
+            : f['Temps de vol'];
         const dateObj = f['Date'] ? new Date(f['Date']) : null;
         const dateStr = dateObj ? dateObj.toLocaleDateString('fr-FR') : '-';
 
@@ -692,7 +712,7 @@ async function soumettreCarnetRoute(event) {
 
     const ancienRecord = idCarnetEnEdition ? listeVolsCarnetCache.find(r => r.id === idCarnetEnEdition) : null;
 
-    const temps = calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee);
+    const temps = calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee, machine);
     const numeric = (val) => {
         if (val === '' || val === null || val === undefined) return null;
         const n = parseFloat(val);
