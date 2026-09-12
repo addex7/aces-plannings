@@ -306,6 +306,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     if (!select || select.dataset.searchReady) return;
     if (select.multiple || select.size > 1) return;
     select.dataset.searchReady = '1';
+    select.dataset.allowCustom = allowCustom ? '1' : '0';
     select.removeAttribute('required');
     select.style.display = 'none';
 
@@ -379,7 +380,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
             list.appendChild(item);
             count++;
         });
-        if (allowCustom && filtre.trim()) {
+        if (select.dataset.allowCustom === '1' && filtre.trim()) {
             const exact = [...select.options].some(o => norm(o.text) === f);
             if (!exact) {
                 const addItem = document.createElement('div');

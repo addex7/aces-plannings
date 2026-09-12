@@ -402,12 +402,14 @@ function adapterFormulaireCarnet(machine) {
     const nature = document.getElementById('carnet-nature');
     const carbuRow = document.getElementById('carnet-carburant-row');
     const huileRow = document.getElementById('carnet-huile-row');
+    const instSel = document.getElementById('carnet-instructeur');
 
     if (piloteLabel) piloteLabel.textContent = isJVIO ? 'Équipage 1 :' : 'Pilote :';
     if (instLabel) instLabel.textContent = isJVIO ? 'Équipage 2 :' : 'Instructeur (si instruction) :';
     if (hDepLabel) hDepLabel.textContent = isJVIO ? 'Heure de départ (H.Loc) :' : 'Heure de départ (UTC) :';
     if (hArrLabel) hArrLabel.textContent = isJVIO ? 'Heure d\'arrivée (H.Loc) :' : 'Heure d\'arrivée (UTC) :';
     if (fonctionLabel) fonctionLabel.textContent = 'Fonction(s) à bord :';
+    if (instSel) instSel.dataset.allowCustom = isJVIO ? '1' : '0';
 
     if (nature) {
         const options = isJVIO ? CARNET_JVIO_NATURES : CARNET_STD_NATURES;
