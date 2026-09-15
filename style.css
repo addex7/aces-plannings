@@ -3142,6 +3142,13 @@ img, table, video, iframe, svg {
     }
 }
 
+#carnet-heure-arrivee:disabled {
+    background: #f1f5f9;
+    color: #475569;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
 /* --- FORMULAIRE F-JVIO COMPACT --- */
 #carnet-form.carnet-form-jvio {
     gap: 10px;
