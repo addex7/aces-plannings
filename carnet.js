@@ -141,7 +141,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         if (decAt) decAt.value = '0';
         if (selectMachine && selectMachine.querySelector(`option[value="${machineImmat}"]`)) selectMachine.value = machineImmat;
         if (selectMachine) adapterFormulaireCarnet(machineImmat);
-        mettreAJourEtatHeureArrivee(machineImmat);
+        mettreAJourStyleChampsAuto(machineImmat);
         const obs = document.getElementById('carnet-observations');
         setTimeout(() => { if (obs) obs.focus(); }, 50);
     } else {
@@ -150,7 +150,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
             selectMachine.value = selectFiltre.value;
         }
         if (selectMachine) adapterFormulaireCarnet(selectMachine.value);
-        mettreAJourEtatHeureArrivee(selectMachine ? selectMachine.value : 'F-GASB');
+        mettreAJourStyleChampsAuto(selectMachine ? selectMachine.value : 'F-GASB');
     }
     document.getElementById('carnet-id').value = recordId || '';
     if (recordId) {
@@ -205,7 +205,7 @@ function remplirFormulaireCarnet(f) {
     document.querySelectorAll('input[name="carnet-fonction"]').forEach(cb => {
         cb.checked = fonctions.includes(cb.value);
     });
-    mettreAJourEtatHeureArrivee(machine);
+    mettreAJourStyleChampsAuto(machine);
     mettreAJourHeureArrivee();
 }
 
@@ -352,12 +352,16 @@ function ajouterMinutes(heure, minutes) {
     return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
-function mettreAJourEtatHeureArrivee(machine) {
-    const input = document.getElementById('carnet-heure-arrivee');
-    if (!input) return;
+function mettreAJourStyleChampsAuto(machine) {
+    const heureArrivee = document.getElementById('carnet-heure-arrivee');
+    const horametreDepart = document.getElementById('carnet-horametre-depart');
     const isMoteur = machine && !MACHINES_PLANEUR_REMOQUE.includes(machine);
-    input.disabled = isMoteur;
-    input.title = isMoteur ? 'Calculée automatiquement à partir de l\'horamètre' : '';
+    if (heureArrivee) {
+        heureArrivee.classList.toggle('carnet-champ-auto', isMoteur);
+    }
+    if (horametreDepart) {
+        horametreDepart.classList.add('carnet-champ-auto');
+    }
 }
 
 function mettreAJourHeureArrivee() {
@@ -1010,11 +1014,11 @@ function initCarnetRoute() {
     if (selectMachine) {
         selectMachine.addEventListener('change', () => {
             adapterFormulaireCarnet(selectMachine.value);
-            mettreAJourEtatHeureArrivee(selectMachine.value);
+            mettreAJourStyleChampsAuto(selectMachine.value);
             mettreAJourHeureArrivee();
         });
         adapterFormulaireCarnet(selectMachine.value);
-        mettreAJourEtatHeureArrivee(selectMachine.value);
+        mettreAJourStyleChampsAuto(selectMachine.value);
     }
 
     chargerCarnetRoute();
