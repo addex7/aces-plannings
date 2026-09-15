@@ -12,6 +12,7 @@ let machineCarnetSelectionnee = 'F-GASB';
 const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CEQJ', 'F-CDVN', 'F-CFRK', 'F-CHDT', 'F-CEQZ', 'F-CESL', 'F-CGOV'];
 const REMOQUES_PLANEURS = [...IMMATS_PLANEURS.map(i => `Remorque ${i}`), 'Remorque SP98', 'Remorque 100LL'];
 const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS];
+const MACHINES_MOTEURS = ['F-GASB', 'F-BLIO', 'F-JVIO'];
 
 function horametreVersMinutes(val) {
     const total = parseFloat(val);
@@ -134,12 +135,16 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
 
     await peuplerInstructeursSelect(recordId ? (listeVolsCarnetCache.find(r => r.id === recordId)?.fields['Instructeur'] || '') : '');
 
+    const record = recordId ? listeVolsCarnetCache.find(r => r.id === recordId) : null;
+    const extraMachine = machineImmat || (record && record.fields ? record.fields['Machine'] : null);
+    peuplerOptionsMachineCarnet(extraMachine);
+
     if (machineImmat) {
         form.dataset.mode = 'observation';
         if (heureDepart) heureDepart.value = '00:00';
         if (heureArrivee) heureArrivee.value = '00:00';
         if (decAt) decAt.value = '0';
-        if (selectMachine && selectMachine.querySelector(`option[value="${machineImmat}"]`)) selectMachine.value = machineImmat;
+        if (selectMachine) selectMachine.value = machineImmat;
         if (selectMachine) adapterFormulaireCarnet(machineImmat);
         mettreAJourStyleChampsAuto(machineImmat);
         const obs = document.getElementById('carnet-observations');
@@ -151,6 +156,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         }
         if (selectMachine) adapterFormulaireCarnet(selectMachine.value);
         mettreAJourStyleChampsAuto(selectMachine ? selectMachine.value : 'F-GASB');
+        if (!recordId) cocherFonctionParDefaut();
     }
     document.getElementById('carnet-id').value = recordId || '';
     if (recordId) {
@@ -189,7 +195,7 @@ function remplirFormulaireCarnet(f) {
     document.getElementById('carnet-heure-depart').value = f['Heure départ'] || '';
     document.getElementById('carnet-heure-arrivee').value = f['Heure arrivée'] || '';
     const nature = document.getElementById('carnet-nature');
-    if (nature) nature.value = f['Nature'] || 'Autre';
+    if (nature) nature.value = f['Nature'] || (machine === 'F-JVIO' ? 'local' : 'Autre');
     if (machine !== 'F-JVIO') {
         document.getElementById('carnet-carburant-depart').value = f['Carburant départ'] || '';
         document.getElementById('carnet-carburant-arrivee').value = f['Carburant arrivée'] || '';
@@ -408,6 +414,23 @@ const CARNET_STD_FONCTIONS = [
 const CARNET_JVIO_NATURES = ['Autre', 'local', 'voyage', 'REV', 'Instruction', 'VLO', 'VLD', 'Activité Particulière'];
 const CARNET_STD_NATURES = ['Autre', 'Instruction', 'Examen'];
 
+function peuplerOptionsMachineCarnet(extraMachine = null) {
+    const select = document.getElementById('carnet-machine');
+    if (!select) return;
+    select.innerHTML = MACHINES_MOTEURS.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (extraMachine && !MACHINES_MOTEURS.includes(extraMachine)) {
+        const opt = document.createElement('option');
+        opt.value = extraMachine;
+        opt.textContent = extraMachine;
+        select.appendChild(opt);
+    }
+}
+
+function cocherFonctionParDefaut() {
+    const cb = document.querySelector('input[name="carnet-fonction"][value="P"]');
+    if (cb) cb.checked = true;
+}
+
 function adapterFormulaireCarnet(machine) {
     const isJVIO = machine === 'F-JVIO';
     const piloteLabel = document.getElementById('carnet-pilote-label');
@@ -435,6 +458,7 @@ function adapterFormulaireCarnet(machine) {
     if (nature) {
         const options = isJVIO ? CARNET_JVIO_NATURES : CARNET_STD_NATURES;
         nature.innerHTML = options.map(v => `<option value="${v}">${v}</option>`).join('');
+        nature.value = isJVIO ? 'local' : options[0];
     }
 
     if (fonctionGroup) {
