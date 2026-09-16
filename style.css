@@ -3159,6 +3159,13 @@ img, table, video, iframe, svg {
     gap: 6px;
     align-items: start;
     font-size: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+#carnet-form.carnet-form-jvio .form-group {
+    max-width: 260px;
+}
+#carnet-form.carnet-form-jvio .full-width {
+    max-width: 100%;
 }
 #carnet-form.carnet-form-jvio .form-group label {
     font-size: 11px;
@@ -3204,8 +3211,14 @@ img, table, video, iframe, svg {
     color: #fff;
     border-color: #1e3d59;
 }
-#carnet-form.carnet-form-jvio .checkbox-option input[type="checkbox"] {
+#carnet-form.carnet-form-jvio .checkbox-option input[type="checkbox"],
+#carnet-form.carnet-form-jvio .checkbox-option input[type="radio"] {
     display: none;
+}
+#carnet-form.carnet-form-jvio .nature-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 #carnet-form.carnet-form-jvio .form-actions {
     padding-top: 2px;

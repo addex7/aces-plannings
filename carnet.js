@@ -40,7 +40,7 @@ function getTarifMachine(machine) {
 }
 
 function horametreVersMinutes(val) {
-    const total = parseFloat(val);
+    const total = parseFloat(String(val).replace(',', '.'));
     if (isNaN(total)) return null;
     const h = Math.floor(total);
     const m = Math.round((total - h) * 100);
@@ -64,8 +64,8 @@ function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heur
     }
     // Priorité aux horamètres si les deux sont renseignés (format décimal pour les autres machines)
     if (horametreDepart && horametreArrivee) {
-        const dep = parseFloat(horametreDepart);
-        const arr = parseFloat(horametreArrivee);
+        const dep = parseFloat(String(horametreDepart).replace(',', '.'));
+        const arr = parseFloat(String(horametreArrivee).replace(',', '.'));
         if (!isNaN(dep) && !isNaN(arr) && arr >= dep) {
             const minutes = Math.round((arr - dep) * 60);
             return formaterDureeMinutes(minutes);
@@ -192,6 +192,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         mettreAJourHeureArrivee();
         mettreAJourActiviteParticuliere();
         mettreAJourPrixDuVol();
+        syncNatureChips();
     }
     const sidebar = document.querySelector('.sidebar');
     const sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 170;
@@ -244,6 +245,7 @@ function remplirFormulaireCarnet(f) {
     mettreAJourHeureArrivee();
     mettreAJourActiviteParticuliere();
     mettreAJourPrixDuVol();
+    syncNatureChips();
 }
 
 let carnetInstructeursCache = [];
@@ -372,8 +374,8 @@ function dureeHorametreMinutes(machine, horametreDepart, horametreArrivee) {
         if (dep === null || arr === null || arr < dep) return null;
         return arr - dep;
     }
-    const dep = parseFloat(horametreDepart);
-    const arr = parseFloat(horametreArrivee);
+    const dep = parseFloat(String(horametreDepart).replace(',', '.'));
+    const arr = parseFloat(String(horametreArrivee).replace(',', '.'));
     if (isNaN(dep) || isNaN(arr) || arr < dep) return null;
     return Math.round((arr - dep) * 60);
 }
@@ -464,6 +466,7 @@ function mettreAJourHeureArrivee() {
     if (minutes === null || !heureDepart) return;
     const arr = ajouterMinutes(heureDepart, minutes);
     if (arr !== null) input.value = arr;
+    mettreAJourPrixDuVol();
 }
 
 function mettreAJourNatureParFonction() {
@@ -475,6 +478,13 @@ function mettreAJourNatureParFonction() {
     } else if (checked.includes('FI') || checked.includes('I')) {
         if (select.querySelector('option[value="Instruction"]')) select.value = 'Instruction';
     }
+    syncNatureChips();
+}
+
+function syncNatureChips() {
+    const select = document.getElementById('carnet-nature');
+    const chips = document.querySelectorAll('input[name="carnet-nature-chip"]');
+    chips.forEach(cb => { cb.checked = cb.value === (select ? select.value : ''); });
 }
 
 const CARNET_JVIO_FONCTIONS = [
@@ -488,12 +498,10 @@ const CARNET_JVIO_FONCTIONS = [
 ];
 
 const EMOJIS_NATURE_JVIO = {
-    'Autre': '⚪',
     'local': '🏠',
     'voyage': '🗺️',
     'REV': '🔄',
     'Instruction': '📚',
-    'VLO': '🛫',
     'VLD': '🛬',
     'Activité Particulière': '🎯'
 };
@@ -505,7 +513,7 @@ const CARNET_STD_FONCTIONS = [
     { value: 'FE', label: 'FE - Examinateur' }
 ];
 
-const CARNET_JVIO_NATURES = ['Autre', 'local', 'voyage', 'REV', 'Instruction', 'VLO', 'VLD', 'Activité Particulière'];
+const CARNET_JVIO_NATURES = ['local', 'voyage', 'REV', 'Instruction', 'VLD', 'Activité Particulière'];
 const CARNET_STD_NATURES = ['Autre', 'Instruction', 'Examen'];
 
 function peuplerOptionsMachineCarnet(extraMachine = null) {
@@ -549,11 +557,28 @@ function adapterFormulaireCarnet(machine) {
     if (instSel) instSel.dataset.allowCustom = isJVIO ? '1' : '0';
     if (fonctionFormGroup) fonctionFormGroup.classList.toggle('full-width', isJVIO);
 
+    const natureChips = document.getElementById('carnet-nature-chips');
     if (nature) {
         const options = isJVIO ? CARNET_JVIO_NATURES : CARNET_STD_NATURES;
-        nature.innerHTML = options.map(v => `<option value="${v}">${isJVIO ? (EMOJIS_NATURE_JVIO[v] || '') + ' ' : ''}${v}</option>`).join('');
+        nature.innerHTML = options.map(v => `<option value="${v}">${v}</option>`).join('');
+        nature.style.display = isJVIO ? 'none' : '';
         nature.value = isJVIO ? 'local' : options[0];
     }
+    if (natureChips) {
+        natureChips.style.display = isJVIO ? 'flex' : 'none';
+        natureChips.innerHTML = isJVIO ? CARNET_JVIO_NATURES.map(v =>
+            `<label class="checkbox-option"><input type="radio" name="carnet-nature-chip" value="${v}"> ${EMOJIS_NATURE_JVIO[v] || ''} ${v}</label>`
+        ).join('') : '';
+        natureChips.querySelectorAll('input[name="carnet-nature-chip"]').forEach(rb => {
+            rb.addEventListener('change', () => {
+                if (nature) nature.value = rb.value;
+                mettreAJourNatureParFonction();
+                mettreAJourActiviteParticuliere();
+                mettreAJourPrixDuVol();
+            });
+        });
+    }
+    syncNatureChips();
 
     if (fonctionGroup) {
         const fonctions = isJVIO ? CARNET_JVIO_FONCTIONS : CARNET_STD_FONCTIONS;
@@ -851,13 +876,14 @@ async function soumettreCarnetRoute(event) {
     const horametreArrivee = document.getElementById('carnet-horametre-arrivee').value;
     const observations = document.getElementById('carnet-observations').value.trim();
     const activiteParticuliere = nature === 'Activité Particulière' ? (document.getElementById('carnet-activite-detail').value.trim() || '') : '';
+    const prixVolText = (document.getElementById('carnet-prix-vol') || { value: '' }).value;
 
     const ancienRecord = idCarnetEnEdition ? listeVolsCarnetCache.find(r => r.id === idCarnetEnEdition) : null;
 
     const temps = calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee, machine);
     const numeric = (val) => {
         if (val === '' || val === null || val === undefined) return null;
-        const n = parseFloat(val);
+        const n = parseFloat(String(val).replace(',', '.'));
         return isNaN(n) ? null : n;
     };
     const valeurCarburant = (val) => {
@@ -890,6 +916,7 @@ async function soumettreCarnetRoute(event) {
         "Huile arrivée": numeric(huileArrivee),
         "Horamètre départ": numeric(horametreDepart),
         "Horamètre arrivée": numeric(horametreArrivee),
+        "Prix du vol": numeric(prixVolText),
         "Observations": observations
     };
 
