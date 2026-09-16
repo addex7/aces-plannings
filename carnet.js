@@ -1163,6 +1163,7 @@ function initCarnetRoute() {
     const btnOuvrir = document.getElementById('btn-ouvrir-carnet');
     const btnFermer = document.querySelector('.close-modal-carnet');
     const btnDelete = document.getElementById('btn-delete-carnet');
+    const btnCancel = document.getElementById('btn-cancel-carnet');
     const modal = document.getElementById('carnet-modal');
     const form = document.getElementById('carnet-form');
     const selectFiltre = document.getElementById('carnet-machine-filtre');
@@ -1175,6 +1176,7 @@ function initCarnetRoute() {
         if (typeof ouvrirModaleDocumentsAeronef === 'function') ouvrirModaleDocumentsAeronef(machineCarnetSelectionnee);
     });
     if (btnFermer) btnFermer.addEventListener('click', fermerModaleCarnet);
+    if (btnCancel) btnCancel.addEventListener('click', fermerModaleCarnet);
     if (btnDelete) btnDelete.addEventListener('click', supprimerCarnetRoute);
     if (modal) {
         modal.addEventListener('click', (e) => {

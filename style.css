@@ -714,6 +714,21 @@ img, table, video, iframe, svg {
 #btn-delete-reservation:hover, #btn-delete-vi-planeur:hover, #btn-delete-carnet:hover, #btn-delete-membre:hover {
     background-color: #dc2626;
 }
+#btn-cancel-carnet {
+    flex: 1;
+    background-color: #94a3b8;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#btn-cancel-carnet:hover {
+    background-color: #64748b;
+}
 .carnet-header-controls {
     display: flex;
     align-items: center;
@@ -3222,6 +3237,37 @@ img, table, video, iframe, svg {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+}
+#carnet-form.carnet-form-jvio .decollage-flex {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+#carnet-form.carnet-form-jvio .decollage-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1e3d59;
+    white-space: nowrap;
+}
+#carnet-form.carnet-form-jvio .decollage-input {
+    width: 70px;
+    flex-shrink: 0;
+}
+#carnet-form.carnet-form-jvio .remarques-prix-row {
+    display: flex;
+    gap: 6px;
+}
+#carnet-form.carnet-form-jvio .remarques-prix-row .form-group {
+    max-width: none;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+#carnet-form.carnet-form-jvio .remarques-prix-row .form-group.remarques-group {
+    flex: 3;
+}
+#carnet-form.carnet-form-jvio .remarques-prix-row .form-group.prix-group {
+    flex: 1;
 }
 #carnet-form.carnet-form-jvio .form-actions {
     padding-top: 2px;

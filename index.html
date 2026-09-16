@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=133">
+    <link rel="stylesheet" href="style.css?v=134">
 </head>
 <body>
 
@@ -967,12 +967,6 @@
                         <input type="time" id="carnet-heure-arrivee" required>
                     </div>
                 </div>
-                <div class="form-row" id="carnet-decol-atterr-row">
-                    <div class="form-group">
-                        <label for="carnet-decol-atterr">Décollages / Atterrissages :</label>
-                        <input type="number" id="carnet-decol-atterr" min="0" step="1" value="1" required>
-                    </div>
-                </div>
                 <div class="form-row" id="carnet-carburant-row">
                     <div class="form-group">
                         <label for="carnet-carburant-depart">Carburant ajouté au départ (L) :</label>
@@ -1003,18 +997,23 @@
                         <input type="number" id="carnet-horametre-arrivee" step="0.01" min="0" placeholder="Ex: 5523.77">
                     </div>
                 </div>
-                <div class="form-row" id="carnet-observations-prix-row">
-                    <div class="form-group observation-only">
+                <div class="form-group full-width decollage-flex" id="carnet-decol-atterr-row">
+                    <label for="carnet-decol-atterr" class="decollage-label">Nombre de décollage et atterrissage :</label>
+                    <input type="number" id="carnet-decol-atterr" class="decollage-input" min="0" step="1" value="1" required>
+                </div>
+                <div class="form-row remarques-prix-row" id="carnet-observations-prix-row">
+                    <div class="form-group observation-only remarques-group">
                         <label for="carnet-observations">Remarques :</label>
                         <textarea id="carnet-observations" rows="2" placeholder="Remarques éventuelles..."></textarea>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group prix-group">
                         <label for="carnet-prix-vol">Prix du vol :</label>
                         <input type="text" id="carnet-prix-vol" class="carnet-champ-auto" readonly value="—">
                     </div>
                 </div>
                 <div class="form-actions full-width">
                     <button type="button" id="btn-delete-carnet" style="display:none;">Supprimer</button>
+                    <button type="button" id="btn-cancel-carnet" class="btn-cancel">Annuler</button>
                     <button type="submit" class="btn-submit">Enregistrer</button>
                 </div>
             </form>
@@ -1209,7 +1208,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=85"></script>
-    <script src="version.js?v=20260916225237"></script>
+    <script src="version.js?v=20260916225758"></script>
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=93"></script>
     <script src="presences.js?v=92"></script>
@@ -1217,7 +1216,7 @@
     <script src="calendrier.js?v=88"></script>
     <script src="comptes.js?v=108"></script>
     <script src="aeronefs.js?v=100"></script>
-    <script src="carnet.js?v=116"></script>
+    <script src="carnet.js?v=117"></script>
     <script src="documents.js?v=83"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=4"></script>
