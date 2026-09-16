@@ -372,6 +372,18 @@ async function chargerSuiviAeronef() {
             ? machineActuelle.fields['Immatriculation'] 
             : valSelectionnee;
 
+        if (machineActuelle) avionTarifId = machineActuelle.id;
+        const prixInput = document.getElementById('prix-heure-suivi');
+        const prixGroup = document.getElementById('prix-heure-suivi-group');
+        if (prixInput && machineActuelle && machineActuelle.fields) {
+            const prix = machineActuelle.fields['Prix heure'];
+            prixInput.value = (prix !== undefined && prix !== null) ? String(prix).replace('.', ',') : '';
+        }
+        if (prixGroup) {
+            const visible = typeof currentUser !== 'undefined' && currentUser && currentUser.roles && (currentUser.roles.includes('Super admin') || currentUser.roles.includes('Trésorier'));
+            prixGroup.style.display = visible ? 'flex' : 'none';
+        }
+
         const horametreActuelAeronef = (machineActuelle && machineActuelle.fields && machineActuelle.fields['Horamètre actuel'] !== undefined && machineActuelle.fields['Horamètre actuel'] !== null && machineActuelle.fields['Horamètre actuel'] !== '')
             ? parseFloat(String(machineActuelle.fields['Horamètre actuel']).replace(',', '.')) || 0
             : 0;
@@ -975,6 +987,7 @@ const TYPES_DOCUMENTS_AERONEFS = [
     { code: 'Autre', nom: 'Autre', dateRequise: false }
 ];
 let documentsAeronefsParMachine = {};
+let avionTarifId = null;
 let machineDocumentsCourante = '';
 
 function peutGererMaintenance() {
@@ -1441,4 +1454,28 @@ async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures)
     }
 }
 
+function initGestionTarifAeronefs() {
+    const input = document.getElementById('prix-heure-suivi');
+    const btn = document.getElementById('btn-save-prix-heure');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+        if (!avionTarifId) return;
+        const prix = parseFloat(String(input.value).replace(',', '.')) || 0;
+        try {
+            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}/${avionTarifId}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ fields: { 'Prix heure': prix } })
+            });
+            if (!res.ok) throw new Error(await res.text());
+            alert('Tarif horaire enregistré.');
+            if (typeof chargerSuiviAeronef === 'function') chargerSuiviAeronef();
+        } catch (e) {
+            console.error(e);
+            alert('Erreur lors de l\'enregistrement du tarif.');
+        }
+    });
+}
+
+initGestionTarifAeronefs();
 initSuiviDocumentsAeronefs();

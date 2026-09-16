@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=129">
+    <link rel="stylesheet" href="style.css?v=130">
 </head>
 <body>
 
@@ -328,6 +328,12 @@
                         <select id="select-machine-suivi">
                             <!-- Populé dynamiquement -->
                         </select>
+                        <div id="prix-heure-suivi-group" style="display: none; align-items: center; gap: 6px;">
+                            <label for="prix-heure-suivi" style="font-size: 13px; font-weight: 600;">Prix / h :</label>
+                            <input type="number" id="prix-heure-suivi" step="0.01" min="0" style="width: 70px; padding: 6px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;">
+                            <span style="font-size: 13px;">€</span>
+                            <button id="btn-save-prix-heure" class="btn-submit" style="padding: 6px 12px; border-radius: 6px; font-size: 12px;">OK</button>
+                        </div>
                         <button id="btn-maintenance" class="btn-submit" style="padding: 8px 14px; border-radius: 6px; font-size: 13px;">Renseigner un acte de maintenance</button>
                     </div>
                 </header>
@@ -955,6 +961,10 @@
                         <option value="Examen">Examen</option>
                     </select>
                 </div>
+                <div class="form-group full-width" id="carnet-activite-detail-group" style="display: none;">
+                    <label for="carnet-activite-detail">Précisez l'activité :</label>
+                    <input type="text" id="carnet-activite-detail" placeholder="Ex: Remorquage" value="Remorquage">
+                </div>
                 <div class="form-row" id="carnet-decol-atterr-row">
                     <div class="form-group">
                         <label for="carnet-decol-atterr">Décollages / Atterrissages :</label>
@@ -991,9 +1001,15 @@
                         <input type="number" id="carnet-horametre-arrivee" step="0.01" min="0" placeholder="Ex: 5523.77">
                     </div>
                 </div>
-                <div class="form-group observation-only full-width">
-                    <label for="carnet-observations">Observations :</label>
-                    <textarea id="carnet-observations" rows="2" placeholder="Remarques éventuelles..."></textarea>
+                <div class="form-row" id="carnet-observations-prix-row">
+                    <div class="form-group observation-only">
+                        <label for="carnet-observations">Remarques :</label>
+                        <textarea id="carnet-observations" rows="2" placeholder="Remarques éventuelles..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="carnet-prix-vol">Prix du vol :</label>
+                        <input type="text" id="carnet-prix-vol" readonly value="—">
+                    </div>
                 </div>
                 <div class="form-actions full-width">
                     <button type="button" id="btn-delete-carnet" style="display:none;">Supprimer</button>
@@ -1191,15 +1207,15 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=85"></script>
-    <script src="version.js?v=20260916222850"></script>
+    <script src="version.js?v=20260916223328"></script>
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=93"></script>
     <script src="presences.js?v=92"></script>
     <script src="planning.js?v=135"></script>
     <script src="calendrier.js?v=88"></script>
     <script src="comptes.js?v=108"></script>
-    <script src="aeronefs.js?v=99"></script>
-    <script src="carnet.js?v=112"></script>
+    <script src="aeronefs.js?v=100"></script>
+    <script src="carnet.js?v=113"></script>
     <script src="documents.js?v=83"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=4"></script>

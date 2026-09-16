@@ -13,6 +13,31 @@ const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CE
 const REMOQUES_PLANEURS = [...IMMATS_PLANEURS.map(i => `Remorque ${i}`), 'Remorque SP98', 'Remorque 100LL'];
 const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS];
 const MACHINES_MOTEURS = ['F-GASB', 'F-BLIO', 'F-JVIO'];
+let tarifsAeronefsCache = null;
+
+async function chargerTarifsAeronefs() {
+    if (tarifsAeronefsCache !== null) return tarifsAeronefsCache;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}`, { headers });
+        const data = await res.json();
+        const cache = {};
+        (data.records || []).forEach(r => {
+            if (r.fields && r.fields['Immatriculation']) {
+                cache[r.fields['Immatriculation']] = parseFloat(String(r.fields['Prix heure'] || '').replace(',', '.')) || 0;
+            }
+        });
+        tarifsAeronefsCache = cache;
+        return cache;
+    } catch (e) {
+        console.warn('Erreur chargement tarifs Aéronefs:', e);
+        tarifsAeronefsCache = {};
+        return {};
+    }
+}
+
+function getTarifMachine(machine) {
+    return tarifsAeronefsCache && tarifsAeronefsCache[machine] ? tarifsAeronefsCache[machine] : 0;
+}
 
 function horametreVersMinutes(val) {
     const total = parseFloat(val);
@@ -165,6 +190,8 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     } else if (selectMachine && form.dataset.mode !== 'observation') {
         mettreAJourDonneesDepartDefaut(selectMachine.value);
         mettreAJourHeureArrivee();
+        mettreAJourActiviteParticuliere();
+        mettreAJourPrixDuVol();
     }
     const sidebar = document.querySelector('.sidebar');
     const sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 170;
@@ -205,6 +232,8 @@ function remplirFormulaireCarnet(f) {
     document.getElementById('carnet-horametre-depart').value = f['Horamètre départ'] || '';
     document.getElementById('carnet-horametre-arrivee').value = f['Horamètre arrivée'] || '';
     document.getElementById('carnet-observations').value = f['Observations'] || '';
+    const activiteDetail = document.getElementById('carnet-activite-detail');
+    if (activiteDetail) activiteDetail.value = f['Précision activité'] || '';
     const decAt = document.getElementById('carnet-decol-atterr');
     if (decAt) decAt.value = (f['Décollages'] === 0 || f['Décollages']) ? f['Décollages'] : '1';
     const fonctions = (f['Fonction'] || '').split('/').map(x => x.trim());
@@ -213,6 +242,8 @@ function remplirFormulaireCarnet(f) {
     });
     mettreAJourStyleChampsAuto(machine);
     mettreAJourHeureArrivee();
+    mettreAJourActiviteParticuliere();
+    mettreAJourPrixDuVol();
 }
 
 let carnetInstructeursCache = [];
@@ -356,6 +387,58 @@ function ajouterMinutes(heure, minutes) {
     const hh = Math.floor(total / 60);
     const mm = total % 60;
     return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function mettreAJourActiviteParticuliere() {
+    const nature = document.getElementById('carnet-nature').value;
+    const group = document.getElementById('carnet-activite-detail-group');
+    const input = document.getElementById('carnet-activite-detail');
+    if (!group || !input) return;
+    if (nature === 'Activité Particulière') {
+        group.style.display = '';
+        if (!input.value) input.value = 'Remorquage';
+    } else {
+        group.style.display = 'none';
+    }
+}
+
+async function mettreAJourPrixDuVol() {
+    const input = document.getElementById('carnet-prix-vol');
+    if (!input) return;
+    const machine = document.getElementById('carnet-machine').value;
+    const nature = document.getElementById('carnet-nature').value;
+    if (nature === 'VLD') {
+        input.value = '0,00 €';
+        return;
+    }
+    await chargerTarifsAeronefs();
+    const tarif = getTarifMachine(machine);
+    if (!tarif) {
+        input.value = '—';
+        return;
+    }
+    const heureDepart = document.getElementById('carnet-heure-depart').value;
+    const heureArrivee = document.getElementById('carnet-heure-arrivee').value;
+    const hDep = document.getElementById('carnet-horametre-depart').value;
+    const hArr = document.getElementById('carnet-horametre-arrivee').value;
+    let minutes = 0;
+    const dureeHora = dureeHorametreMinutes(machine, hDep, hArr);
+    if (dureeHora !== null && dureeHora > 0) {
+        minutes = dureeHora;
+    } else if (heureDepart && heureArrivee) {
+        const [hD, mD] = heureDepart.split(':').map(Number);
+        const [hA, mA] = heureArrivee.split(':').map(Number);
+        if (!isNaN(hD) && !isNaN(mD) && !isNaN(hA) && !isNaN(mA)) {
+            minutes = (hA * 60 + mA) - (hD * 60 + mD);
+            if (minutes < 0) minutes += 24 * 60;
+        }
+    }
+    if (minutes <= 0) {
+        input.value = '—';
+        return;
+    }
+    const prix = (minutes / 60) * tarif;
+    input.value = prix.toFixed(2).replace('.', ',') + ' €';
 }
 
 function mettreAJourStyleChampsAuto(machine) {
@@ -767,6 +850,7 @@ async function soumettreCarnetRoute(event) {
     const horametreDepart = document.getElementById('carnet-horametre-depart').value;
     const horametreArrivee = document.getElementById('carnet-horametre-arrivee').value;
     const observations = document.getElementById('carnet-observations').value.trim();
+    const activiteParticuliere = nature === 'Activité Particulière' ? (document.getElementById('carnet-activite-detail').value.trim() || '') : '';
 
     const ancienRecord = idCarnetEnEdition ? listeVolsCarnetCache.find(r => r.id === idCarnetEnEdition) : null;
 
@@ -799,6 +883,7 @@ async function soumettreCarnetRoute(event) {
         "Décollages": decollages,
         "Atterrissages": atterrissages,
         "Nature": nature,
+        "Précision activité": activiteParticuliere,
         "Carburant départ": valeurCarburant(carburantDepart),
         "Carburant arrivée": valeurCarburant(carburantArrivee),
         "Huile départ": numeric(huileDepart),
@@ -1042,8 +1127,24 @@ function initCarnetRoute() {
     const champsCalculHeureArrivee = ['carnet-machine', 'carnet-horametre-depart', 'carnet-horametre-arrivee', 'carnet-heure-depart'];
     champsCalculHeureArrivee.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener('input', mettreAJourHeureArrivee);
+        if (el) {
+            el.addEventListener('input', () => {
+                mettreAJourHeureArrivee();
+                mettreAJourPrixDuVol();
+            });
+        }
     });
+    const elHeureArrivee = document.getElementById('carnet-heure-arrivee');
+    if (elHeureArrivee) elHeureArrivee.addEventListener('input', mettreAJourPrixDuVol);
+
+    const nature = document.getElementById('carnet-nature');
+    if (nature) {
+        nature.addEventListener('change', () => {
+            mettreAJourNatureParFonction();
+            mettreAJourActiviteParticuliere();
+            mettreAJourPrixDuVol();
+        });
+    }
 
     const selectMachine = document.getElementById('carnet-machine');
     if (selectMachine) {
@@ -1051,6 +1152,8 @@ function initCarnetRoute() {
             adapterFormulaireCarnet(selectMachine.value);
             mettreAJourStyleChampsAuto(selectMachine.value);
             mettreAJourHeureArrivee();
+            mettreAJourActiviteParticuliere();
+            mettreAJourPrixDuVol();
         });
         adapterFormulaireCarnet(selectMachine.value);
         mettreAJourStyleChampsAuto(selectMachine.value);

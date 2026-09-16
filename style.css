@@ -597,10 +597,17 @@ img, table, video, iframe, svg {
     width: 100%;
     max-width: none;
     height: 100%;
-    max-height: none;
+    max-height: 100vh;
     margin: 0;
+    padding: 12px 16px;
     overflow-y: auto;
     box-sizing: border-box;
+}
+#carnet-modal .modal-header {
+    margin-bottom: 8px;
+}
+#carnet-modal .modal-header h3 {
+    font-size: 18px;
 }
 #carnet-modal {
     align-items: center;
@@ -3149,12 +3156,13 @@ img, table, video, iframe, svg {
 
 /* --- FORMULAIRE F-JVIO COMPACT --- */
 #carnet-form.carnet-form-jvio {
-    gap: 10px;
+    gap: 6px;
     align-items: start;
+    font-size: 12px;
 }
 #carnet-form.carnet-form-jvio .form-group label {
-    font-size: 13px;
-    margin-bottom: 3px;
+    font-size: 11px;
+    margin-bottom: 2px;
     font-weight: 600;
     color: #1e3d59;
 }
@@ -3162,28 +3170,28 @@ img, table, video, iframe, svg {
 #carnet-form.carnet-form-jvio .form-group select,
 #carnet-form.carnet-form-jvio .form-group textarea,
 #carnet-form.carnet-form-jvio .select-recherche button {
-    padding: 6px 10px;
-    font-size: 13px;
-    min-height: 36px;
-    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    min-height: 30px;
+    border-radius: 6px;
 }
 #carnet-form.carnet-form-jvio .form-group textarea {
     resize: none;
-    height: 60px;
+    height: 44px;
 }
 #carnet-form.carnet-form-jvio .checkbox-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
 }
 #carnet-form.carnet-form-jvio .checkbox-option {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     border: 1px solid #cbd5e1;
-    border-radius: 16px;
-    padding: 4px 10px;
-    font-size: 12px;
+    border-radius: 14px;
+    padding: 3px 8px;
+    font-size: 11px;
     cursor: pointer;
     background: #fff;
     color: #1e3d59;
@@ -3200,11 +3208,13 @@ img, table, video, iframe, svg {
     display: none;
 }
 #carnet-form.carnet-form-jvio .form-actions {
-    padding-top: 5px;
+    padding-top: 2px;
+    margin-top: 4px;
+    gap: 6px;
 }
 #carnet-form.carnet-form-jvio .form-actions button {
-    padding: 8px 16px;
-    font-size: 14px;
+    padding: 6px 12px;
+    font-size: 12px;
 }
 @media (max-width: 700px) {
     #carnet-form.carnet-form-jvio {
