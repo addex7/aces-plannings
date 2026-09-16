@@ -3238,6 +3238,15 @@ img, table, video, iframe, svg {
     flex-wrap: wrap;
     gap: 4px;
 }
+#carnet-form.carnet-form-jvio .form-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+#carnet-form.carnet-form-jvio .form-row .form-group {
+    max-width: none;
+}
 #carnet-form.carnet-form-jvio .decollage-flex {
     display: flex;
     align-items: center;
