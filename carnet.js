@@ -516,8 +516,15 @@ const CARNET_STD_FONCTIONS = [
 const CARNET_JVIO_NATURES = ['local', 'voyage', 'REV', 'Instruction', 'VLD', 'Activité Particulière'];
 const CARNET_STD_NATURES = ['Autre', 'Instruction', 'Examen'];
 
+const EMOJIS_MACHINE = {
+    'F-GASB': '✈️',
+    'F-BLIO': '🛩️',
+    'F-JVIO': '🚁'
+};
+
 function peuplerOptionsMachineCarnet(extraMachine = null) {
     const select = document.getElementById('carnet-machine');
+    const chips = document.getElementById('carnet-machine-chips');
     if (!select) return;
     select.innerHTML = MACHINES_MOTEURS.map(m => `<option value="${m}">${m}</option>`).join('');
     if (extraMachine && !MACHINES_MOTEURS.includes(extraMachine)) {
@@ -526,6 +533,29 @@ function peuplerOptionsMachineCarnet(extraMachine = null) {
         opt.textContent = extraMachine;
         select.appendChild(opt);
     }
+    if (chips) {
+        chips.innerHTML = Array.from(select.options).map(o =>
+            `<label class="checkbox-option"><input type="radio" name="carnet-machine-chip" value="${o.value}"> ${EMOJIS_MACHINE[o.value] || ''} ${o.text}</label>`
+        ).join('');
+        chips.querySelectorAll('input[name="carnet-machine-chip"]').forEach(rb => {
+            rb.addEventListener('change', () => {
+                select.value = rb.value;
+                adapterFormulaireCarnet(rb.value);
+                mettreAJourStyleChampsAuto(rb.value);
+                mettreAJourHeureArrivee();
+                mettreAJourActiviteParticuliere();
+                mettreAJourPrixDuVol();
+                syncMachineChips();
+                syncNatureChips();
+            });
+        });
+    }
+}
+
+function syncMachineChips() {
+    const select = document.getElementById('carnet-machine');
+    const chips = document.querySelectorAll('input[name="carnet-machine-chip"]');
+    chips.forEach(cb => { cb.checked = cb.value === (select ? select.value : ''); });
 }
 
 function cocherFonctionParDefaut() {
@@ -544,6 +574,8 @@ function adapterFormulaireCarnet(machine) {
     const fonctionGroup = document.getElementById('carnet-fonction-group');
     const fonctionLabel = document.getElementById('carnet-fonction-label');
     const nature = document.getElementById('carnet-nature');
+    const machineSelect = document.getElementById('carnet-machine');
+    const machineChips = document.getElementById('carnet-machine-chips');
     const carbuRow = document.getElementById('carnet-carburant-row');
     const huileRow = document.getElementById('carnet-huile-row');
     const instSel = document.getElementById('carnet-instructeur');
@@ -581,6 +613,9 @@ function adapterFormulaireCarnet(machine) {
         });
     }
     syncNatureChips();
+    if (machineSelect) machineSelect.style.display = 'none';
+    if (machineChips) machineChips.style.display = 'flex';
+    syncMachineChips();
 
     if (fonctionGroup) {
         const fonctions = isJVIO ? CARNET_JVIO_FONCTIONS : CARNET_STD_FONCTIONS;
@@ -1175,6 +1210,7 @@ function initCarnetRoute() {
         });
     }
 
+    peuplerOptionsMachineCarnet();
     const selectMachine = document.getElementById('carnet-machine');
     if (selectMachine) {
         selectMachine.addEventListener('change', () => {
