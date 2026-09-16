@@ -535,6 +535,8 @@ function cocherFonctionParDefaut() {
 
 function adapterFormulaireCarnet(machine) {
     const isJVIO = machine === 'F-JVIO';
+    const modal = document.getElementById('carnet-modal');
+    if (modal) modal.classList.toggle('carnet-modal-jvio', isJVIO);
     const piloteLabel = document.getElementById('carnet-pilote-label');
     const instLabel = document.getElementById('carnet-instructeur-label');
     const hDepLabel = document.getElementById('carnet-heure-depart-label');
