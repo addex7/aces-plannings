@@ -14,6 +14,14 @@ const REMOQUES_PLANEURS = [...IMMATS_PLANEURS.map(i => `Remorque ${i}`), 'Remorq
 const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS];
 const MACHINES_MOTEURS = ['F-GASB', 'F-BLIO', 'F-JVIO'];
 
+function horametreVersMinutes(val) {
+    const total = parseFloat(val);
+    if (isNaN(total)) return null;
+    const h = Math.floor(total);
+    const m = Math.round((total - h) * 100);
+    return h * 60 + m;
+}
+
 function formaterDureeMinutes(minutes) {
     const hrs = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -21,12 +29,12 @@ function formaterDureeMinutes(minutes) {
 }
 
 function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee, machine) {
-    // F-JVIO : horamètre au format décimal d'heures (ex. 1174.61 - 1172.11 = 2.50 h)
+    // F-JVIO : horamètre au format H.MM (ex. 1154.17 = 1154 h 17 min)
     if (horametreDepart && horametreArrivee && machine === 'F-JVIO') {
-        const dep = parseFloat(horametreDepart);
-        const arr = parseFloat(horametreArrivee);
-        if (!isNaN(dep) && !isNaN(arr) && arr >= dep) {
-            return formaterDureeMinutes(Math.round((arr - dep) * 60));
+        const dep = horametreVersMinutes(horametreDepart);
+        const arr = horametreVersMinutes(horametreArrivee);
+        if (dep !== null && arr !== null && arr >= dep) {
+            return formaterDureeMinutes(arr - dep);
         }
     }
     // Priorité aux horamètres si les deux sont renseignés (format décimal pour les autres machines)
@@ -327,6 +335,12 @@ function afficherCarburant(v) {
 
 function dureeHorametreMinutes(machine, horametreDepart, horametreArrivee) {
     if (!horametreDepart || !horametreArrivee) return null;
+    if (machine === 'F-JVIO') {
+        const dep = horametreVersMinutes(horametreDepart);
+        const arr = horametreVersMinutes(horametreArrivee);
+        if (dep === null || arr === null || arr < dep) return null;
+        return arr - dep;
+    }
     const dep = parseFloat(horametreDepart);
     const arr = parseFloat(horametreArrivee);
     if (isNaN(dep) || isNaN(arr) || arr < dep) return null;
