@@ -395,14 +395,25 @@ function mettreAJourNatureParFonction() {
 }
 
 const CARNET_JVIO_FONCTIONS = [
-    { value: 'P', label: 'P = Pilote' },
-    { value: 'PCdB', label: 'PCdB = PIL.+CdB' },
-    { value: 'PAX', label: 'PAX = Passager' },
-    { value: 'EP', label: 'EP = Élève pilote' },
-    { value: 'I', label: 'I = Instructeur' },
-    { value: 'ICdB', label: 'ICdB = Instr.+CdB' },
-    { value: 'EX', label: 'EX = Examinateur' }
+    { value: 'P', label: 'P = Pilote', emoji: '🧑‍✈️' },
+    { value: 'PCdB', label: 'PCdB = PIL.+CdB', emoji: '🛩️' },
+    { value: 'PAX', label: 'PAX = Passager', emoji: '👤' },
+    { value: 'EP', label: 'EP = Élève pilote', emoji: '🎓' },
+    { value: 'I', label: 'I = Instructeur', emoji: '👨‍🏫' },
+    { value: 'ICdB', label: 'ICdB = Instr.+CdB', emoji: '✈️' },
+    { value: 'EX', label: 'EX = Examinateur', emoji: '📋' }
 ];
+
+const EMOJIS_NATURE_JVIO = {
+    'Autre': '⚪',
+    'local': '🏠',
+    'voyage': '🗺️',
+    'REV': '🔄',
+    'Instruction': '📚',
+    'VLO': '🛫',
+    'VLD': '🛬',
+    'Activité Particulière': '🎯'
+};
 
 const CARNET_STD_FONCTIONS = [
     { value: 'P', label: 'P - Pilote' },
@@ -457,14 +468,14 @@ function adapterFormulaireCarnet(machine) {
 
     if (nature) {
         const options = isJVIO ? CARNET_JVIO_NATURES : CARNET_STD_NATURES;
-        nature.innerHTML = options.map(v => `<option value="${v}">${v}</option>`).join('');
+        nature.innerHTML = options.map(v => `<option value="${v}">${isJVIO ? (EMOJIS_NATURE_JVIO[v] || '') + ' ' : ''}${v}</option>`).join('');
         nature.value = isJVIO ? 'local' : options[0];
     }
 
     if (fonctionGroup) {
         const fonctions = isJVIO ? CARNET_JVIO_FONCTIONS : CARNET_STD_FONCTIONS;
         fonctionGroup.innerHTML = fonctions.map(f =>
-            `<label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="${f.value}"> ${f.label}</label>`
+            `<label class="checkbox-option">${f.emoji ? f.emoji + ' ' : ''}<input type="checkbox" name="carnet-fonction" value="${f.value}"> ${f.label}</label>`
         ).join('');
         fonctionGroup.querySelectorAll('input[name="carnet-fonction"]').forEach(cb => {
             cb.addEventListener('change', mettreAJourNatureParFonction);
