@@ -400,6 +400,7 @@ async function chargerSuiviAeronef() {
         }
 
         let potentielInitial = 0;
+        let buteeInitiale = 0;
 
         const dateDepartStr = dateDepart.getFullYear() + '-' +
             String(dateDepart.getMonth() + 1).padStart(2, '0') + '-' +
@@ -474,7 +475,10 @@ async function chargerSuiviAeronef() {
             }, 0);
             const horametreJour = horametreActuel - tempsCarnetDepuisJour;
             potentielCourant = buteeJour - horametreJour;
-            if (i === 0) potentielInitial = potentielCourant;
+            if (i === 0) {
+                potentielInitial = potentielCourant;
+                buteeInitiale = buteeJour;
+            }
 
             const dayNum = day.toString().padStart(2, '0');
             const monthNum = (month + 1).toString().padStart(2, '0');
@@ -734,7 +738,7 @@ async function chargerSuiviAeronef() {
                         heureArriveeCarnet = heureDepartCarnet + (isNaN(t) ? 0.5 : t);
                     }
                     const dureeCarnet = Math.max(heureArriveeCarnet - heureDepartCarnet, 0);
-                    const offsetHeures = -dateJour.getTimezoneOffset() / 60;
+                    const offsetHeures = immatMachine.toUpperCase() === 'F-JVIO' ? 0 : -dateJour.getTimezoneOffset() / 60;
                     const heureDepartCarnetLocal = heureDepartCarnet + offsetHeures;
                     const left = positionHeure(heureDepartCarnetLocal);
                     const widthPct = Math.max(positionHeure(heureDepartCarnetLocal + dureeCarnet) - positionHeure(heureDepartCarnetLocal), 1.0);
@@ -769,10 +773,12 @@ async function chargerSuiviAeronef() {
         const titreDoc = document.getElementById('aeronef-suivi-title');
         if (titreDoc) {
             titreDoc.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <span>Prévisionnel sur 14 jours</span>
                     <div style="font-size: 14px; font-weight: normal;">
-                        Potentiel actuel : <strong>${potentielInitial.toFixed(1)} h</strong>
+                        Prochaine butée : <strong>${buteeInitiale.toFixed(1)} h</strong>
+                        &nbsp;|&nbsp; Dernier horamètre : <strong>${horametreActuel.toFixed(2)} h</strong>
+                        &nbsp;|&nbsp; Potentiel actuel : <strong>${potentielInitial.toFixed(1)} h</strong>
                     </div>
                 </div>
             `;
