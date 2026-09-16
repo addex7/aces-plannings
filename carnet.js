@@ -953,6 +953,7 @@ async function soumettreCarnetRoute(event) {
         "Huile arrivée": numeric(huileArrivee),
         "Horamètre départ": numeric(horametreDepart),
         "Horamètre arrivée": numeric(horametreArrivee),
+        "Prix du vol": numeric(prixVolText),
         "Observations": observations
     };
 
