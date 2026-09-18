@@ -1980,6 +1980,15 @@ function initGestionnaireModale() {
         formReservation.addEventListener('submit', async (e) => {
             e.preventDefault();
             const typesVol = getTypeVolSelectionne();
+            const typesValidesAirtable = ['Local','Navigation','Vol de nuit','Instruction','VI Moteur','VI Planeur'];
+            const typesFinaux = typesVol.filter(t => typesValidesAirtable.includes(t));
+            const typesSupplementaires = typesVol.filter(t => !typesValidesAirtable.includes(t));
+            const commentairesBase = (document.getElementById('form-commentaires') || {}).value || '';
+            let commentairesFinal = commentairesBase.trim();
+            if (typesSupplementaires.length) {
+                const extra = typesSupplementaires.join(', ');
+                commentairesFinal = commentairesFinal ? `${commentairesFinal}\n${extra}` : extra;
+            }
             const piloteNom = document.getElementById('form-pilote').value.trim();
             const passagerNom = document.getElementById('form-passager') ? document.getElementById('form-passager').value.trim() : '';
             const telephone = document.getElementById('form-telephone') ? document.getElementById('form-telephone').value.trim() : '';
@@ -2041,9 +2050,12 @@ function initGestionnaireModale() {
                     return;
                 }
                 const commentaire = document.getElementById('form-commentaires').value.trim();
+                const commentaireVI = typesSupplementaires.length
+                    ? (commentaire ? `${commentaire}\n${typesSupplementaires.join(', ')}` : typesSupplementaires.join(', '))
+                    : commentaire;
                 if (isVIPlaneur) {
                     const auteurNom = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
-                    const recordData = { fields: { "Nom": passagerNom, "Pilote": piloteNom, "Auteur": auteurNom, "Téléphone": telephone, "Date de début": dateDebut, "Date de fin": dateFin, "Commentaire": commentaire } };
+                    const recordData = { fields: { "Nom": passagerNom, "Pilote": piloteNom, "Auteur": auteurNom, "Téléphone": telephone, "Date de début": dateDebut, "Date de fin": dateFin, "Commentaire": commentaireVI } };
                     try {
                         const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}`, {
                             method: 'POST',
@@ -2069,7 +2081,7 @@ function initGestionnaireModale() {
                 }
                 const recordData = {
                     fields: {
-                        "Type de vol": typesVol,
+                        "Type de vol": typesFinaux.length ? typesFinaux : ['Local'],
                         "Machine": [machineId],
                         "Pilote": piloteNom,
                         "Instructeur": instructeur,
@@ -2077,7 +2089,7 @@ function initGestionnaireModale() {
                         "Téléphone": telephone,
                         "Date de début": dateDebut,
                         "Date de fin": dateFin,
-                        "Commentaires VI": "",
+                        "Commentaires VI": commentairesFinal,
                         "Temps estimé": 1
                     }
                 };
@@ -2117,17 +2129,16 @@ function initGestionnaireModale() {
                 alert("Veuillez sélectionner une machine.");
                 return;
             }
-            const commentaires = document.getElementById('form-commentaires').value;
             const tempsEstime = parseFloat(document.getElementById('form-estimation').value) || 0;
             const recordData = {
                 fields: {
-                    "Type de vol": typesVol,
+                    "Type de vol": typesFinaux.length ? typesFinaux : ['Local'],
                     "Machine": [machineId],
                     "Pilote": piloteNom,
                     "Instructeur": instructeur,
                     "Date de début": dateDebut,
                     "Date de fin": dateFin,
-                    "Commentaires VI": "",
+                    "Commentaires VI": commentairesFinal,
                     "Temps estimé": tempsEstime
                 }
             };
