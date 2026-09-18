@@ -890,8 +890,18 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                                 libelleEntete = isVIMoteur ? `🎯 VI Moteur (${piloteFormate})` : `🎯 VI (${piloteFormate})`;
                             }
                         }
+                        const debutStr = convertirHeureEnHHMM(heureDebut);
+                        const finStr = convertirHeureEnHHMM(heureFin);
                         if (isCreneau) {
                             barresDiv.title = (vol.fields['Commentaires VI'] || '') + (passagerNom ? '\nPassager : ' + passagerNom : '');
+                        } else {
+                            barresDiv.title = [
+                                `Type : ${Array.isArray(typeVol) ? typeVol.join(', ') : typeVol}`,
+                                `Pilote : ${piloteFormate || '—'}`,
+                                `Passager : ${passagerNom || '—'}`,
+                                `Instructeur : ${instructeurNom || '—'}`,
+                                `Horaires : ${debutStr} - ${finStr}`
+                            ].join('\n');
                         }
                         barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
                         if (!isCreneau) {
