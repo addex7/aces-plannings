@@ -167,6 +167,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const extraMachine = machineImmat || (record && record.fields ? record.fields['Machine'] : null);
     const filtreMachine = document.getElementById('carnet-machine-filtre');
     const machineCible = extraMachine || (filtreMachine ? filtreMachine.value : 'F-GASB');
+    console.log('[CARNET] ouvrir machineCible:', machineCible, 'recordId:', recordId);
 
     const piloteDefaut = (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
     const piloteCible = recordId ? (record.fields?.['Pilote'] || '') : piloteDefaut;
@@ -174,6 +175,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
 
     const instructeurCible = recordId ? (record.fields?.['Instructeur'] || '') : '';
     await peuplerInstructeursSelect(instructeurCible, machineCible);
+    console.log('[CARNET] instructeur options after peupler:', document.getElementById('carnet-instructeur')?.options?.length);
 
     peuplerOptionsMachineCarnet(extraMachine);
 
@@ -311,6 +313,7 @@ async function peuplerInstructeursSelect(instructeur = '', machine = '') {
     const sel = document.getElementById('carnet-instructeur');
     if (!sel) return;
     const isJVIO = machine === 'F-JVIO';
+    console.log('[CARNET] peuplerInstructeursSelect machine:', machine, 'isJVIO:', isJVIO, 'instructeur:', instructeur);
     try {
         if (isJVIO) {
             let noms = [...carnetPilotesCache];
@@ -325,6 +328,7 @@ async function peuplerInstructeursSelect(instructeur = '', machine = '') {
                 const piloteSel = document.getElementById('carnet-pilote');
                 noms = (piloteSel && piloteSel.options.length) ? [...piloteSel.options].map(o => o.value).filter(Boolean) : [...carnetPilotesCache];
             }
+            console.log('[CARNET] noms équipage2:', noms.length, noms.slice(0, 3));
             if (instructeur && !noms.includes(instructeur)) noms.push(instructeur);
             sel.innerHTML = '<option value="">-- Aucun --</option>';
             noms.forEach(nom => {
@@ -358,6 +362,7 @@ async function peuplerInstructeursSelect(instructeur = '', machine = '') {
             });
         }
         if (instructeur) sel.value = instructeur;
+        console.log('[CARNET] options équipage2 fin:', sel.options.length);
     } catch (err) {
         console.error('Erreur chargement instructeurs:', err);
         sel.innerHTML = `<option value="">-- Aucun --</option>${instructeur ? `<option value="${escHtml(instructeur)}">${escHtml(instructeur)}</option>` : ''}`;
@@ -576,6 +581,7 @@ function peuplerOptionsMachineCarnet(extraMachine = null) {
         ).join('');
         chips.querySelectorAll('input[name="carnet-machine-chip"]').forEach(rb => {
             rb.addEventListener('change', async () => {
+                console.log('[CARNET] chip machine:', rb.value);
                 select.value = rb.value;
                 adapterFormulaireCarnet(rb.value);
                 const instSel = document.getElementById('carnet-instructeur');
