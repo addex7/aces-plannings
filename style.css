@@ -2840,6 +2840,9 @@ img, table, video, iframe, svg {
     border-radius: 16px;
     background: #fff;
     color: #1e3d59;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 .nr-title {
     margin: 0 0 20px 0;
