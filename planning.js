@@ -562,6 +562,8 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                 const estMoi = estUtilisateurCourant(pilote);
                 const classePilote = pilote ? 'vi-avec-pilote' : 'vi-sans-pilote';
                 barresDiv.className = `reservation-bar ${classePilote}${estMoi ? ' ma-reservation' : ''}`;
+                if (duree <= 2) barresDiv.classList.add('short-reservation');
+                if (duree <= 1) barresDiv.classList.add('very-short-reservation');
                 barresDiv.style.left = `${positionHeure(heureDebut)}%`;
                 barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
                 const libelle = pilote ? `${type} (${formaterNomPilote(pilote)})` : `${type} DISPONIBLE`;
