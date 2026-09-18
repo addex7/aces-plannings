@@ -2714,12 +2714,15 @@ function initGestionnaireVolsInitiation() {
     if (btnArchives) btnArchives.addEventListener('click', () => setFiltre('archives'));
 
     function setFiltreTypes() {
-        filtreTypesInitiation = Array.from(document.querySelectorAll('input[name="initiation-type-filtre"]:checked')).map(cb => cb.value);
+        filtreTypesInitiation = Array.from(document.querySelectorAll('.initiation-filter-btn.active')).map(btn => btn.dataset.type);
         afficherVolsInitiation();
     }
-    const typeCheckboxes = document.querySelectorAll('input[name="initiation-type-filtre"]');
-    if (typeCheckboxes.length) {
-        typeCheckboxes.forEach(cb => cb.addEventListener('change', setFiltreTypes));
+    const typeFilterBtns = document.querySelectorAll('.initiation-filter-btn');
+    if (typeFilterBtns.length) {
+        typeFilterBtns.forEach(btn => btn.addEventListener('click', () => {
+            btn.classList.toggle('active');
+            setFiltreTypes();
+        }));
         setFiltreTypes();
     }
 
@@ -2903,37 +2906,41 @@ function initGestionCreneauxVI() {
     const form = document.getElementById('form-creneaux-vi');
     if (form) {
         form.addEventListener('submit', creerCreneauxVI);
+        form.addEventListener('reset', () => {
+            setTimeout(genererApercuCreneauxVI, 0);
+        });
     }
+    ['gv-type','gv-date','gv-debut','gv-fin','gv-nombre'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', genererApercuCreneauxVI);
+    });
+    genererApercuCreneauxVI();
 }
 
-async function creerCreneauxVI(e) {
-    e.preventDefault();
-    const type = document.getElementById('gv-type').value;
-    const date = document.getElementById('gv-date').value;
-    const debut = document.getElementById('gv-debut').value;
-    const fin = document.getElementById('gv-fin').value;
-    const dureeMin = parseInt(document.getElementById('gv-duree').value, 10);
-    const nombre = parseInt(document.getElementById('gv-nombre').value, 10);
-    if (!type || !date || !debut || !fin || !dureeMin || !nombre) {
-        alert('Tous les champs sont requis.');
-        return;
+function genererApercuCreneauxVI() {
+    const apercu = document.getElementById('gv-apercu');
+    const type = document.getElementById('gv-type')?.value || '';
+    const date = document.getElementById('gv-date')?.value || '';
+    const debut = document.getElementById('gv-debut')?.value || '';
+    const fin = document.getElementById('gv-fin')?.value || '';
+    const nombre = parseInt(document.getElementById('gv-nombre')?.value, 10);
+    if (!type || !date || !debut || !fin || !nombre) {
+        if (apercu) apercu.innerHTML = 'Remplis les champs pour voir l\'aperçu des créneaux.';
+        return [];
     }
     const debutMin = timeToMinutes(debut);
     const finMin = timeToMinutes(fin);
     if (finMin <= debutMin) {
-        alert('L\'heure de fin doit être après l\'heure de début.');
-        return;
+        if (apercu) apercu.innerHTML = 'L\'heure de fin doit être après l\'heure de début.';
+        return [];
     }
-    const maxSlots = Math.floor((finMin - debutMin) / dureeMin);
-    const slots = Math.min(nombre, maxSlots);
-    if (slots <= 0) {
-        alert('Aucun créneau ne tient dans l\'intervalle.');
-        return;
-    }
+    const totalMin = finMin - debutMin;
+    const duree = totalMin / nombre;
     const records = [];
-    for (let i = 0; i < slots; i++) {
-        const start = debutMin + i * dureeMin;
-        const end = start + dureeMin;
+    const lignes = [];
+    for (let i = 0; i < nombre; i++) {
+        const start = Math.round(debutMin + i * duree);
+        const end = (i === nombre - 1) ? finMin : Math.round(start + duree);
         records.push({
             fields: {
                 'Date': date,
@@ -2943,6 +2950,30 @@ async function creerCreneauxVI(e) {
                 'Statut': 'Disponible'
             }
         });
+        const slotMin = end - start;
+        lignes.push(`Créneau ${i + 1} : <strong>${minutesToTimeString(start)} - ${minutesToTimeString(end)}</strong> (${slotMin} min)`);
+    }
+    if (apercu) {
+        apercu.innerHTML = `<div style="margin-bottom:4px;font-weight:bold;">Aperçu des créneaux :</div>` +
+            `<ul style="margin:0; padding-left:18px; line-height:1.5;">${lignes.map(l => `<li>${l}</li>`).join('')}</ul>`;
+    }
+    return records;
+}
+
+async function creerCreneauxVI(e) {
+    e.preventDefault();
+    const type = document.getElementById('gv-type')?.value;
+    const date = document.getElementById('gv-date')?.value;
+    const debut = document.getElementById('gv-debut')?.value;
+    const fin = document.getElementById('gv-fin')?.value;
+    if (!type || !date || !debut || !fin) {
+        alert('Tous les champs sont requis.');
+        return;
+    }
+    const records = genererApercuCreneauxVI();
+    if (!records || records.length === 0) {
+        alert('Aucun créneau ne tient dans l\'intervalle.');
+        return;
     }
     try {
         for (let i = 0; i < records.length; i += 10) {

@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=142">
+    <link rel="stylesheet" href="style.css?v=143">
 </head>
 <body>
 
@@ -258,7 +258,7 @@
                 </header>
 
                 <div id="gestion-vi-toolbar" style="display:none; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px;">
-                    <h3 style="margin-top:0; margin-bottom:8px; color:#1e3d59; font-size:16px;">Gérer les créneaux VI</h3>
+                    <h3 style="margin-top:0; margin-bottom:8px; color:#1e3d59; font-size:16px;">Créer de multiple créneau de VI</h3>
                     <form id="form-creneaux-vi">
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:10px;">
                             <div class="form-group">
@@ -282,13 +282,12 @@
                                 <input type="time" id="gv-fin" value="17:30" required>
                             </div>
                             <div class="form-group">
-                                <label for="gv-duree">Durée (min)</label>
-                                <input type="number" id="gv-duree" value="45" min="5" required>
-                            </div>
-                            <div class="form-group">
                                 <label for="gv-nombre">Nombre</label>
                                 <input type="number" id="gv-nombre" value="5" min="1" required>
                             </div>
+                        </div>
+                        <div id="gv-apercu" style="margin-bottom:10px; font-size:13px; color:#475569; background:#fff; border-radius:6px; border:1px solid #e2e8f0; padding:10px; min-height:20px;">
+                            Remplis les champs pour voir l'aperçu des créneaux.
                         </div>
                         <div class="form-actions">
                             <button type="submit" class="btn-primary">Créer les créneaux</button>
@@ -301,18 +300,11 @@
                     <button type="button" id="btn-initiation-pris" class="initiation-tab">Déjà pris</button>
                     <button type="button" id="btn-initiation-creneaux" class="initiation-tab" style="display:none;">Créneaux dispos</button>
                     <button type="button" id="btn-initiation-archives" class="initiation-tab">Archives</button>
-                </div>
-
-                <div class="initiation-type-filter" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 10px 0; font-size: 14px; color: #475569;">
-                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                        <input type="checkbox" name="initiation-type-filtre" value="VIP" checked> VIP
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                        <input type="checkbox" name="initiation-type-filtre" value="VIULM" checked> VIULM
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                        <input type="checkbox" name="initiation-type-filtre" value="VIA" checked> VIA
-                    </label>
+                    <div class="initiation-type-filter" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                        <button type="button" class="initiation-filter-btn active" data-type="VIP">VIP</button>
+                        <button type="button" class="initiation-filter-btn active" data-type="VIULM">VIULM</button>
+                        <button type="button" class="initiation-filter-btn active" data-type="VIA">VIA</button>
+                    </div>
                 </div>
 
                 <div id="initiation-list" class="initiation-list">
@@ -1208,11 +1200,11 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=86"></script>
-    <script src="version.js?v=20260918193852"></script>
+    <script src="version.js?v=20260918194357"></script>
     <script src="app.js?v=85"></script>
     <script src="utils.js?v=96"></script>
     <script src="presences.js?v=94"></script>
-    <script src="planning.js?v=145"></script>
+    <script src="planning.js?v=146"></script>
     <script src="calendrier.js?v=88"></script>
     <script src="comptes.js?v=108"></script>
     <script src="aeronefs.js?v=100"></script>

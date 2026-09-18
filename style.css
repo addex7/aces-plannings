@@ -938,6 +938,21 @@ img, table, video, iframe, svg {
     background-color: #1e3d59;
     color: white;
 }
+.initiation-filter-btn {
+    background-color: #e2e8f0;
+    color: #475569;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.initiation-filter-btn.active {
+    background-color: #10b981;
+    color: white;
+}
 .initiation-list {
     background: white;
     border-radius: 12px;
