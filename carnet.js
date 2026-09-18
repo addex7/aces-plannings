@@ -163,14 +163,18 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     if (departInput) departInput.value = 'LFOY';
     if (arriveeInput) arriveeInput.value = 'LFOY';
 
-    const piloteDefaut = (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
-    const piloteCible = recordId ? (listeVolsCarnetCache.find(r => r.id === recordId)?.fields['Pilote'] || '') : piloteDefaut;
-    await peuplerPilotesSelect(piloteCible);
-
-    await peuplerInstructeursSelect(recordId ? (listeVolsCarnetCache.find(r => r.id === recordId)?.fields['Instructeur'] || '') : '');
-
     const record = recordId ? listeVolsCarnetCache.find(r => r.id === recordId) : null;
     const extraMachine = machineImmat || (record && record.fields ? record.fields['Machine'] : null);
+    const filtreMachine = document.getElementById('carnet-machine-filtre');
+    const machineCible = extraMachine || (filtreMachine ? filtreMachine.value : 'F-GASB');
+
+    const piloteDefaut = (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
+    const piloteCible = recordId ? (record.fields?.['Pilote'] || '') : piloteDefaut;
+    await peuplerPilotesSelect(piloteCible);
+
+    const instructeurCible = recordId ? (record.fields?.['Instructeur'] || '') : '';
+    await peuplerInstructeursSelect(instructeurCible, machineCible);
+
     peuplerOptionsMachineCarnet(extraMachine);
 
     if (machineImmat) {
@@ -303,32 +307,46 @@ async function peuplerPilotesSelect(pilote = '') {
     }
 }
 
-async function peuplerInstructeursSelect(instructeur = '') {
+async function peuplerInstructeursSelect(instructeur = '', machine = '') {
     const sel = document.getElementById('carnet-instructeur');
     if (!sel) return;
-    const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
+    const isJVIO = machine === 'F-JVIO';
     try {
-        if (!carnetInstructeursCache.length) {
-            const table = typeof TABLE_UTILISATEURS !== 'undefined' ? TABLE_UTILISATEURS : 'Utilisateurs';
-            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message);
-            carnetInstructeursCache = (data.records || []).filter(r => {
-                const roles = Array.isArray(r.fields?.['Rôles']) ? r.fields['Rôles'] : [r.fields?.['Rôles']].filter(Boolean);
-                return roles.some(role => ROLES_INSTRUCTEUR.includes(role));
+        if (isJVIO) {
+            if (!carnetPilotesCache.length) await peuplerPilotesSelect('');
+            const noms = [...carnetPilotesCache];
+            if (instructeur && !noms.includes(instructeur)) noms.push(instructeur);
+            sel.innerHTML = '<option value="">-- Aucun --</option>';
+            noms.forEach(nom => {
+                const opt = document.createElement('option');
+                opt.value = nom;
+                opt.textContent = nom;
+                sel.appendChild(opt);
+            });
+        } else {
+            const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
+            if (!carnetInstructeursCache.length) {
+                const table = typeof TABLE_UTILISATEURS !== 'undefined' ? TABLE_UTILISATEURS : 'Utilisateurs';
+                const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message);
+                carnetInstructeursCache = (data.records || []).filter(r => {
+                    const roles = Array.isArray(r.fields?.['Rôles']) ? r.fields['Rôles'] : [r.fields?.['Rôles']].filter(Boolean);
+                    return roles.some(role => ROLES_INSTRUCTEUR.includes(role));
+                });
+            }
+            const noneOption = sel.querySelector('option[value=""]');
+            sel.innerHTML = noneOption ? noneOption.outerHTML : '<option value="">-- Aucun --</option>';
+            carnetInstructeursCache.forEach(r => {
+                const f = r.fields || {};
+                const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Instructeur';
+                const opt = document.createElement('option');
+                opt.value = nomComplet;
+                opt.textContent = nomComplet;
+                if (instructeur && (nomComplet === instructeur || f['Nom'] === instructeur || f['Prénom'] === instructeur)) opt.selected = true;
+                sel.appendChild(opt);
             });
         }
-        const noneOption = sel.querySelector('option[value=""]');
-        sel.innerHTML = noneOption ? noneOption.outerHTML : '<option value="">-- Aucun --</option>';
-        carnetInstructeursCache.forEach(r => {
-            const f = r.fields || {};
-            const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Instructeur';
-            const opt = document.createElement('option');
-            opt.value = nomComplet;
-            opt.textContent = nomComplet;
-            if (instructeur && (nomComplet === instructeur || f['Nom'] === instructeur || f['Prénom'] === instructeur)) opt.selected = true;
-            sel.appendChild(opt);
-        });
         if (instructeur) sel.value = instructeur;
     } catch (err) {
         console.error('Erreur chargement instructeurs:', err);
