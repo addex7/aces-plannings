@@ -454,6 +454,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             const barresDiv = document.createElement('div');
             barresDiv.className = 'reservation-bar';
             if (duree <= 2) barresDiv.classList.add('short-reservation');
+            if (duree <= 1) barresDiv.classList.add('very-short-reservation');
             const piloteFormate = (typeof formaterNomPilote === 'function') ? formaterNomPilote(piloteNom) : piloteNom;
             const isVIMoteur = typesVol.includes('VI Moteur');
             const isAncienVI = typesVol.includes("Vol d'Initiation") || typesVol.includes("Vol d'Initiation (VI)");

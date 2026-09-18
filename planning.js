@@ -14,6 +14,8 @@ let listeReservationsConflits = [];
 let filtreInitiationActif = 'apourvoir';
 let filtreTypesInitiation = ['VIP', 'VIULM', 'VIA'];
 let listeMembresCache = [];
+let hMinPlanning = 0;
+let hMaxPlanning = 24;
 
 function parseTempsDeVol(tempsStr) {
     if (!tempsStr) return NaN;
@@ -785,6 +787,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         });
         if (etendreFenetre) { hMin = 0; hMax = 24; }
         if (hMax <= hMin) { hMin = 0; hMax = 24; }
+        hMinPlanning = hMin;
+        hMaxPlanning = hMax;
         genererFriseHeures(hMin, hMax);
         listeAvionsCache.forEach(avion => {
             if (!avion.fields) return;
@@ -906,6 +910,9 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         barresDiv.style.zIndex = '5';
                         if (duree <= 2) {
                             barresDiv.classList.add('short-reservation');
+                        }
+                        if (duree <= 1) {
+                            barresDiv.classList.add('very-short-reservation');
                         }
                         const passagerNom = (vol.fields['Passager'] || '').toString().trim();
                         const instructeurNom = nomUtilisateurDepuisId(vol.fields['Instructeur'], listeMembresCache);
@@ -1259,9 +1266,16 @@ function actualiserLigneHeureCourante() {
     if (rows.style.position !== 'relative' && getComputedStyle(rows).position !== 'relative') {
         rows.style.position = 'relative';
     }
-    line.style.display = 'block';
     const heureDec = now.getHours() + (now.getMinutes() / 60);
-    line.style.left = `calc(90px + (100% - 90px) * ${positionHeure(heureDec) / 100})`;
+    const hMin = (typeof hMinPlanning === 'number') ? hMinPlanning : 0;
+    const hMax = (typeof hMaxPlanning === 'number') ? hMaxPlanning : 24;
+    if (heureDec < hMin || heureDec > hMax) {
+        line.style.display = 'none';
+        return;
+    }
+    const pourcentage = ((heureDec - hMin) / (hMax - hMin)) * 100;
+    line.style.display = 'block';
+    line.style.left = `calc(90px + (100% - 90px) * ${pourcentage / 100})`;
 }
 
 function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations', record = null) {

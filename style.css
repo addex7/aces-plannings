@@ -490,6 +490,15 @@ img, table, video, iframe, svg {
     display: block;
     white-space: nowrap;
 }
+.reservation-bar.very-short-reservation {
+    padding: 0 2px;
+}
+.reservation-bar.very-short-reservation strong {
+    font-size: 8.5px;
+}
+.reservation-bar.very-short-reservation span {
+    font-size: 7.5px;
+}
 /* --- SECTIONS INSCRIPTIONS PLANEUR --- */
 .glider-presence-section {
     padding: 15px;
