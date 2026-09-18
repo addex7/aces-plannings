@@ -6,7 +6,6 @@ const EMAILJS_RESET_TEMPLATE_ID = ''; // ID du template EmailJS dédié au reset
 const EMAILJS_PUBLIC_KEY = 'V_q5vuIMURlLXAaVC';
 const PUBLIC_URL = 'https://addex7.github.io/aces-plannings/index.html';
 
-let currentUser = null;
 let idMembreEnEdition = null;
 
 function isSuperAdmin() {

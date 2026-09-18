@@ -2,6 +2,8 @@
    APPLICATION DE GESTION AÉROCLUB - POINT D'ENTRÉE PRINCIPAL
    ========================================================================== */
 
+let currentUser = null;
+
 // Configuration API Airtable (globale pour tous les modules)
 const AIRTABLE_PAT = 'patbX51fRBLO4v35h.e116a6e20d699408c3a49d07137099bbaf3fe23e734767dea63fa5d890508fff';
 const BASE_ID = 'appufjvD3gYG6H44n';
