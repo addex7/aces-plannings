@@ -9,6 +9,8 @@ const TABLE_CARNET_ROUTE = 'Carnet de route Pilotes';
 let listeVolsCarnetCache = [];
 let idCarnetEnEdition = null;
 let machineCarnetSelectionnee = 'F-GASB';
+let carnetPageJVIO = 1;
+const LIGNES_PAR_PAGE_JVIO = 9;
 const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CEQJ', 'F-CDVN', 'F-CFRK', 'F-CHDT', 'F-CEQZ', 'F-CESL', 'F-CGOV'];
 const REMOQUES_PLANEURS = [...IMMATS_PLANEURS.map(i => `Remorque ${i}`), 'Remorque SP98', 'Remorque 100LL'];
 const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS];
@@ -51,6 +53,13 @@ function formaterDureeMinutes(minutes) {
     const hrs = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${String(hrs).padStart(2, '0')}h${String(mins).padStart(2, '0')}`;
+}
+
+function dureeStringEnMinutes(str) {
+    if (!str || str === '-') return 0;
+    const match = String(str).match(/(\d+)h(\d+)/);
+    if (!match) return 0;
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
 }
 
 function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heureArrivee, machine) {
@@ -644,21 +653,47 @@ function afficherCarnet(records) {
     const isJVIO = machineCarnetSelectionnee === 'F-JVIO';
     const table = tbody.closest('table');
     const thead = table ? table.querySelector('thead') : null;
+    const tfoot = table ? table.querySelector('tfoot') : null;
+    const tableContainer = table ? table.closest('.carnet-table-container') : null;
     if (table) table.style.minWidth = isJVIO ? '950px' : '1100px';
     if (thead) thead.innerHTML = genererHeaderCarnet(isJVIO);
+    if (tfoot) tfoot.remove();
+    if (tableContainer) {
+        const existingPagination = tableContainer.querySelector('.carnet-pagination');
+        if (existingPagination) existingPagination.remove();
+    }
     if (!records || records.length === 0) {
         tbody.innerHTML = `<tr><td colspan="${isJVIO ? 11 : 15}" class="carnet-empty">Aucun vol enregistré dans le carnet de route.</td></tr>`;
         return;
     }
-    tbody.innerHTML = '';
-    records.forEach(record => {
+
+    // Pré-calculer les temps pour toutes les lignes
+    const recordsData = records.map(record => {
         const f = record.fields || {};
         const temps = machineCarnetSelectionnee === 'F-JVIO' || !f['Temps de vol']
             ? calculerTempsDeVol(f['Horamètre départ'], f['Horamètre arrivée'], f['Heure départ'], f['Heure arrivée'], machineCarnetSelectionnee)
             : f['Temps de vol'];
         const dateObj = f['Date'] ? new Date(f['Date']) : null;
         const dateStr = dateObj ? dateObj.toLocaleDateString('fr-FR') : '-';
+        return { record, f, temps, dateStr };
+    });
 
+    let pageRecords = recordsData;
+    let totalPages = 1;
+    let totalCumuleMinutes = 0;
+
+    if (isJVIO) {
+        totalPages = Math.max(1, Math.ceil(recordsData.length / LIGNES_PAR_PAGE_JVIO));
+        if (carnetPageJVIO > totalPages) carnetPageJVIO = totalPages;
+        if (carnetPageJVIO < 1) carnetPageJVIO = 1;
+        const start = (carnetPageJVIO - 1) * LIGNES_PAR_PAGE_JVIO;
+        const end = start + LIGNES_PAR_PAGE_JVIO;
+        pageRecords = recordsData.slice(start, end);
+        totalCumuleMinutes = recordsData.slice(0, end).reduce((sum, d) => sum + dureeStringEnMinutes(d.temps), 0);
+    }
+
+    tbody.innerHTML = '';
+    pageRecords.forEach(({ record, f, temps, dateStr }) => {
         const tr = document.createElement('tr');
         tr.dataset.id = record.id;
         if (isJVIO) {
@@ -701,6 +736,38 @@ function afficherCarnet(records) {
         tr.addEventListener('click', () => ouvrirModaleCarnet(record.id));
         tbody.appendChild(tr);
     });
+
+    if (isJVIO) {
+        const newTfoot = document.createElement('tfoot');
+        newTfoot.innerHTML = `
+            <tr class="carnet-total-cumule">
+                <td colspan="10" style="text-align:right; font-weight:600;">Total cumulé :</td>
+                <td style="font-weight:600;">${formaterDureeMinutes(totalCumuleMinutes)}</td>
+            </tr>
+        `;
+        table.appendChild(newTfoot);
+
+        if (tableContainer) {
+            const pagination = document.createElement('div');
+            pagination.className = 'carnet-pagination';
+            pagination.innerHTML = `
+                <button type="button" ${carnetPageJVIO === 1 ? 'disabled' : ''} data-page="${carnetPageJVIO - 1}">◀ Précédent</button>
+                <span>Page ${carnetPageJVIO} / ${totalPages}</span>
+                <button type="button" ${carnetPageJVIO === totalPages ? 'disabled' : ''} data-page="${carnetPageJVIO + 1}">Suivant ▶</button>
+            `;
+            pagination.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const newPage = parseInt(e.currentTarget.dataset.page, 10);
+                    if (!isNaN(newPage)) {
+                        carnetPageJVIO = newPage;
+                        afficherCarnet(records);
+                    }
+                });
+            });
+            tableContainer.appendChild(pagination);
+        }
+    }
 }
 
 function afficherAlarmeObservation(records) {
@@ -841,6 +908,9 @@ async function chargerCarnetRoute() {
                 const f = r.fields || {};
                 return !machineCarnetSelectionnee || f['Machine'] === machineCarnetSelectionnee;
             }).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
+            if (isJVIO) {
+                carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / LIGNES_PAR_PAGE_JVIO));
+            }
             afficherCarnet(volsMachine);
             afficherAlarmeObservation(volsMachine);
             await synchroniserHorametreAeronef(machineCarnetSelectionnee, volsMachine);

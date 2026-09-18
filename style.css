@@ -1070,6 +1070,37 @@ img, table, video, iframe, svg {
     padding: 30px;
     font-style: italic;
 }
+.carnet-table tfoot .carnet-total-cumule td {
+    background: #e2e8f0;
+    font-weight: 600;
+    color: #1e3d59;
+    padding: 10px;
+}
+.carnet-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #1e3d59;
+}
+.carnet-pagination button {
+    padding: 4px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #1e3d59;
+    cursor: pointer;
+    font-size: 12px;
+}
+.carnet-pagination button:hover:not(:disabled) {
+    background: #f1f5f9;
+}
+.carnet-pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 #carnet-form {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
