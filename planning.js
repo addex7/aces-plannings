@@ -560,7 +560,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
                 barresDiv.className = `reservation-bar ${classePilote}${estMoi ? ' ma-reservation' : ''}`;
                 barresDiv.style.left = `${positionHeure(heureDebut)}%`;
                 barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
-                const libelle = pilote ? `🎯 ${type} (${formaterNomPilote(pilote)})` : `🎯 ${type} DISPONIBLE`;
+                const libelle = pilote ? `${type} (${formaterNomPilote(pilote)})` : `${type} DISPONIBLE`;
                 barresDiv.innerHTML = `<strong>${libelle}</strong>`;
                 const debutStr = convertirHeureEnHHMM(heureDebut);
                 const finStr = convertirHeureEnHHMM(heureFin);

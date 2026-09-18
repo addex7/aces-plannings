@@ -361,7 +361,6 @@ img, table, video, iframe, svg {
 }
 .timeline-row.vi-planeur-row .grid-hour-block {
     border-right-color: rgba(0, 0, 0, 0.15);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
 }
 .reservation-bar {
     position: absolute;
