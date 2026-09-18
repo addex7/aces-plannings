@@ -424,7 +424,10 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     });
     document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) fermer(); });
     select.addEventListener('change', majBtn);
-    new MutationObserver(majBtn).observe(select, { childList: true });
+    new MutationObserver(() => {
+        majBtn();
+        if (panel.style.display !== 'none') renderList(search.value);
+    }).observe(select, { childList: true });
     majBtn();
 }
 
