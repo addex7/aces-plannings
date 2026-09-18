@@ -564,14 +564,15 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
                 barresDiv.innerHTML = `<strong>${libelle}</strong>`;
                 const debutStr = convertirHeureEnHHMM(heureDebut);
                 const finStr = convertirHeureEnHHMM(heureFin);
-                barresDiv.title = [
+                barresDiv.setAttribute('data-tooltip', [
                     `Type : ${type}`,
                     `Nom : ${nom}`,
                     `Pilote : ${formaterNomPilote(pilote) || '—'}`,
                     `Horaires : ${debutStr} - ${finStr}`,
                     `Téléphone : ${vol.fields['Téléphone'] || '—'}`,
                     `Commentaire : ${vol.fields['Commentaire'] || '—'}`
-                ].join('\n');
+                ].join('\n'));
+                barresDiv.removeAttribute('title');
                 if (!isCreneau) {
                     const handleLeft = document.createElement('div');
                     handleLeft.className = 'resize-handle resize-handle-left';
@@ -893,16 +894,17 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const debutStr = convertirHeureEnHHMM(heureDebut);
                         const finStr = convertirHeureEnHHMM(heureFin);
                         if (isCreneau) {
-                            barresDiv.title = (vol.fields['Commentaires VI'] || '') + (passagerNom ? '\nPassager : ' + passagerNom : '');
+                            barresDiv.setAttribute('data-tooltip', (vol.fields['Commentaires VI'] || '') + (passagerNom ? '\nPassager : ' + passagerNom : ''));
                         } else {
-                            barresDiv.title = [
+                            barresDiv.setAttribute('data-tooltip', [
                                 `Type : ${Array.isArray(typeVol) ? typeVol.join(', ') : typeVol}`,
                                 `Pilote : ${piloteFormate || '—'}`,
                                 `Passager : ${passagerNom || '—'}`,
                                 `Instructeur : ${instructeurNom || '—'}`,
                                 `Horaires : ${debutStr} - ${finStr}`
-                            ].join('\n');
+                            ].join('\n'));
                         }
+                        barresDiv.removeAttribute('title');
                         barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
                         if (!isCreneau) {
                             const handleLeft = document.createElement('div');

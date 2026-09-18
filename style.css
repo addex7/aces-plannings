@@ -411,6 +411,23 @@ img, table, video, iframe, svg {
 .reservation-bar:hover {
     filter: brightness(1.05);
 }
+.reservation-bar[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #1e3d59;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: normal;
+    white-space: pre;
+    z-index: 1000;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    pointer-events: none;
+}
 .reservation-bar strong {
     font-size: 12.5px;
     white-space: nowrap;
