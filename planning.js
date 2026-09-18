@@ -1980,7 +1980,7 @@ function initGestionnaireModale() {
         formReservation.addEventListener('submit', async (e) => {
             e.preventDefault();
             const typesVol = getTypeVolSelectionne();
-            const typesValidesAirtable = ['Local','Navigation','Vol de nuit','Instruction','VI Moteur','VI Planeur'];
+            const typesValidesAirtable = ['Local','Navigation','Vol de nuit','Instruction','VI Moteur','VI Planeur','Remorquage'];
             const typesFinaux = typesVol.filter(t => typesValidesAirtable.includes(t));
             const typesSupplementaires = typesVol.filter(t => !typesValidesAirtable.includes(t));
             const commentairesBase = (document.getElementById('form-commentaires') || {}).value || '';
