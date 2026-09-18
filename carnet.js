@@ -738,6 +738,15 @@ function afficherCarnet(records) {
     });
 
     if (isJVIO) {
+        for (let i = pageRecords.length; i < LIGNES_PAR_PAGE_JVIO; i++) {
+            const tr = document.createElement('tr');
+            tr.className = 'carnet-ligne-vide';
+            tr.innerHTML = `<td colspan="11">&nbsp;</td>`;
+            tbody.appendChild(tr);
+        }
+    }
+
+    if (isJVIO) {
         const newTfoot = document.createElement('tfoot');
         newTfoot.innerHTML = `
             <tr class="carnet-total-cumule">
