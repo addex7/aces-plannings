@@ -313,8 +313,18 @@ async function peuplerInstructeursSelect(instructeur = '', machine = '') {
     const isJVIO = machine === 'F-JVIO';
     try {
         if (isJVIO) {
-            if (!carnetPilotesCache.length) await peuplerPilotesSelect('');
-            const noms = [...carnetPilotesCache];
+            let noms = [...carnetPilotesCache];
+            if (!noms.length) {
+                const piloteSel = document.getElementById('carnet-pilote');
+                if (piloteSel && piloteSel.options.length) {
+                    noms = [...piloteSel.options].map(o => o.value).filter(Boolean);
+                }
+            }
+            if (!noms.length) {
+                await peuplerPilotesSelect('');
+                const piloteSel = document.getElementById('carnet-pilote');
+                noms = (piloteSel && piloteSel.options.length) ? [...piloteSel.options].map(o => o.value).filter(Boolean) : [...carnetPilotesCache];
+            }
             if (instructeur && !noms.includes(instructeur)) noms.push(instructeur);
             sel.innerHTML = '<option value="">-- Aucun --</option>';
             noms.forEach(nom => {
