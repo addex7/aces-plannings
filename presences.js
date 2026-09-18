@@ -259,7 +259,14 @@ function ouvrirInscrireAutre(table, valeur) {
     if (!modal || !select) return;
     if (typeof chargerListeMembresCache === 'function') chargerListeMembresCache();
     select.innerHTML = '';
-    const membres = (typeof listeMembresCache !== 'undefined' ? listeMembresCache : []);
+    let membres = (typeof listeMembresCache !== 'undefined' ? listeMembresCache : []);
+    const pilotesVI = table === 'Initiation';
+    if (pilotesVI) {
+        membres = membres.filter(m => {
+            const roles = (m.fields || {})['Rôles'] || [];
+            return roles.includes('Pilote VI');
+        });
+    }
     membres.sort((a, b) => {
         const fa = a.fields || {};
         const fb = b.fields || {};
@@ -275,6 +282,7 @@ function ouvrirInscrireAutre(table, valeur) {
         opt.textContent = nom;
         select.appendChild(opt);
     });
+    select.dataset.allowCustom = pilotesVI ? '0' : '1';
     modal.dataset.table = table;
     modal.dataset.valeur = valeur;
     modal.style.display = 'flex';
@@ -285,11 +293,11 @@ async function inscrireAutreMembre() {
     const select = document.getElementById('select-inscrire-autre');
     if (!modal || !select || !select.value) return;
     const table = modal.dataset.table;
-    const autorisations = table === 'Événements'
-        ? ['Super admin', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM']
+    const autorisations = (table === 'Événements' || table === 'Initiation')
+        ? ['Super admin', 'Gestion VI', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM']
         : ['Super admin'];
     if (!roleAutorise(autorisations)) {
-        alert(table === 'Événements' ? "Réservé aux Super admin et instructeurs." : "Réservé aux Super admin.");
+        alert(table === 'Présences Club' ? "Réservé aux Super admin." : "Réservé aux Super admin, Gestion VI et instructeurs.");
         return;
     }
     const valeur = modal.dataset.valeur;
@@ -298,6 +306,28 @@ async function inscrireAutreMembre() {
         ? `${(membre.fields || {})['Prénom'] || ''} ${(membre.fields || {})['Nom'] || ''}`.trim()
         : select.value.trim();
     if (!nomPilote) return;
+
+    if (table === 'Initiation') {
+        try {
+            const vol = JSON.parse(valeur || '{}');
+            if (!vol.id || !vol.source) return;
+            const tableName = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'planeur' ? 'VI Planeur' : 'VI Créneaux');
+            const fields = vol.source === 'moteur' ? { 'Pilote': [membre.id] } : { 'Pilote': nomPilote };
+            if (vol.source === 'creneau') fields['Statut'] = 'Réservé';
+            const patchRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
+                method: 'PATCH',
+                headers: headers,
+                body: JSON.stringify({ records: [{ id: vol.id, fields }] })
+            });
+            if (!patchRes.ok) throw new Error(await patchRes.text());
+            modal.style.display = 'none';
+            if (typeof chargerVolsInitiation === 'function') await chargerVolsInitiation();
+        } catch (error) {
+            console.error(error);
+            alert("Erreur lors de l'inscription.");
+        }
+        return;
+    }
 
     if (table === 'Événements') {
         try {

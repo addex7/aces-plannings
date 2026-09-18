@@ -2556,6 +2556,10 @@ function afficherVolsInitiation() {
         const machineText = vol.source === 'moteur' && vol.machineName ? `🛩️ ${vol.machineName}<br>` : '';
         const peutSInscrire = !estArchive && isAPourvoir && hasRolePiloteVI();
         const boutonSInscrire = peutSInscrire ? `<button class="btn-reserver-initiation" data-id="${vol.id}" data-source="${vol.source}">S'inscrire</button>` : '';
+        const rolesInscrireAutre = ['Super admin', 'Gestion VI', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
+        const peutInscrireAutre = !estArchive && isAPourvoir && (currentUser?.roles || []).some(r => rolesInscrireAutre.includes(r));
+        const volData = encodeURIComponent(JSON.stringify({ id: vol.id, source: vol.source }));
+        const boutonInscrireAutre = peutInscrireAutre ? `<button class="btn-reserver-initiation" data-inscrire-autre="1" data-id="${vol.id}" data-source="${vol.source}" data-vol="${volData}">Inscrire autre</button>` : '';
         const card = document.createElement('div');
         card.className = `initiation-card ${vol.classe}`;
         card.innerHTML = `
@@ -2568,6 +2572,7 @@ function afficherVolsInitiation() {
             <div class="initiation-meta">
                 <strong>${piloteText}</strong>
                 ${boutonSInscrire}
+                ${boutonInscrireAutre}
             </div>
         `;
         if (hasRoleGestionVI()) {
@@ -2723,7 +2728,13 @@ function initGestionnaireVolsInitiation() {
             const btn = e.target.closest('.btn-reserver-initiation');
             if (btn) {
                 e.stopPropagation();
-                reserverVolInitiation(btn.dataset.id, btn.dataset.source);
+                if (btn.dataset.inscrireAutre === '1') {
+                    if (typeof ouvrirInscrireAutre === 'function') {
+                        ouvrirInscrireAutre('Initiation', decodeURIComponent(btn.dataset.vol));
+                    }
+                } else {
+                    reserverVolInitiation(btn.dataset.id, btn.dataset.source);
+                }
             }
         });
     }
