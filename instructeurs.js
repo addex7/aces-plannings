@@ -346,7 +346,7 @@ async function chargerDisponibilitesInstructeurs(dateCible, forceRefresh = false
     return disposInstructeursCache;
 }
 
-function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reservationsFournis) {
+function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reservationsFournis, hMin = 0, hMax = 24) {
     if (!afficherDisposInstructeurs) return;
     if (!listeInstructeursCache.length) return;
     const dispos = disposFournis || disposInstructeursCache;
@@ -378,6 +378,8 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
         nomSpan.textContent = nom;
         machineCell.appendChild(nomSpan);
         rowDiv.appendChild(machineCell);
+        const contentWrapper = document.createElement('div');
+        contentWrapper.style.cssText = 'flex: 1; position: relative; overflow: hidden;';
         const gridBg = document.createElement('div');
         gridBg.className = 'hours-grid-background dispo-grid';
 
@@ -490,7 +492,9 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
 
         afficherConflitsReservations(barresInfos);
 
-        rowDiv.appendChild(gridBg);
+        appliquerEchelleGrid(gridBg, hMin, hMax);
+        contentWrapper.appendChild(gridBg);
+        rowDiv.appendChild(contentWrapper);
         rowsContainer.appendChild(rowDiv);
     });
 }

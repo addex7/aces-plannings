@@ -488,7 +488,7 @@ function ouvrirModaleEditionVICreneau(vol) {
     modal.style.display = 'flex';
 }
 
-function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
+function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax = 24) {
     if (!afficherVIPPlaneur) return;
     const rowDiv = document.createElement('div');
     rowDiv.className = 'timeline-row vi-planeur-row';
@@ -496,6 +496,8 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
     machineCell.className = 'machine-cell';
     machineCell.textContent = 'VI Planeur';
     rowDiv.appendChild(machineCell);
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.cssText = 'flex: 1; position: relative; overflow: hidden;';
 
     const gridBg = document.createElement('div');
     gridBg.className = 'hours-grid-background';
@@ -619,7 +621,9 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil) {
         }
     });
 
-    rowDiv.appendChild(gridBg);
+    appliquerEchelleGrid(gridBg, hMin, hMax);
+    contentWrapper.appendChild(gridBg);
+    rowDiv.appendChild(contentWrapper);
     rowsContainer.appendChild(rowDiv);
 }
 
@@ -745,6 +749,43 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         }
         populerSelectAvions(listeAvionsCache);
         const soleil = calculerSoleilLFOY(dateAffichee);
+        const dayStart = new Date(dateAffichee.getFullYear(), dateAffichee.getMonth(), dateAffichee.getDate());
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+        let hMin = Math.max(0, soleil.aubeAero - 1.5);
+        let hMax = Math.min(24, soleil.crepusculeAero + 1.5);
+        const toutesReservations = [...listeReservationsCache, ...volsVIP, ...creneauxVIMotor];
+        let etendreFenetre = false;
+        toutesReservations.forEach(vol => {
+            if (!vol.fields) return;
+            const debutRaw = vol.fields['Date de début'];
+            const finRaw = vol.fields['Date de fin'];
+            if (!debutRaw || !finRaw) return;
+            const dateDebut = new Date(debutRaw);
+            const dateFin = new Date(finRaw);
+            const segmentDebut = new Date(Math.max(dateDebut.getTime(), dayStart.getTime()));
+            const segmentFin = new Date(Math.min(dateFin.getTime(), dayEnd.getTime()));
+            if (segmentFin <= segmentDebut) return;
+            const heureDebut = segmentDebut.getHours() + (segmentDebut.getMinutes() / 60);
+            let heureFin = segmentFin.getHours() + (segmentFin.getMinutes() / 60);
+            if (segmentFin.getTime() >= dayEnd.getTime()) heureFin = 24;
+            if (heureDebut < hMin || heureFin > hMax) etendreFenetre = true;
+        });
+        maintenancesJour.forEach(m => {
+            const mf = m.fields || {};
+            if (!mf['Date'] || isNaN(parseFloat(mf['durée']))) return;
+            const mStart = new Date(mf['Date']);
+            const mEnd = new Date(mStart.getTime() + parseFloat(mf['durée']) * 3600000);
+            const segDebut = new Date(Math.max(mStart.getTime(), dayStart.getTime()));
+            const segFin = new Date(Math.min(mEnd.getTime(), dayEnd.getTime()));
+            if (segFin <= segDebut) return;
+            const heureDebut = segDebut.getHours() + (segDebut.getMinutes() / 60);
+            let heureFin = segFin.getHours() + (segFin.getMinutes() / 60);
+            if (segFin.getTime() >= dayEnd.getTime()) heureFin = 24;
+            if (heureDebut < hMin || heureFin > hMax) etendreFenetre = true;
+        });
+        if (etendreFenetre) { hMin = 0; hMax = 24; }
+        if (hMax <= hMin) { hMin = 0; hMax = 24; }
+        genererFriseHeures(hMin, hMax);
         listeAvionsCache.forEach(avion => {
             if (!avion.fields) return;
             const avionId = avion.id;
@@ -832,7 +873,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                 gridCells.appendChild(gridBlock);
             }
             const contentWrapper = document.createElement('div');
-            contentWrapper.style.cssText = 'display: flex; flex-direction: column; flex: 1;';
+            contentWrapper.style.cssText = 'display: flex; flex-direction: column; flex: 1; position: relative; overflow: hidden;';
+            appliquerEchelleGrid(gridBg, hMin, hMax);
             contentWrapper.appendChild(gridBg);
             rowDiv.appendChild(contentWrapper);
             const barresInfos = [];
@@ -1021,8 +1063,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         });
         if (autoActiverVIP && volsVIP.length > 0) afficherVIPPlaneur = true;
         mettreAJourBoutonVIPPlaneur();
-        afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil);
-        if (typeof afficherLignesInstructeurs === 'function') afficherLignesInstructeurs(rowsContainer, soleil, disposInstructeurs, [...listeReservationsCache, ...volsVIP, ...creneauxVIMotor]);
+        afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin, hMax);
+        if (typeof afficherLignesInstructeurs === 'function') afficherLignesInstructeurs(rowsContainer, soleil, disposInstructeurs, [...listeReservationsCache, ...volsVIP, ...creneauxVIMotor], hMin, hMax);
         await chargerPresencesPlaneur();
         await chargerPresencesClub();
         actualiserLigneHeureCourante();
@@ -1032,18 +1074,29 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
     }
 }
 
-function genererFriseHeures() {
+function genererFriseHeures(hMin = 0, hMax = 24) {
     const container = document.getElementById('timeline-hours');
     if (!container) return;
+    if (hMax <= hMin) { hMin = 0; hMax = 24; }
+    const echelle = 24 / (hMax - hMin);
+    const margeGauche = -(hMin / (hMax - hMin)) * 100;
     container.innerHTML = "";
+    container.style.position = 'relative';
+    container.style.overflow = 'hidden';
+    container.style.display = 'block';
+    container.style.width = '100%';
+    container.style.height = '100%';
+    const grille = document.createElement('div');
+    grille.style.cssText = `display:flex; position:relative; width:${echelle * 100}%; height:100%; margin-left:${margeGauche}%;`;
     for (let h = 0; h < 24; h++) {
         const heureStr = h + 'h';
         const div = document.createElement('div');
         div.className = 'hour-cell-header';
-        div.style.flex = LARGEURS_HEURES[h];
+        div.style.flex = '1';
         div.innerHTML = `<span>${heureStr}</span>`;
-        container.appendChild(div);
+        grille.appendChild(div);
     }
+    container.appendChild(grille);
 }
 
 function mettreAJourDateAffichee() {

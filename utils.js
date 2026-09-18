@@ -131,33 +131,27 @@ function convertirHeureEnHHMM(decimalHeure) {
     return `${String(heures).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-const LARGEURS_HEURES = [2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,2];
+const LARGEURS_HEURES = new Array(24).fill(1);
 const TOTAL_LARGEUR_HEURES = LARGEURS_HEURES.reduce((a,b)=>a+b,0);
 
 function positionHeure(decimalHeure) {
     if (decimalHeure <= 0) return 0;
     if (decimalHeure >= 24) return 100;
-    const h = Math.floor(decimalHeure);
-    const fraction = decimalHeure - h;
-    let cumul = 0;
-    for (let i = 0; i < h; i++) cumul += LARGEURS_HEURES[i];
-    cumul += LARGEURS_HEURES[h] * fraction;
-    return (cumul / TOTAL_LARGEUR_HEURES) * 100;
+    return (decimalHeure / 24) * 100;
 }
 
 function positionHeureInverse(pourcentage) {
     if (pourcentage <= 0) return 0;
     if (pourcentage >= 100) return 24;
-    const cible = (pourcentage / 100) * TOTAL_LARGEUR_HEURES;
-    let cumul = 0;
-    for (let h = 0; h < 24; h++) {
-        if (cumul + LARGEURS_HEURES[h] >= cible) {
-            const fraction = (cible - cumul) / LARGEURS_HEURES[h];
-            return h + fraction;
-        }
-        cumul += LARGEURS_HEURES[h];
-    }
-    return 24;
+    return (pourcentage / 100) * 24;
+}
+
+function appliquerEchelleGrid(gridBg, hMin, hMax) {
+    if (!gridBg || hMax <= hMin) return;
+    const echelle = 24 / (hMax - hMin);
+    const margeGauche = -(hMin / (hMax - hMin)) * 100;
+    gridBg.style.width = `${echelle * 100}%`;
+    gridBg.style.marginLeft = `${margeGauche}%`;
 }
 
 function creerWrapperCellulesGrille(gridBg) {
