@@ -439,7 +439,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     ];
 
     function essayer() {
-        ids.forEach(id => rendreSelectRecherchable(id, id === 'carnet-pilote'));
+        ids.forEach(id => rendreSelectRecherchable(id, id === 'carnet-pilote' || id === 'form-pilote' || id === 'select-inscrire-autre'));
         if (ids.some(id => document.getElementById(id) && !document.getElementById(id).dataset.searchReady)) {
             setTimeout(essayer, 500);
         }

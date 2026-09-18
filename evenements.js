@@ -191,6 +191,8 @@ function renderEvenement(record) {
     const btnInscription = estInscrit
         ? `<button class="btn-inscription" disabled style="opacity:0.6;">Déjà inscrit</button>`
         : `<button class="btn-inscription" onclick="sinscrireEvenement('${record.id}')">M'inscrire</button>`;
+    const peutInscrireAutre = typeof roleAutorise === 'function' && roleAutorise(['Super admin', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM']);
+    const btnInscrireAutre = peutInscrireAutre ? `<button class="btn-inscription" onclick="ouvrirInscrireAutre('Événements', '${record.id}')">Inscrire quelqu'un d'autre</button>` : '';
     const peutSupprimer = createur === nomConnecte || (currentUser && currentUser.roles && currentUser.roles.includes('Super admin'));
     const btnSupprimer = peutSupprimer ? `<button class="btn-delete" onclick="supprimerEvenement('${record.id}')">Supprimer l'évènement</button>` : '';
 
@@ -206,6 +208,7 @@ function renderEvenement(record) {
             </div>
             <div class="evenement-actions" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 ${btnInscription}
+                ${btnInscrireAutre}
                 ${btnSupprimer}
             </div>
         </div>

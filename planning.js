@@ -1190,8 +1190,19 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
             else if (!piloteSelectionne && r.id === monId) opt.selected = true;
             sel.appendChild(opt);
         });
-        if (piloteSelectionne) sel.value = piloteSelectionne;
-        else if (monId) sel.value = monId;
+        let valeurChoisie = monId;
+        if (piloteSelectionne) {
+            const existe = [...sel.options].some(o => o.value === piloteSelectionne || o.textContent.trim() === piloteSelectionne);
+            if (!existe) {
+                const optLibre = document.createElement('option');
+                optLibre.value = piloteSelectionne;
+                optLibre.textContent = piloteSelectionne;
+                optLibre.selected = true;
+                sel.appendChild(optLibre);
+            }
+            valeurChoisie = piloteSelectionne;
+        }
+        sel.value = valeurChoisie;
         group.style.display = 'flex';
     } catch (err) {
         console.error('Erreur chargement membres:', err);

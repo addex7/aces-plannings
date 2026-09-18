@@ -284,16 +284,48 @@ async function inscrireAutreMembre() {
     const modal = document.getElementById('modal-inscrire-autre');
     const select = document.getElementById('select-inscrire-autre');
     if (!modal || !select || !select.value) return;
-    if (!roleAutorise(['Super admin'])) {
-        alert("Réservé aux Super admin.");
+    const table = modal.dataset.table;
+    const autorisations = table === 'Événements'
+        ? ['Super admin', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM']
+        : ['Super admin'];
+    if (!roleAutorise(autorisations)) {
+        alert(table === 'Événements' ? "Réservé aux Super admin et instructeurs." : "Réservé aux Super admin.");
         return;
     }
-    const table = modal.dataset.table;
     const valeur = modal.dataset.valeur;
     const membre = (typeof listeMembresCache !== 'undefined' ? listeMembresCache : []).find(m => m.id === select.value);
-    if (!membre) return;
-    const f = membre.fields || {};
-    const nomPilote = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Membre';
+    const nomPilote = membre
+        ? `${(membre.fields || {})['Prénom'] || ''} ${(membre.fields || {})['Nom'] || ''}`.trim()
+        : select.value.trim();
+    if (!nomPilote) return;
+
+    if (table === 'Événements') {
+        try {
+            const recordId = valeur;
+            const getRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
+            const record = await getRes.json();
+            if (!getRes.ok) throw new Error(record.error ? record.error.message : 'Erreur Airtable');
+
+            const inscrits = parseInscrits(record.fields['Inscrits'] || '');
+            if (inscrits.some(i => i.nom === nomPilote)) { alert(`${nomPilote} est déjà inscrit.`); return; }
+            inscrits.push({ nom: nomPilote, commentaire: '' });
+
+            const patchRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
+                method: 'PATCH',
+                headers: headers,
+                body: JSON.stringify({ records: [{ id: recordId, fields: { 'Inscrits': formatInscrits(inscrits) } }] })
+            });
+            if (!patchRes.ok) throw new Error(await patchRes.text());
+            modal.style.display = 'none';
+            if (typeof chargerEvenementsJour === 'function') await chargerEvenementsJour();
+            if (typeof chargerProchainsEvenements === 'function') await chargerProchainsEvenements();
+        } catch (error) {
+            console.error(error);
+            alert("Erreur lors de l'inscription.");
+        }
+        return;
+    }
+
     const dateStr = dateAffichee.toISOString().split('T')[0];
     const tableName = table === 'Présences Club' ? 'Présences Club' : 'Présences Planeur';
     const fields = table === 'Présences Club'
