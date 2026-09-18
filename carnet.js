@@ -565,9 +565,11 @@ function peuplerOptionsMachineCarnet(extraMachine = null) {
             `<label class="checkbox-option"><input type="radio" name="carnet-machine-chip" value="${o.value}"> ${EMOJIS_MACHINE[o.value] || ''} ${o.text}</label>`
         ).join('');
         chips.querySelectorAll('input[name="carnet-machine-chip"]').forEach(rb => {
-            rb.addEventListener('change', () => {
+            rb.addEventListener('change', async () => {
                 select.value = rb.value;
                 adapterFormulaireCarnet(rb.value);
+                const instSel = document.getElementById('carnet-instructeur');
+                await peuplerInstructeursSelect(instSel ? instSel.value : '', rb.value);
                 mettreAJourStyleChampsAuto(rb.value);
                 mettreAJourHeureArrivee();
                 mettreAJourActiviteParticuliere();
@@ -1312,8 +1314,10 @@ function initCarnetRoute() {
     peuplerOptionsMachineCarnet();
     const selectMachine = document.getElementById('carnet-machine');
     if (selectMachine) {
-        selectMachine.addEventListener('change', () => {
+        selectMachine.addEventListener('change', async () => {
             adapterFormulaireCarnet(selectMachine.value);
+            const instSel = document.getElementById('carnet-instructeur');
+            await peuplerInstructeursSelect(instSel ? instSel.value : '', selectMachine.value);
             mettreAJourStyleChampsAuto(selectMachine.value);
             mettreAJourHeureArrivee();
             mettreAJourActiviteParticuliere();

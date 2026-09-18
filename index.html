@@ -902,6 +902,15 @@
             </div>
             <form id="carnet-form">
                 <input type="hidden" id="carnet-id">
+                <div class="form-group full-width">
+                    <label for="carnet-machine">Machine :</label>
+                    <select id="carnet-machine" required>
+                        <option value="F-GASB">F-GASB</option>
+                        <option value="F-BLIO">F-BLIO</option>
+                        <option value="F-JVIO">F-JVIO</option>
+                    </select>
+                    <div id="carnet-machine-chips" class="checkbox-group" style="display: none; margin-top: 4px;"></div>
+                </div>
                 <div class="form-group">
                     <label for="carnet-date">Date du vol :</label>
                     <input type="date" id="carnet-date" required>
@@ -937,15 +946,6 @@
                 <div class="form-group full-width" id="carnet-activite-detail-group" style="display: none;">
                     <label for="carnet-activite-detail">Précisez l'activité :</label>
                     <input type="text" id="carnet-activite-detail" placeholder="Ex: Remorquage" value="Remorquage">
-                </div>
-                <div class="form-group full-width">
-                    <label for="carnet-machine">Machine :</label>
-                    <select id="carnet-machine" required>
-                        <option value="F-GASB">F-GASB</option>
-                        <option value="F-BLIO">F-BLIO</option>
-                        <option value="F-JVIO">F-JVIO</option>
-                    </select>
-                    <div id="carnet-machine-chips" class="checkbox-group" style="display: none; margin-top: 4px;"></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -1208,7 +1208,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=85"></script>
-    <script src="version.js?v=20260918182136"></script>
+    <script src="version.js?v=20260918182403"></script>
     <script src="app.js?v=84"></script>
     <script src="utils.js?v=93"></script>
     <script src="presences.js?v=92"></script>
@@ -1216,7 +1216,7 @@
     <script src="calendrier.js?v=88"></script>
     <script src="comptes.js?v=108"></script>
     <script src="aeronefs.js?v=100"></script>
-    <script src="carnet.js?v=122"></script>
+    <script src="carnet.js?v=123"></script>
     <script src="documents.js?v=83"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=4"></script>
