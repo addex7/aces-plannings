@@ -1704,11 +1704,6 @@ function initGestionnaireModaleVIPlaneur() {
     if (btnDeleteVI) {
         btnDeleteVI.addEventListener('click', async () => {
             if (!idVIModale || tableVIModale !== 'VI Planeur') return;
-            const auteur = volVIModale?.fields?.['Auteur'] || '';
-            if (!hasRoleGestionVI() && !estUtilisateurCourant(auteur)) {
-                alert("Tu n'as pas le droit de supprimer ce VI Planeur.");
-                return;
-            }
             if (!confirm("Es-tu sûr de vouloir supprimer ce VI Planeur ?")) return;
             try {
                 const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?records[]=${idVIModale}`, {
@@ -2313,7 +2308,9 @@ function ouvrirModaleCreationDepuisGrille(avionId, heureDebutClic) {
 
 async function ouvrirModaleEdition(vol, avionIdOuImmat) {
     if (!modal) return;
-    if (!peutBougerReservations() && !estProprietaireReservation(vol)) {
+    const typesVolEdit = Array.isArray(vol.fields?.['Type de vol']) ? vol.fields['Type de vol'] : [vol.fields?.['Type de vol']].filter(Boolean);
+    const estVI = typesVolEdit.some(t => ['VI Moteur', 'VI Planeur', "Vol d'Initiation", "Vol d'Initiation (VI)"].includes(t));
+    if (!estVI && !peutBougerReservations() && !estProprietaireReservation(vol)) {
         ouvrirModaleInformation(vol);
         return;
     }
@@ -2632,15 +2629,18 @@ function afficherVolsInitiation() {
                 ${boutonSInscrire}
                 ${boutonInscrireAutre}
             </div>
+            <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
         `;
-        if (hasRoleGestionVI()) {
-            card.style.cursor = 'pointer';
-            card.title = 'Cliquer pour modifier';
-            card.addEventListener('click', (e) => {
-                if (e.target.closest('.btn-reserver-initiation')) return;
-                editerVolInitiation(vol);
-            });
-        }
+        card.style.cursor = 'pointer';
+        card.title = 'Cliquer pour modifier';
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('.btn-reserver-initiation, .btn-supprimer-initiation')) return;
+            editerVolInitiation(vol);
+        });
+        card.querySelector('.btn-supprimer-initiation').addEventListener('click', (e) => {
+            e.stopPropagation();
+            supprimerVolInitiation(vol);
+        });
         container.appendChild(card);
     });
 }
@@ -2803,7 +2803,6 @@ function initGestionnaireVolsInitiation() {
 }
 
 function editerVolInitiation(vol) {
-    if (!hasRoleGestionVI() && !estUtilisateurCourant(vol.auteur)) return;
     if (vol.source === 'planeur') {
         const volEdit = {
             id: vol.id,
@@ -2836,6 +2835,27 @@ function editerVolInitiation(vol) {
         ouvrirModaleEdition(volEdit, vol.machine);
     } else if (vol.source === 'creneau') {
         ouvrirModaleChoixModifierCreneau(vol);
+    }
+}
+
+async function supprimerVolInitiation(vol) {
+    if (!vol || !vol.id) return;
+    const table = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'creneau' ? 'VI Créneaux' : 'VI Planeur');
+    if (!confirm('Supprimer ce vol d\'initiation ?')) return;
+    try {
+        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${vol.id}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        if (response.ok) {
+            if (typeof chargerVolsInitiation === 'function') await chargerVolsInitiation();
+            if (typeof chargerDonneesPlanning === 'function') await chargerDonneesPlanning(true);
+        } else {
+            alert('Erreur lors de la suppression.');
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Erreur lors de la suppression.');
     }
 }
 

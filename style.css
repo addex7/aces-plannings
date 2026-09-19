@@ -1041,6 +1041,22 @@ img, table, video, iframe, svg {
 .btn-reserver-initiation:hover {
     background-color: #007f86;
 }
+.btn-supprimer-initiation {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+}
+.btn-supprimer-initiation:hover {
+    background: #b91c1c;
+}
 
 /* --- GESTION CRÉNEAUX VI --- */
 #gestion-vi-toolbar {
