@@ -39,6 +39,7 @@ function initBoutonDisponibiliteInstructeur() {
     const headerRow = document.querySelector('#view-instructeur header > div');
     if (!headerRow) return;
     const ref = document.getElementById('select-instructeur-suivi');
+    const refWrap = ref ? (ref.closest('.select-recherche') || ref) : null;
     const visible = (estInstructeur() || (typeof isSuperAdmin === 'function' && isSuperAdmin())) ? 'inline-block' : 'none';
 
     if (!document.getElementById('btn-gerer-dispos')) {
@@ -47,8 +48,8 @@ function initBoutonDisponibiliteInstructeur() {
         btnGerer.className = 'btn-toggle';
         btnGerer.textContent = 'Gérer mes dispos';
         btnGerer.addEventListener('click', ouvrirModaleGererDispos);
-        if (ref) {
-            ref.parentNode.insertBefore(btnGerer, ref.nextSibling);
+        if (refWrap) {
+            refWrap.parentNode.insertBefore(btnGerer, refWrap.nextSibling);
         } else {
             headerRow.appendChild(btnGerer);
         }
@@ -62,8 +63,8 @@ function initBoutonDisponibiliteInstructeur() {
         btnDecl.textContent = '+ Déclarer mes dispos';
         btnDecl.addEventListener('click', ouvrirModaleDisponibilite);
         const gerer = document.getElementById('btn-gerer-dispos');
-        if (ref) {
-            ref.parentNode.insertBefore(btnDecl, gerer ? gerer.nextSibling : ref.nextSibling);
+        if (refWrap) {
+            refWrap.parentNode.insertBefore(btnDecl, gerer ? gerer.nextSibling : refWrap.nextSibling);
         } else {
             headerRow.appendChild(btnDecl);
         }
