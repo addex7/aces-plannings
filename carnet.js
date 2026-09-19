@@ -1546,6 +1546,24 @@ function initCarnetRoute() {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', suggererNatureParTrajet);
     });
+    const elInstructeur = document.getElementById('carnet-instructeur');
+    if (elInstructeur) {
+        elInstructeur.addEventListener('change', () => {
+            const machine = document.getElementById('carnet-machine')?.value || '';
+            if (!elInstructeur.value.trim() || machine === 'F-JVIO' || !MACHINES_MOTEURS.includes(machine)) return;
+            const fi = document.querySelector('input[name="carnet-fonction"][value="FI"]');
+            if (fi && !fi.checked) {
+                fi.checked = true;
+                appliquerExclusiviteFonctions(fi);
+            }
+            const vi = document.querySelector('input[name="carnet-nature-extra"][value="Vol d\'initiation"]');
+            if (vi && vi.checked) {
+                vi.checked = false;
+                majVerrouillageVolInitiation();
+            }
+            mettreAJourNatureParFonction();
+        });
+    }
 
     const nature = document.getElementById('carnet-nature');
     if (nature) {
