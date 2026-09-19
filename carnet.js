@@ -762,7 +762,7 @@ function adapterFormulaireCarnet(machine) {
     if (hDepLabel) hDepLabel.textContent = isJVIO ? 'Heure de départ (H.Loc) :' : 'Heure de départ (UTC) :';
     if (hArrLabel) hArrLabel.textContent = isJVIO ? 'Heure d\'arrivée (H.Loc) :' : 'Heure d\'arrivée (UTC) :';
     if (fonctionLabel) fonctionLabel.textContent = 'Fonction(s) à bord :';
-    if (instSel) instSel.dataset.allowCustom = isJVIO ? '1' : '0';
+    if (instSel) instSel.dataset.allowCustom = '1';
     if (fonctionFormGroup) fonctionFormGroup.classList.toggle('full-width', isMoteur);
 
     const natureChips = document.getElementById('carnet-nature-chips');
