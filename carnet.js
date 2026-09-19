@@ -621,6 +621,15 @@ function majVerrouillageVolInitiation() {
         if (label) label.classList.toggle('chip-disabled', lock);
         if (lock && rb.value === 'Local') rb.checked = true;
     });
+    if (lock) {
+        chips.querySelectorAll('input[name="carnet-nature-extra"]').forEach(cb => {
+            if (cb !== vi) cb.checked = false;
+        });
+        chips.querySelectorAll('input[name="carnet-nature-qual"]').forEach(cb => {
+            cb.checked = false;
+        });
+        majNatureStd();
+    }
 }
 
 const CARNET_JVIO_FONCTIONS = [
