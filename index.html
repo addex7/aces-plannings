@@ -974,12 +974,22 @@
                 </div>
                 <div class="form-row" id="carnet-carburant-row">
                     <div class="form-group">
-                        <label for="carnet-carburant-depart">Carburant ajouté au départ (L) :</label>
-                        <input type="text" id="carnet-carburant-depart" inputmode="decimal" placeholder="Ex: 130 ou 130 + PC">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                            <label for="carnet-carburant-depart">Carburant ajouté au départ (L) :</label>
+                            <label style="display:flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#475569; white-space:nowrap;">
+                                <input type="checkbox" id="carnet-pc-depart" style="margin:0;"> PC ?
+                            </label>
+                        </div>
+                        <input type="text" id="carnet-carburant-depart" inputmode="decimal" placeholder="Ex: 130">
                     </div>
                     <div class="form-group">
-                        <label for="carnet-carburant-arrivee">Carburant ajouté à l'arrivée (L) :</label>
-                        <input type="text" id="carnet-carburant-arrivee" inputmode="decimal" placeholder="Ex: 130 ou 130 + PC">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                            <label for="carnet-carburant-arrivee">Carburant ajouté à l'arrivée (L) :</label>
+                            <label style="display:flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#475569; white-space:nowrap;">
+                                <input type="checkbox" id="carnet-pc-arrivee" style="margin:0;"> PC ?
+                            </label>
+                        </div>
+                        <input type="text" id="carnet-carburant-arrivee" inputmode="decimal" placeholder="Ex: 130">
                     </div>
                 </div>
                 <div class="form-row" id="carnet-huile-row">
@@ -1203,7 +1213,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=86"></script>
-    <script src="version.js?v=20260919193332"></script>
+    <script src="version.js?v=20260919194358"></script>
     <script src="app.js?v=85"></script>
     <script src="utils.js?v=97"></script>
     <script src="presences.js?v=94"></script>
@@ -1211,7 +1221,7 @@
     <script src="calendrier.js?v=88"></script>
     <script src="comptes.js?v=108"></script>
     <script src="aeronefs.js?v=102"></script>
-    <script src="carnet.js?v=129"></script>
+    <script src="carnet.js?v=130"></script>
     <script src="documents.js?v=83"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=4"></script>

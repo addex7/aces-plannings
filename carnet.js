@@ -238,8 +238,14 @@ function remplirFormulaireCarnet(f) {
     const nature = document.getElementById('carnet-nature');
     if (nature) nature.value = f['Nature'] || (machine === 'F-JVIO' ? 'local' : 'Autre');
     if (machine !== 'F-JVIO') {
-        document.getElementById('carnet-carburant-depart').value = f['Carburant départ'] || '';
-        document.getElementById('carnet-carburant-arrivee').value = f['Carburant arrivée'] || '';
+        const cbDep = parseCarburant(f['Carburant départ']);
+        const cbArr = parseCarburant(f['Carburant arrivée']);
+        document.getElementById('carnet-carburant-depart').value = cbDep.q;
+        document.getElementById('carnet-carburant-arrivee').value = cbArr.q;
+        const pcDep = document.getElementById('carnet-pc-depart');
+        const pcArr = document.getElementById('carnet-pc-arrivee');
+        if (pcDep) pcDep.checked = cbDep.pc;
+        if (pcArr) pcArr.checked = cbArr.pc;
         document.getElementById('carnet-huile-depart').value = f['Huile départ'] || '';
         document.getElementById('carnet-huile-arrivee').value = f['Huile arrivée'] || '';
     }
@@ -407,6 +413,41 @@ function afficherCarburant(v) {
     if (val.toUpperCase() === 'PC') return 'PC';
     if (val.toUpperCase().includes('PC')) return val;
     return formaterNombre(v) || '-';
+}
+
+function afficherHuile(v) {
+    if (v === null || v === undefined || v === '') return '-';
+    const val = String(v).trim();
+    if (val.toUpperCase().includes('L') || val.toUpperCase().includes('PC')) return val;
+    const n = parseFloat(val.replace(',', '.'));
+    if (!isNaN(n)) {
+        if (n === 0) return '-';
+        return `+${formaterNombre(v)}L`;
+    }
+    return val;
+}
+
+function parseCarburant(v) {
+    if (v === null || v === undefined || v === '') return { q: '', pc: false };
+    const str = String(v).trim();
+    const pc = str.toUpperCase().includes('PC');
+    const q = str
+        .replace(/\+\s*/g, '')
+        .replace(/L\b/ig, '')
+        .replace(/PC/ig, '')
+        .trim();
+    return { q, pc };
+}
+
+function formatterCarburantPC(q, pc) {
+    const val = (q || '').trim();
+    if (!pc) return val;
+    if (val === '') return 'PC';
+    if (val.toUpperCase().includes('PC')) return val;
+    if (val.startsWith('+')) return `${val}L PC`;
+    const n = parseFloat(val.replace(',', '.'));
+    if (!isNaN(n)) return `+${val}L PC`;
+    return `${val} PC`;
 }
 
 function dureeHorametreMinutes(machine, horametreDepart, horametreArrivee) {
@@ -788,8 +829,8 @@ function afficherCarnet(records) {
                 <td>${f['Nature'] || '-'}</td>
                 <td>${afficherCarburant(f['Carburant départ'])}</td>
                 <td>${afficherCarburant(f['Carburant arrivée'])}</td>
-                <td>${formaterNombre(f['Huile départ']) || '-'}</td>
-                <td>${formaterNombre(f['Huile arrivée']) || '-'}</td>
+                <td>${afficherHuile(f['Huile départ'])}</td>
+                <td>${afficherHuile(f['Huile arrivée'])}</td>
                 <td>${(f['Observations'] || '').trim() || '-'}</td>
                 <td>${horametre}</td>
             `;
@@ -1045,8 +1086,12 @@ async function soumettreCarnetRoute(event) {
     const heureDepart = document.getElementById('carnet-heure-depart').value;
     const heureArrivee = document.getElementById('carnet-heure-arrivee').value;
     const nature = document.getElementById('carnet-nature').value;
-    const carburantDepart = document.getElementById('carnet-carburant-depart').value;
-    const carburantArrivee = document.getElementById('carnet-carburant-arrivee').value;
+    let carburantDepart = document.getElementById('carnet-carburant-depart').value;
+    let carburantArrivee = document.getElementById('carnet-carburant-arrivee').value;
+    const pcDepart = document.getElementById('carnet-pc-depart')?.checked;
+    const pcArrivee = document.getElementById('carnet-pc-arrivee')?.checked;
+    if (pcDepart) carburantDepart = formatterCarburantPC(carburantDepart, true);
+    if (pcArrivee) carburantArrivee = formatterCarburantPC(carburantArrivee, true);
     const huileDepart = document.getElementById('carnet-huile-depart').value;
     const huileArrivee = document.getElementById('carnet-huile-arrivee').value;
     const horametreDepart = document.getElementById('carnet-horametre-depart').value;
