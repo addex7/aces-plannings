@@ -564,8 +564,26 @@ function mettreAJourNatureParFonction() {
 
 function syncNatureChips() {
     const select = document.getElementById('carnet-nature');
+    const val = select ? select.value : '';
+    const qualChips = document.querySelectorAll('input[name="carnet-nature-qual"]');
+    if (qualChips.length) {
+        qualChips.forEach(cb => { cb.checked = cb.value === val; });
+        if (!document.querySelector('input[name="carnet-nature-base"]:checked')) {
+            const def = document.querySelector('input[name="carnet-nature-base"][value="Local"]');
+            if (def) def.checked = true;
+        }
+        return;
+    }
     const chips = document.querySelectorAll('input[name="carnet-nature-chip"]');
-    chips.forEach(cb => { cb.checked = cb.value === (select ? select.value : ''); });
+    chips.forEach(cb => { cb.checked = cb.value === val; });
+}
+
+function majNatureStd() {
+    const select = document.getElementById('carnet-nature');
+    if (!select) return;
+    const qual = document.querySelector('input[name="carnet-nature-qual"]:checked');
+    select.value = qual && select.querySelector(`option[value="${qual.value}"]`) ? qual.value : 'Autre';
+    syncNatureChips();
 }
 
 const CARNET_JVIO_FONCTIONS = [
@@ -603,7 +621,14 @@ const CARNET_MOTEUR_FONCTIONS = [
 
 const CARNET_JVIO_NATURES = ['local', 'voyage', 'REV', 'Instruction', 'VLD', 'Activité Particulière'];
 const CARNET_STD_NATURES = ['Autre', 'Instruction', 'Examen'];
+const CARNET_STD_NATURES_BASE = ['Local', 'Navigation'];
+const CARNET_STD_NATURES_EXTRA = ['VFR Nuit', "Vol d'initiation"];
+const CARNET_STD_NATURES_QUAL = ['Instruction', 'Examen'];
 const EMOJIS_NATURE_STD = {
+    'Local': '🏠',
+    'Navigation': '🗺️',
+    'VFR Nuit': '🌙',
+    "Vol d'initiation": '🎁',
     'Autre': '📝',
     'Instruction': '📚',
     'Examen': '✅'
@@ -696,7 +721,6 @@ function adapterFormulaireCarnet(machine) {
 
     const natureChips = document.getElementById('carnet-nature-chips');
     const natureOptions = isJVIO ? CARNET_JVIO_NATURES : CARNET_STD_NATURES;
-    const emojisNature = isJVIO ? EMOJIS_NATURE_JVIO : EMOJIS_NATURE_STD;
     if (nature) {
         nature.innerHTML = natureOptions.map(v => `<option value="${v}">${v}</option>`).join('');
         nature.style.display = isMoteur ? 'none' : '';
@@ -704,17 +728,44 @@ function adapterFormulaireCarnet(machine) {
     }
     if (natureChips) {
         natureChips.style.display = isMoteur ? 'flex' : 'none';
-        natureChips.innerHTML = isMoteur ? natureOptions.map(v =>
-            `<label class="checkbox-option"><input type="radio" name="carnet-nature-chip" value="${v}"> ${emojisNature[v] || ''} ${v}</label>`
-        ).join('') : '';
-        natureChips.querySelectorAll('input[name="carnet-nature-chip"]').forEach(rb => {
-            rb.addEventListener('change', () => {
-                if (nature) nature.value = rb.value;
-                mettreAJourNatureParFonction();
-                mettreAJourActiviteParticuliere();
-                mettreAJourPrixDuVol();
+        if (isJVIO) {
+            natureChips.innerHTML = CARNET_JVIO_NATURES.map(v =>
+                `<label class="checkbox-option"><input type="radio" name="carnet-nature-chip" value="${v}"> ${EMOJIS_NATURE_JVIO[v] || ''} ${v}</label>`
+            ).join('');
+            natureChips.querySelectorAll('input[name="carnet-nature-chip"]').forEach(rb => {
+                rb.addEventListener('change', () => {
+                    if (nature) nature.value = rb.value;
+                    mettreAJourNatureParFonction();
+                    mettreAJourActiviteParticuliere();
+                    mettreAJourPrixDuVol();
+                });
             });
-        });
+        } else if (isMoteur) {
+            natureChips.innerHTML =
+                CARNET_STD_NATURES_BASE.map(v =>
+                    `<label class="checkbox-option"><input type="radio" name="carnet-nature-base" value="${v}"> ${EMOJIS_NATURE_STD[v] || ''} ${v}</label>`
+                ).join('') +
+                CARNET_STD_NATURES_EXTRA.map(v =>
+                    `<label class="checkbox-option"><input type="checkbox" name="carnet-nature-extra" value="${v}"> ${EMOJIS_NATURE_STD[v] || ''} ${v}</label>`
+                ).join('') +
+                CARNET_STD_NATURES_QUAL.map(v =>
+                    `<label class="checkbox-option"><input type="checkbox" name="carnet-nature-qual" value="${v}"> ${EMOJIS_NATURE_STD[v] || ''} ${v}</label>`
+                ).join('');
+            natureChips.querySelectorAll('input[name="carnet-nature-qual"]').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        natureChips.querySelectorAll('input[name="carnet-nature-qual"]').forEach(o => {
+                            if (o !== cb) o.checked = false;
+                        });
+                    }
+                    majNatureStd();
+                    mettreAJourActiviteParticuliere();
+                    mettreAJourPrixDuVol();
+                });
+            });
+        } else {
+            natureChips.innerHTML = '';
+        }
     }
     syncNatureChips();
     if (machineSelect) machineSelect.style.display = 'none';
