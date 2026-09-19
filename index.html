@@ -950,13 +950,25 @@
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label for="carnet-heure-depart" id="carnet-heure-depart-label">Heure de départ (UTC) :</label>
-                        <input type="time" id="carnet-heure-depart" required>
+                    <div class="form-col" style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="form-group" style="margin:0;">
+                            <label for="carnet-heure-depart" id="carnet-heure-depart-label">Heure de départ (UTC) :</label>
+                            <input type="time" id="carnet-heure-depart" required>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label for="carnet-horametre-depart">Horamètre au départ :</label>
+                            <input type="number" id="carnet-horametre-depart" step="0.01" min="0" placeholder="Ex: 5523.45">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="carnet-heure-arrivee" id="carnet-heure-arrivee-label">Heure d'arrivée (UTC) :</label>
-                        <input type="time" id="carnet-heure-arrivee" required>
+                    <div class="form-col" style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="form-group" style="margin:0;">
+                            <label for="carnet-heure-arrivee" id="carnet-heure-arrivee-label">Heure d'arrivée (UTC) :</label>
+                            <input type="time" id="carnet-heure-arrivee" required>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label for="carnet-horametre-arrivee">Horamètre à l'arrivée :</label>
+                            <input type="number" id="carnet-horametre-arrivee" step="0.01" min="0" placeholder="Ex: 5523.77">
+                        </div>
                     </div>
                 </div>
                 <div class="form-row" id="carnet-carburant-row">
@@ -977,16 +989,6 @@
                     <div class="form-group">
                         <label for="carnet-huile-arrivee">Huile ajoutée à l'arrivée (L) :</label>
                         <input type="number" id="carnet-huile-arrivee" step="0.1" min="0" placeholder="0">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="carnet-horametre-depart">Horamètre au départ :</label>
-                        <input type="number" id="carnet-horametre-depart" step="0.01" min="0" placeholder="Ex: 5523.45">
-                    </div>
-                    <div class="form-group">
-                        <label for="carnet-horametre-arrivee">Horamètre à l'arrivée :</label>
-                        <input type="number" id="carnet-horametre-arrivee" step="0.01" min="0" placeholder="Ex: 5523.77">
                     </div>
                 </div>
                 <div class="form-group full-width decollage-flex" id="carnet-decol-atterr-row">
@@ -1200,7 +1202,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=86"></script>
-    <script src="version.js?v=20260919191432"></script>
+    <script src="version.js?v=20260919191615"></script>
     <script src="app.js?v=85"></script>
     <script src="utils.js?v=96"></script>
     <script src="presences.js?v=94"></script>
