@@ -2628,8 +2628,8 @@ function afficherVolsInitiation() {
                 <strong>${piloteText}</strong>
                 ${boutonSInscrire}
                 ${boutonInscrireAutre}
+                <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
             </div>
-            <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
         `;
         card.style.cursor = 'pointer';
         card.title = 'Cliquer pour modifier';
