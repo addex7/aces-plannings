@@ -442,7 +442,44 @@ function mettreAJourBoutonVIPPlaneur() {
     }
 }
 
-function ouvrirModaleEditionVIPlaneur(vol) {
+async function peuplerSelectPilotesVI(valeurSelectionnee = '') {
+    const sel = document.getElementById('form-vi-pilote');
+    if (!sel) return;
+    await chargerListeMembresCache();
+    let cible = (valeurSelectionnee || '').toString().trim();
+    if (cible.startsWith('rec')) {
+        cible = nomUtilisateurDepuisId(cible, listeMembresCache) || cible;
+    }
+    const pilotes = (listeMembresCache || []).filter(r => {
+        const roles = Array.isArray(r.fields?.['Rôles']) ? r.fields['Rôles'] : [r.fields?.['Rôles']].filter(Boolean);
+        return roles.includes('Pilote VI');
+    });
+    sel.innerHTML = '<option value="">-- Aucun --</option>';
+    let trouve = false;
+    pilotes.forEach(r => {
+        const f = r.fields || {};
+        const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+        if (!nomComplet) return;
+        const opt = document.createElement('option');
+        opt.value = nomComplet;
+        opt.textContent = nomComplet;
+        if (cible && (nomComplet === cible || (typeof correspondanceNom === 'function' && correspondanceNom(nomComplet, cible)))) {
+            opt.selected = true;
+            trouve = true;
+        }
+        sel.appendChild(opt);
+    });
+    if (cible && !trouve) {
+        const opt = document.createElement('option');
+        opt.value = cible;
+        opt.textContent = cible;
+        opt.selected = true;
+        sel.appendChild(opt);
+    }
+    if (!cible) sel.value = '';
+}
+
+async function ouvrirModaleEditionVIPlaneur(vol) {
     const modal = document.getElementById('vi-planeur-modal');
     const modalTitle = modal ? modal.querySelector('h3') : null;
     const btnDeleteVI = document.getElementById('btn-delete-vi-planeur');
@@ -461,12 +498,12 @@ function ouvrirModaleEditionVIPlaneur(vol) {
     document.getElementById('form-vi-statut').value = 'Réservé';
     document.getElementById('form-vi-debut').value = formaterPourInput(new Date(vol.fields['Date de début']));
     document.getElementById('form-vi-fin').value = formaterPourInput(new Date(vol.fields['Date de fin']));
-    document.getElementById('form-vi-pilote').value = (vol.fields['Pilote'] || '').toString().trim();
+    await peuplerSelectPilotesVI((vol.fields['Pilote'] || '').toString().trim());
     document.getElementById('form-vi-commentaire').value = (vol.fields['Commentaire'] || '').toString().trim();
     modal.style.display = 'flex';
 }
 
-function ouvrirModaleEditionVICreneau(vol) {
+async function ouvrirModaleEditionVICreneau(vol) {
     const modal = document.getElementById('vi-planeur-modal');
     const modalTitle = modal ? modal.querySelector('h3') : null;
     const btnDeleteVI = document.getElementById('btn-delete-vi-planeur');
@@ -485,7 +522,7 @@ function ouvrirModaleEditionVICreneau(vol) {
     document.getElementById('form-vi-statut').value = (vol.statut || 'Disponible');
     document.getElementById('form-vi-debut').value = formaterPourInput(new Date(vol.debut));
     document.getElementById('form-vi-fin').value = formaterPourInput(new Date(vol.fin));
-    document.getElementById('form-vi-pilote').value = (vol.pilote || '').toString().trim();
+    await peuplerSelectPilotesVI((vol.pilote || '').toString().trim());
     document.getElementById('form-vi-commentaire').value = (vol.commentaire || '').toString().trim();
     modal.style.display = 'flex';
 }
