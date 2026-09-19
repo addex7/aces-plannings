@@ -992,6 +992,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const isInstruction = typesVol.includes('Instruction');
                         const estMoi = estUtilisateurCourant(piloteNom) || estUtilisateurCourant(instructeurNom);
                         if (estMoi) barresDiv.classList.add('ma-reservation');
+                        if (isInstruction) barresDiv.classList.add('reservation-instruction');
                         let libelleEntete = piloteFormate || 'Pilote non défini';
                         if (instructeurNom) {
                             barresDiv.classList.add('reservation-avec-instructeur');
