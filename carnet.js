@@ -1556,6 +1556,11 @@ function initCarnetRoute() {
                 fi.checked = true;
                 appliquerExclusiviteFonctions(fi);
             }
+            const ep = document.querySelector('input[name="carnet-fonction"][value="EP"]');
+            if (ep && !ep.checked) {
+                ep.checked = true;
+                appliquerExclusiviteFonctions(ep);
+            }
             const vi = document.querySelector('input[name="carnet-nature-extra"][value="Vol d\'initiation"]');
             if (vi && vi.checked) {
                 vi.checked = false;
