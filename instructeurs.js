@@ -488,7 +488,12 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
             barresDiv.title = `${libelleEntete} — ${immat}`;
             barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
-            barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
+            barresDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isCreneau) return;
+                if (typeof ouvrirModaleEdition === 'function') ouvrirModaleEdition(r, immat || machineId);
+                else if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id);
+            });
             gridBg.appendChild(barresDiv);
             barresInfos.push({ bar: barresDiv, debut: heureDebut, fin: heureFin });
         });
