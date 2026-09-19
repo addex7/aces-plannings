@@ -356,6 +356,12 @@ async function peuplerCarnetInstructeurs(instructeur = '', machine = '') {
                 if (instructeur && (nomComplet === instructeur || f['Nom'] === instructeur || f['Prénom'] === instructeur)) opt.selected = true;
                 sel.appendChild(opt);
             });
+            if (instructeur && ![...sel.options].some(o => o.value === instructeur)) {
+                const opt = document.createElement('option');
+                opt.value = instructeur;
+                opt.textContent = instructeur;
+                sel.appendChild(opt);
+            }
         }
         if (instructeur) sel.value = instructeur;
     } catch (err) {
