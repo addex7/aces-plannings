@@ -248,12 +248,13 @@ function remplirFormulaireCarnet(f) {
         if (pcArr) pcArr.checked = cbArr.pc;
         document.getElementById('carnet-huile-depart').value = f['Huile départ'] || '';
         document.getElementById('carnet-huile-arrivee').value = f['Huile arrivée'] || '';
+        restaurerDetailNatureStd(f['Précision activité'] || '');
     }
     document.getElementById('carnet-horametre-depart').value = f['Horamètre départ'] || '';
     document.getElementById('carnet-horametre-arrivee').value = f['Horamètre arrivée'] || '';
     document.getElementById('carnet-observations').value = f['Observations'] || '';
     const activiteDetail = document.getElementById('carnet-activite-detail');
-    if (activiteDetail) activiteDetail.value = f['Précision activité'] || '';
+    if (activiteDetail) activiteDetail.value = machine === 'F-JVIO' ? (f['Précision activité'] || '') : '';
     const decAt = document.getElementById('carnet-decol-atterr');
     if (decAt) decAt.value = (f['Décollages'] === 0 || f['Décollages']) ? f['Décollages'] : '1';
     const fonctions = (f['Fonction'] || '').split('/').map(x => x.trim());
@@ -584,6 +585,28 @@ function majNatureStd() {
     const qual = document.querySelector('input[name="carnet-nature-qual"]:checked');
     select.value = qual && select.querySelector(`option[value="${qual.value}"]`) ? qual.value : 'Autre';
     syncNatureChips();
+}
+
+function detailNatureStd() {
+    const base = document.querySelector('input[name="carnet-nature-base"]:checked');
+    const extras = Array.from(document.querySelectorAll('input[name="carnet-nature-extra"]:checked')).map(cb => cb.value);
+    const quals = Array.from(document.querySelectorAll('input[name="carnet-nature-qual"]:checked')).map(cb => cb.value);
+    const parts = [];
+    if (base) parts.push(base.value);
+    parts.push(...extras, ...quals);
+    return parts.join(' + ');
+}
+
+function restaurerDetailNatureStd(detail) {
+    const parts = String(detail || '').split('+').map(s => s.trim()).filter(Boolean);
+    const aBase = parts.some(v => CARNET_STD_NATURES_BASE.includes(v));
+    document.querySelectorAll('input[name="carnet-nature-base"]').forEach(rb => {
+        rb.checked = aBase ? parts.includes(rb.value) : rb.value === 'Local';
+    });
+    document.querySelectorAll('input[name="carnet-nature-extra"]').forEach(cb => {
+        cb.checked = parts.includes(cb.value);
+    });
+    majVerrouillageVolInitiation();
 }
 
 function majVerrouillageVolInitiation() {
@@ -1163,7 +1186,12 @@ async function soumettreCarnetRoute(event) {
     const horametreDepart = document.getElementById('carnet-horametre-depart').value;
     const horametreArrivee = document.getElementById('carnet-horametre-arrivee').value;
     const observations = document.getElementById('carnet-observations').value.trim();
-    const activiteParticuliere = nature === 'Activité Particulière' ? (document.getElementById('carnet-activite-detail').value.trim() || '') : '';
+    let precisionActivite = '';
+    if (nature === 'Activité Particulière') {
+        precisionActivite = document.getElementById('carnet-activite-detail').value.trim() || '';
+    } else if (MACHINES_MOTEURS.includes(machine) && machine !== 'F-JVIO') {
+        precisionActivite = detailNatureStd();
+    }
     const prixVolText = (document.getElementById('carnet-prix-vol') || { value: '' }).value;
 
     const ancienRecord = idCarnetEnEdition ? listeVolsCarnetCache.find(r => r.id === idCarnetEnEdition) : null;
@@ -1201,7 +1229,7 @@ async function soumettreCarnetRoute(event) {
         "Décollages": decollages,
         "Atterrissages": atterrissages,
         "Nature": nature,
-        "Précision activité": activiteParticuliere,
+        "Précision activité": precisionActivite,
         "Carburant départ": valeurCarburant(carburantDepart),
         "Carburant arrivée": valeurCarburant(carburantArrivee),
         "Huile départ": extraireNombreChamp(huileDepart),
