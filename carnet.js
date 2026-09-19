@@ -551,6 +551,33 @@ function mettreAJourHeureArrivee() {
     mettreAJourPrixDuVol();
 }
 
+function suggererNatureParTrajet() {
+    const dep = (document.getElementById('carnet-depart')?.value || '').trim().toUpperCase();
+    const arr = (document.getElementById('carnet-arrivee')?.value || '').trim().toUpperCase();
+    if (!dep || !arr || dep === arr) return;
+    const machine = document.getElementById('carnet-machine')?.value || '';
+    if (machine === 'F-JVIO') {
+        const select = document.getElementById('carnet-nature');
+        if (select && select.value === 'local' && select.querySelector('option[value="voyage"]')) {
+            select.value = 'voyage';
+            syncNatureChips();
+            mettreAJourActiviteParticuliere();
+            mettreAJourPrixDuVol();
+        }
+    } else if (MACHINES_MOTEURS.includes(machine)) {
+        const vi = document.querySelector('input[name="carnet-nature-extra"][value="Vol d\'initiation"]');
+        if (vi && vi.checked) return;
+        const base = document.querySelector('input[name="carnet-nature-base"]:checked');
+        if (base && base.value === 'Navigation') return;
+        const nav = document.querySelector('input[name="carnet-nature-base"][value="Navigation"]');
+        if (nav) {
+            nav.checked = true;
+            mettreAJourActiviteParticuliere();
+            mettreAJourPrixDuVol();
+        }
+    }
+}
+
 const FONCTIONS_EXCLUSIVES = [['P', 'EP'], ['FI', 'FE']];
 
 function appliquerExclusiviteFonctions(cb) {
@@ -862,6 +889,12 @@ function adapterFormulaireCarnet(machine) {
     }
 }
 
+function formatEquipageCourt(nom) {
+    const parts = String(nom || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return nom || '';
+    return `${parts.slice(1).join(' ')} ${parts[0].charAt(0).toUpperCase()}.`;
+}
+
 function afficherCarnet(records) {
     const tbody = document.getElementById('carnet-body');
     if (!tbody) return;
@@ -914,8 +947,8 @@ function afficherCarnet(records) {
         if (isJVIO) {
             tr.innerHTML = `
                 <td>${dateStr}</td>
-                <td>${f['Pilote'] || '-'}</td>
-                <td>${f['Instructeur'] || '-'}</td>
+                <td>${formatEquipageCourt(f['Pilote']) || '-'}</td>
+                <td>${formatEquipageCourt(f['Instructeur']) || '-'}</td>
                 <td>${f['Fonction'] || '-'}</td>
                 <td>${f['Nature'] || '-'}</td>
                 <td>${f['Départ'] || '-'}</td>
@@ -926,7 +959,7 @@ function afficherCarnet(records) {
                 <td>${temps || '-'}</td>
             `;
         } else {
-            const equipage = [f['Pilote'], f['Instructeur']].filter(Boolean).join(' / ') || '-';
+            const equipage = [f['Pilote'], f['Instructeur']].filter(Boolean).map(formatEquipageCourt).join(' / ') || '-';
             const carburant = [formaterNombre(f['Carburant départ']), formaterNombre(f['Carburant arrivée'])].filter(v => v !== '').join(' / ') || '-';
             const huile = [formaterNombre(f['Huile départ']), formaterNombre(f['Huile arrivée'])].filter(v => v !== '').join(' / ') || '-';
             const horametre = [formaterNombre(f['Horamètre départ']), formaterNombre(f['Horamètre arrivée'])].filter(v => v !== '').join(' / ') || '-';
@@ -1509,6 +1542,10 @@ function initCarnetRoute() {
     });
     const elHeureArrivee = document.getElementById('carnet-heure-arrivee');
     if (elHeureArrivee) elHeureArrivee.addEventListener('input', mettreAJourPrixDuVol);
+    ['carnet-depart', 'carnet-arrivee'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', suggererNatureParTrajet);
+    });
 
     const nature = document.getElementById('carnet-nature');
     if (nature) {
