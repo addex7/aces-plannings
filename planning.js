@@ -1170,6 +1170,8 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
     const sel = document.getElementById('form-pilote');
     const group = document.getElementById('group-pilote');
     if (!sel || !group) return;
+    const isVIPlaneur = typeof getTypeVolSelectionne === 'function' && getTypeVolSelectionne().includes('VI Planeur');
+    sel.dataset.allowCustom = isVIPlaneur ? '0' : '1';
     const roles = (typeof currentUser !== 'undefined' && currentUser ? currentUser.roles || [] : []);
     const autorise = (typeof isSuperAdmin === 'function' && isSuperAdmin()) ||
         roles.some(r => ['Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'].includes(r));
@@ -1188,9 +1190,13 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
             if (!res.ok) throw new Error(data.error?.message || 'Erreur');
             listeMembresCache = data.records || [];
         }
-        sel.innerHTML = '<option value="">-- Choisir un pilote --</option>';
+        sel.innerHTML = `<option value="">${isVIPlaneur ? '-- Choisir un pilote VI --' : '-- Choisir un pilote --'}</option>`;
         listeMembresCache.forEach(r => {
             const f = r.fields || {};
+            if (isVIPlaneur) {
+                const rolesMembre = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
+                if (!rolesMembre.includes('Pilote VI')) return;
+            }
             const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Membre';
             const opt = document.createElement('option');
             opt.value = r.id;
@@ -1199,17 +1205,17 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
             else if (!piloteSelectionne && r.id === monId) opt.selected = true;
             sel.appendChild(opt);
         });
-        let valeurChoisie = monId;
+        let valeurChoisie = isVIPlaneur ? '' : monId;
         if (piloteSelectionne) {
             const existe = [...sel.options].some(o => o.value === piloteSelectionne || o.textContent.trim() === piloteSelectionne);
-            if (!existe) {
+            if (!existe && !isVIPlaneur) {
                 const optLibre = document.createElement('option');
                 optLibre.value = piloteSelectionne;
                 optLibre.textContent = piloteSelectionne;
                 optLibre.selected = true;
                 sel.appendChild(optLibre);
             }
-            valeurChoisie = piloteSelectionne;
+            if (existe || !isVIPlaneur) valeurChoisie = piloteSelectionne;
         }
         sel.value = valeurChoisie;
         group.style.display = 'flex';
@@ -1571,6 +1577,15 @@ function appliquerEtatFormulaire() {
     const isVIPlaneur = typeSelectionne.includes('VI Planeur');
     const isVIMoteur = typeSelectionne.includes('VI Moteur');
     const isVI = isVIPlaneur || isVIMoteur;
+
+    const groupInstructeur = document.getElementById('group-instructeur');
+    if (groupInstructeur) groupInstructeur.style.display = isVIPlaneur ? 'none' : '';
+    const viPrecedent = appliquerEtatFormulaire._viPlaneur;
+    appliquerEtatFormulaire._viPlaneur = isVIPlaneur;
+    if (viPrecedent !== isVIPlaneur && (viPrecedent !== undefined || isVIPlaneur)) {
+        const selPil = document.getElementById('form-pilote');
+        peuplerPiloteSelect(selPil ? selPil.value : null);
+    }
 
     const machineId = getMachineSelectionnee();
     const avionSelectionne = (listeAvionsCache || []).find(a => a.id === machineId);
