@@ -550,8 +550,20 @@ const CARNET_STD_FONCTIONS = [
     { value: 'FE', label: 'FE - Examinateur' }
 ];
 
+const CARNET_MOTEUR_FONCTIONS = [
+    { value: 'P', label: 'P = Pilote', emoji: '🧑‍✈️' },
+    { value: 'EP', label: 'EP = Élève pilote', emoji: '🎓' },
+    { value: 'FI', label: 'FI = Instructeur', emoji: '👨‍🏫' },
+    { value: 'FE', label: 'FE = Examinateur', emoji: '📋' }
+];
+
 const CARNET_JVIO_NATURES = ['local', 'voyage', 'REV', 'Instruction', 'VLD', 'Activité Particulière'];
 const CARNET_STD_NATURES = ['Autre', 'Instruction', 'Examen'];
+const EMOJIS_NATURE_STD = {
+    'Autre': '📝',
+    'Instruction': '📚',
+    'Examen': '✅'
+};
 
 const EMOJIS_MACHINE = {
     'F-GASB': '✈️',
@@ -604,8 +616,9 @@ function cocherFonctionParDefaut() {
 
 function adapterFormulaireCarnet(machine) {
     const isJVIO = machine === 'F-JVIO';
+    const isMoteur = MACHINES_MOTEURS.includes(machine);
     const modal = document.getElementById('carnet-modal');
-    if (modal) modal.classList.toggle('carnet-modal-jvio', isJVIO);
+    if (modal) modal.classList.toggle('carnet-modal-jvio', isMoteur);
     const piloteLabel = document.getElementById('carnet-pilote-label');
     const instLabel = document.getElementById('carnet-instructeur-label');
     const hDepLabel = document.getElementById('carnet-heure-depart-label');
@@ -621,26 +634,27 @@ function adapterFormulaireCarnet(machine) {
     const form = document.getElementById('carnet-form');
     const fonctionFormGroup = fonctionGroup ? fonctionGroup.parentElement : null;
 
-    if (form) form.classList.toggle('carnet-form-jvio', isJVIO);
+    if (form) form.classList.toggle('carnet-form-jvio', isMoteur);
     if (piloteLabel) piloteLabel.textContent = isJVIO ? 'Équipage 1 :' : 'Pilote :';
     if (instLabel) instLabel.textContent = isJVIO ? 'Équipage 2 :' : 'Instructeur (si instruction) :';
     if (hDepLabel) hDepLabel.textContent = isJVIO ? 'Heure de départ (H.Loc) :' : 'Heure de départ (UTC) :';
     if (hArrLabel) hArrLabel.textContent = isJVIO ? 'Heure d\'arrivée (H.Loc) :' : 'Heure d\'arrivée (UTC) :';
     if (fonctionLabel) fonctionLabel.textContent = 'Fonction(s) à bord :';
     if (instSel) instSel.dataset.allowCustom = isJVIO ? '1' : '0';
-    if (fonctionFormGroup) fonctionFormGroup.classList.toggle('full-width', isJVIO);
+    if (fonctionFormGroup) fonctionFormGroup.classList.toggle('full-width', isMoteur);
 
     const natureChips = document.getElementById('carnet-nature-chips');
+    const natureOptions = isJVIO ? CARNET_JVIO_NATURES : CARNET_STD_NATURES;
+    const emojisNature = isJVIO ? EMOJIS_NATURE_JVIO : EMOJIS_NATURE_STD;
     if (nature) {
-        const options = isJVIO ? CARNET_JVIO_NATURES : CARNET_STD_NATURES;
-        nature.innerHTML = options.map(v => `<option value="${v}">${v}</option>`).join('');
-        nature.style.display = isJVIO ? 'none' : '';
-        nature.value = isJVIO ? 'local' : options[0];
+        nature.innerHTML = natureOptions.map(v => `<option value="${v}">${v}</option>`).join('');
+        nature.style.display = isMoteur ? 'none' : '';
+        nature.value = isJVIO ? 'local' : natureOptions[0];
     }
     if (natureChips) {
-        natureChips.style.display = isJVIO ? 'flex' : 'none';
-        natureChips.innerHTML = isJVIO ? CARNET_JVIO_NATURES.map(v =>
-            `<label class="checkbox-option"><input type="radio" name="carnet-nature-chip" value="${v}"> ${EMOJIS_NATURE_JVIO[v] || ''} ${v}</label>`
+        natureChips.style.display = isMoteur ? 'flex' : 'none';
+        natureChips.innerHTML = isMoteur ? natureOptions.map(v =>
+            `<label class="checkbox-option"><input type="radio" name="carnet-nature-chip" value="${v}"> ${emojisNature[v] || ''} ${v}</label>`
         ).join('') : '';
         natureChips.querySelectorAll('input[name="carnet-nature-chip"]').forEach(rb => {
             rb.addEventListener('change', () => {
@@ -657,7 +671,7 @@ function adapterFormulaireCarnet(machine) {
     syncMachineChips();
 
     if (fonctionGroup) {
-        const fonctions = isJVIO ? CARNET_JVIO_FONCTIONS : CARNET_STD_FONCTIONS;
+        const fonctions = isJVIO ? CARNET_JVIO_FONCTIONS : (isMoteur ? CARNET_MOTEUR_FONCTIONS : CARNET_STD_FONCTIONS);
         fonctionGroup.innerHTML = fonctions.map(f =>
             `<label class="checkbox-option">${f.emoji ? f.emoji + ' ' : ''}<input type="checkbox" name="carnet-fonction" value="${f.value}"> ${f.label}</label>`
         ).join('');
