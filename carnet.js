@@ -410,9 +410,13 @@ function formaterNombre(n) {
 function afficherCarburant(v) {
     if (v === null || v === undefined || v === '') return '-';
     const val = String(v).trim();
-    if (val.toUpperCase() === 'PC') return 'PC';
     if (val.toUpperCase().includes('PC')) return val;
-    return formaterNombre(v) || '-';
+    const compact = val.replace(/\s/g, '');
+    if (/^[0-9]*[.,]?[0-9]+$/.test(compact)) {
+        const n = parseFloat(compact.replace(',', '.'));
+        return n === 0 ? '-' : `+${formaterNombre(n)}L`;
+    }
+    return val;
 }
 
 function afficherHuile(v) {
@@ -437,17 +441,6 @@ function parseCarburant(v) {
         .replace(/PC/ig, '')
         .trim();
     return { q, pc };
-}
-
-function formatterCarburantPC(q, pc) {
-    const val = (q || '').trim();
-    if (!pc) return val;
-    if (val === '') return 'PC';
-    if (val.toUpperCase().includes('PC')) return val;
-    if (val.startsWith('+')) return `${val}L PC`;
-    const n = parseFloat(val.replace(',', '.'));
-    if (!isNaN(n)) return `+${val}L PC`;
-    return `${val} PC`;
 }
 
 function dureeHorametreMinutes(machine, horametreDepart, horametreArrivee) {
@@ -1090,8 +1083,8 @@ async function soumettreCarnetRoute(event) {
     let carburantArrivee = document.getElementById('carnet-carburant-arrivee').value;
     const pcDepart = document.getElementById('carnet-pc-depart')?.checked;
     const pcArrivee = document.getElementById('carnet-pc-arrivee')?.checked;
-    if (pcDepart) carburantDepart = formatterCarburantPC(carburantDepart, true);
-    if (pcArrivee) carburantArrivee = formatterCarburantPC(carburantArrivee, true);
+    if (pcDepart) carburantDepart = `${carburantDepart} PC`;
+    if (pcArrivee) carburantArrivee = `${carburantArrivee} PC`;
     const huileDepart = document.getElementById('carnet-huile-depart').value;
     const huileArrivee = document.getElementById('carnet-huile-arrivee').value;
     const horametreDepart = document.getElementById('carnet-horametre-depart').value;
@@ -1108,13 +1101,17 @@ async function soumettreCarnetRoute(event) {
         const n = parseFloat(String(val).replace(',', '.'));
         return isNaN(n) ? null : n;
     };
+    const extraireNombreChamp = (val) => {
+        const m = String(val ?? '').replace(',', '.').match(/\d+(?:\.\d+)?/);
+        return m ? parseFloat(m[0]) : null;
+    };
     const valeurCarburant = (val) => {
-        const v = (val || '').trim();
+        const v = String(val ?? '').trim();
         if (v === '') return null;
-        if (v.toUpperCase().includes('PC')) return v;
-        const n = parseFloat(v.replace(',', '.'));
-        const isPureNumber = /^[0-9]*[.,]?[0-9]+$/.test(v.replace(/\s/g, ''));
-        return isPureNumber && !isNaN(n) ? n : v;
+        const pc = v.toUpperCase().includes('PC');
+        const n = extraireNombreChamp(v);
+        if (n === null) return pc ? 'PC' : null;
+        return pc ? `+${n}L PC` : n;
     };
 
     const fields = {
@@ -1134,8 +1131,8 @@ async function soumettreCarnetRoute(event) {
         "Précision activité": activiteParticuliere,
         "Carburant départ": valeurCarburant(carburantDepart),
         "Carburant arrivée": valeurCarburant(carburantArrivee),
-        "Huile départ": numeric(huileDepart),
-        "Huile arrivée": numeric(huileArrivee),
+        "Huile départ": extraireNombreChamp(huileDepart),
+        "Huile arrivée": extraireNombreChamp(huileArrivee),
         "Horamètre départ": numeric(horametreDepart),
         "Horamètre arrivée": numeric(horametreArrivee),
         "Prix du vol": numeric(prixVolText),
