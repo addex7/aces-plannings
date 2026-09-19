@@ -79,6 +79,10 @@ async function enregistrerEvenement(e) {
         alert('Veuillez remplir tous les champs obligatoires.');
         return;
     }
+    if (dateFin < dateDebut) {
+        alert('La date de fin ne peut pas être avant la date de début.');
+        return;
+    }
 
     const payload = {
         records: [{
@@ -119,8 +123,9 @@ async function enregistrerEvenement(e) {
 
 function estDansIntervalle(date, debut, fin) {
     const d = new Date(date + 'T00:00:00');
-    const db = new Date(debut + 'T00:00:00');
-    const df = new Date(fin + 'T00:00:00');
+    let db = new Date(debut + 'T00:00:00');
+    let df = new Date(fin + 'T00:00:00');
+    if (df < db) df = db;
     return d >= db && d <= df;
 }
 
@@ -133,7 +138,7 @@ async function chargerEvenementsJour() {
     container.innerHTML = '<div class="loading">Chargement des événements...</div>';
 
     try {
-        const formula = encodeURIComponent(`NOT(IS_BEFORE({${FIELDS.DATE_FIN}}, DATETIME_PARSE('${dateIso}', 'YYYY-MM-DD')))`);
+        const formula = encodeURIComponent(`OR(NOT(IS_BEFORE({${FIELDS.DATE_FIN}}, DATETIME_PARSE('${dateIso}', 'YYYY-MM-DD'))), NOT(IS_BEFORE({${FIELDS.DATE_DEBUT}}, DATETIME_PARSE('${dateIso}', 'YYYY-MM-DD'))))`);
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}?filterByFormula=${formula}&sort[0][field]=${encodeURIComponent(FIELDS.DATE_DEBUT)}&sort[0][direction]=asc&pageSize=100`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
