@@ -262,7 +262,7 @@ img, table, video, iframe, svg {
     transition: background-color 0.2s, color 0.2s;
 }
 .btn-toggle.active {
-    background-color: #1e3d59;
+    background-color: #10b981;
     color: white;
 }
 .date-navigation {

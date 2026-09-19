@@ -1,6 +1,6 @@
 const TABLE_DISPONIBILITES = 'Disponibilités instructeurs';
 const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur ULM'];
-let afficherDisposInstructeurs = false;
+let afficherDisposInstructeurs = localStorage.getItem('planning_afficherDispos') === '1';
 let disposInstructeursCache = [];
 let listeInstructeursCache = [];
 
@@ -115,6 +115,7 @@ function mettreAJourBoutonDisposInstructeurs() {
 
 function basculerDisposInstructeurs() {
     afficherDisposInstructeurs = !afficherDisposInstructeurs;
+    localStorage.setItem('planning_afficherDispos', afficherDisposInstructeurs ? '1' : '0');
     mettreAJourBoutonDisposInstructeurs();
     if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
 }

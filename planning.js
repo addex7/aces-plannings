@@ -3,7 +3,7 @@
    ========================================================================== */
 
 // Les variables globales sont définies dans app.js
-let afficherVIPPlaneur = false;
+let afficherVIPPlaneur = localStorage.getItem('planning_afficherVIP') === '1';
 let idVIModale = null;
 let tableVIModale = null;
 let volChoixCreneau = null;
@@ -470,6 +470,12 @@ function mettreAJourBoutonVIPPlaneur() {
     if (btn) {
         btn.classList.toggle('active', afficherVIPPlaneur);
     }
+}
+
+function setAfficherVIPPlaneur(val) {
+    afficherVIPPlaneur = val;
+    localStorage.setItem('planning_afficherVIP', val ? '1' : '0');
+    mettreAJourBoutonVIPPlaneur();
 }
 
 async function peuplerSelectPilotesVI(valeurSelectionnee = '') {
@@ -1140,7 +1146,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             }
             rowsContainer.appendChild(rowDiv);
         });
-        if (autoActiverVIP && volsVIP.length > 0) afficherVIPPlaneur = true;
+        if (autoActiverVIP && volsVIP.length > 0 && localStorage.getItem('planning_afficherVIP') === null) afficherVIPPlaneur = true;
         mettreAJourBoutonVIPPlaneur();
         afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin, hMax);
         if (typeof afficherLignesInstructeurs === 'function') afficherLignesInstructeurs(rowsContainer, soleil, disposInstructeurs, [...listeReservationsCache, ...volsVIP, ...creneauxVIMotor], hMin, hMax);
@@ -1754,8 +1760,7 @@ function initGestionnaireModaleVIPlaneur() {
                     form.reset();
                     idVIModale = null;
                     tableVIModale = null;
-                    afficherVIPPlaneur = false;
-                    mettreAJourBoutonVIPPlaneur();
+                    setAfficherVIPPlaneur(false);
                     chargerDonneesPlanning(true);
                 }
             } catch (error) {
@@ -1880,8 +1885,7 @@ function initGestionnaireModaleVIPlaneur() {
                 tableVIModale = null;
                 volVIModale = null;
                 if (table === 'VI Planeur') {
-                    afficherVIPPlaneur = true;
-                    mettreAJourBoutonVIPPlaneur();
+                    setAfficherVIPPlaneur(true);
                 }
                 chargerDonneesPlanning(true);
                 if (typeof chargerVolsInitiation === 'function') chargerVolsInitiation();
@@ -2151,8 +2155,7 @@ function initGestionnaireModale() {
                         if (response.ok) {
                             modal.style.display = 'none';
                             formReservation.reset();
-                            afficherVIPPlaneur = true;
-                            mettreAJourBoutonVIPPlaneur();
+                            setAfficherVIPPlaneur(true);
                             chargerDonneesPlanning(true);
                         }
                     } catch (error) {
@@ -2520,8 +2523,7 @@ function initBoutonsNavigation() {
     const btnToggleVIP = document.getElementById('btn-toggle-vi-planeur');
     if (btnToggleVIP) {
         btnToggleVIP.addEventListener('click', () => {
-            afficherVIPPlaneur = !afficherVIPPlaneur;
-            mettreAJourBoutonVIPPlaneur();
+            setAfficherVIPPlaneur(!afficherVIPPlaneur);
             chargerDonneesPlanning(false, false);
         });
     }
