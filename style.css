@@ -1263,6 +1263,12 @@ img, table, video, iframe, svg {
         grid-template-columns: 1fr;
     }
 }
+#view-instructeur .select-recherche {
+    width: 240px;
+    min-width: 240px;
+    max-width: 240px;
+    flex: 0 0 auto;
+}
 
 /* --- MINI CALENDRIER --- */
 #mini-calendrier {
