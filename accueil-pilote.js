@@ -129,7 +129,7 @@ async function chargerAccueilPilote() {
         </div>`;
 
     const htmlValidites = `
-        <div class="ap-card ap-card-white">
+        <div id="ap-validites-card" class="ap-card ap-card-white" style="cursor:pointer;">
             <h3>Mes validités & qualifications</h3>
             <div class="ap-validites-list">
                 ${renderValidites(validites)}
@@ -182,6 +182,13 @@ async function chargerAccueilPilote() {
         const t = document.getElementById('tab-comptes');
         if (t) t.click();
     });
+
+    const cardValidites = document.getElementById('ap-validites-card');
+    if (cardValidites) {
+        cardValidites.addEventListener('click', () => {
+            if (typeof ouvrirEspaceMembrePerso === 'function') ouvrirEspaceMembrePerso();
+        });
+    }
 
     container.querySelectorAll('.ap-signalement-row').forEach(row => {
         row.addEventListener('click', () => {

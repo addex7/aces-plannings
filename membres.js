@@ -435,6 +435,16 @@ function ouvrirSuiviMembre(id) {
     if (typeof chargerAccueilMembre === 'function') chargerAccueilMembre(id);
 }
 
+function ouvrirEspaceMembrePerso() {
+    const viewAccueilMembre = document.getElementById('view-accueil-membre');
+    const tabMembres = document.getElementById('tab-membres');
+    document.querySelectorAll('.view-section').forEach(s => { s.style.display = 'none'; });
+    if (viewAccueilMembre) viewAccueilMembre.style.display = 'block';
+    document.querySelectorAll('.nav-sub li').forEach(li => li.classList.remove('active'));
+    if (tabMembres) tabMembres.classList.add('active');
+    if (typeof chargerAccueilMembre === 'function') chargerAccueilMembre(currentUser ? currentUser.id : null);
+}
+
 async function ajouterUtilisateur(event) {
     event.preventDefault();
     const prenom = document.getElementById('membre-prenom').value.trim();
