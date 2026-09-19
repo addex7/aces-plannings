@@ -2208,15 +2208,32 @@ img, table, video, iframe, svg {
     white-space: nowrap;
 }
 
-/* --- NOTIFICATIONS --- */
-.notifications-bell {
-    background: transparent;
-    border: none;
+/* --- ICONES HAUT DE SIDEBAR --- */
+.sidebar-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    background: #1e3d59;
     color: #fff;
     font-size: 16px;
     cursor: pointer;
     position: relative;
-    padding: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background .2s, transform .1s;
+}
+.sidebar-icon-btn:hover {
+    background: #2a4f70;
+}
+.sidebar-icon-btn:active {
+    transform: scale(0.95);
+}
+#user-avatar {
+    font-size: 13px;
+    font-weight: 700;
 }
 .notifications-count {
     position: absolute;
@@ -2229,6 +2246,18 @@ img, table, video, iframe, svg {
     font-size: 10px;
     font-weight: bold;
     line-height: 1;
+    display: none;
+}
+#messagerie-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: #dc2626;
+    color: #fff;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    box-shadow: 0 0 0 2px #1e3d59;
     display: none;
 }
 .notifications-panel {
