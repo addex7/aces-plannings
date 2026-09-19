@@ -63,6 +63,36 @@ function afficherModaleAlerte(titre, messageHtml, icone = '⚠️') {
     document.body.appendChild(overlay);
 }
 
+function afficherModaleConfirmation(titre, messageHtml, onConfirm) {
+    const existing = document.getElementById('planning-confirm-modal');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'planning-confirm-modal';
+    overlay.className = 'modal';
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '20000';
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-width: 420px; text-align: left;">
+            <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
+            <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                <span style="font-size:28px;">🗑️</span>
+                <span>${escapeHtml(titre)}</span>
+            </h3>
+            <div style="margin-top:15px; line-height:1.6; font-size:15px; color:#334155;">${messageHtml}</div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                <button type="button" class="nr-btn-cancel" id="planning-confirm-cancel">Annuler</button>
+                <button type="button" id="planning-confirm-ok" style="background:#dc2626; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600;">Supprimer</button>
+            </div>
+        </div>
+    `;
+    const fermer = () => overlay.remove();
+    overlay.querySelector('.close-modal').addEventListener('click', fermer);
+    overlay.querySelector('#planning-confirm-cancel').addEventListener('click', fermer);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) fermer(); });
+    overlay.querySelector('#planning-confirm-ok').addEventListener('click', () => { fermer(); onConfirm(); });
+    document.body.appendChild(overlay);
+}
+
 function formaterDateISO(date) {
     const y = date.getFullYear();
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -2841,22 +2871,28 @@ function editerVolInitiation(vol) {
 async function supprimerVolInitiation(vol) {
     if (!vol || !vol.id) return;
     const table = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'creneau' ? 'VI Créneaux' : 'VI Planeur');
-    if (!confirm('Supprimer ce vol d\'initiation ?')) return;
-    try {
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${vol.id}`, {
-            method: 'DELETE',
-            headers: headers
-        });
-        if (response.ok) {
-            if (typeof chargerVolsInitiation === 'function') await chargerVolsInitiation();
-            if (typeof chargerDonneesPlanning === 'function') await chargerDonneesPlanning(true);
-        } else {
-            alert('Erreur lors de la suppression.');
+    const detail = [vol.passager, vol.dateStr, `${vol.heureDebut || ''} - ${vol.heureFin || ''}`].filter(Boolean).join(' • ');
+    afficherModaleConfirmation(
+        'Supprimer ce vol d\'initiation ?',
+        `<p><strong>${escapeHtml(detail || 'Vol d\'initiation')}</strong></p><p>Cette action est définitive.</p>`,
+        async () => {
+            try {
+                const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${vol.id}`, {
+                    method: 'DELETE',
+                    headers: headers
+                });
+                if (response.ok) {
+                    if (typeof chargerVolsInitiation === 'function') await chargerVolsInitiation();
+                    if (typeof chargerDonneesPlanning === 'function') await chargerDonneesPlanning(true);
+                } else {
+                    afficherModaleAlerte('Erreur', '<p>La suppression a échoué.</p>', '⚠️');
+                }
+            } catch (error) {
+                console.error(error);
+                afficherModaleAlerte('Erreur', '<p>La suppression a échoué.</p>', '⚠️');
+            }
         }
-    } catch (error) {
-        console.error(error);
-        alert('Erreur lors de la suppression.');
-    }
+    );
 }
 
 async function supprimerCreneauVI(vol) {
