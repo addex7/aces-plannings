@@ -184,6 +184,54 @@ img, table, video, iframe, svg {
     margin: 0;
     font-size: 22px;
 }
+.planning-titre-groupe {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.btn-legende-couleurs {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid #1e3d59;
+    background: #fff;
+    color: #1e3d59;
+    font-weight: 800;
+    font-size: 14px;
+    font-style: italic;
+    font-family: Georgia, 'Times New Roman', serif;
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background 0.2s, color 0.2s;
+}
+.btn-legende-couleurs:hover {
+    background: #1e3d59;
+    color: #fff;
+}
+.legende-ligne {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 7px 0;
+}
+.legende-pastille {
+    width: 26px;
+    height: 15px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    border-left: 3px solid rgba(0, 0, 0, 0.35);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.legende-separateur {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 12px 0;
+}
 .header-actions {
     display: flex;
     align-items: center;

@@ -2525,6 +2525,27 @@ function initBoutonsNavigation() {
             chargerDonneesPlanning(false, false);
         });
     }
+    const btnLegende = document.getElementById('btn-legende-couleurs');
+    if (btnLegende) {
+        btnLegende.addEventListener('click', () => {
+            const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
+            afficherModaleAlerte('Légende des couleurs', `
+                ${item('#ff6e40', 'Réservation')}
+                ${item('#3b82f6', 'Instruction / avec instructeur')}
+                ${item('#eab308', 'Remorquage')}
+                ${item('#e11d48', "Vol d'initiation avion (pilote attribué)")}
+                ${item('#00adb5', "Vol d'initiation à pourvoir")}
+                ${item('#8e44ad', 'VI Planeur')}
+                ${item('#10b981', 'Mes réservations')}
+                <hr class="legende-separateur">
+                ${item('rgba(34,197,94,0.45)', 'Instructeur disponible')}
+                ${item('rgba(239,68,68,0.45)', 'Instructeur indisponible')}
+                <hr class="legende-separateur">
+                <div class="legende-ligne"><span class="legende-pastille" style="background:repeating-linear-gradient(45deg, rgba(30,61,89,.4), rgba(30,61,89,.4) 4px, rgba(30,61,89,.15) 4px, rgba(30,61,89,.15) 8px); border-left-color:rgba(30,61,89,.6);"></span><span>Nuit aéronautique</span></div>
+                ${item('rgba(135,175,215,0.45)', 'Aube / crépuscule civil')}
+            `, 'ℹ️');
+        });
+    }
 }
 
 // --- FONCTIONS POUR L'ONGLET VOL D'INITIATION ---
