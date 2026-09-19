@@ -1626,7 +1626,8 @@ function appliquerEtatFormulaire() {
     appliquerEtatFormulaire._viPlaneur = isVI;
     if (viPrecedent !== isVI && (viPrecedent !== undefined || isVI)) {
         const selPil = document.getElementById('form-pilote');
-        peuplerPiloteSelect(selPil ? selPil.value : null);
+        const enEdition = typeof idReservationEnEdition !== 'undefined' && !!idReservationEnEdition;
+        peuplerPiloteSelect(isVI && !enEdition ? '' : (selPil ? selPil.value : null));
     }
 
     const machineId = getMachineSelectionnee();
