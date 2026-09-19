@@ -168,7 +168,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const filtreMachine = document.getElementById('carnet-machine-filtre');
     const machineCible = extraMachine || (filtreMachine ? filtreMachine.value : 'F-GASB');
 
-    const piloteDefaut = (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
+    const piloteDefaut = `${currentUser?.prenom || ''} ${currentUser?.nom || ''}`.trim() || (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '');
     const piloteCible = recordId ? (record.fields?.['Pilote'] || '') : piloteDefaut;
     await peuplerPilotesSelect(piloteCible);
 
@@ -274,7 +274,7 @@ let carnetPilotesCache = [];
 async function peuplerPilotesSelect(pilote = '') {
     const sel = document.getElementById('carnet-pilote');
     if (!sel) return;
-    const defaut = pilote || (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim());
+    const defaut = pilote || `${currentUser?.prenom || ''} ${currentUser?.nom || ''}`.trim() || (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '');
     const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
     const peutChoisir = currentUser && Array.isArray(currentUser.roles) && (
         currentUser.roles.includes('Super admin') ||
@@ -890,8 +890,10 @@ function adapterFormulaireCarnet(machine) {
 }
 
 function formatEquipageCourt(nom) {
-    const parts = String(nom || '').trim().split(/\s+/).filter(Boolean);
-    if (parts.length < 2) return nom || '';
+    const str = String(nom || '').trim();
+    const parts = str.split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return str;
+    if (/^[A-ZÀ-Ý]\.?$/.test(parts[parts.length - 1])) return str;
     return `${parts.slice(1).join(' ')} ${parts[0].charAt(0).toUpperCase()}.`;
 }
 
