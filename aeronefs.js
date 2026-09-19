@@ -381,7 +381,8 @@ async function chargerSuiviAeronef() {
         }
         if (prixGroup) {
             const visible = typeof currentUser !== 'undefined' && currentUser && currentUser.roles && (currentUser.roles.includes('Super admin') || currentUser.roles.includes('Trésorier'));
-            prixGroup.style.display = visible ? 'flex' : 'none';
+            const isBLIO = immatMachine.toString().trim().toUpperCase() === 'F-BLIO';
+            prixGroup.style.display = (visible && !isBLIO) ? 'flex' : 'none';
         }
 
         const horametreActuelAeronef = (machineActuelle && machineActuelle.fields && machineActuelle.fields['Horamètre actuel'] !== undefined && machineActuelle.fields['Horamètre actuel'] !== null && machineActuelle.fields['Horamètre actuel'] !== '')

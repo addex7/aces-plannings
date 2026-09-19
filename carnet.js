@@ -446,6 +446,10 @@ async function mettreAJourPrixDuVol() {
     if (!input) return;
     const machine = document.getElementById('carnet-machine').value;
     const nature = document.getElementById('carnet-nature').value;
+    if (machine === 'F-BLIO') {
+        input.value = '';
+        return;
+    }
     if (nature === 'VLD') {
         input.value = '0,00 €';
         return;
@@ -616,6 +620,7 @@ function cocherFonctionParDefaut() {
 
 function adapterFormulaireCarnet(machine) {
     const isJVIO = machine === 'F-JVIO';
+    const isBLIO = machine === 'F-BLIO';
     const isMoteur = MACHINES_MOTEURS.includes(machine);
     const modal = document.getElementById('carnet-modal');
     if (modal) modal.classList.toggle('carnet-modal-jvio', isMoteur);
@@ -631,10 +636,16 @@ function adapterFormulaireCarnet(machine) {
     const carbuRow = document.getElementById('carnet-carburant-row');
     const huileRow = document.getElementById('carnet-huile-row');
     const instSel = document.getElementById('carnet-instructeur');
+    const prixInput = document.getElementById('carnet-prix-vol');
+    const prixGroup = prixInput ? prixInput.closest('.form-group') : null;
     const form = document.getElementById('carnet-form');
     const fonctionFormGroup = fonctionGroup ? fonctionGroup.parentElement : null;
 
     if (form) form.classList.toggle('carnet-form-jvio', isMoteur);
+    if (prixGroup) {
+        prixGroup.style.display = isBLIO ? 'none' : '';
+        if (isBLIO && prixInput) prixInput.value = '';
+    }
     if (piloteLabel) piloteLabel.textContent = isJVIO ? 'Équipage 1 :' : 'Pilote :';
     if (instLabel) instLabel.textContent = isJVIO ? 'Équipage 2 :' : 'Instructeur (si instruction) :';
     if (hDepLabel) hDepLabel.textContent = isJVIO ? 'Heure de départ (H.Loc) :' : 'Heure de départ (UTC) :';
