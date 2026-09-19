@@ -718,6 +718,13 @@ img, table, video, iframe, svg {
     cursor: pointer;
     margin: 0;
 }
+.checkbox-option.chip-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.checkbox-option.chip-disabled:hover {
+    background: #f8fafc;
+}
 /* --- BOUTONS D'ACTION DU FORMULAIRE --- */
 .form-actions {
     display: flex;

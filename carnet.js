@@ -586,6 +586,20 @@ function majNatureStd() {
     syncNatureChips();
 }
 
+function majVerrouillageVolInitiation() {
+    const chips = document.getElementById('carnet-nature-chips');
+    if (!chips) return;
+    const vi = chips.querySelector('input[name="carnet-nature-extra"][value="Vol d\'initiation"]');
+    if (!vi) return;
+    const lock = vi.checked;
+    chips.querySelectorAll('input[name="carnet-nature-base"]').forEach(rb => {
+        rb.disabled = lock;
+        const label = rb.closest('label');
+        if (label) label.classList.toggle('chip-disabled', lock);
+        if (lock && rb.value === 'Local') rb.checked = true;
+    });
+}
+
 const CARNET_JVIO_FONCTIONS = [
     { value: 'P', label: 'P = Pilote', emoji: '🧑‍✈️' },
     { value: 'PCdB', label: 'PCdB = PIL.+CdB', emoji: '🛩️' },
@@ -751,6 +765,13 @@ function adapterFormulaireCarnet(machine) {
                 CARNET_STD_NATURES_QUAL.map(v =>
                     `<label class="checkbox-option"><input type="checkbox" name="carnet-nature-qual" value="${v}"> ${EMOJIS_NATURE_STD[v] || ''} ${v}</label>`
                 ).join('');
+            natureChips.querySelectorAll('input[name="carnet-nature-extra"]').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    majVerrouillageVolInitiation();
+                    mettreAJourActiviteParticuliere();
+                    mettreAJourPrixDuVol();
+                });
+            });
             natureChips.querySelectorAll('input[name="carnet-nature-qual"]').forEach(cb => {
                 cb.addEventListener('change', () => {
                     if (cb.checked) {
@@ -763,6 +784,7 @@ function adapterFormulaireCarnet(machine) {
                     mettreAJourPrixDuVol();
                 });
             });
+            majVerrouillageVolInitiation();
         } else {
             natureChips.innerHTML = '';
         }
