@@ -45,6 +45,16 @@ function updateUIRoles() {
     const tabMessagerie = document.getElementById('tab-messagerie');
     const superAdmin = isSuperAdmin();
     if (profile) profile.textContent = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : 'Pilote Connecté';
+    const avatar = document.getElementById('user-avatar');
+    if (avatar) {
+        if (currentUser) {
+            const initiales = `${(currentUser.prenom || '').charAt(0)}${(currentUser.nom || '').charAt(0)}`.toUpperCase();
+            avatar.textContent = initiales || '?';
+            avatar.style.display = 'flex';
+        } else {
+            avatar.style.display = 'none';
+        }
+    }
     if (logoutBtn) logoutBtn.style.display = currentUser ? 'inline-block' : 'none';
     if (tabMembres) tabMembres.style.display = currentUser ? 'block' : 'none';
     if (tabAudit) tabAudit.style.display = superAdmin ? 'block' : 'none';

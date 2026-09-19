@@ -934,6 +934,19 @@ function initNavigationTabs() {
         });
     }
 
+    const avatar = document.getElementById('user-avatar');
+    if (avatar) {
+        avatar.addEventListener('click', () => {
+            if (isSuperAdmin()) {
+                activerTab(tabMembres, viewMembres);
+                if (typeof chargerUtilisateurs === 'function') chargerUtilisateurs();
+            } else {
+                activerTab(tabMembres, viewAccueilMembre);
+                if (typeof chargerAccueilMembre === 'function') chargerAccueilMembre(currentUser ? currentUser.id : null);
+            }
+        });
+    }
+
     // Menus déroulants
     document.querySelectorAll('.nav-group-title').forEach(titre => {
         titre.addEventListener('click', () => {
