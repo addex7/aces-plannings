@@ -551,6 +551,18 @@ function mettreAJourHeureArrivee() {
     mettreAJourPrixDuVol();
 }
 
+const FONCTIONS_EXCLUSIVES = [['P', 'EP'], ['FI', 'FE']];
+
+function appliquerExclusiviteFonctions(cb) {
+    if (!cb.checked) return;
+    FONCTIONS_EXCLUSIVES.forEach(groupe => {
+        if (!groupe.includes(cb.value)) return;
+        document.querySelectorAll('input[name="carnet-fonction"]').forEach(o => {
+            if (o !== cb && groupe.includes(o.value)) o.checked = false;
+        });
+    });
+}
+
 function mettreAJourNatureParFonction() {
     const select = document.getElementById('carnet-nature');
     if (!select) return;
@@ -832,7 +844,10 @@ function adapterFormulaireCarnet(machine) {
             `<label class="checkbox-option">${f.emoji ? f.emoji + ' ' : ''}<input type="checkbox" name="carnet-fonction" value="${f.value}"> ${f.label}</label>`
         ).join('');
         fonctionGroup.querySelectorAll('input[name="carnet-fonction"]').forEach(cb => {
-            cb.addEventListener('change', mettreAJourNatureParFonction);
+            cb.addEventListener('change', () => {
+                if (isMoteur && !isJVIO) appliquerExclusiviteFonctions(cb);
+                mettreAJourNatureParFonction();
+            });
         });
     }
 
