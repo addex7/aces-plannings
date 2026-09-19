@@ -194,10 +194,11 @@ function renderEvenement(record) {
     const peutInscrireAutre = typeof roleAutorise === 'function' && roleAutorise(['Super admin', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM']);
     const btnInscrireAutre = peutInscrireAutre ? `<button class="btn-inscription" onclick="ouvrirInscrireAutre('Événements', '${record.id}')">Inscrire quelqu'un d'autre</button>` : '';
     const peutSupprimer = createur === nomConnecte || (currentUser && currentUser.roles && currentUser.roles.includes('Super admin'));
-    const btnSupprimer = peutSupprimer ? `<button class="btn-delete" onclick="supprimerEvenement('${record.id}')">Supprimer l'évènement</button>` : '';
+    const btnSupprimer = peutSupprimer ? `<button class="btn-supprimer-evenement" onclick="supprimerEvenement('${record.id}')" title="Supprimer l'évènement">×</button>` : '';
 
     return `
         <div class="evenement-card" data-record-id="${record.id}">
+            ${btnSupprimer}
             <div class="evenement-header">
                 <div class="evenement-titre">${titre}</div>
                 <div class="evenement-sous-titre">${dateTexte} • ${horaireTexte}</div>
@@ -209,7 +210,6 @@ function renderEvenement(record) {
             <div class="evenement-actions" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 ${btnInscription}
                 ${btnInscrireAutre}
-                ${btnSupprimer}
             </div>
         </div>
     `;
@@ -267,20 +267,28 @@ async function desinscrireEvenement(recordId, nom) {
 }
 
 async function supprimerEvenement(recordId) {
-    if (!confirm('Supprimer définitivement cet évènement ?')) return;
-    try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
-        if (res.ok) {
-            chargerEvenementsJour();
-            chargerProchainsEvenements();
-        } else {
-            const err = await res.json();
+    const executer = async () => {
+        try {
+            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
+            if (res.ok) {
+                chargerEvenementsJour();
+                chargerProchainsEvenements();
+            } else {
+                const err = await res.json();
+                console.error(err);
+                if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Erreur', '<p>La suppression a échoué.</p>', '⚠️');
+                else alert('Erreur lors de la suppression.');
+            }
+        } catch (err) {
             console.error(err);
-            alert('Erreur lors de la suppression.');
+            if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Erreur', '<p>La suppression a échoué.</p>', '⚠️');
+            else alert('Erreur lors de la suppression.');
         }
-    } catch (err) {
-        console.error(err);
-        alert('Erreur lors de la suppression.');
+    };
+    if (typeof afficherModaleConfirmation === 'function') {
+        afficherModaleConfirmation('Supprimer cet évènement ?', '<p>Cette action est définitive.</p>', executer);
+    } else if (confirm('Supprimer définitivement cet évènement ?')) {
+        executer();
     }
 }
 

@@ -1456,12 +1456,32 @@ img, table, video, iframe, svg {
     flex: 1 1 220px;
     min-width: 220px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    position: relative;
+}
+.btn-supprimer-evenement {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: #dc2626;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 6px;
+}
+.btn-supprimer-evenement:hover {
+    color: #b91c1c;
+    background: #fee2e2;
 }
 .evenement-titre {
     font-size: 18px;
     font-weight: 700;
     color: #1e3d59;
     margin-bottom: 4px;
+    padding-right: 26px;
 }
 .evenement-sous-titre {
     font-size: 13px;
