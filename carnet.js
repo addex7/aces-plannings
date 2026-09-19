@@ -202,6 +202,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         if (record && record.fields) remplirFormulaireCarnet(record.fields);
     } else if (selectMachine && form.dataset.mode !== 'observation') {
         mettreAJourDonneesDepartDefaut(selectMachine.value);
+        suggererNatureParTrajet();
         mettreAJourHeureArrivee();
         mettreAJourActiviteParticuliere();
         mettreAJourPrixDuVol();
