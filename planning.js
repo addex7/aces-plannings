@@ -1617,7 +1617,11 @@ function appliquerEtatFormulaire() {
     const isVI = isVIPlaneur || isVIMoteur;
 
     const groupInstructeur = document.getElementById('group-instructeur');
-    if (groupInstructeur) groupInstructeur.style.display = isVIPlaneur ? 'none' : '';
+    if (groupInstructeur) {
+        groupInstructeur.style.display = isVI ? 'none' : '';
+        const selInst = document.getElementById('form-instructeur');
+        if (isVI && selInst) selInst.value = '';
+    }
     const viPrecedent = appliquerEtatFormulaire._viPlaneur;
     appliquerEtatFormulaire._viPlaneur = isVI;
     if (viPrecedent !== isVI && (viPrecedent !== undefined || isVI)) {
