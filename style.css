@@ -397,6 +397,10 @@ img, table, video, iframe, svg {
 .reservation-bar.reservation-avec-instructeur strong {
     color: #ffffff;
 }
+.reservation-bar.reservation-remorquage {
+    background-color: #eab308;
+    border-left: 4px solid #854d0e;
+}
 .reservation-bar.vi-planeur {
     background-color: #8e44ad;
     border-left: 4px solid #5b2c6f;

@@ -990,9 +990,11 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const isAncienVI = typesVol.includes("Vol d'Initiation") || typesVol.includes("Vol d'Initiation (VI)");
                         const isCreneau = vol._table === 'VI Créneaux';
                         const isInstruction = typesVol.includes('Instruction');
+                        const isRemorquage = typesVol.includes('Remorquage');
                         const estMoi = estUtilisateurCourant(piloteNom) || estUtilisateurCourant(instructeurNom);
                         if (estMoi) barresDiv.classList.add('ma-reservation');
                         if (isInstruction) barresDiv.classList.add('reservation-instruction');
+                        if (isRemorquage) barresDiv.classList.add('reservation-remorquage');
                         let libelleEntete = piloteFormate || 'Pilote non défini';
                         if (instructeurNom) {
                             barresDiv.classList.add('reservation-avec-instructeur');
