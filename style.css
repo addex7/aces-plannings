@@ -1947,7 +1947,6 @@ img, table, video, iframe, svg {
 }
 .instructeur-nom {
     cursor: pointer;
-    border-bottom: 1px dashed #1e3d59;
     padding-bottom: 1px;
     display: -webkit-box;
     max-width: 100%;
@@ -1961,7 +1960,9 @@ img, table, video, iframe, svg {
 }
 .instructeur-nom:hover {
     color: #3b82f6;
-    border-bottom-color: #3b82f6;
+}
+.timeline-row:not(.instructeur-dispo-row) .machine-cell:hover {
+    color: #3b82f6;
 }
 .dispo-grid {
     position: relative;

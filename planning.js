@@ -920,6 +920,16 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             badgeMaint.setAttribute('data-tooltip', textPotentiel);
             machineCell.appendChild(badgeMaint);
             machineCell.appendChild(document.createTextNode(avionNom));
+            machineCell.style.cursor = 'pointer';
+            machineCell.title = `Voir le suivi de ${avionNom}`;
+            machineCell.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const selMachine = document.getElementById('select-machine-suivi');
+                if (selMachine) selMachine.value = avionId;
+                const tabAero = document.getElementById('tab-aeronefs');
+                if (tabAero) tabAero.click();
+                if (selMachine && selMachine.value === avionId) selMachine.dispatchEvent(new Event('change', { bubbles: true }));
+            });
             rowDiv.appendChild(machineCell);
             const gridBg = document.createElement('div');
             gridBg.className = 'hours-grid-background';

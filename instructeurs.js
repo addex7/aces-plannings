@@ -378,6 +378,22 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
         const nomSpan = document.createElement('span');
         nomSpan.className = 'instructeur-nom';
         nomSpan.textContent = nom;
+        nomSpan.title = `Voir le planning de ${nom}`;
+        nomSpan.addEventListener('click', (e) => {
+            e.stopPropagation();
+            try { instructeurSelectionne = nom; } catch (err) {}
+            const selSuivi = document.getElementById('select-instructeur-suivi');
+            if (selSuivi) {
+                const opt = Array.from(selSuivi.options).find(o => correspondanceNom(o.value, nom));
+                if (opt) {
+                    selSuivi.value = opt.value;
+                    selSuivi.dispatchEvent(new Event('change', { bubbles: true }));
+                    selSuivi.dispatchEvent(new Event('maj-affichage'));
+                }
+            }
+            const tabInst = document.getElementById('tab-instructeur');
+            if (tabInst) tabInst.click();
+        });
         machineCell.appendChild(nomSpan);
         rowDiv.appendChild(machineCell);
         const contentWrapper = document.createElement('div');
