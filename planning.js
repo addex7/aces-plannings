@@ -1752,7 +1752,7 @@ function appliquerEtatFormulaire() {
     if (inputEstimation) inputEstimation.required = true;
 }
 
-function majAlerteModale(id, parent, afficher, texte) {
+function majAlerteModale(id, parent, afficher, texte, niveau = 'erreur') {
     let warn = document.getElementById(id);
     if (!afficher || !parent) {
         if (warn) warn.remove();
@@ -1761,7 +1761,10 @@ function majAlerteModale(id, parent, afficher, texte) {
     if (!warn) {
         warn = document.createElement('div');
         warn.id = id;
-        warn.style.cssText = 'margin-top:8px; padding:8px 10px; border-radius:8px; background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; font-size:13px; font-weight:600;';
+        const style = niveau === 'warning'
+            ? 'background:#fff7ed; border:1px solid #fdba74; color:#c2410c;'
+            : 'background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c;';
+        warn.style.cssText = `margin-top:8px; padding:8px 10px; border-radius:8px; font-size:13px; font-weight:600; ${style}`;
         parent.appendChild(warn);
     }
     warn.textContent = texte;
@@ -1776,7 +1779,7 @@ function verifierTempsMoteur() {
     const dureeH = (new Date(fin.value) - new Date(debut.value)) / 3600000;
     const estH = parseFloat(String(est.value).replace(',', '.'));
     const depasse = Number.isFinite(dureeH) && dureeH > 0 && Number.isFinite(estH) && estH > dureeH;
-    majAlerteModale('alerte-temps-moteur', group, depasse, '⚠️ Le temps moteur estimé dépasse la durée du créneau réservé.');
+    majAlerteModale('alerte-temps-moteur', group, depasse, '⚠️ Le temps moteur estimé dépasse la durée du créneau réservé.', 'warning');
 }
 
 let alerteInstructeurDemandee = false;
@@ -1795,7 +1798,7 @@ function verifierDatePassee() {
     if (!debut) return;
     const section = debut.closest('.nr-section');
     const passee = !!debut.value && new Date(debut.value) < new Date();
-    majAlerteModale('alerte-date-passee', section, passee, '⚠️ La date de la réservation est dans le passé.');
+    majAlerteModale('alerte-date-passee', section, passee, '⚠️ La date de la réservation est dans le passé.', 'warning');
 }
 
 function verifierAlertesReservation() {
@@ -2093,8 +2096,12 @@ function initGestionnaireModale() {
     }
     if (modal && !modal.dataset.alertesListener) {
         modal.dataset.alertesListener = '1';
-        modal.addEventListener('input', verifierAlertesReservation);
-        modal.addEventListener('change', verifierAlertesReservation);
+        ['input', 'change'].forEach(type => document.addEventListener(type, (e) => {
+            if (e.target && e.target.closest && e.target.closest('#reservation-modal')) verifierAlertesReservation();
+        }, true));
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.closest && e.target.closest('#reservation-modal .nr-stepper')) setTimeout(verifierAlertesReservation, 0);
+        }, true);
         new MutationObserver(() => {
             if (modal.style.display === 'flex') alerteInstructeurDemandee = false;
         }).observe(modal, { attributes: true, attributeFilter: ['style'] });
