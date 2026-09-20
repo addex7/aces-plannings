@@ -418,6 +418,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     });
     document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) fermer(); });
     select.addEventListener('change', majBtn);
+    select.addEventListener('maj-affichage', majBtn);
     new MutationObserver(() => {
         majBtn();
         if (panel.style.display !== 'none') renderList(search.value);

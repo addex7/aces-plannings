@@ -254,21 +254,36 @@ async function ouvrirModaleModification(reservationId) {
 
     // Remplir l'instructeur
     if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
+    if (typeof chargerListeMembresCache === 'function') await chargerListeMembresCache();
     if (form['form-instructeur']) {
         const savedInstructeur = reservation.fields['Instructeur'];
         let nomInstructeur = '';
         if (savedInstructeur) {
             const idInstructeur = Array.isArray(savedInstructeur) ? savedInstructeur[0] : savedInstructeur;
-            if (typeof listeInstructeursCache !== 'undefined' && listeInstructeursCache.length) {
-                const found = listeInstructeursCache.find(i => i.id === idInstructeur || i.nomComplet === idInstructeur);
-                nomInstructeur = found ? found.nomComplet : idInstructeur;
+            if (typeof idInstructeur === 'string' && idInstructeur.startsWith('rec')) {
+                const found = (typeof listeInstructeursCache !== 'undefined' ? listeInstructeursCache : []).find(i => i.id === idInstructeur);
+                nomInstructeur = found ? found.nomComplet : nomUtilisateurDepuisId(idInstructeur, typeof listeMembresCache !== 'undefined' ? listeMembresCache : []);
             } else {
-                nomInstructeur = idInstructeur.toString().trim();
+                nomInstructeur = String(idInstructeur).trim();
             }
         }
-        const options = Array.from(form['form-instructeur'].options);
+        const selInst = form['form-instructeur'];
+        const options = Array.from(selInst.options);
         const match = nomInstructeur && options.find(o => o.value && typeof correspondanceNom === 'function' && correspondanceNom(o.value, nomInstructeur));
-        form['form-instructeur'].value = match ? match.value : (options.some(o => o.value === nomInstructeur) ? nomInstructeur : '');
+        if (match) {
+            selInst.value = match.value;
+        } else if (nomInstructeur && !String(nomInstructeur).startsWith('rec')) {
+            if (!options.some(o => o.value === nomInstructeur)) {
+                const opt = document.createElement('option');
+                opt.value = nomInstructeur;
+                opt.textContent = nomInstructeur;
+                selInst.appendChild(opt);
+            }
+            selInst.value = nomInstructeur;
+        } else {
+            selInst.value = '';
+        }
+        selInst.dispatchEvent(new Event('maj-affichage'));
     }
 
     // Stocker l'ID de la réservation en cours d'édition
@@ -2054,6 +2069,7 @@ function initGestionnaireModale() {
             if (sel) {
                 const match = Array.from(sel.options).find(o => o.value === options.instructeur || correspondanceNom(o.value, options.instructeur));
                 if (match) sel.value = match.value;
+                sel.dispatchEvent(new Event('maj-affichage'));
             }
         }
         appliquerEtatFormulaire();
@@ -2390,6 +2406,7 @@ async function ouvrirModaleEdition(vol, avionIdOuImmat) {
         } else {
             sel.value = '';
         }
+        sel.dispatchEvent(new Event('maj-affichage'));
     }
     if (typeof peuplerPiloteSelect === 'function') {
         const piloteId = Array.isArray(vol.fields['Pilote']) ? vol.fields['Pilote'][0] : vol.fields['Pilote'];
