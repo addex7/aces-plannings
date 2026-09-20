@@ -3,7 +3,7 @@
    ========================================================================== */
 
 // Les variables globales sont définies dans app.js
-console.log('%c[planning.js] version 176 chargée', 'color:#7c3aed;font-weight:bold');
+console.log('%c[planning.js] version 177 chargée', 'color:#7c3aed;font-weight:bold');
 let afficherVIPPlaneur = localStorage.getItem('planning_afficherVIP') === '1';
 let idVIModale = null;
 let tableVIModale = null;
@@ -1554,6 +1554,51 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
     let dateJourCible = null;
     let gridResizeCible = parentGrid;
     const dateOrigineStr = dateCibleVol ? `${dateCibleVol.getFullYear()}-${String(dateCibleVol.getMonth() + 1).padStart(2, '0')}-${String(dateCibleVol.getDate()).padStart(2, '0')}` : null;
+    const mStartRef = (tableName === 'Maintenance' && record && record.fields) ? new Date(record.fields['Date']) : null;
+    const mEndRef = mStartRef ? new Date(mStartRef.getTime() + parseFloat(record.fields['durée'] || 0) * 3600000) : null;
+    const ghostsMulti = [];
+    function majGhostsMulti() {
+        while (ghostsMulti.length) { const g = ghostsMulti.pop(); if (g.parentNode) g.parentNode.removeChild(g); }
+        const tbody = parentGrid.closest('tbody');
+        if (!mStartRef || !mEndRef || !tbody) return false;
+        let effStart, effEnd;
+        if (dateJourCible) {
+            const [cy, cm, cd] = dateJourCible.split('-').map(Number);
+            const jourCible = new Date(cy, cm - 1, cd);
+            effStart = bord === 'gauche' ? new Date(jourCible.getTime() + hDebFinale * 3600000) : mStartRef;
+            effEnd = bord === 'droite' ? new Date(jourCible.getTime() + hFinFinale * 3600000) : mEndRef;
+        } else {
+            effStart = mStartRef;
+            effEnd = mEndRef;
+        }
+        if (!(effEnd > effStart)) return true;
+        const startDay = new Date(effStart.getFullYear(), effStart.getMonth(), effStart.getDate());
+        const endDay = new Date(effEnd.getFullYear(), effEnd.getMonth(), effEnd.getDate());
+        for (const tr of tbody.querySelectorAll('tr')) {
+            const td = tr.children[1];
+            const g = td ? td.firstElementChild : null;
+            if (!g) continue;
+            const txt = (tr.children[0] && tr.children[0].textContent || '').trim();
+            const mDate = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            const dStr = mDate ? `${mDate[3]}-${mDate[2]}-${mDate[1]}` : (g.dataset.dateJour || null);
+            if (!dStr) continue;
+            const [ry, rm, rd] = dStr.split('-').map(Number);
+            const rowDay = new Date(ry, rm - 1, rd);
+            if (rowDay < startDay || rowDay > endDay) continue;
+            const segStart = rowDay.getTime() === startDay.getTime() ? (effStart - startDay) / 3600000 : 0;
+            const segEnd = rowDay.getTime() === endDay.getTime() ? Math.min(24, (effEnd - endDay) / 3600000) : 24;
+            if (segEnd <= 0) continue;
+            const gb = document.createElement('div');
+            gb.className = 'ghost-bar-preview';
+            gb.innerHTML = `<span style="font-size:11px; font-weight:bold; color:#1e3d59; display:block; text-align:center; margin-top:15px;"></span>`;
+            gb.style.left = `${positionHeure(segStart)}%`;
+            gb.style.width = `${positionHeure(segEnd) - positionHeure(segStart)}%`;
+            gb.querySelector('span').textContent = `${minutesToTimeString(segStart * 60)} - ${minutesToTimeString(segEnd * 60)}`;
+            g.appendChild(gb);
+            ghostsMulti.push(gb);
+        }
+        return ghostsMulti.length > 0;
+    }
     function onMouseMove(moveEvent) {
         const xRelatif = moveEvent.clientX - rectGrid.left;
         let pourcentage = xRelatif / rectGrid.width;
@@ -1579,19 +1624,17 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
                         const txt = (tr.children[0] && tr.children[0].textContent || '').trim();
                         const mDate = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                         dateJourCible = mDate ? `${mDate[3]}-${mDate[2]}-${mDate[1]}` : (g.dataset.dateJour || null);
-                        if (ghostBar.parentNode !== g) g.appendChild(ghostBar);
                         break;
                     }
                 }
             }
+            if (majGhostsMulti()) { ghostBar.style.display = 'none'; return; }
         }
-        const autreJour = tableName === 'Maintenance' && gridResizeCible !== parentGrid;
-        const gLeft = autreJour ? Math.min(bord === 'gauche' ? hDebFinale : hFinInitiale, bord === 'gauche' ? hDebutInitiale : hFinFinale) : hDebFinale;
-        const gRight = autreJour ? Math.max(bord === 'gauche' ? hDebFinale : hFinInitiale, bord === 'gauche' ? hDebutInitiale : hFinFinale) : hFinFinale;
-        ghostBar.style.left = `${positionHeure(gLeft)}%`;
-        ghostBar.style.width = `${positionHeure(gRight) - positionHeure(gLeft)}%`;
-        const txtStart = minutesToTimeString(gLeft * 60);
-        const txtEnd = minutesToTimeString(gRight * 60);
+        ghostBar.style.display = '';
+        ghostBar.style.left = `${positionHeure(hDebFinale)}%`;
+        ghostBar.style.width = `${positionHeure(hFinFinale) - positionHeure(hDebFinale)}%`;
+        const txtStart = minutesToTimeString(hDebFinale * 60);
+        const txtEnd = minutesToTimeString(hFinFinale * 60);
         ghostBar.querySelector('span').textContent = `${txtStart} - ${txtEnd}`;
     }
     async function onMouseUp() {
@@ -1599,6 +1642,7 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
         document.removeEventListener('mouseup', onMouseUp);
         barElement.style.opacity = '1';
         if (ghostBar.parentNode) ghostBar.parentNode.removeChild(ghostBar);
+        while (ghostsMulti.length) { const g = ghostsMulti.pop(); if (g.parentNode) g.parentNode.removeChild(g); }
         const jourChange = tableName === 'Maintenance' && dateJourCible && dateJourCible !== dateOrigineStr;
         if (hDebFinale !== hDebutInitiale || hFinFinale !== hFinInitiale || jourChange) {
             barElement.style.left = `${positionHeure(hDebFinale)}%`;
