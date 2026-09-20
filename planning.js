@@ -1672,7 +1672,8 @@ function appliquerEtatFormulaire() {
 
     const groupInstructeur = document.getElementById('group-instructeur');
     if (groupInstructeur) {
-        groupInstructeur.style.display = isVI ? 'none' : '';
+        const showInstructeur = !isVI && typeSelectionne.includes('Instruction');
+        groupInstructeur.style.display = showInstructeur ? '' : 'none';
         const selInst = document.getElementById('form-instructeur');
         if (isVI && selInst) selInst.value = '';
     }
@@ -1697,6 +1698,17 @@ function appliquerEtatFormulaire() {
         if (cb.parentElement) cb.parentElement.style.display = showVolDeNuit ? '' : 'none';
         if (!showVolDeNuit) cb.checked = false;
     });
+    const typeGroup = document.getElementById('form-type-vol-group');
+    if (typeGroup) {
+        const ordreTypes = showRemorquage
+            ? ['Local', 'Navigation', 'Instruction', 'Remorquage', 'VI Moteur', 'VI Planeur']
+            : ['Local', 'Navigation', 'Instruction', 'Vol de nuit', 'VI Moteur', 'VI Planeur'];
+        ordreTypes.forEach(v => {
+            const cb = typeGroup.querySelector(`input[name="form-type-vol"][value="${v}"]`);
+            if (cb && cb.parentElement) typeGroup.appendChild(cb.parentElement);
+        });
+    }
+    verifierTempsMoteur();
 
     if (groupMachine) groupMachine.style.display = isVIPlaneur ? 'none' : 'block';
     if (groupEstimation) groupEstimation.style.display = isVI ? 'none' : 'block';
@@ -1738,6 +1750,32 @@ function appliquerEtatFormulaire() {
     if (labelCommentaires) labelCommentaires.textContent = 'COMMENTAIRES';
     if (groupCommentaires) groupCommentaires.style.display = 'none';
     if (inputEstimation) inputEstimation.required = true;
+}
+
+function verifierTempsMoteur() {
+    const est = document.getElementById('form-estimation');
+    const debut = document.getElementById('form-debut');
+    const fin = document.getElementById('form-fin');
+    const group = document.getElementById('group-estimation');
+    if (!est || !debut || !fin || !group) return;
+    let warn = document.getElementById('alerte-temps-moteur');
+    const d = new Date(debut.value);
+    const f = new Date(fin.value);
+    const dureeH = (f - d) / 3600000;
+    const estH = parseFloat(String(est.value).replace(',', '.'));
+    const depasse = Number.isFinite(dureeH) && dureeH > 0 && Number.isFinite(estH) && estH > dureeH;
+    if (!depasse) {
+        if (warn) warn.remove();
+        return;
+    }
+    if (!warn) {
+        warn = document.createElement('div');
+        warn.id = 'alerte-temps-moteur';
+        warn.style.cssText = 'margin-top:8px; padding:8px 10px; border-radius:8px; background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; font-size:13px; font-weight:600;';
+        group.appendChild(warn);
+    }
+    const dureeTxt = (Math.round(dureeH * 100) / 100).toString().replace('.', ',');
+    warn.textContent = `⚠️ Le temps moteur estimé (${String(estH).replace('.', ',')} h) dépasse la durée du créneau réservé (${dureeTxt} h).`;
 }
 
 function getTypeVolSelectionne() {
@@ -2027,6 +2065,14 @@ function initGestionnaireModale() {
             }
         });
     }
+    ['form-debut', 'form-fin', 'form-estimation'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.tempsMoteurListener) {
+            el.dataset.tempsMoteurListener = '1';
+            el.addEventListener('input', verifierTempsMoteur);
+            el.addEventListener('change', verifierTempsMoteur);
+        }
+    });
     window.ouvrirModaleNouvelleReservation = async function(options = {}) {
         console.log('[PLANNING] ouvrir appelée', options);
         idReservationEnEdition = null;
