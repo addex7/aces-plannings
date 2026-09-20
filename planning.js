@@ -1413,6 +1413,7 @@ function actualiserLigneHeureCourante() {
 
 function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations', record = null) {
     e.preventDefault();
+    if (tableName === 'Maintenance') console.log('[MAINT-DRAG] start', { tableName, volId, hasGrid: !!gridBg, tbody: !!gridBg.closest('tbody'), rows: gridBg.closest('tbody') ? gridBg.closest('tbody').querySelectorAll('tr').length : 0 });
     const resa = record || (listeReservationsCache || []).find(r => r.id === volId);
     if (tableName !== 'Maintenance' && !peutBougerReservations() && !estProprietaireReservation(resa)) return;
     let aBouge = false;
@@ -1463,6 +1464,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
                     if (!g) continue;
                     const r = g.getBoundingClientRect();
                     if (evt.clientY >= r.top && evt.clientY <= r.bottom) {
+                        if (gridCible !== g) console.log('[MAINT-DRAG] nouvelle ligne', r.top, r.bottom, 'clientY:', evt.clientY);
                         gridCible = g;
                         const txt = (tr.children[0] && tr.children[0].textContent || '').trim();
                         const mDate = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -1514,6 +1516,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
                 gridCible.appendChild(barresDiv);
             }
             const dateCibleFinale = (tableName === 'Maintenance' && dateJourCible) ? new Date(`${dateJourCible}T12:00:00`) : callbackMiseAJour;
+            if (tableName === 'Maintenance') console.log('[MAINT-DRAG] drop', { dateJourCible, dateCibleFinale, heureFinale, changedGrid: gridCible !== gridBg });
             if (typeof sauvegarderDeplacementVol === 'function') {
                 sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, dateCibleFinale, avionIdCible).catch(err => {
                     console.error(err);
