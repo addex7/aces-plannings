@@ -3,7 +3,7 @@
    ========================================================================== */
 
 // Les variables globales sont définies dans app.js
-console.log('%c[planning.js] version 174 chargée', 'color:#7c3aed;font-weight:bold');
+console.log('%c[planning.js] version 175 chargée', 'color:#7c3aed;font-weight:bold');
 let afficherVIPPlaneur = localStorage.getItem('planning_afficherVIP') === '1';
 let idVIModale = null;
 let tableVIModale = null;
@@ -1414,7 +1414,6 @@ function actualiserLigneHeureCourante() {
 
 function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations', record = null) {
     e.preventDefault();
-    if (tableName === 'Maintenance') console.log('[MAINT-DRAG] start', { tableName, volId, hasGrid: !!gridBg, tbody: !!gridBg.closest('tbody'), rows: gridBg.closest('tbody') ? gridBg.closest('tbody').querySelectorAll('tr').length : 0 });
     const resa = record || (listeReservationsCache || []).find(r => r.id === volId);
     if (tableName !== 'Maintenance' && !peutBougerReservations() && !estProprietaireReservation(resa)) return;
     let aBouge = false;
@@ -1465,7 +1464,6 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
                     if (!g) continue;
                     const r = g.getBoundingClientRect();
                     if (evt.clientY >= r.top && evt.clientY <= r.bottom) {
-                        if (gridCible !== g) console.log('[MAINT-DRAG] nouvelle ligne', r.top, r.bottom, 'clientY:', evt.clientY);
                         gridCible = g;
                         const txt = (tr.children[0] && tr.children[0].textContent || '').trim();
                         const mDate = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -1517,7 +1515,6 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
                 gridCible.appendChild(barresDiv);
             }
             const dateCibleFinale = (tableName === 'Maintenance' && dateJourCible) ? new Date(`${dateJourCible}T12:00:00`) : callbackMiseAJour;
-            if (tableName === 'Maintenance') console.log('[MAINT-DRAG] drop', { dateJourCible, dateCibleFinale, heureFinale, changedGrid: gridCible !== gridBg });
             if (typeof sauvegarderDeplacementVol === 'function') {
                 sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, dateCibleFinale, avionIdCible).catch(err => {
                     console.error(err);
@@ -1554,6 +1551,9 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
     parentGrid.appendChild(ghostBar);
     let hDebFinale = hDebutInitiale;
     let hFinFinale = hFinInitiale;
+    let dateJourCible = null;
+    let gridResizeCible = parentGrid;
+    const dateOrigineStr = dateCibleVol ? `${dateCibleVol.getFullYear()}-${String(dateCibleVol.getMonth() + 1).padStart(2, '0')}-${String(dateCibleVol.getDate()).padStart(2, '0')}` : null;
     function onMouseMove(moveEvent) {
         const xRelatif = moveEvent.clientX - rectGrid.left;
         let pourcentage = xRelatif / rectGrid.width;
@@ -1566,10 +1566,32 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
             if (heureCalculee <= hDebutInitiale) heureCalculee = hDebutInitiale + 0.25;
             hFinFinale = heureCalculee;
         }
-        ghostBar.style.left = `${positionHeure(hDebFinale)}%`;
-        ghostBar.style.width = `${positionHeure(hFinFinale) - positionHeure(hDebFinale)}%`;
-        const txtStart = minutesToTimeString(hDebFinale * 60);
-        const txtEnd = minutesToTimeString(hFinFinale * 60);
+        if (tableName === 'Maintenance') {
+            const tbody = parentGrid.closest('tbody');
+            if (tbody) {
+                for (const tr of tbody.querySelectorAll('tr')) {
+                    const td = tr.children[1];
+                    const g = td ? td.firstElementChild : null;
+                    if (!g) continue;
+                    const r = g.getBoundingClientRect();
+                    if (moveEvent.clientY >= r.top && moveEvent.clientY <= r.bottom) {
+                        gridResizeCible = g;
+                        const txt = (tr.children[0] && tr.children[0].textContent || '').trim();
+                        const mDate = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                        dateJourCible = mDate ? `${mDate[3]}-${mDate[2]}-${mDate[1]}` : (g.dataset.dateJour || null);
+                        if (ghostBar.parentNode !== g) g.appendChild(ghostBar);
+                        break;
+                    }
+                }
+            }
+        }
+        const autreJour = tableName === 'Maintenance' && gridResizeCible !== parentGrid;
+        const gLeft = autreJour ? (bord === 'gauche' ? hDebFinale : 0) : hDebFinale;
+        const gRight = autreJour ? (bord === 'gauche' ? 24 : hFinFinale) : hFinFinale;
+        ghostBar.style.left = `${positionHeure(gLeft)}%`;
+        ghostBar.style.width = `${positionHeure(gRight) - positionHeure(gLeft)}%`;
+        const txtStart = minutesToTimeString(gLeft * 60);
+        const txtEnd = minutesToTimeString(gRight * 60);
         ghostBar.querySelector('span').textContent = `${txtStart} - ${txtEnd}`;
     }
     async function onMouseUp() {
@@ -1577,10 +1599,12 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
         document.removeEventListener('mouseup', onMouseUp);
         barElement.style.opacity = '1';
         if (ghostBar.parentNode) ghostBar.parentNode.removeChild(ghostBar);
-        if (hDebFinale !== hDebutInitiale || hFinFinale !== hFinInitiale) {
+        const jourChange = tableName === 'Maintenance' && dateJourCible && dateJourCible !== dateOrigineStr;
+        if (hDebFinale !== hDebutInitiale || hFinFinale !== hFinInitiale || jourChange) {
             barElement.style.left = `${positionHeure(hDebFinale)}%`;
             barElement.style.width = `${positionHeure(hFinFinale) - positionHeure(hDebFinale)}%`;
-            appliquerChangementDuree(reservationId, hDebFinale, hFinFinale, dateCibleVol, tableName, record).catch(err => {
+            if (jourChange && gridResizeCible !== parentGrid) gridResizeCible.appendChild(barElement);
+            appliquerChangementDuree(reservationId, hDebFinale, hFinFinale, dateCibleVol, tableName, record, bord, jourChange ? dateJourCible : null).catch(err => {
                 console.error(err);
                 chargerDonneesPlanning(true, true, true);
             });
@@ -1596,7 +1620,7 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
     document.addEventListener('mouseup', onMouseUp);
 }
 
-async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, tableName = 'Réservations', record = null) {
+async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, tableName = 'Réservations', record = null, bord = null, dateJourCible = null) {
     const referenceDate = dateCible ? new Date(dateCible) : dateAffichee;
     const annee = referenceDate.getFullYear();
     const mois = referenceDate.getMonth();
@@ -1607,7 +1631,18 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
     let fieldsPatch;
     let dateDebutOut = dateDebut;
     let dateFinOut = dateFin;
-    if (isMaintenance && record) {
+    if (isMaintenance && record && dateJourCible) {
+        const mStart = new Date(record.fields['Date']);
+        const mEnd = new Date(mStart.getTime() + parseFloat(record.fields['durée']) * 3600000);
+        const [y, mo, d] = dateJourCible.split('-').map(Number);
+        const jourCible = new Date(y, mo - 1, d);
+        const newStart = bord === 'gauche' ? new Date(jourCible.getTime() + hDeb * 3600000) : mStart;
+        const newEnd = bord === 'droite' ? new Date(jourCible.getTime() + hFin * 3600000) : mEnd;
+        if (!(newEnd > newStart)) return;
+        fieldsPatch = { "Date": newStart.toISOString(), "durée": (newEnd - newStart) / 3600000 };
+        dateDebutOut = newStart;
+        dateFinOut = newEnd;
+    } else if (isMaintenance && record) {
         const mStart = new Date(record.fields['Date']);
         const mEnd = new Date(mStart.getTime() + parseFloat(record.fields['durée']) * 3600000);
         const startOfDay = new Date(annee, mois, jour, 0, 0, 0);
