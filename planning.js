@@ -1708,7 +1708,7 @@ function appliquerEtatFormulaire() {
             if (cb && cb.parentElement) typeGroup.appendChild(cb.parentElement);
         });
     }
-    verifierTempsMoteur();
+    verifierAlertesReservation();
 
     if (groupMachine) groupMachine.style.display = isVIPlaneur ? 'none' : 'block';
     if (groupEstimation) groupEstimation.style.display = isVI ? 'none' : 'block';
@@ -1752,30 +1752,54 @@ function appliquerEtatFormulaire() {
     if (inputEstimation) inputEstimation.required = true;
 }
 
+function majAlerteModale(id, parent, afficher, texte) {
+    let warn = document.getElementById(id);
+    if (!afficher || !parent) {
+        if (warn) warn.remove();
+        return;
+    }
+    if (!warn) {
+        warn = document.createElement('div');
+        warn.id = id;
+        warn.style.cssText = 'margin-top:8px; padding:8px 10px; border-radius:8px; background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; font-size:13px; font-weight:600;';
+        parent.appendChild(warn);
+    }
+    warn.textContent = texte;
+}
+
 function verifierTempsMoteur() {
     const est = document.getElementById('form-estimation');
     const debut = document.getElementById('form-debut');
     const fin = document.getElementById('form-fin');
     const group = document.getElementById('group-estimation');
     if (!est || !debut || !fin || !group) return;
-    let warn = document.getElementById('alerte-temps-moteur');
-    const d = new Date(debut.value);
-    const f = new Date(fin.value);
-    const dureeH = (f - d) / 3600000;
+    const dureeH = (new Date(fin.value) - new Date(debut.value)) / 3600000;
     const estH = parseFloat(String(est.value).replace(',', '.'));
     const depasse = Number.isFinite(dureeH) && dureeH > 0 && Number.isFinite(estH) && estH > dureeH;
-    if (!depasse) {
-        if (warn) warn.remove();
-        return;
-    }
-    if (!warn) {
-        warn = document.createElement('div');
-        warn.id = 'alerte-temps-moteur';
-        warn.style.cssText = 'margin-top:8px; padding:8px 10px; border-radius:8px; background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; font-size:13px; font-weight:600;';
-        group.appendChild(warn);
-    }
-    const dureeTxt = (Math.round(dureeH * 100) / 100).toString().replace('.', ',');
-    warn.textContent = `⚠️ Le temps moteur estimé (${String(estH).replace('.', ',')} h) dépasse la durée du créneau réservé (${dureeTxt} h).`;
+    majAlerteModale('alerte-temps-moteur', group, depasse, '⚠️ Le temps moteur estimé dépasse la durée du créneau réservé.');
+}
+
+function verifierInstructeurObligatoire() {
+    const group = document.getElementById('group-instructeur');
+    const sel = document.getElementById('form-instructeur');
+    if (!group || !sel) return;
+    const types = (typeof getTypeVolSelectionne === 'function') ? getTypeVolSelectionne() : [];
+    const besoin = types.includes('Instruction') && !types.includes('VI Moteur') && !types.includes('VI Planeur');
+    majAlerteModale('alerte-instructeur-obligatoire', group, besoin && !sel.value.trim(), '⚠️ Un instructeur est obligatoire pour un vol d\'instruction.');
+}
+
+function verifierDatePassee() {
+    const debut = document.getElementById('form-debut');
+    if (!debut) return;
+    const section = debut.closest('.nr-section');
+    const passee = !!debut.value && new Date(debut.value) < new Date();
+    majAlerteModale('alerte-date-passee', section, passee, '⚠️ La date de la réservation est dans le passé.');
+}
+
+function verifierAlertesReservation() {
+    verifierTempsMoteur();
+    verifierInstructeurObligatoire();
+    verifierDatePassee();
 }
 
 function getTypeVolSelectionne() {
@@ -2065,12 +2089,12 @@ function initGestionnaireModale() {
             }
         });
     }
-    ['form-debut', 'form-fin', 'form-estimation'].forEach(id => {
+    ['form-debut', 'form-fin', 'form-estimation', 'form-instructeur'].forEach(id => {
         const el = document.getElementById(id);
-        if (el && !el.dataset.tempsMoteurListener) {
-            el.dataset.tempsMoteurListener = '1';
-            el.addEventListener('input', verifierTempsMoteur);
-            el.addEventListener('change', verifierTempsMoteur);
+        if (el && !el.dataset.alertesListener) {
+            el.dataset.alertesListener = '1';
+            el.addEventListener('input', verifierAlertesReservation);
+            el.addEventListener('change', verifierAlertesReservation);
         }
     });
     window.ouvrirModaleNouvelleReservation = async function(options = {}) {
