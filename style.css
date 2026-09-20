@@ -1940,6 +1940,7 @@ img, table, video, iframe, svg {
     align-items: center;
     padding: 0 4px;
     font-weight: 600;
+    font-size: 11px;
     color: #1e3d59;
     overflow: hidden;
     white-space: nowrap;
