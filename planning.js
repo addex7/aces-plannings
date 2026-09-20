@@ -3,6 +3,7 @@
    ========================================================================== */
 
 // Les variables globales sont définies dans app.js
+console.log('%c[planning.js] version 174 chargée', 'color:#7c3aed;font-weight:bold');
 let afficherVIPPlaneur = localStorage.getItem('planning_afficherVIP') === '1';
 let idVIModale = null;
 let tableVIModale = null;
