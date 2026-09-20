@@ -3,7 +3,16 @@
    ========================================================================== */
 
 // Les variables globales sont définies dans app.js
-console.log('%c[planning.js] version 178 chargée', 'color:#7c3aed;font-weight:bold');
+console.log('%c[planning.js] version 179 chargée', 'color:#7c3aed;font-weight:bold');
+
+function afficherChargementGlobal() {
+    const o = document.getElementById('saving-overlay');
+    if (o) o.style.display = 'flex';
+}
+function masquerChargementGlobal() {
+    const o = document.getElementById('saving-overlay');
+    if (o) o.style.display = 'none';
+}
 let afficherVIPPlaneur = localStorage.getItem('planning_afficherVIP') === '1';
 let idVIModale = null;
 let tableVIModale = null;
@@ -1517,10 +1526,11 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             }
             const dateCibleFinale = (tableName === 'Maintenance' && dateJourCible) ? new Date(`${dateJourCible}T12:00:00`) : callbackMiseAJour;
             if (typeof sauvegarderDeplacementVol === 'function') {
+                afficherChargementGlobal();
                 sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, dateCibleFinale, avionIdCible).catch(err => {
                     console.error(err);
                     chargerDonneesPlanning(true, true, true);
-                });
+                }).finally(() => masquerChargementGlobal());
             }
         }
         setTimeout(() => {
@@ -1650,10 +1660,11 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
                 barElement.style.left = `${positionHeure(hDebFinale)}%`;
                 barElement.style.width = `${positionHeure(hFinFinale) - positionHeure(hDebFinale)}%`;
             }
+            afficherChargementGlobal();
             appliquerChangementDuree(reservationId, hDebFinale, hFinFinale, dateCibleVol, tableName, record, bord, jourChange ? dateJourCible : null).catch(err => {
                 console.error(err);
                 chargerDonneesPlanning(true, true, true);
-            });
+            }).finally(() => masquerChargementGlobal());
         }
         setTimeout(() => {
             isResizing = false;
@@ -1725,15 +1736,17 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
             if (typeof enregistrerAudit === 'function') {
                 const message = `Nouveau : ${dateDebutOut.toISOString().slice(0,16).replace('T',' ')} - ${dateFinOut.toISOString().slice(0,16).replace('T',' ')}`;
                 if (isMaintenance) {
-                    await enregistrerAudit('Modification maintenance (durée)', tableName, message, 'Maintenance');
+                    enregistrerAudit('Modification maintenance (durée)', tableName, message, 'Maintenance').catch(err => console.error('Audit:', err));
                 } else {
-                    await enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning');
+                    enregistrerAudit('Modification de réservation (durée)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning').catch(err => console.error('Audit:', err));
                 }
             }
-            await chargerDonneesPlanning(true, true, true);
             const viewAeronefs = document.getElementById('view-aeronefs');
-            if (viewAeronefs && viewAeronefs.style.display !== 'none') {
-                chargerSuiviAeronef();
+            if (viewAeronefs && viewAeronefs.style.display !== 'none' && typeof chargerSuiviAeronef === 'function') {
+                chargerDonneesPlanning(true, true, true).catch(() => {});
+                await chargerSuiviAeronef();
+            } else {
+                await chargerDonneesPlanning(true, true, true);
             }
         } else {
             const data = await response.json().catch(() => ({}));
@@ -1792,15 +1805,17 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
             if (typeof enregistrerAudit === 'function') {
                 const message = `Nouveau : ${dateDebutOut.toISOString().slice(0,16).replace('T',' ')} - ${dateFinOut.toISOString().slice(0,16).replace('T',' ')}`;
                 if (isMaintenance) {
-                    await enregistrerAudit('Modification maintenance (déplacement)', tableName, message, 'Maintenance');
+                    enregistrerAudit('Modification maintenance (déplacement)', tableName, message, 'Maintenance').catch(err => console.error('Audit:', err));
                 } else {
-                    await enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning');
+                    enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning').catch(err => console.error('Audit:', err));
                 }
             }
-            await chargerDonneesPlanning(true, true, true);
             const viewAeronefs = document.getElementById('view-aeronefs');
-            if (viewAeronefs && viewAeronefs.style.display !== 'none') {
-                chargerSuiviAeronef();
+            if (viewAeronefs && viewAeronefs.style.display !== 'none' && typeof chargerSuiviAeronef === 'function') {
+                chargerDonneesPlanning(true, true, true).catch(() => {});
+                await chargerSuiviAeronef();
+            } else {
+                await chargerDonneesPlanning(true, true, true);
             }
         } else {
             const data = await response.json().catch(() => ({}));

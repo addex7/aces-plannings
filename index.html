@@ -8,9 +8,17 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=157">
+    <link rel="stylesheet" href="style.css?v=158">
 </head>
 <body>
+
+    <!-- OVERLAY DE SAUVEGARDE GLOBAL -->
+    <div id="saving-overlay">
+        <div class="saving-overlay-box">
+            <div class="saving-spinner"></div>
+            <div>Enregistrement en cours...</div>
+        </div>
+    </div>
 
     <!-- LOGIN OVERLAY -->
     <div id="login-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; align-items: center; justify-content: center; flex-direction: column; background: linear-gradient(rgba(30,61,89,0.65), rgba(30,61,89,0.45)), url('https://2y553dp2sx.ucarecd.net/844a0820-1a60-4f99-8be6-9a909130596f/-/preview/1000x750/') center/cover no-repeat; color: #fff;">
@@ -1253,11 +1261,11 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=88"></script>
-    <script src="version.js?v=20260920231612"></script>
+    <script src="version.js?v=20260920232129"></script>
     <script src="app.js?v=85"></script>
     <script src="utils.js?v=98"></script>
     <script src="presences.js?v=94"></script>
-    <script src="planning.js?v=178"></script>
+    <script src="planning.js?v=179"></script>
     <script src="calendrier.js?v=88"></script>
     <script src="comptes.js?v=108"></script>
     <script src="aeronefs.js?v=106"></script>
