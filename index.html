@@ -1045,21 +1045,25 @@
                         <div class="nr-options-grid" id="maintenance-machine-group"></div>
                         <input type="hidden" id="maintenance-machine-select">
                     </div>
-                    <div class="form-group">
-                        <label for="maintenance-date-debut">Date de début :</label>
-                        <input type="date" id="maintenance-date-debut" required>
+                    <div style="display: flex; gap: 10px; flex: 1 1 100%;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="maintenance-date-debut">Date de début :</label>
+                            <input type="date" id="maintenance-date-debut" required>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="maintenance-heure-debut">Heure de début :</label>
+                            <input type="time" id="maintenance-heure-debut" required>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="maintenance-heure-debut">Heure de début :</label>
-                        <input type="time" id="maintenance-heure-debut" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="maintenance-date-fin">Date de fin :</label>
-                        <input type="date" id="maintenance-date-fin" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="maintenance-heure-fin">Heure de fin :</label>
-                        <input type="time" id="maintenance-heure-fin" required>
+                    <div style="display: flex; gap: 10px; flex: 1 1 100%;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="maintenance-date-fin">Date de fin :</label>
+                            <input type="date" id="maintenance-date-fin" required>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="maintenance-heure-fin">Heure de fin :</label>
+                            <input type="time" id="maintenance-heure-fin" required>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="maintenance-ancienne-butee">Ancienne butée :</label>
@@ -1249,14 +1253,14 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=88"></script>
-    <script src="version.js?v=20260920221354"></script>
+    <script src="version.js?v=20260920222815"></script>
     <script src="app.js?v=85"></script>
     <script src="utils.js?v=98"></script>
     <script src="presences.js?v=94"></script>
-    <script src="planning.js?v=168"></script>
+    <script src="planning.js?v=169"></script>
     <script src="calendrier.js?v=88"></script>
     <script src="comptes.js?v=108"></script>
-    <script src="aeronefs.js?v=104"></script>
+    <script src="aeronefs.js?v=105"></script>
     <script src="carnet.js?v=142"></script>
     <script src="documents.js?v=83"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>

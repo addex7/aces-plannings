@@ -26,8 +26,6 @@ function populerMachinesChips(containerId, hiddenId, onChange) {
             }
             if (onChange) onChange(hidden.value);
         });
-        const check = document.createElement('span');
-        check.className = 'nr-check';
         const icon = document.createElement('span');
         icon.className = 'nr-icon';
         icon.textContent = '✈️';
@@ -35,7 +33,6 @@ function populerMachinesChips(containerId, hiddenId, onChange) {
         txt.className = 'nr-label';
         txt.textContent = avion.fields['Immatriculation'] || avion.fields['Nom'] || 'Sans nom';
         label.appendChild(input);
-        label.appendChild(check);
         label.appendChild(icon);
         label.appendChild(txt);
         container.appendChild(label);
@@ -253,6 +250,7 @@ async function supprimerMaintenance() {
         }
         fermerModaleMaintenance();
         chargerSuiviAeronef();
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, true, true);
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la suppression de la maintenance.');
@@ -334,6 +332,7 @@ async function enregistrerMaintenance(e) {
         await notifierReservationsSurMaintenance(immat, dateTime, duree);
         fermerModaleMaintenance();
         chargerSuiviAeronef();
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, true, true);
     } catch (err) {
         console.error(err);
         alert("Erreur lors de l'enregistrement de la maintenance.");
@@ -1139,6 +1138,7 @@ async function enregistrerButee(e) {
         }
         document.getElementById('butee-modal').style.display = 'none';
         chargerSuiviAeronef();
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, true, true);
     } catch (err) {
         console.error(err);
         alert("Erreur lors de l'enregistrement de la butée.");

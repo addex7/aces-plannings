@@ -1107,9 +1107,39 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                     maintDiv.className = 'maintenance-bar';
                     maintDiv.style.left = `${positionHeure(hDebut)}%`;
                     maintDiv.style.width = `${positionHeure(hFin) - positionHeure(hDebut)}%`;
-                    maintDiv.style.zIndex = '10';
+                    maintDiv.style.zIndex = '4';
+                    maintDiv.style.pointerEvents = 'auto';
+                    maintDiv.style.cursor = 'pointer';
                     maintDiv.title = `Maintenance ${mImmat} — ${hDebut.toFixed(2)}h à ${hFin.toFixed(2)}h`;
                     if (dureeM >= 1) maintDiv.textContent = 'Maintenance';
+
+                    const handleLeftM = document.createElement('div');
+                    handleLeftM.className = 'resize-handle resize-handle-left';
+                    const handleRightM = document.createElement('div');
+                    handleRightM.className = 'resize-handle resize-handle-right';
+                    maintDiv.appendChild(handleLeftM);
+                    maintDiv.appendChild(handleRightM);
+                    handleLeftM.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                        initierResize(e, m.id, gridBg, maintDiv, 'gauche', hDebut, hFin, dateAffichee, 'Maintenance', m);
+                    });
+                    handleRightM.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                        initierResize(e, m.id, gridBg, maintDiv, 'droite', hDebut, hFin, dateAffichee, 'Maintenance', m);
+                    });
+                    const oneDayM = mStart >= dayStart && mEnd <= dayEnd;
+                    if (oneDayM) {
+                        maintDiv.addEventListener('mousedown', (e) => {
+                            if (e.target.classList.contains('resize-handle')) return;
+                            e.stopPropagation();
+                            initierDeplacementBarre(e, m.id, avionId, gridBg, maintDiv, hDebut, dureeM, dateAffichee, 'Maintenance', m);
+                        });
+                    }
+                    maintDiv.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (isResizing || isDraggingBar) return;
+                        if (typeof ouvrirModaleMaintenance === 'function') ouvrirModaleMaintenance(m);
+                    });
                     gridBg.appendChild(maintDiv);
                 }
             });
@@ -2012,8 +2042,6 @@ function populerMachinesCases(avions) {
                 document.querySelectorAll('input[name="form-machine"]').forEach(cb => { if (cb !== e.target) cb.checked = false; });
             }
         });
-        const check = document.createElement('span');
-        check.className = 'nr-check';
         const icon = document.createElement('span');
         icon.className = 'nr-icon';
         icon.textContent = '✈️';
@@ -2021,7 +2049,6 @@ function populerMachinesCases(avions) {
         txt.className = 'nr-label';
         txt.textContent = avion.fields['Immatriculation'] || avion.fields['Nom'] || 'Sans nom';
         label.appendChild(input);
-        label.appendChild(check);
         label.appendChild(icon);
         label.appendChild(txt);
         container.appendChild(label);
