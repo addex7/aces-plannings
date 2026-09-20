@@ -2359,22 +2359,37 @@ async function ouvrirModaleEdition(vol, avionIdOuImmat) {
     const typeVol = vol.fields['Type de vol'] || 'Vol Classique';
     cocherTypeVol(typeVol);
     if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
+    if (typeof chargerListeMembresCache === 'function') await chargerListeMembresCache();
     const sel = document.getElementById('form-instructeur');
     if (sel) {
         const saved = vol.fields['Instructeur'];
         let nom = '';
         if (saved) {
             const idInstructeur = Array.isArray(saved) ? saved[0] : saved;
-            if (typeof listeInstructeursCache !== 'undefined' && listeInstructeursCache.length) {
-                const found = listeInstructeursCache.find(i => i.id === idInstructeur || i.nomComplet === idInstructeur);
-                nom = found ? found.nomComplet : idInstructeur;
+            if (typeof idInstructeur === 'string' && idInstructeur.startsWith('rec')) {
+                const found = (typeof listeInstructeursCache !== 'undefined' ? listeInstructeursCache : []).find(i => i.id === idInstructeur);
+                nom = found ? found.nomComplet : nomUtilisateurDepuisId(idInstructeur, typeof listeMembresCache !== 'undefined' ? listeMembresCache : []);
             } else {
-                nom = idInstructeur.toString().trim();
+                nom = String(idInstructeur).trim();
             }
         }
-        const options = Array.from(sel.options);
-        const match = nom && options.find(o => o.value && typeof correspondanceNom === 'function' && correspondanceNom(o.value, nom));
-        sel.value = match ? match.value : (options.some(o => o.value === nom) ? nom : '');
+        if (nom && !nom.startsWith('rec')) {
+            const options = Array.from(sel.options);
+            const match = options.find(o => o.value && typeof correspondanceNom === 'function' && correspondanceNom(o.value, nom));
+            if (match) {
+                sel.value = match.value;
+            } else {
+                if (!options.some(o => o.value === nom)) {
+                    const opt = document.createElement('option');
+                    opt.value = nom;
+                    opt.textContent = nom;
+                    sel.appendChild(opt);
+                }
+                sel.value = nom;
+            }
+        } else {
+            sel.value = '';
+        }
     }
     if (typeof peuplerPiloteSelect === 'function') {
         const piloteId = Array.isArray(vol.fields['Pilote']) ? vol.fields['Pilote'][0] : vol.fields['Pilote'];
