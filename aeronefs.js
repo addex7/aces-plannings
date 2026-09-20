@@ -768,15 +768,13 @@ async function chargerSuiviAeronef() {
                     }
                 });
 
-                if (oneDay) {
-                    maintenanceBubble.addEventListener('mousedown', (e) => {
-                        if (e.target.classList.contains('resize-handle')) return;
-                        e.stopPropagation();
-                        if (typeof initierDeplacementBarre === 'function') {
-                            initierDeplacementBarre(e, m.id, machineActuelle.id, gridBg, maintenanceBubble, heureDebut, heureFin - heureDebut, dateJour, 'Maintenance', m);
-                        }
-                    });
-                }
+                maintenanceBubble.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('resize-handle')) return;
+                    e.stopPropagation();
+                    if (typeof initierDeplacementBarre === 'function') {
+                        initierDeplacementBarre(e, m.id, machineActuelle.id, gridBg, maintenanceBubble, heureDebut, heureFin - heureDebut, dateJour, 'Maintenance', m);
+                    }
+                });
 
                 maintenanceBubble.addEventListener('click', (e) => {
                     e.stopPropagation();

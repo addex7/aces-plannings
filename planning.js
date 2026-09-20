@@ -1127,14 +1127,11 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         e.stopPropagation();
                         initierResize(e, m.id, gridBg, maintDiv, 'droite', hDebut, hFin, dateAffichee, 'Maintenance', m);
                     });
-                    const oneDayM = mStart >= dayStart && mEnd <= dayEnd;
-                    if (oneDayM) {
-                        maintDiv.addEventListener('mousedown', (e) => {
-                            if (e.target.classList.contains('resize-handle')) return;
-                            e.stopPropagation();
-                            initierDeplacementBarre(e, m.id, avionId, gridBg, maintDiv, hDebut, dureeM, dateAffichee, 'Maintenance', m);
-                        });
-                    }
+                    maintDiv.addEventListener('mousedown', (e) => {
+                        if (e.target.classList.contains('resize-handle')) return;
+                        e.stopPropagation();
+                        initierDeplacementBarre(e, m.id, avionId, gridBg, maintDiv, hDebut, dureeM, dateAffichee, 'Maintenance', m);
+                    });
                     maintDiv.addEventListener('click', (e) => {
                         e.stopPropagation();
                         if (isResizing || isDraggingBar) return;
