@@ -1392,6 +1392,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
     let ghost = null;
     let avionIdCible = avionId;
     let gridCible = gridBg;
+    let dateJourCible = null;
     const rectGrid = gridBg.getBoundingClientRect();
     document.body.style.userSelect = 'none';
     document.body.style.webkitUserSelect = 'none';
@@ -1426,6 +1427,15 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
                 gridCible = grid;
                 if (ghost && ghost.parentNode !== grid) grid.appendChild(ghost);
             }
+        } else if (tableName === 'Maintenance') {
+            const el = document.elementFromPoint(evt.clientX, evt.clientY);
+            const tr = el && el.closest ? el.closest('tr') : null;
+            const grid = tr ? tr.querySelector('[data-date-jour]') : null;
+            if (grid) {
+                gridCible = grid;
+                dateJourCible = grid.dataset.dateJour;
+                if (ghost && ghost.parentNode !== grid) grid.appendChild(ghost);
+            }
         }
         ghost.style.left = `${positionHeure(nouvelleHeureDebut)}%`;
         const hDebutStr = convertirHeureEnHHMM(nouvelleHeureDebut);
@@ -1444,11 +1454,14 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             if (heureFinale + dureeVol > 24) heureFinale = 24 - dureeVol;
             barresDiv.style.left = `${positionHeure(heureFinale)}%`;
             barresDiv.style.width = `${positionHeure(heureFinale + dureeVol) - positionHeure(heureFinale)}%`;
-            if (avionIdCible && avionIdCible !== avionId && gridCible && gridCible !== gridBg) {
+            if (tableName === 'Maintenance' && gridCible && gridCible !== gridBg) {
+                gridCible.appendChild(barresDiv);
+            } else if (avionIdCible && avionIdCible !== avionId && gridCible && gridCible !== gridBg) {
                 gridCible.appendChild(barresDiv);
             }
+            const dateCibleFinale = (tableName === 'Maintenance' && dateJourCible) ? new Date(`${dateJourCible}T12:00:00`) : callbackMiseAJour;
             if (typeof sauvegarderDeplacementVol === 'function') {
-                sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, callbackMiseAJour, avionIdCible).catch(err => {
+                sauvegarderDeplacementVol(volId, avionId, heureFinale, dureeVol, tableName, record, dateCibleFinale, avionIdCible).catch(err => {
                     console.error(err);
                     chargerDonneesPlanning(true, true, true);
                 });
@@ -1608,11 +1621,10 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
     if (isMaintenance && record) {
         const mStart = new Date(record.fields['Date']);
         const mEnd = new Date(mStart.getTime() + parseFloat(record.fields['durée']) * 3600000);
-        const startOfDay = new Date(annee, mois, jour, 0, 0, 0);
-        const hOriginal = Math.max(0, Math.min(24, (mStart.getTime() - startOfDay.getTime()) / 3600000));
-        const deltaHeures = nouvelleHeureDebut - hOriginal;
-        const newStart = new Date(mStart.getTime() + deltaHeures * 3600000);
-        const newEnd = new Date(mEnd.getTime() + deltaHeures * 3600000);
+        const dureeMs = mEnd - mStart;
+        const startOfDayCible = new Date(annee, mois, jour, 0, 0, 0);
+        const newStart = new Date(startOfDayCible.getTime() + nouvelleHeureDebut * 3600000);
+        const newEnd = new Date(newStart.getTime() + dureeMs);
         fieldsPatch = { "Date": newStart.toISOString(), "durée": (newEnd - newStart) / 3600000 };
         dateDebutOut = newStart;
         dateFinOut = newEnd;

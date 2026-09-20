@@ -4,6 +4,44 @@
 
 let maintenancesSuiviCache = [];
 
+function populerMachinesChips(containerId, hiddenId, onChange) {
+    const container = document.getElementById(containerId);
+    const hidden = document.getElementById(hiddenId);
+    if (!container || !hidden) return;
+    container.innerHTML = '';
+    (listeAvionsCache || []).forEach(avion => {
+        if (!avion.fields) return;
+        const label = document.createElement('label');
+        label.className = 'nr-option';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = avion.id;
+        input.checked = hidden.value === avion.id;
+        input.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                container.querySelectorAll('input[type="checkbox"]').forEach(cb => { if (cb !== e.target) cb.checked = false; });
+                hidden.value = avion.id;
+            } else {
+                hidden.value = '';
+            }
+            if (onChange) onChange(hidden.value);
+        });
+        const check = document.createElement('span');
+        check.className = 'nr-check';
+        const icon = document.createElement('span');
+        icon.className = 'nr-icon';
+        icon.textContent = '✈️';
+        const txt = document.createElement('span');
+        txt.className = 'nr-label';
+        txt.textContent = avion.fields['Immatriculation'] || avion.fields['Nom'] || 'Sans nom';
+        label.appendChild(input);
+        label.appendChild(check);
+        label.appendChild(icon);
+        label.appendChild(txt);
+        container.appendChild(label);
+    });
+}
+
 function genererFriseHeuresSuivi() {
     const container = document.getElementById('timeline-hours-suivi');
     if (!container) return;
@@ -141,27 +179,22 @@ function ouvrirModaleMaintenance(record = null) {
 
     const selMachine = document.getElementById('maintenance-machine-select');
     if (selMachine) {
-        if (!selMachine.options.length) {
-            (listeAvionsCache || []).forEach(a => {
-                if (!a.fields) return;
-                const opt = document.createElement('option');
-                opt.value = a.id;
-                opt.textContent = a.fields['Immatriculation'] || a.fields['Nom'] || 'Sans nom';
-                selMachine.appendChild(opt);
-            });
-        }
-        selMachine.value = machine.id;
-        if (!selMachine.dataset.ready) {
-            selMachine.dataset.ready = '1';
-            selMachine.addEventListener('change', () => {
-                const m = (listeAvionsCache || []).find(x => x.id === selMachine.value);
-                if (!m || !m.fields) return;
-                document.getElementById('maintenance-machine-id').value = m.id;
-                document.getElementById('maintenance-machine-immat').value = m.fields['Immatriculation'] || '';
-                const b = parseFloat(String(m.fields['Prochaine Butée'] || '').replace(',', '.')) || 0;
-                document.getElementById('maintenance-ancienne-butee').value = b;
-            });
-        }
+        const machineReelle = (listeAvionsCache || []).find(a => a.id === machine.id)
+            || (listeAvionsCache || []).find(a => a.fields && a.fields['Immatriculation'] === machine.fields['Immatriculation']);
+        selMachine.value = machineReelle ? machineReelle.id : '';
+        populerMachinesChips('maintenance-machine-group', 'maintenance-machine-select', (machineIdChoisie) => {
+            const m = (listeAvionsCache || []).find(x => x.id === machineIdChoisie);
+            if (!m || !m.fields) return;
+            document.getElementById('maintenance-machine-id').value = m.id;
+            document.getElementById('maintenance-machine-immat').value = m.fields['Immatriculation'] || '';
+            const b = parseFloat(String(m.fields['Prochaine Butée'] || '').replace(',', '.')) || 0;
+            document.getElementById('maintenance-ancienne-butee').value = b;
+            const cbChanger = document.getElementById('maintenance-changer-butee');
+            const inputNouvelle = document.getElementById('maintenance-nouvelle-butee');
+            if (inputNouvelle && (!cbChanger || !cbChanger.checked || String(inputNouvelle.value).trim() === '')) {
+                inputNouvelle.value = b + 50;
+            }
+        });
     }
 
     const f = record ? record.fields : {};
@@ -538,6 +571,7 @@ async function chargerSuiviAeronef() {
 
             const gridBg = document.createElement('div');
             gridBg.style.cssText = 'position: relative; height: 42px; width: 100%; display: flex; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;';
+            gridBg.dataset.dateJour = dateJourStr;
 
             gridBg.innerHTML = genererFondNuitHTML(dateJour);
 
@@ -1064,26 +1098,18 @@ function ouvrirModaleButee() {
     const selMachine = document.getElementById('butee-machine-select');
     const selSuivi = document.getElementById('select-machine-suivi');
     if (!modal || !selMachine) return;
-    selMachine.innerHTML = '';
-    (listeAvionsCache || []).forEach(a => {
-        if (!a.fields) return;
-        const opt = document.createElement('option');
-        opt.value = a.id;
-        opt.textContent = a.fields['Immatriculation'] || a.fields['Nom'] || 'Sans nom';
-        selMachine.appendChild(opt);
-    });
+    const machineCourante = (listeAvionsCache || []).find(a => a.id === (selSuivi && selSuivi.value))
+        || (listeAvionsCache || []).find(a => a.fields && a.fields['Immatriculation'] === (selSuivi && selSuivi.value))
+        || (listeAvionsCache || [])[0];
+    selMachine.value = machineCourante ? machineCourante.id : '';
     const majActuelle = () => {
         const m = (listeAvionsCache || []).find(x => x.id === selMachine.value);
         const b = m ? (parseFloat(String(m.fields['Prochaine Butée'] || '').replace(',', '.')) || 0) : 0;
         document.getElementById('butee-actuelle').value = b;
+        document.getElementById('butee-nouvelle').value = b + 50;
     };
-    if (!selMachine.dataset.ready) {
-        selMachine.dataset.ready = '1';
-        selMachine.addEventListener('change', majActuelle);
-    }
-    if (selSuivi && selSuivi.value) selMachine.value = selSuivi.value;
+    populerMachinesChips('butee-machine-group', 'butee-machine-select', majActuelle);
     majActuelle();
-    document.getElementById('butee-nouvelle').value = '';
     modal.style.display = 'flex';
 }
 

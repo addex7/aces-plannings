@@ -1041,8 +1041,9 @@
                 <input type="hidden" id="maintenance-machine-id">
                 <div class="form-row">
                     <div class="form-group" style="flex: 1 1 100%;">
-                        <label for="maintenance-machine-select">Machine :</label>
-                        <select id="maintenance-machine-select"></select>
+                        <label>Machine :</label>
+                        <div class="nr-options-grid" id="maintenance-machine-group"></div>
+                        <input type="hidden" id="maintenance-machine-select">
                     </div>
                     <div class="form-group">
                         <label for="maintenance-date-debut">Date de début :</label>
@@ -1090,8 +1091,9 @@
             <h3>Modifier la butée de l'horamètre</h3>
             <form id="butee-form">
                 <div class="form-group">
-                    <label for="butee-machine-select">Machine :</label>
-                    <select id="butee-machine-select"></select>
+                    <label>Machine :</label>
+                    <div class="nr-options-grid" id="butee-machine-group"></div>
+                    <input type="hidden" id="butee-machine-select">
                 </div>
                 <div class="form-group">
                     <label for="butee-actuelle">Butée actuelle (h) :</label>
@@ -1247,14 +1249,14 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=88"></script>
-    <script src="version.js?v=20260920220514"></script>
+    <script src="version.js?v=20260920221354"></script>
     <script src="app.js?v=85"></script>
     <script src="utils.js?v=98"></script>
     <script src="presences.js?v=94"></script>
-    <script src="planning.js?v=167"></script>
+    <script src="planning.js?v=168"></script>
     <script src="calendrier.js?v=88"></script>
     <script src="comptes.js?v=108"></script>
-    <script src="aeronefs.js?v=103"></script>
+    <script src="aeronefs.js?v=104"></script>
     <script src="carnet.js?v=142"></script>
     <script src="documents.js?v=83"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
