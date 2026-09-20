@@ -1779,13 +1779,15 @@ function verifierTempsMoteur() {
     majAlerteModale('alerte-temps-moteur', group, depasse, '⚠️ Le temps moteur estimé dépasse la durée du créneau réservé.');
 }
 
+let alerteInstructeurDemandee = false;
+
 function verifierInstructeurObligatoire() {
     const group = document.getElementById('group-instructeur');
     const sel = document.getElementById('form-instructeur');
     if (!group || !sel) return;
     const types = (typeof getTypeVolSelectionne === 'function') ? getTypeVolSelectionne() : [];
     const besoin = types.includes('Instruction') && !types.includes('VI Moteur') && !types.includes('VI Planeur');
-    majAlerteModale('alerte-instructeur-obligatoire', group, besoin && !sel.value.trim(), '⚠️ Un instructeur est obligatoire pour un vol d\'instruction.');
+    majAlerteModale('alerte-instructeur-obligatoire', group, alerteInstructeurDemandee && besoin && !sel.value.trim(), '⚠️ Un instructeur est obligatoire pour un vol d\'instruction.');
 }
 
 function verifierDatePassee() {
@@ -2089,14 +2091,14 @@ function initGestionnaireModale() {
             }
         });
     }
-    ['form-debut', 'form-fin', 'form-estimation', 'form-instructeur'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && !el.dataset.alertesListener) {
-            el.dataset.alertesListener = '1';
-            el.addEventListener('input', verifierAlertesReservation);
-            el.addEventListener('change', verifierAlertesReservation);
-        }
-    });
+    if (modal && !modal.dataset.alertesListener) {
+        modal.dataset.alertesListener = '1';
+        modal.addEventListener('input', verifierAlertesReservation);
+        modal.addEventListener('change', verifierAlertesReservation);
+        new MutationObserver(() => {
+            if (modal.style.display === 'flex') alerteInstructeurDemandee = false;
+        }).observe(modal, { attributes: true, attributeFilter: ['style'] });
+    }
     window.ouvrirModaleNouvelleReservation = async function(options = {}) {
         console.log('[PLANNING] ouvrir appelée', options);
         idReservationEnEdition = null;
@@ -2156,6 +2158,15 @@ function initGestionnaireModale() {
         formReservation.addEventListener('submit', async (e) => {
             e.preventDefault();
             const typesVol = getTypeVolSelectionne();
+            const besoinInstructeur = typesVol.includes('Instruction') && !typesVol.includes('VI Moteur') && !typesVol.includes('VI Planeur');
+            const selInstructeur = document.getElementById('form-instructeur');
+            if (besoinInstructeur && (!selInstructeur || !selInstructeur.value.trim())) {
+                alerteInstructeurDemandee = true;
+                verifierInstructeurObligatoire();
+                const grpInst = document.getElementById('group-instructeur');
+                if (grpInst) grpInst.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
             const typesValidesAirtable = ['Local','Navigation','Vol de nuit','Instruction','VI Moteur','VI Planeur','Remorquage'];
             const typesFinaux = typesVol.filter(t => typesValidesAirtable.includes(t));
             const typesSupplementaires = typesVol.filter(t => !typesValidesAirtable.includes(t));
