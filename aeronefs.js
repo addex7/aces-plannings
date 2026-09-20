@@ -2,6 +2,8 @@
    AÉRONEFS - SUIVI DU POTENTIEL ET MAINTENANCE
    ========================================================================== */
 
+let maintenancesSuiviCache = [];
+
 function genererFriseHeuresSuivi() {
     const container = document.getElementById('timeline-hours-suivi');
     if (!container) return;
@@ -136,6 +138,31 @@ function ouvrirModaleMaintenance(record = null) {
         }
     }
     if (!machine || !machine.fields) return;
+
+    const selMachine = document.getElementById('maintenance-machine-select');
+    if (selMachine) {
+        if (!selMachine.options.length) {
+            (listeAvionsCache || []).forEach(a => {
+                if (!a.fields) return;
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.textContent = a.fields['Immatriculation'] || a.fields['Nom'] || 'Sans nom';
+                selMachine.appendChild(opt);
+            });
+        }
+        selMachine.value = machine.id;
+        if (!selMachine.dataset.ready) {
+            selMachine.dataset.ready = '1';
+            selMachine.addEventListener('change', () => {
+                const m = (listeAvionsCache || []).find(x => x.id === selMachine.value);
+                if (!m || !m.fields) return;
+                document.getElementById('maintenance-machine-id').value = m.id;
+                document.getElementById('maintenance-machine-immat').value = m.fields['Immatriculation'] || '';
+                const b = parseFloat(String(m.fields['Prochaine Butée'] || '').replace(',', '.')) || 0;
+                document.getElementById('maintenance-ancienne-butee').value = b;
+            });
+        }
+    }
 
     const f = record ? record.fields : {};
     const now = new Date();
@@ -353,6 +380,7 @@ async function chargerSuiviAeronef() {
             const resMaintenance = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}`, { headers });
             const dataMaintenance = await resMaintenance.json();
             maintenanceRecords = dataMaintenance.records || [];
+            maintenancesSuiviCache = maintenanceRecords;
         } catch (err) {
             console.warn('Erreur chargement Maintenance:', err);
         }
@@ -963,8 +991,141 @@ function initNavigationTabs() {
     }
 }
 
+async function remplirMenuMaintenance(menu) {
+    const selSuivi = document.getElementById('select-machine-suivi');
+    let immat = '';
+    if (selSuivi) {
+        const m = (listeAvionsCache || []).find(a => a.id === selSuivi.value || (a.fields && a.fields['Immatriculation'] === selSuivi.value));
+        if (m) immat = m.fields['Immatriculation'] || '';
+        else if (selSuivi.selectedIndex >= 0) immat = selSuivi.options[selSuivi.selectedIndex].textContent;
+    }
+    if (!maintenancesSuiviCache.length) {
+        try {
+            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}`, { headers });
+            const data = await res.json();
+            maintenancesSuiviCache = data.records || [];
+        } catch (err) { console.error(err); }
+    }
+    const maints = (maintenancesSuiviCache || [])
+        .filter(m => m.fields && (m.fields['Machine'] || '') === immat)
+        .sort((a, b) => new Date(b.fields['Date']) - new Date(a.fields['Date']));
+
+    let html = `
+        <div class="menu-maint-item" data-action="maintenance">🔧 Mettre la machine en maintenance</div>
+        <div class="menu-maint-item" data-action="butee">⏱️ Modifier la butée de l'horamètre</div>`;
+    if (maints.length) {
+        html += `<div style="border-top:1px solid #e2e8f0; padding:8px 14px 4px; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase;">Modifier une maintenance</div>`;
+        maints.slice(0, 10).forEach(m => {
+            const d = new Date(m.fields['Date']);
+            const label = `${d.toLocaleDateString('fr-FR')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${m.fields['durée'] || 0}h`;
+            html += `<div class="menu-maint-item" data-maint="${m.id}">✏️ ${label}</div>`;
+        });
+    }
+    menu.innerHTML = html;
+    menu.querySelectorAll('.menu-maint-item').forEach(el => {
+        el.style.cssText = 'padding:10px 14px; cursor:pointer; font-size:13px; color:#1e3d59; white-space:nowrap;';
+        el.addEventListener('mouseenter', () => { el.style.background = '#f1f5f9'; });
+        el.addEventListener('mouseleave', () => { el.style.background = ''; });
+        el.addEventListener('click', () => {
+            menu.style.display = 'none';
+            if (el.dataset.action === 'maintenance') ouvrirModaleMaintenance();
+            else if (el.dataset.action === 'butee') ouvrirModaleButee();
+            else if (el.dataset.maint) {
+                const rec = maintenancesSuiviCache.find(m => m.id === el.dataset.maint);
+                if (rec) ouvrirModaleMaintenance(rec);
+            }
+        });
+    });
+}
+
+function initMenuMaintenance() {
+    const btn = document.getElementById('btn-maintenance');
+    if (!btn || document.getElementById('menu-maintenance')) return;
+    const parent = btn.parentElement;
+    if (parent) parent.style.position = 'relative';
+    const menu = document.createElement('div');
+    menu.id = 'menu-maintenance';
+    menu.style.cssText = 'display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:280px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden; text-align:left;';
+    parent.appendChild(menu);
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (menu.style.display === 'none') {
+            menu.style.display = 'block';
+            remplirMenuMaintenance(menu);
+        } else {
+            menu.style.display = 'none';
+        }
+    });
+    document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.style.display = 'none'; });
+}
+
+function ouvrirModaleButee() {
+    const modal = document.getElementById('butee-modal');
+    const selMachine = document.getElementById('butee-machine-select');
+    const selSuivi = document.getElementById('select-machine-suivi');
+    if (!modal || !selMachine) return;
+    selMachine.innerHTML = '';
+    (listeAvionsCache || []).forEach(a => {
+        if (!a.fields) return;
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.fields['Immatriculation'] || a.fields['Nom'] || 'Sans nom';
+        selMachine.appendChild(opt);
+    });
+    const majActuelle = () => {
+        const m = (listeAvionsCache || []).find(x => x.id === selMachine.value);
+        const b = m ? (parseFloat(String(m.fields['Prochaine Butée'] || '').replace(',', '.')) || 0) : 0;
+        document.getElementById('butee-actuelle').value = b;
+    };
+    if (!selMachine.dataset.ready) {
+        selMachine.dataset.ready = '1';
+        selMachine.addEventListener('change', majActuelle);
+    }
+    if (selSuivi && selSuivi.value) selMachine.value = selSuivi.value;
+    majActuelle();
+    document.getElementById('butee-nouvelle').value = '';
+    modal.style.display = 'flex';
+}
+
+async function enregistrerButee(e) {
+    e.preventDefault();
+    const selMachine = document.getElementById('butee-machine-select');
+    const nouvelle = parseFloat(String(document.getElementById('butee-nouvelle').value).replace(',', '.'));
+    const machine = (listeAvionsCache || []).find(x => x.id === selMachine.value);
+    if (!machine || !machine.fields || isNaN(nouvelle)) return;
+    const immat = machine.fields['Immatriculation'] || '';
+    const ancienne = parseFloat(String(document.getElementById('butee-actuelle').value).replace(',', '.')) || 0;
+    try {
+        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ fields: { 'Machine': immat, 'Date': new Date().toISOString(), 'Ancienne butée': ancienne, 'Nouvelle Butée': nouvelle, 'durée': 0 } })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const resAvion = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}/${machine.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ fields: { 'Prochaine Butée': nouvelle } })
+        });
+        if (!resAvion.ok) throw new Error(await resAvion.text());
+        if (typeof enregistrerAudit === 'function') {
+            await enregistrerAudit('Modification butée horamètre', immat, `Butée : ${ancienne} h → ${nouvelle} h`, 'Maintenance');
+        }
+        document.getElementById('butee-modal').style.display = 'none';
+        chargerSuiviAeronef();
+    } catch (err) {
+        console.error(err);
+        alert("Erreur lors de l'enregistrement de la butée.");
+    }
+}
+
 const btnMaintenance = document.getElementById('btn-maintenance');
-if (btnMaintenance) btnMaintenance.addEventListener('click', () => ouvrirModaleMaintenance());
+if (btnMaintenance) initMenuMaintenance();
+
+const formButee = document.getElementById('butee-form');
+if (formButee) formButee.addEventListener('submit', enregistrerButee);
+const closeButee = document.getElementById('close-butee');
+if (closeButee) closeButee.addEventListener('click', () => { document.getElementById('butee-modal').style.display = 'none'; });
 
 const formMaintenance = document.getElementById('maintenance-form');
 if (formMaintenance) formMaintenance.addEventListener('submit', enregistrerMaintenance);
