@@ -3,7 +3,7 @@
    ========================================================================== */
 
 // Les variables globales sont définies dans app.js
-console.log('%c[planning.js] version 177 chargée', 'color:#7c3aed;font-weight:bold');
+console.log('%c[planning.js] version 178 chargée', 'color:#7c3aed;font-weight:bold');
 let afficherVIPPlaneur = localStorage.getItem('planning_afficherVIP') === '1';
 let idVIModale = null;
 let tableVIModale = null;
@@ -1507,12 +1507,13 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             let pourcentageFin = Math.max(0, Math.min(1, xPosFinal / rectGrid.width));
             let heureFinale = Math.round(positionHeureInverse(pourcentageFin * 100) * 4) / 4;
             if (heureFinale + dureeVol > 24) heureFinale = 24 - dureeVol;
-            barresDiv.style.left = `${positionHeure(heureFinale)}%`;
-            barresDiv.style.width = `${positionHeure(heureFinale + dureeVol) - positionHeure(heureFinale)}%`;
-            if (tableName === 'Maintenance' && gridCible && gridCible !== gridBg) {
-                gridCible.appendChild(barresDiv);
-            } else if (avionIdCible && avionIdCible !== avionId && gridCible && gridCible !== gridBg) {
-                gridCible.appendChild(barresDiv);
+            const jourChangeMove = tableName === 'Maintenance' && gridCible && gridCible !== gridBg;
+            if (!jourChangeMove) {
+                barresDiv.style.left = `${positionHeure(heureFinale)}%`;
+                barresDiv.style.width = `${positionHeure(heureFinale + dureeVol) - positionHeure(heureFinale)}%`;
+                if (avionIdCible && avionIdCible !== avionId && gridCible && gridCible !== gridBg) {
+                    gridCible.appendChild(barresDiv);
+                }
             }
             const dateCibleFinale = (tableName === 'Maintenance' && dateJourCible) ? new Date(`${dateJourCible}T12:00:00`) : callbackMiseAJour;
             if (typeof sauvegarderDeplacementVol === 'function') {
@@ -1645,9 +1646,10 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
         while (ghostsMulti.length) { const g = ghostsMulti.pop(); if (g.parentNode) g.parentNode.removeChild(g); }
         const jourChange = tableName === 'Maintenance' && dateJourCible && dateJourCible !== dateOrigineStr;
         if (hDebFinale !== hDebutInitiale || hFinFinale !== hFinInitiale || jourChange) {
-            barElement.style.left = `${positionHeure(hDebFinale)}%`;
-            barElement.style.width = `${positionHeure(hFinFinale) - positionHeure(hDebFinale)}%`;
-            if (jourChange && gridResizeCible !== parentGrid) gridResizeCible.appendChild(barElement);
+            if (!jourChange) {
+                barElement.style.left = `${positionHeure(hDebFinale)}%`;
+                barElement.style.width = `${positionHeure(hFinFinale) - positionHeure(hDebFinale)}%`;
+            }
             appliquerChangementDuree(reservationId, hDebFinale, hFinFinale, dateCibleVol, tableName, record, bord, jourChange ? dateJourCible : null).catch(err => {
                 console.error(err);
                 chargerDonneesPlanning(true, true, true);
