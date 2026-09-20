@@ -1458,13 +1458,15 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
                 if (ghost && ghost.parentNode !== grid) grid.appendChild(ghost);
             }
         } else if (tableName === 'Maintenance') {
-            const el = document.elementFromPoint(evt.clientX, evt.clientY);
-            const tr = el && el.closest ? el.closest('tr') : null;
-            const grid = tr ? tr.querySelector('[data-date-jour]') : null;
-            if (grid) {
-                gridCible = grid;
-                dateJourCible = grid.dataset.dateJour;
-                if (ghost && ghost.parentNode !== grid) grid.appendChild(ghost);
+            const lignes = document.querySelectorAll('[data-date-jour]');
+            for (const g of lignes) {
+                const r = g.getBoundingClientRect();
+                if (evt.clientY >= r.top && evt.clientY <= r.bottom) {
+                    gridCible = g;
+                    dateJourCible = g.dataset.dateJour;
+                    if (ghost && ghost.parentNode !== g) g.appendChild(ghost);
+                    break;
+                }
             }
         }
         ghost.style.left = `${positionHeure(nouvelleHeureDebut)}%`;
