@@ -900,22 +900,18 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             });
             const creneauxMotorAvion = creneauxVIMotor.filter(c => (c.fields['Machine'] || []).includes(avionId));
             volsAvion = volsAvion.concat(creneauxMotorAvion);
-            let potentielInitial = avion.fields['Potentiel restant'] !== undefined ? parseFloat(avion.fields['Potentiel restant']) : 0;
-            const totalHeuresEstimees = listeReservationsCache
-                .filter(res => res.fields && res.fields['Machine'] && res.fields['Machine'].includes(avionId))
-                .reduce((somme, res) => somme + (parseFloat(res.fields['Temps estimé']) || 0), 0);
-            const potentielPredictif = potentielInitial - totalHeuresEstimees;
+            const potentielActuel = avion.fields['Potentiel restant'] !== undefined ? parseFloat(avion.fields['Potentiel restant']) : 0;
             let couleurStatus = "status-green";
-            let textPotentiel = `Potentiel net estimé : ${potentielPredictif.toFixed(1)}h`;
-            if (potentielPredictif <= 5) {
+            let textPotentiel = `Potentiel actuel : ${potentielActuel.toFixed(1)}h`;
+            if (potentielActuel <= 5) {
                 couleurStatus = "status-red";
-                textPotentiel = `ARRÊT IMMINENT (${potentielPredictif.toFixed(1)}h restantes)`;
-            } else if (potentielPredictif <= 15) {
+                textPotentiel = `ARRÊT IMMINENT (${potentielActuel.toFixed(1)}h restantes)`;
+            } else if (potentielActuel <= 15) {
                 couleurStatus = "status-orange";
-                textPotentiel = `Révision à prévoir (${potentielPredictif.toFixed(1)}h restantes)`;
+                textPotentiel = `Révision à prévoir (${potentielActuel.toFixed(1)}h restantes)`;
             } else {
                 couleurStatus = "status-green";
-                textPotentiel = `Potentiel bon (${potentielPredictif.toFixed(1)}h restantes)`;
+                textPotentiel = `Potentiel bon (${potentielActuel.toFixed(1)}h restantes)`;
             }
             const machineCell = document.createElement('div');
             machineCell.className = 'machine-cell';
