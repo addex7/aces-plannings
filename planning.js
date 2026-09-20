@@ -1455,14 +1455,21 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
                 if (ghost && ghost.parentNode !== grid) grid.appendChild(ghost);
             }
         } else if (tableName === 'Maintenance') {
-            const lignes = document.querySelectorAll('[data-date-jour]');
-            for (const g of lignes) {
-                const r = g.getBoundingClientRect();
-                if (evt.clientY >= r.top && evt.clientY <= r.bottom) {
-                    gridCible = g;
-                    dateJourCible = g.dataset.dateJour;
-                    if (ghost && ghost.parentNode !== g) g.appendChild(ghost);
-                    break;
+            const tbody = gridBg.closest('tbody');
+            if (tbody) {
+                for (const tr of tbody.querySelectorAll('tr')) {
+                    const td = tr.children[1];
+                    const g = td ? td.firstElementChild : null;
+                    if (!g) continue;
+                    const r = g.getBoundingClientRect();
+                    if (evt.clientY >= r.top && evt.clientY <= r.bottom) {
+                        gridCible = g;
+                        const txt = (tr.children[0] && tr.children[0].textContent || '').trim();
+                        const mDate = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                        dateJourCible = mDate ? `${mDate[3]}-${mDate[2]}-${mDate[1]}` : (g.dataset.dateJour || null);
+                        if (ghost && ghost.parentNode !== g) g.appendChild(ghost);
+                        break;
+                    }
                 }
             }
         }
@@ -1476,6 +1483,24 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
         window.removeEventListener('mouseup', onMouseUp);
         barresDiv.style.opacity = '1';
         if (aBouge) {
+            if (tableName === 'Maintenance') {
+                const tbody = gridBg.closest('tbody');
+                if (tbody) {
+                    for (const tr of tbody.querySelectorAll('tr')) {
+                        const td = tr.children[1];
+                        const g = td ? td.firstElementChild : null;
+                        if (!g) continue;
+                        const r = g.getBoundingClientRect();
+                        if (evt.clientY >= r.top && evt.clientY <= r.bottom) {
+                            gridCible = g;
+                            const txt = (tr.children[0] && tr.children[0].textContent || '').trim();
+                            const mDate = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                            dateJourCible = mDate ? `${mDate[3]}-${mDate[2]}-${mDate[1]}` : (g.dataset.dateJour || null);
+                            break;
+                        }
+                    }
+                }
+            }
             if (ghost) ghost.remove();
             const xPosFinal = evt.clientX - rectGrid.left;
             let pourcentageFin = Math.max(0, Math.min(1, xPosFinal / rectGrid.width));
