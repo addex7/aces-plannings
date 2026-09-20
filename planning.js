@@ -2118,12 +2118,20 @@ function initGestionnaireModale() {
         const mois = (dateAffichee.getMonth() + 1).toString().padStart(2, '0');
         const jour = dateAffichee.getDate().toString().padStart(2, '0');
         const dateBase = `${annee}-${mois}-${jour}`;
-        const heureDebut = options.heureDebut !== undefined ? String(options.heureDebut).padStart(2, '0') : '09';
-        if (document.getElementById('form-debut')) document.getElementById('form-debut').value = `${dateBase}T${heureDebut}:00`;
-        if (document.getElementById('form-fin')) {
-            const d = new Date(`${dateBase}T${heureDebut}:00`);
+        const debutInput = document.getElementById('form-debut');
+        const finInput = document.getElementById('form-fin');
+        if (debutInput) {
+            if (options.heureDebut !== undefined) {
+                debutInput.value = `${dateBase}T${String(options.heureDebut).padStart(2, '0')}:00`;
+            } else {
+                const maintenant = new Date();
+                debutInput.value = formaterPourInput(new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate(), maintenant.getHours() + 1, 0));
+            }
+        }
+        if (finInput && debutInput && debutInput.value) {
+            const d = new Date(debutInput.value);
             d.setMinutes(d.getMinutes() + (options.dureeMinutes || 120));
-            document.getElementById('form-fin').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            finInput.value = formaterPourInput(d);
         }
         if (document.getElementById('form-estimation')) document.getElementById('form-estimation').value = '1.0';
         if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
@@ -2443,6 +2451,7 @@ function ouvrirModaleCreationDepuisGrille(avionId, heureDebutClic) {
     document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T${((heureDebutClic + 2) % 24).toString().padStart(2, '0')}:00`;
     document.getElementById('form-estimation').value = '1.0';
     if (typeof peuplerPiloteSelect === 'function') peuplerPiloteSelect();
+    verifierAlertesReservation();
     modal.style.display = 'flex';
 }
 
@@ -2549,6 +2558,7 @@ function ouvrirModaleCreationDepuisGrilleDate(avionId, heureDebutClic, dateCible
     document.getElementById('form-fin').value = `${annee}-${mois}-${jour}T${((heureDebutClic + 2) % 24).toString().padStart(2, '0')}:00`;
     document.getElementById('form-estimation').value = '1.0';
     if (typeof peuplerPiloteSelect === 'function') peuplerPiloteSelect();
+    verifierAlertesReservation();
     modal.style.display = 'flex';
 }
 
