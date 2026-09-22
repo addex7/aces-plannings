@@ -1387,7 +1387,7 @@ async function supprimerVolMaintenance(machineImmat, date, horametreArrivee) {
             const d = new Date(f['Date du vol']).toISOString().split('T')[0];
             return d === date;
         });
-        await Promise.all(records.map(rec => fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route')}/${rec.id}`, {
+        await Promise.all(records.map(rec => apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route')}/${rec.id}`, {
             method: 'DELETE',
             headers
         })));

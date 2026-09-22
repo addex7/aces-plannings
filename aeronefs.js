@@ -390,10 +390,10 @@ async function chargerSuiviAeronef() {
 
     try {
         const [resMachines, resReservations, resCarnet, resPilotes] = await Promise.all([
-            fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}`, { headers }),
-            fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}`, { headers }),
-            fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route Pilotes')}`, { headers }),
-            fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Utilisateurs')}`, { headers })
+            apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}`, { headers }),
+            apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}`, { headers }),
+            apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route Pilotes')}`, { headers }),
+            apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Utilisateurs')}`, { headers })
         ]);
 
         const dataMachines = await resMachines.json();
@@ -1610,7 +1610,7 @@ async function getNomPiloteReservation(piloteField) {
     const id = Array.isArray(piloteField) ? piloteField[0] : piloteField;
     if (typeof id === 'string' && id.startsWith('rec')) {
         try {
-            const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Utilisateurs')}/${id}`, { headers });
+            const res = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Utilisateurs')}/${id}`, { headers });
             const data = await res.json();
             if (res.ok && data.fields) {
                 return `${data.fields['Prénom'] || ''} ${data.fields['Nom'] || ''}`.trim();
@@ -1633,7 +1633,7 @@ async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures)
         const dateText = dateDebut.toLocaleDateString('fr-FR');
         const formula = `AND(FIND('${immat.replace(/'/g, "\\'")}', ARRAYJOIN({Machine}, ',')), DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')<='${endDay}', DATETIME_FORMAT({Date de fin}, 'YYYY-MM-DD')>='${startDay}')`;
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
-        const res = await fetch(url, { headers });
+        const res = await apiFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const records = data.records || [];

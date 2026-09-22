@@ -39,7 +39,7 @@ async function enregistrerAudit(action, cible = '', details = '', module = '') {
         }]
     };
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_AUDIT)}`, {
+        const res = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_AUDIT)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify(body)

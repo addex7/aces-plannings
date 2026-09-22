@@ -131,7 +131,7 @@ async function sinscrireClub(lieu) {
 
 async function desinscrireClub(recordId) {
     try {
-        const recRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}/${recordId}`, { headers });
+        const recRes = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}/${recordId}`, { headers });
         const rec = recRes.ok ? await recRes.json() : null;
         const nomInscrit = (rec && rec.fields && rec.fields['Nom du pilote']) || '';
         const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
@@ -226,7 +226,7 @@ async function sinscrirePlaneur(role) {
 
 async function desinscrirePlaneur(recordId) {
     try {
-        const recRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}/${recordId}`, { headers });
+        const recRes = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}/${recordId}`, { headers });
         const rec = recRes.ok ? await recRes.json() : null;
         const nomInscrit = (rec && rec.fields && rec.fields['Nom du pilote']) || '';
         const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();

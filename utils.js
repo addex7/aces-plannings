@@ -209,6 +209,49 @@ function afficherConflitsReservations(barresInfos) {
 const API_CACHE = {};
 const API_CACHE_TTL = 30000; // 30 secondes
 
+// --- LIMITATION DE CONCURRENCE + RETRY POUR L'API AIRTABLE ---
+// Airtable limite a ~5 requetes/seconde : on bride le parallelisme et on reessaie sur 429/5xx.
+const _apiSemaphore = { enCours: 0, file: [] };
+const API_MAX_PARALLEL = 4;
+function _apiDistribuer() {
+    while (_apiSemaphore.enCours < API_MAX_PARALLEL && _apiSemaphore.file.length) {
+        _apiSemaphore.enCours++;
+        _apiSemaphore.file.shift()();
+    }
+}
+function _apiAcquerir() {
+    return new Promise(resolve => { _apiSemaphore.file.push(resolve); _apiDistribuer(); });
+}
+function _apiRelacher() {
+    _apiSemaphore.enCours--;
+    _apiDistribuer();
+}
+
+async function apiFetch(url, options = {}, maxEssais = 6) {
+    await _apiAcquerir();
+    try {
+        let delai = 700;
+        for (let essai = 0; essai < maxEssais; essai++) {
+            let res;
+            try {
+                res = await fetch(url, options);
+            } catch (err) {
+                if (essai === maxEssais - 1) throw err;
+                await new Promise(r => setTimeout(r, delai));
+                delai *= 2;
+                continue;
+            }
+            if (res.status !== 429 && res.status < 500) return res;
+            if (essai === maxEssais - 1) return res;
+            const attente = parseInt(res.headers.get('Retry-After') || '0', 10) * 1000;
+            await new Promise(r => setTimeout(r, Math.max(delai, attente) + Math.random() * 250));
+            delai *= 2;
+        }
+    } finally {
+        _apiRelacher();
+    }
+}
+
 function viderApiCache() {
     Object.keys(API_CACHE).forEach(k => delete API_CACHE[k]);
 }
@@ -228,7 +271,7 @@ async function cachedFetch(url, options = {}, ttl = API_CACHE_TTL, force = false
         }
     }
     if (method !== 'GET') viderApiCache();
-    const res = await fetch(url, options);
+    const res = await apiFetch(url, options);
     const data = await res.json();
     if (method === 'GET' && res.ok) API_CACHE[url] = { data, ts: Date.now() };
     return {

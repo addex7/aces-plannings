@@ -182,7 +182,7 @@ async function chargerMessagesAvecOffset(formula) {
     let offset = '';
     do {
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100${offset ? '&offset=' + encodeURIComponent(offset) : ''}`;
-        const res = await fetch(url, { headers });
+        const res = await apiFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         all.push(...(data.records || []));
@@ -315,7 +315,7 @@ async function envoyerMessage(e) {
         };
         if (pieceJointe !== null) fields[FIELDS_MESSAGE.PIECE] = pieceJointe;
 
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}`, {
+        const res = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ records: [{ fields }] })
@@ -406,7 +406,7 @@ function afficherThread(thread) {
 async function marquerMessagesLus(ids) {
     if (!ids || !ids.length) return;
     try {
-        await Promise.all(ids.map(id => fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}/${id}`, {
+        await Promise.all(ids.map(id => apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}/${id}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { [FIELDS_MESSAGE.LU]: true } })
@@ -444,7 +444,7 @@ async function compterMessagesNonLus() {
     if (!destinataire) { badge.style.display = 'none'; return; }
     const formula = `AND(OR(FIND('Tous', {Destinataire}) > 0, FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire}) > 0), {Lu}=FALSE())`;
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`, { headers });
+        const res = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const count = (data.records || []).length;

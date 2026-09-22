@@ -89,7 +89,7 @@ async function chargerNotifications() {
     try {
         const formula = `{Pilote}='${piloteNom.replace(/'/g, "\\'")}'`;
         const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NOTIFICATIONS)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=20`;
-        const res = await fetch(url, { headers });
+        const res = await apiFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const records = data.records || [];
@@ -131,7 +131,7 @@ function afficherNotifications(records) {
 
 async function marquerNotificationLue(recordId) {
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NOTIFICATIONS)}/${recordId}`, {
+        const res = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NOTIFICATIONS)}/${recordId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { Lue: true } })
@@ -156,7 +156,7 @@ async function creerNotification(piloteNom, message, type = 'info', lien = '') {
             }
         }]
     };
-    await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NOTIFICATIONS)}`, {
+    await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NOTIFICATIONS)}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body)
