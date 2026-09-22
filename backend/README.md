@@ -40,17 +40,38 @@ curl http://localhost:3000/health   # {"ok":true}
 
 ## nginx + HTTPS
 
+Deux options :
+
+**A. Site + API sur le meme domaine (recommande — voir `nginx-site.conf`)**
+```bash
+# le site statique est servi depuis /var/www/glide2000 (clone du repo)
+mkdir -p /var/www/glide2000 && git clone https://github.com/addex7/aces-plannings.git /var/www/glide2000
+cp backend/nginx-site.conf /etc/nginx/sites-available/glide2000
+# editer : remplacer <domaine>, puis
+ln -s /etc/nginx/sites-available/glide2000 /etc/nginx/sites-enabled/
+certbot --nginx -d <domaine>
+```
+Dans `app.js` : `const API_BASE = 'https://<domaine>/v0/glide2000';`
+
+**B. API seule sur un sous-domaine** (site reste sur GitHub Pages) :
 ```nginx
 server {
     server_name api.<domaine>;
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
     }
 }
 ```
-`certbot --nginx -d api.<domaine>` puis le site statique peut etre servi
-par le meme nginx (ou GitHub Pages / file:// comme aujourd'hui).
+`certbot --nginx -d api.<domaine>` puis dans `app.js` :
+`const API_BASE = 'https://api.<domaine>/v0/glide2000';`
+
+## Deployer une mise a jour du site (option A)
+
+```bash
+cd /var/www/glide2000 && git pull
+```
 
 ## Migration des donnees
 
