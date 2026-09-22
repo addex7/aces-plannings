@@ -42,18 +42,28 @@ curl http://localhost:3000/health   # {"ok":true}
 
 Deux options :
 
-**A. Site + API sur le meme domaine (recommande — voir `nginx-site.conf`)**
+**A. Installation automatique (recommande)**
+
 ```bash
-# le site statique est servi depuis /var/www/glide2000 (clone du repo)
-mkdir -p /var/www/glide2000 && git clone https://github.com/addex7/aces-plannings.git /var/www/glide2000
-cp backend/nginx-site.conf /etc/nginx/sites-available/glide2000
-# editer : remplacer <domaine>, puis
+curl -sL https://raw.githubusercontent.com/addex7/aces-plannings/main/backend/setup-vps.sh | sudo bash
+# ou avec un domaine perso : | sudo bash -s mon-domaine.fr
+```
+
+Le script installe Docker + nginx + certbot + ufw, clone le repo dans
+`/opt/glide2000`, genere les secrets, demarre les conteneurs, configure
+nginx + HTTPS. Le site statique est servi depuis le meme clone (deploys = `git pull`).
+
+**B. Installation manuelle — site + API sur le meme domaine (voir `nginx-site.conf`)**
+```bash
+git clone https://github.com/addex7/aces-plannings.git /opt/glide2000
+cp /opt/glide2000/backend/nginx-site.conf /etc/nginx/sites-available/glide2000
+# editer : remplacer <domaine> et le chemin root, puis
 ln -s /etc/nginx/sites-available/glide2000 /etc/nginx/sites-enabled/
 certbot --nginx -d <domaine>
 ```
 Dans `app.js` : `const API_BASE = 'https://<domaine>/v0/glide2000';`
 
-**B. API seule sur un sous-domaine** (site reste sur GitHub Pages) :
+**C. API seule sur un sous-domaine** (site reste sur GitHub Pages) :
 ```nginx
 server {
     server_name api.<domaine>;
@@ -70,7 +80,7 @@ server {
 ## Deployer une mise a jour du site (option A)
 
 ```bash
-cd /var/www/glide2000 && git pull
+cd /opt/glide2000 && git pull
 ```
 
 ## Migration des donnees
