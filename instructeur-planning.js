@@ -241,14 +241,16 @@ async function supprimerDisposChevauchantes(dateStr, debutMin, finMin, nom, cons
     } catch (err) { console.error('[SUPPRIMER DISPOS]', err); }
 }
 
-async function enregistrerPlageDisponibilite(dateStr, debutMin, finMin, dispo, discipline = '', nomCible = '') {
+async function enregistrerPlageDisponibilite(dateStr, debutMin, finMin, dispo, discipline = '', nomCible = '', recharger = true) {
     const nom = nomCible || instructeurSelectionne || (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '');
     if (!nom) { alert('Aucun instructeur sélectionné.'); return; }
     if (typeof estUtilisateurCourant === 'function' && !estUtilisateurCourant(nom)) { alert("Seul l'instructeur concerné peut modifier ses disponibilités."); return; }
     await supprimerDisposChevauchantes(dateStr, debutMin, finMin, nom, !dispo, discipline);
     if (!dispo) {
-        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
-        if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
+        if (recharger) {
+            if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+            if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
+        }
         return;
     }
     const fmtMin = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
@@ -260,8 +262,10 @@ async function enregistrerPlageDisponibilite(dateStr, debutMin, finMin, dispo, d
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         if (typeof enregistrerAudit === 'function') await enregistrerAudit('Création disponibilité', nom, `Instructeur : ${nom} | Date : ${dateStr} | ${debut} - ${fin} | Disponible`, 'Instructeur');
-        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
-        if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
+        if (recharger) {
+            if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+            if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
+        }
     } catch (err) {
         console.error(err);
         alert('Erreur : ' + (err.message || ''));
@@ -270,36 +274,54 @@ async function enregistrerPlageDisponibilite(dateStr, debutMin, finMin, dispo, d
 
 function mettreAJourSurlignementDrag() {
     if (!dragDispo || !dragDispo.actif) return;
-    const hStart = parseInt(dragDispo.start.dataset.slot, 10);
-    const hEnd = parseInt(dragDispo.end.dataset.slot, 10);
-    const date = dragDispo.start.dataset.date;
-    const hMin = Math.min(hStart, hEnd);
-    const hMax = Math.max(hStart, hEnd);
+    const sStart = parseInt(dragDispo.start.dataset.slot, 10);
+    const sEnd = parseInt(dragDispo.end.dataset.slot, 10);
+    const dA = dragDispo.start.dataset.date;
+    const dB = dragDispo.end.dataset.date;
+    const dMin = dA < dB ? dA : dB;
+    const dMax = dA > dB ? dA : dB;
+    const sMin = Math.min(sStart, sEnd);
+    const sMax = Math.max(sStart, sEnd);
     document.querySelectorAll('.grid-hour-block').forEach(el => {
-        const h = parseInt(el.dataset.slot, 10);
+        const s = parseInt(el.dataset.slot, 10);
+        const d = el.dataset.date || '';
         const discOk = !dragDispo.discipline || el.dataset.discipline === dragDispo.discipline;
         const nomOk = !dragDispo.nom || el.dataset.nom === dragDispo.nom;
-        const isIn = discOk && nomOk && el.dataset.date === date && h >= hMin && h <= hMax;
+        const isIn = discOk && nomOk && d >= dMin && d <= dMax && s >= sMin && s <= sMax;
         el.style.outline = isIn ? '2px solid #1e3d59' : '';
     });
 }
 
-function finaliserDragDisponibilite() {
+async function finaliserDragDisponibilite() {
     if (!dragDispo || !dragDispo.actif) return;
     const start = dragDispo.start;
     const end = dragDispo.end;
     const dispo = dragDispo.dispo;
     const nomCible = dragDispo.nom || '';
+    const discipline = start.dataset.discipline || '';
     dragDispo = null;
     document.querySelectorAll('.grid-hour-block').forEach(el => { el.style.outline = ''; });
-    if (start.dataset.date !== end.dataset.date) return;
     if (start.dataset.discipline !== end.dataset.discipline) return;
     if ((start.dataset.nom || '') !== (end.dataset.nom || '')) return;
-    const hStart = parseInt(start.dataset.slot, 10);
-    const hEnd = parseInt(end.dataset.slot, 10);
-    const sDebut = Math.min(hStart, hEnd);
-    const sFin = Math.max(hStart, hEnd);
-    enregistrerPlageDisponibilite(start.dataset.date, sDebut * 30, (sFin + 1) * 30, dispo, start.dataset.discipline || '', nomCible);
+    const sStart = parseInt(start.dataset.slot, 10);
+    const sEnd = parseInt(end.dataset.slot, 10);
+    if (isNaN(sStart) || isNaN(sEnd)) return;
+    const sMin = Math.min(sStart, sEnd);
+    const sMax = Math.max(sStart, sEnd);
+    const dMin = start.dataset.date < end.dataset.date ? start.dataset.date : end.dataset.date;
+    const dMax = start.dataset.date > end.dataset.date ? start.dataset.date : end.dataset.date;
+    const curseur = new Date(dMin + 'T12:00:00');
+    const dernier = new Date(dMax + 'T12:00:00');
+    const dates = [];
+    while (curseur <= dernier) {
+        dates.push(`${curseur.getFullYear()}-${String(curseur.getMonth() + 1).padStart(2, '0')}-${String(curseur.getDate()).padStart(2, '0')}`);
+        curseur.setDate(curseur.getDate() + 1);
+    }
+    for (const ds of dates) {
+        await enregistrerPlageDisponibilite(ds, sMin * 30, (sMax + 1) * 30, dispo, discipline, nomCible, false);
+    }
+    if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+    if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
 }
 
 function disciplinesInstructeur(nom) {
