@@ -833,7 +833,7 @@ img, table, video, iframe, svg {
 .btn-submit:hover {
     background-color: #11995d;
 }
-#btn-delete-reservation, #btn-delete-vi-planeur, #btn-delete-carnet, #btn-delete-membre {
+#btn-delete-reservation, #btn-delete-vi-planeur, #btn-delete-carnet, #btn-delete-membre, #btn-delete-maintenance {
     flex: 1;
     background-color: #ef4444;
     color: white;
@@ -845,7 +845,7 @@ img, table, video, iframe, svg {
     cursor: pointer;
     transition: background 0.2s;
 }
-#btn-delete-reservation:hover, #btn-delete-vi-planeur:hover, #btn-delete-carnet:hover, #btn-delete-membre:hover {
+#btn-delete-reservation:hover, #btn-delete-vi-planeur:hover, #btn-delete-carnet:hover, #btn-delete-membre:hover, #btn-delete-maintenance:hover {
     background-color: #dc2626;
 }
 #btn-cancel-carnet {

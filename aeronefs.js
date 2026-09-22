@@ -200,16 +200,14 @@ function ouvrirModaleMaintenance(record = null) {
     const dateDebut = f['Date'] ? new Date(f['Date']) : now;
     const dateFin = f['Date'] ? new Date(dateDebut.getTime() + dureeH * 3600000) : new Date(now.getTime() + 3600000);
 
-    const fmtDate = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    const fmtHeure = d => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const fmtDateTime = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+        + 'T' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
     document.getElementById('maintenance-id').value = record ? record.id : '';
     document.getElementById('maintenance-machine-id').value = machine.id;
     document.getElementById('maintenance-machine-immat').value = machine.fields['Immatriculation'] || '';
-    document.getElementById('maintenance-date-debut').value = fmtDate(dateDebut);
-    document.getElementById('maintenance-heure-debut').value = fmtHeure(dateDebut);
-    document.getElementById('maintenance-date-fin').value = fmtDate(dateFin);
-    document.getElementById('maintenance-heure-fin').value = fmtHeure(dateFin);
+    document.getElementById('maintenance-debut').value = fmtDateTime(dateDebut);
+    document.getElementById('maintenance-fin').value = fmtDateTime(dateFin);
 
     const butee = parseFloat(String(machine.fields['Prochaine Butée'] || '').replace(',', '.')) || 0;
     const ancienne = f['Ancienne butée'] !== undefined ? f['Ancienne butée'] : butee;
@@ -312,24 +310,22 @@ async function enregistrerMaintenance(e) {
     const maintenanceId = document.getElementById('maintenance-id').value;
     const immat = document.getElementById('maintenance-machine-immat').value;
     const avionId = document.getElementById('maintenance-machine-id').value;
-    const dateDebut = document.getElementById('maintenance-date-debut').value;
-    const heureDebut = document.getElementById('maintenance-heure-debut').value;
-    const dateFin = document.getElementById('maintenance-date-fin').value;
-    const heureFin = document.getElementById('maintenance-heure-fin').value;
+    const debutStr = document.getElementById('maintenance-debut').value;
+    const finStr = document.getElementById('maintenance-fin').value;
     const ancienneButee = parseFloat(String(document.getElementById('maintenance-ancienne-butee').value).replace(',', '.'));
     const changerButee = document.getElementById('maintenance-changer-butee').checked;
     const nouvelleButee = changerButee
         ? parseFloat(String(document.getElementById('maintenance-nouvelle-butee').value).replace(',', '.'))
         : ancienneButee;
 
-    if (!immat || !dateDebut || !heureDebut || !dateFin || !heureFin || isNaN(ancienneButee)) return;
+    if (!immat || !debutStr || !finStr || isNaN(ancienneButee)) return;
     if (changerButee && isNaN(nouvelleButee)) {
         alert('Renseigne la nouvelle butée.');
         return;
     }
 
-    const dateTime = new Date(`${dateDebut}T${heureDebut}`);
-    const dateTimeFin = new Date(`${dateFin}T${heureFin}`);
+    const dateTime = new Date(debutStr);
+    const dateTimeFin = new Date(finStr);
     if (isNaN(dateTime.getTime()) || isNaN(dateTimeFin.getTime()) || dateTimeFin <= dateTime) {
         alert('La date de fin doit être postérieure à la date de début.');
         return;

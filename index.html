@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=159">
+    <link rel="stylesheet" href="style.css?v=160">
 </head>
 <body>
 
@@ -1058,55 +1058,44 @@
     <div id="maintenance-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close-modal" id="close-maintenance">&times;</span>
-            <h3>Renseigner un acte de maintenance</h3>
-            <form id="maintenance-form">
+            <h3 class="nr-title">Renseigner un acte de maintenance</h3>
+            <form id="maintenance-form" class="nr-form">
                 <input type="hidden" id="maintenance-id">
                 <input type="hidden" id="maintenance-machine-immat">
                 <input type="hidden" id="maintenance-machine-id">
-                <div class="form-row">
-                    <div class="form-group" style="flex: 1 1 100%;">
-                        <label>Machine :</label>
-                        <div class="nr-options-grid" id="maintenance-machine-group"></div>
-                        <input type="hidden" id="maintenance-machine-select">
-                    </div>
-                    <div style="display: flex; gap: 10px; flex: 1 1 100%;">
-                        <div class="form-group" style="flex: 1;">
-                            <label for="maintenance-date-debut">Date de début :</label>
-                            <input type="date" id="maintenance-date-debut" required>
+                <div class="nr-section">
+                    <div class="nr-section-title">AÉRONEF</div>
+                    <div class="nr-options-grid" id="maintenance-machine-group"></div>
+                    <input type="hidden" id="maintenance-machine-select">
+                </div>
+                <div class="nr-section">
+                    <div class="nr-datetimes">
+                        <div class="nr-datetime">
+                            <div class="nr-section-title">DÉBUT</div>
+                            <input type="datetime-local" id="maintenance-debut" required>
                         </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label for="maintenance-heure-debut">Heure de début :</label>
-                            <input type="time" id="maintenance-heure-debut" required>
+                        <div class="nr-datetime">
+                            <div class="nr-section-title">FIN</div>
+                            <input type="datetime-local" id="maintenance-fin" required>
                         </div>
-                    </div>
-                    <div style="display: flex; gap: 10px; flex: 1 1 100%;">
-                        <div class="form-group" style="flex: 1;">
-                            <label for="maintenance-date-fin">Date de fin :</label>
-                            <input type="date" id="maintenance-date-fin" required>
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label for="maintenance-heure-fin">Heure de fin :</label>
-                            <input type="time" id="maintenance-heure-fin" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="maintenance-ancienne-butee">Ancienne butée :</label>
-                        <input type="number" id="maintenance-ancienne-butee" step="0.01" min="0" required>
-                    </div>
-                    <div class="form-group" style="display:flex; align-items:center;">
-                        <label class="checkbox-option" style="margin:0;">
-                            <input type="checkbox" id="maintenance-changer-butee">
-                            <span>Changer la butée</span>
-                        </label>
-                    </div>
-                    <div class="form-group" id="maintenance-nouvelle-butee-group" style="display:none;">
-                        <label for="maintenance-nouvelle-butee">Nouvelle butée :</label>
-                        <input type="number" id="maintenance-nouvelle-butee" step="0.01" min="0">
                     </div>
                 </div>
-                <div class="form-actions" style="gap: 10px;">
-                    <button type="submit" class="btn-submit">Enregistrer l'acte</button>
-                    <button type="button" id="btn-delete-maintenance" class="btn-delete" style="display:none;">Supprimer</button>
+                <div class="nr-section">
+                    <div class="nr-section-title">ANCIENNE BUTÉE</div>
+                    <input type="number" id="maintenance-ancienne-butee" class="nr-input" step="0.01" min="0" required>
+                    <label class="checkbox-option" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="maintenance-changer-butee">
+                        <span>Changer la butée</span>
+                    </label>
+                    <div id="maintenance-nouvelle-butee-group" style="display:none; margin-top:10px;">
+                        <div class="nr-section-title">NOUVELLE BUTÉE</div>
+                        <input type="number" id="maintenance-nouvelle-butee" class="nr-input" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="nr-footer">
+                    <button type="button" class="nr-btn-cancel" onclick="document.getElementById('maintenance-modal').style.display='none'">Annuler</button>
+                    <button type="submit" class="nr-btn-save"><span class="nr-icon-save">💾</span> Enregistrer</button>
+                    <button type="button" id="btn-delete-maintenance" style="display:none;">Supprimer</button>
                 </div>
             </form>
         </div>
@@ -1277,14 +1266,14 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=89"></script>
-    <script src="version.js?v=20260922172730"></script>
+    <script src="version.js?v=20260922173754"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=103"></script>
     <script src="presences.js?v=96"></script>
     <script src="planning.js?v=181"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=110"></script>
-    <script src="aeronefs.js?v=109"></script>
+    <script src="aeronefs.js?v=110"></script>
     <script src="carnet.js?v=144"></script>
     <script src="documents.js?v=85"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
