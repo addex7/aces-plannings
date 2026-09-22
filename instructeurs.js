@@ -207,7 +207,7 @@ async function supprimerDisponibilite(record) {
     const dateFr = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     if (!confirm(`Supprimer la disponibilité du ${dateFr} de ${f['Heure début']} à ${f['Heure fin']} ?`)) return;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}/${record.id}`, { method: 'DELETE', headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}/${record.id}`, { method: 'DELETE', headers });
         if (!res.ok) throw new Error('Erreur Airtable');
         if (typeof enregistrerAudit === 'function') {
             const nom = f['Instructeur'] || '';
@@ -240,7 +240,7 @@ async function ouvrirModaleGererDispos() {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const formula = `AND({Instructeur}='${nom}', DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${todayStr}')`;
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc`;
     try {
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
@@ -312,7 +312,7 @@ async function enregistrerDisponibilite(e) {
     const payload = { records: [{ ...(dispoId ? { id: dispoId } : {}), fields }] };
     const method = dispoId ? 'PATCH' : 'POST';
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method, headers, body: JSON.stringify(payload) });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method, headers, body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         if (typeof enregistrerAudit === 'function') {
@@ -332,7 +332,7 @@ async function chargerDisponibilitesInstructeurs(dateCible, forceRefresh = false
     await chargerListeInstructeurs(forceRefresh);
     const dateStr = `${dateCible.getFullYear()}-${String(dateCible.getMonth() + 1).padStart(2, '0')}-${String(dateCible.getDate()).padStart(2, '0')}`;
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
     try {
         console.log('[DISPOS] URL:', url);
         const res = await cachedFetch(url, { headers }, API_CACHE_TTL, forceRefresh);
@@ -553,7 +553,7 @@ async function chargerSuiviInstructeur14Jours(nom, start) {
     const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
     const formula = `AND({Instructeur}='${nom.replace(/'/g, "\\'")}', DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=200`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=200`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         const records = data.records || [];
@@ -594,7 +594,7 @@ async function chargerSuiviInstructeur14Jours(nom, start) {
 async function chargerListeInstructeurs(forceRefresh = false) {
     if (!forceRefresh && listeInstructeursCache.length) return;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         listeInstructeursCache = (data.records || []).map(r => {
@@ -633,7 +633,7 @@ async function verifierConflitDisponibiliteInstructeur(nom, dateDebut, dateFin, 
     const dates = Array.from(jours).map(j => `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${j}'`);
     const formula = `AND(SEARCH('${prenom.replace(/'/g, "\\'")}', {Instructeur}) > 0, OR(${dates.join(',')}))`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         const records = data.records || [];

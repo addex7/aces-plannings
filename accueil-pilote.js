@@ -299,7 +299,7 @@ async function chargerProchaineJournee() {
                 ? `IS_AFTER({${s.dateField}}, NOW())`
                 : `IS_AFTER({${s.dateField}}, DATEADD(NOW(), -1, 'days'))`;
             const pageSize = 100;
-            const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(s.table)}?filterByFormula=${encodeURIComponent(nowFormula)}&sort[0][field]=${encodeURIComponent(s.dateField)}&sort[0][direction]=asc&pageSize=${pageSize}`;
+            const url = `${API_BASE}/${encodeURIComponent(s.table)}?filterByFormula=${encodeURIComponent(nowFormula)}&sort[0][field]=${encodeURIComponent(s.dateField)}&sort[0][direction]=asc&pageSize=${pageSize}`;
             const res = await cachedFetch(url, { headers });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error?.message);
@@ -336,7 +336,7 @@ async function chargerDernierVol() {
     const nom = (currentUser.nom || '').toLowerCase();
     const id = currentUser.id;
     try {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?sort[0][field]=Date&sort[0][direction]=desc&pageSize=50`;
+        const url = `${API_BASE}/${encodeURIComponent(table)}?sort[0][field]=Date&sort[0][direction]=desc&pageSize=50`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message);
@@ -401,7 +401,7 @@ async function chargerSignalementsAccueil() {
     const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
     try {
         const formula = `AND(TRIM({Observations}) != '', {Statut observation} != 'Observation traitée')`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
+        const url = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message);
@@ -429,7 +429,7 @@ async function chargerSignalementsAccueil() {
 async function chargerValiditesAccueil() {
     if (!currentUser) return null;
     try {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${currentUser.id}`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${currentUser.id}`;
         const res = await cachedFetch(url, { headers }, 0, true);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message);
@@ -482,7 +482,7 @@ async function chargerExperiencesAccueil(cpl = false) {
     const mois24 = dateIlYAMoisAccueil(24);
     const dateMin = `${mois24.getFullYear()}-${String(mois24.getMonth() + 1).padStart(2, '0')}-${String(mois24.getDate()).padStart(2, '0')}`;
     const formula = `AND(OR(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0), IS_AFTER({Date}, "${dateMin}"))`;
-    const baseUrl = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
+    const baseUrl = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
 
     let records = [];
     let offset = '';
@@ -610,7 +610,7 @@ async function chargerMessagesClub() {
     if (!nom) return [];
     try {
         const formula = `FIND('Tous', {Destinataire}) > 0`;
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=5`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=5`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         return data.records || [];
@@ -632,7 +632,7 @@ async function posterMessageClub(titre, corps) {
     const expediteur = typeof nomCompletCourant === 'function' ? nomCompletCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
     const date = new Date().toISOString().split('T')[0];
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -662,7 +662,7 @@ async function chargerNomsMembresActifs() {
     const all = [];
     let offset = '';
     do {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&fields%5B%5D=Actif&pageSize=100${offset ? '&offset=' + encodeURIComponent(offset) : ''}`;
+        const url = `${API_BASE}/${encodeURIComponent(table)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&fields%5B%5D=Actif&pageSize=100${offset ? '&offset=' + encodeURIComponent(offset) : ''}`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
@@ -685,7 +685,7 @@ async function retirerMessageClub(recordId) {
     if (!confirm('Retirer ce message du Messages club ?\nIl restera dans les boîtes mail des membres.')) return;
     const table = typeof TABLE_MESSAGERIE !== 'undefined' ? TABLE_MESSAGERIE : 'Messagerie';
     try {
-        const getRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${recordId}`, { headers });
+        const getRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}/${recordId}`, { headers });
         const record = await getRes.json();
         if (!getRes.ok) throw new Error(record.error?.message || 'Erreur');
 
@@ -704,7 +704,7 @@ async function retirerMessageClub(recordId) {
             return;
         }
 
-        const patchRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${recordId}`, {
+        const patchRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}/${recordId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { 'Destinataire': noms.join('; ') } })

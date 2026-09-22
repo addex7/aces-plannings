@@ -128,7 +128,7 @@ async function chargerDonneesCalendrier(annee, mois) {
     // Réservations (aéronefs F-BLIO, F-GASB, F-JVIO, etc.)
     try {
         const formulaResa = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${finStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${debutStr}')`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formulaResa)}&pageSize=100`;
+        const url = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formulaResa)}&pageSize=100`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
@@ -159,7 +159,7 @@ async function chargerDonneesCalendrier(annee, mois) {
     // Présences Planeur (Instructeurs, Élèves, Pilotes)
     try {
         const formulaPlaneur = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${debutStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${finStr}')`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formulaPlaneur)}&pageSize=100`;
+        const url = `${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formulaPlaneur)}&pageSize=100`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
@@ -185,7 +185,7 @@ async function chargerDonneesCalendrier(annee, mois) {
     // Présences Club (Atelier Alain Bernage, Salle Ernest Meyer)
     try {
         const formulaClub = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${debutStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${finStr}')`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}?filterByFormula=${encodeURIComponent(formulaClub)}&pageSize=100`;
+        const url = `${API_BASE}/${encodeURIComponent('Présences Club')}?filterByFormula=${encodeURIComponent(formulaClub)}&pageSize=100`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
@@ -211,7 +211,7 @@ async function chargerDonneesCalendrier(annee, mois) {
     // Événements club
     try {
         const formulaEvt = `AND(DATETIME_FORMAT({Date début},'YYYY-MM-DD')<='${finStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${debutStr}')`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Événements')}?filterByFormula=${encodeURIComponent(formulaEvt)}&pageSize=100`;
+        const url = `${API_BASE}/${encodeURIComponent('Événements')}?filterByFormula=${encodeURIComponent(formulaEvt)}&pageSize=100`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');

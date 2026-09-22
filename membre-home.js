@@ -119,7 +119,7 @@ async function chargerAccueilMembre(id) {
     const membreId = id || currentUser.id;
     container.innerHTML = '<p class="carnet-empty">Chargement du profil...</p>';
     try {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreId}`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreId}`;
         const res = await cachedFetch(url, { headers }, 0, true);
         const record = await res.json();
         if (!res.ok) throw new Error(record.error?.message || 'Erreur');
@@ -321,7 +321,7 @@ async function chargerExperiences() {
         const mois24 = dateIlYAMois(24);
         const dateMin = `${mois24.getFullYear()}-${String(mois24.getMonth() + 1).padStart(2, '0')}-${String(mois24.getDate()).padStart(2, '0')}`;
         const formula = `AND(OR(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0), IS_AFTER({Date}, "${dateMin}"))`;
-        const baseUrl = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
+        const baseUrl = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
 
         let records = [];
         let offset = '';
@@ -430,7 +430,7 @@ async function mettreAJourPhoto(dataURL) {
     const membre = membreSelectionne || currentUser;
     if (!membre) return;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membre.id}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membre.id}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { [MEMBRE_FIELDS.PHOTO]: dataURL } })
@@ -449,7 +449,7 @@ async function chargerListeMembres() {
     const bar = document.getElementById('accueil-admin-bar');
     if (!select || !bar || !isSuperAdmin()) return;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const previous = select.value;
@@ -471,7 +471,7 @@ async function chargerListeMembres() {
 }
 
 async function patchMembre(membreId, fieldsToSend) {
-    const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreId}`, {
+    const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${membreId}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify({ fields: fieldsToSend })
@@ -555,7 +555,7 @@ async function chargerDocumentsMembre() {
     try {
         const nomComplet = `${(membreSelectionne.prenom || '').replace(/"/g, '\\"')} ${(membreSelectionne.nom || '').replace(/"/g, '\\"')}`.trim();
         const formula = `FIND(UPPER("${nomComplet}"), UPPER({Sous-dossier})) > 0`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}?filterByFormula=${encodeURIComponent(formula)}`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}?filterByFormula=${encodeURIComponent(formula)}`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
@@ -603,7 +603,7 @@ async function uploaderDocumentMembre(e) {
             'Description': 'Justificatif membre',
             'Auteur': currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : ''
         };
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ records: [{ fields }] })
@@ -624,7 +624,7 @@ async function supprimerDocumentMembre(id) {
     if (!confirm('Supprimer ce document ?')) return;
     if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, {
             method: 'DELETE',
             headers
         });
@@ -715,7 +715,7 @@ async function ouvrirAnnuaireMembres() {
     if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="carnet-empty">Chargement...</td></tr>';
     modal.style.display = 'flex';
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const records = (data.records || []).filter(r => r.fields && r.fields['Actif'] !== false);

@@ -4,9 +4,13 @@
 
 let currentUser = null;
 
-// Configuration API Airtable (globale pour tous les modules)
-const AIRTABLE_PAT = 'patbX51fRBLO4v35h.e116a6e20d699408c3a49d07137099bbaf3fe23e734767dea63fa5d890508fff';
+// Configuration API (globale pour tous les modules)
+// Migration VPS : remplacer API_BASE par l'URL du backend auto-heberge (ex. https://api.exemple.fr/v0/glide2000)
+// et API_TOKEN par le jeton defini cote serveur.
+const API_TOKEN = 'patbX51fRBLO4v35h.e116a6e20d699408c3a49d07137099bbaf3fe23e734767dea63fa5d890508fff';
+const AIRTABLE_PAT = API_TOKEN;
 const BASE_ID = 'appufjvD3gYG6H44n';
+const API_BASE = `${API_BASE}`;
 const TABLE_NOTIFICATIONS = 'Notifications';
 const headers = { 
     Authorization: `Bearer ${AIRTABLE_PAT}`,
@@ -88,7 +92,7 @@ async function chargerNotifications() {
     if (!list) return;
     try {
         const formula = `{Pilote}='${piloteNom.replace(/'/g, "\\'")}'`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NOTIFICATIONS)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=20`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_NOTIFICATIONS)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=20`;
         const res = await apiFetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
@@ -131,7 +135,7 @@ function afficherNotifications(records) {
 
 async function marquerNotificationLue(recordId) {
     try {
-        const res = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NOTIFICATIONS)}/${recordId}`, {
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_NOTIFICATIONS)}/${recordId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { Lue: true } })
@@ -156,7 +160,7 @@ async function creerNotification(piloteNom, message, type = 'info', lien = '') {
             }
         }]
     };
-    await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NOTIFICATIONS)}`, {
+    await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_NOTIFICATIONS)}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body)

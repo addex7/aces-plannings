@@ -1,0 +1,17 @@
+{
+  "name": "glide2000-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API compatible Airtable au-dessus de PostgreSQL pour Glide 2000",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "export": "node export-airtable.js",
+    "import": "node import-postgres.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  }
+}

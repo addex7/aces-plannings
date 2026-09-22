@@ -113,7 +113,7 @@ function formaterDateISO(date) {
 // --- FONCTION POUR METTRE À JOUR L'HORAMÈTRE ---
 async function mettreAJourHorametreAeronef(avionId, heuresAjoutees) {
     try {
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
             headers: headers
         });
         const avion = await response.json();
@@ -125,7 +125,7 @@ async function mettreAJourHorametreAeronef(avionId, heuresAjoutees) {
 
         const nouvelHorametre = parseFloat(avion.fields['Horamètre actuel']) + parseFloat(heuresAjoutees);
 
-        const updateResponse = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
+        const updateResponse = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
             method: 'PATCH',
             headers: headers,
             body: JSON.stringify({
@@ -149,7 +149,7 @@ async function ajouterAuCarnetDeRoute(avionId, piloteId, heuresVol) {
     try {
         const dateVol = dateAffichee.toISOString().split('T')[0];
 
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route')}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Carnet de route')}`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify({
@@ -178,10 +178,10 @@ async function mettreAJourStatutCreneauxConflit(dateJour, avionId) {
     const typeAttendu = immat === 'F-JVIO' ? 'VIULM' : (immat === 'F-GASB' ? 'VIA' : null);
     if (!typeAttendu) return;
     try {
-        const urlCreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateJour}'&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
+        const urlCreneaux = `${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateJour}'&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
         const resCreneaux = await cachedFetch(urlCreneaux, { headers });
         const dataCreneaux = await resCreneaux.json();
-        const urlResa = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateJour}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateJour}', FIND('${immat}', ARRAYJOIN({Machine},',')))`)}&pageSize=100`;
+        const urlResa = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateJour}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateJour}', FIND('${immat}', ARRAYJOIN({Machine},',')))`)}&pageSize=100`;
         const resResa = await cachedFetch(urlResa, { headers });
         const dataResa = await resResa.json();
         const reservations = dataResa.records || [];
@@ -208,7 +208,7 @@ async function mettreAJourStatutCreneauxConflit(dateJour, avionId) {
         });
         if (updates.length) {
             for (let i = 0; i < updates.length; i += 10) {
-                await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}`, {
+                await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
                     method: 'PATCH',
                     headers: headers,
                     body: JSON.stringify({ records: updates.slice(i, i + 10) })
@@ -368,7 +368,7 @@ async function sauvegarderReservation() {
     try {
         if (idReservationEnEdition) {
             // METTRE À JOUR UNE RÉSERVATION EXISTANTE
-            const updateResponse = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}/${idReservationEnEdition}`, {
+            const updateResponse = await cachedFetch(`${API_BASE}/${encodeURIComponent('Réservations')}/${idReservationEnEdition}`, {
                 method: 'PATCH',
                 headers: headers,
                 body: JSON.stringify({
@@ -392,7 +392,7 @@ async function sauvegarderReservation() {
 
         } else {
             // CRÉER UNE NOUVELLE RÉSERVATION
-            const reservationResponse = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}`, {
+            const reservationResponse = await cachedFetch(`${API_BASE}/${encodeURIComponent('Réservations')}`, {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify({
@@ -464,7 +464,7 @@ async function supprimerReservation() {
     if (!confirm("Es-tu sûr de vouloir supprimer cette réservation ?")) return;
 
     try {
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?records[]=${idReservationEnEdition}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Réservations')}?records[]=${idReservationEnEdition}`, {
             method: 'DELETE',
             headers: headers
         });
@@ -738,7 +738,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
     try {
         await chargerListeMembresCache();
         if (forceRefresh || listeAvionsCache.length === 0) {
-            const resAvions = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}`, { headers });
+            const resAvions = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers });
             const dataAvions = await resAvions.json();
             if (dataAvions.records) listeAvionsCache = dataAvions.records;
         }
@@ -748,9 +748,9 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         const avionIdJVIO = avionJVIO ? avionJVIO.id : null;
         const avionIdGASB = avionGASB ? avionGASB.id : null;
         let creneauxVIMotor = [];
-        const urlReservations = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')<='${debutJour}', DATETIME_FORMAT({Date de fin}, 'YYYY-MM-DD')>='${debutJour}')`)}`;
-        const urlVIPlaneur = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?filterByFormula=DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')='${debutJour}'`;
-        const urlVICreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${debutJour}'`;
+        const urlReservations = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')<='${debutJour}', DATETIME_FORMAT({Date de fin}, 'YYYY-MM-DD')>='${debutJour}')`)}`;
+        const urlVIPlaneur = `${API_BASE}/${encodeURIComponent('VI Planeur')}?filterByFormula=DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')='${debutJour}'`;
+        const urlVICreneaux = `${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${debutJour}'`;
 
         const [resReservations, resVIPlaneur, resVICreneaux] = await Promise.all([
             cachedFetch(urlReservations, { headers }, API_CACHE_TTL, forceRefresh),
@@ -832,8 +832,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             return nom && nom !== 'DISPONIBLE';
         });
         const formulaJour = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${debutJour}'`;
-        const urlCarnetPilotes = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Carnet de route Pilotes')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
-        const urlMaintenance = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
+        const urlCarnetPilotes = `${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
+        const urlMaintenance = `${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
         const [resCarnetPilotes, resMaintenance] = await Promise.all([
             cachedFetch(urlCarnetPilotes, { headers }, API_CACHE_TTL, forceRefresh),
             cachedFetch(urlMaintenance, { headers }, API_CACHE_TTL, forceRefresh)
@@ -1320,7 +1320,7 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
     }
     try {
         if (!listeMembresCache.length) {
-            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error?.message || 'Erreur');
             listeMembresCache = data.records || [];
@@ -1365,7 +1365,7 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
 async function chargerListeMembresCache(force = false) {
     if (!force && listeMembresCache.length) return;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         listeMembresCache = data.records || [];
@@ -1718,7 +1718,7 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
         fieldsPatch = { "Date de début": dateDebut.toISOString(), "Date de fin": dateFin.toISOString() };
     }
     try {
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(tableName)}`, {
             method: 'PATCH',
             headers: headers,
             body: JSON.stringify({ records: [{ id: reservationId, fields: fieldsPatch }] })
@@ -1787,7 +1787,7 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
         if (nouvelAvionId && nouvelAvionId !== avionId) fieldsPatch['Machine'] = [nouvelAvionId];
     }
     try {
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(tableName)}`, {
             method: 'PATCH',
             headers: headers,
             body: JSON.stringify({ records: [{ id: volId, fields: fieldsPatch }] })
@@ -1999,7 +1999,7 @@ function initGestionnaireModaleVIPlaneur() {
             if (!idVIModale || tableVIModale !== 'VI Planeur') return;
             if (!confirm("Es-tu sûr de vouloir supprimer ce VI Planeur ?")) return;
             try {
-                const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?records[]=${idVIModale}`, {
+                const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Planeur')}?records[]=${idVIModale}`, {
                     method: 'DELETE',
                     headers: headers
                 });
@@ -2065,7 +2065,7 @@ function initGestionnaireModaleVIPlaneur() {
                                 'Statut': statut
                             }
                         };
-                        await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+                        await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}`, {
                             method: 'PATCH',
                             headers: headers,
                             body: JSON.stringify({ records: [recordData] })
@@ -2102,12 +2102,12 @@ function initGestionnaireModaleVIPlaneur() {
                                 'Token': null
                             }
                         };
-                        await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+                        await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}`, {
                             method: 'POST',
                             headers: headers,
                             body: JSON.stringify({ fields: newRecord.fields })
                         });
-                        await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+                        await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}`, {
                             method: 'PATCH',
                             headers: headers,
                             body: JSON.stringify({ records: [oldRecord] })
@@ -2122,7 +2122,7 @@ function initGestionnaireModaleVIPlaneur() {
                         recordData.id = idVIModale;
                         methode = 'PATCH';
                     }
-                    await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`, {
+                    await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}`, {
                         method: methode,
                         headers: headers,
                         body: JSON.stringify({ records: [recordData] })
@@ -2428,7 +2428,7 @@ function initGestionnaireModale() {
                     const auteurNom = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
                     const recordData = { fields: { "Nom": passagerNom, "Pilote": piloteNom, "Auteur": auteurNom, "Téléphone": telephone, "Date de début": dateDebut, "Date de fin": dateFin, "Commentaire": commentaireVI } };
                     try {
-                        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}`, {
+                        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Planeur')}`, {
                             method: 'POST',
                             headers: headers,
                             body: JSON.stringify({ records: [recordData] })
@@ -2463,7 +2463,7 @@ function initGestionnaireModale() {
                         "Temps estimé": 1
                     }
                 };
-                let url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}`;
+                let url = `${API_BASE}/${encodeURIComponent('Réservations')}`;
                 let methode = idReservationEnEdition ? 'PATCH' : 'POST';
                 if (idReservationEnEdition) recordData.id = idReservationEnEdition;
                 try {
@@ -2512,7 +2512,7 @@ function initGestionnaireModale() {
                     "Temps estimé": tempsEstime
                 }
             };
-            let url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}`;
+            let url = `${API_BASE}/${encodeURIComponent('Réservations')}`;
             let methode = idReservationEnEdition ? 'PATCH' : 'POST';
             if (idReservationEnEdition) recordData.id = idReservationEnEdition;
             try {
@@ -2566,7 +2566,7 @@ function initGestionnaireModale() {
             const resaDate = resa && resa.fields && resa.fields['Date de début'] ? formaterDateISO(new Date(resa.fields['Date de début'])) : null;
             if (!confirm("Es-tu sûr de vouloir supprimer cette réservation ?")) return;
             try {
-                const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?records[]=${idReservationEnEdition}`, {
+                const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Réservations')}?records[]=${idReservationEnEdition}`, {
                     method: 'DELETE',
                     headers: headers
                 });
@@ -3006,14 +3006,14 @@ async function chargerVolsInitiation() {
     const container = document.getElementById('initiation-list');
     if (container) container.innerHTML = "<div class='loading'>Chargement des vols d'initiation...</div>";
     try {
-        const urlVIPlaneur = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Planeur')}?pageSize=100&sort[0][field]=${encodeURIComponent('Date de début')}&sort[0][direction]=asc`;
+        const urlVIPlaneur = `${API_BASE}/${encodeURIComponent('VI Planeur')}?pageSize=100&sort[0][field]=${encodeURIComponent('Date de début')}&sort[0][direction]=asc`;
         const resVI = await cachedFetch(urlVIPlaneur, { headers });
         const dataVI = await resVI.json();
         const typeFormula = `OR(FIND('VI Moteur', {Type de vol}), FIND("Vol d'Initiation", {Type de vol}), FIND("Vol d'Initiation (VI)", {Type de vol}))`;
-        const urlReservations = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(typeFormula)}&pageSize=100&sort[0][field]=${encodeURIComponent('Date de début')}&sort[0][direction]=asc`;
+        const urlReservations = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(typeFormula)}&pageSize=100&sort[0][field]=${encodeURIComponent('Date de début')}&sort[0][direction]=asc`;
         const resResa = await cachedFetch(urlReservations, { headers });
         const dataResa = await resResa.json();
-        const urlCreneaux = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}?pageSize=100&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
+        const urlCreneaux = `${API_BASE}/${encodeURIComponent('VI Créneaux')}?pageSize=100&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
         const resCreneaux = await cachedFetch(urlCreneaux, { headers });
         const dataCreneaux = await resCreneaux.json();
         listeVolsInitiationCache = [];
@@ -3087,7 +3087,7 @@ async function chargerVolsInitiation() {
             const dateMin = creneauxDates[0];
             const dateMax = creneauxDates[creneauxDates.length - 1];
             const formulaConflit = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateMax}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateMin}', OR(FIND('F-JVIO', ARRAYJOIN({Machine},',')), FIND('F-GASB', ARRAYJOIN({Machine},','))))`;
-            const urlConflit = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formulaConflit)}&pageSize=100`;
+            const urlConflit = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formulaConflit)}&pageSize=100`;
             try {
                 const resConflit = await cachedFetch(urlConflit, { headers });
                 const dataConflit = await resConflit.json();
@@ -3202,7 +3202,7 @@ async function supprimerVolInitiation(vol) {
         `<p><strong>${escapeHtml(detail || 'Vol d\'initiation')}</strong></p><p>Cette action est définitive.</p>`,
         async () => {
             try {
-                const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${vol.id}`, {
+                const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}/${vol.id}`, {
                     method: 'DELETE',
                     headers: headers
                 });
@@ -3225,7 +3225,7 @@ async function supprimerCreneauVI(vol) {
     const table = vol._table || 'VI Créneaux';
     if (!confirm('Es-tu sûr de vouloir supprimer ce créneau ?')) return;
     try {
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?records[]=${vol.id}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}?records[]=${vol.id}`, {
             method: 'DELETE',
             headers: headers
         });
@@ -3291,7 +3291,7 @@ async function reserverVolInitiation(id, source) {
     }
     const tableName = source === 'planeur' ? 'VI Planeur' : (source === 'creneau' ? 'VI Créneaux' : 'Réservations');
     try {
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(tableName)}`, {
             method: 'PATCH',
             headers: headers,
             body: JSON.stringify({ records: [{ id, fields: { "Pilote": nomPilote.trim() } }] })
@@ -3417,7 +3417,7 @@ async function creerCreneauxVI(e) {
     try {
         for (let i = 0; i < records.length; i += 10) {
             const batch = records.slice(i, i + 10);
-            const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('VI Créneaux')}`, {
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ records: batch })

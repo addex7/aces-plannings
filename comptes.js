@@ -70,7 +70,7 @@ function isTresorier() {
 
 async function chargerUtilisateursComptes() {
     if (utilisateursComptesCache.length) return;
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&pageSize%3D100`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&pageSize%3D100`;
     const res = await apiFetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Erreur lors du chargement des pilotes.');
@@ -141,7 +141,7 @@ function peuplerSelectPilotes(select) {
 async function fetchComptes(piloteNom) {
     if (!piloteNom) return [];
     const formula = `{Pilote}='${piloteNom.replace(/'/g, "\\'")}'`;
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=desc`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=desc`;
     const res = await apiFetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Impossible de lire les comptes.');
@@ -491,7 +491,7 @@ function trouverPiloteParNom(csvNom) {
 
 async function supprimerImportCSV(piloteNom) {
     const formula = `AND({Pilote}='${piloteNom.replace(/'/g, "\\'")}', {Source}='Import CSV')`;
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
     const res = await apiFetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Erreur suppression anciennes lignes.');
@@ -502,7 +502,7 @@ async function supprimerImportCSV(piloteNom) {
     for (let i = 0; i < ids.length; i += 10) {
         const batch = ids.slice(i, i + 10);
         const params = batch.map(id => `records[]=${encodeURIComponent(id)}`).join('&');
-        const del = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?${params}`, {
+        const del = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}?${params}`, {
             method: 'DELETE',
             headers
         });
@@ -513,7 +513,7 @@ async function supprimerImportCSV(piloteNom) {
 
 async function validerRecetteManuelle(piloteNom, montant, dateIso) {
     const formula = `AND({Pilote}='${piloteNom.replace(/'/g, "\\'")}', {Source}='Saisie pilote', {Crédit}=${montant}, DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${dateIso}')`;
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`;
     const res = await apiFetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Erreur validation recette.');
@@ -542,7 +542,7 @@ async function creerImportCSV(piloteNom, transactions) {
     }));
 
     for (let i = 0; i < records.length; i += 10) {
-        const res = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}`, {
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ records: records.slice(i, i + 10) })
@@ -585,7 +585,7 @@ async function enregistrerRecetteManuelle(e) {
     };
 
     try {
-        const res = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}`, {
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify(body)
@@ -606,7 +606,7 @@ async function enregistrerRecetteManuelle(e) {
 }
 
 async function supprimerRecetteManuelle(recordId, audit = true) {
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_COMPTES)}/${recordId}`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}/${recordId}`;
     let record = null;
     if (audit) {
         try {

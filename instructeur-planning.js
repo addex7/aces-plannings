@@ -129,7 +129,7 @@ async function chargerDisposInstructeurPlage(start, end) {
     const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
     const formula = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         console.log('[INSTRUCTEUR DISPOS] records:', data.records ? data.records.length : 0);
@@ -143,7 +143,7 @@ async function chargerReservationsInstructeurPlage(nom, start, end) {
     const prenom = (nom.split(' ')[0] || nom).replace(/'/g, "\\'");
     const formula = `AND(OR(SEARCH('${prenom}', {Instructeur}) > 0, SEARCH('${prenom}', {Pilote}) > 0), DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${endStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${startStr}')`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         const records = data.records || [];
@@ -167,7 +167,7 @@ async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, conserve
     const selEnd = (hFin + 1) * 60;
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         const records = (data.records || []).filter(r => {
@@ -186,7 +186,7 @@ async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, conserve
         for (let i = 0; i < ids.length; i += 10) {
             const batch = ids.slice(i, i + 10);
             const query = batch.map(id => `records[]=${encodeURIComponent(id)}`).join('&');
-            await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}?${query}`, { method: 'DELETE', headers });
+            await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?${query}`, { method: 'DELETE', headers });
         }
         if (conserverRestes) {
             const aConserver = [];
@@ -213,7 +213,7 @@ async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, conserve
                 });
                 for (let i = 0; i < newRecords.length; i += 10) {
                     const batch = newRecords.slice(i, i + 10);
-                    await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: batch }) });
+                    await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: batch }) });
                 }
             }
         }
@@ -235,7 +235,7 @@ async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo) {
     const fin = hFin < 23 ? `${String(hFin + 1).padStart(2, '0')}:00` : '23:59';
     const fields = { 'Date': dateStr, 'Heure début': debut, 'Heure fin': fin, 'Machine': '', 'Disponible': dispo, 'Instructeur': nom };
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] }) });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] }) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         if (typeof enregistrerAudit === 'function') await enregistrerAudit('Création disponibilité', nom, `Instructeur : ${nom} | Date : ${dateStr} | ${debut} - ${fin} | Disponible`, 'Instructeur');
@@ -419,7 +419,7 @@ async function basculerDisponibiliteHeure(dateStr, heure, estDisponible) {
     const dispo = !estDisponible;
     const fields = { 'Date': dateStr, 'Heure début': debut, 'Heure fin': fin, 'Machine': '', 'Disponible': dispo, 'Instructeur': nom };
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] }) });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] }) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         if (typeof enregistrerAudit === 'function') await enregistrerAudit('Bascule disponibilité', nom, `Instructeur : ${nom} | Date : ${dateStr} | ${debut} - ${fin} | ${dispo ? 'Disponible' : 'Indisponible'}`, 'Instructeur');

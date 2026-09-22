@@ -128,7 +128,7 @@ async function chargerInvitation(recordId) {
     const setup = document.getElementById('setup-overlay');
     const nameEl = document.getElementById('setup-name');
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
         const record = await res.json();
         if (!res.ok) throw new Error(record.error?.message || 'Erreur');
         if (!record || !record.id || record.fields['Actif']) {
@@ -170,7 +170,7 @@ async function chargerReset(recordId) {
     const btn = document.getElementById('btn-setup');
     const identifiantInput = document.getElementById('setup-identifiant');
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
         const record = await res.json();
         if (!res.ok) throw new Error(record.error?.message || 'Erreur');
         if (!record || !record.id) { setupError('Lien de réinitialisation invalide.'); return; }
@@ -212,7 +212,7 @@ async function seConnecter() {
     try {
         const champ = identifiant;
         const formula = `AND(OR({Identifiant}='${champ}', {Mail}='${champ}'), {Actif}=1)`;
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const record = (data.records || [])[0];
@@ -225,7 +225,7 @@ async function seConnecter() {
         // Migration : remplace un mot de passe stocké en clair par son empreinte
         if (stocke === motDePasse && stocke !== hashSaisi) {
             try {
-                await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${record.id}`, {
+                await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${record.id}`, {
                     method: 'PATCH',
                     headers,
                     body: JSON.stringify({ fields: { 'Mot de passe': hashSaisi } })
@@ -274,7 +274,7 @@ async function validerSetup() {
         fields['Actif'] = true;
     }
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields })
@@ -325,7 +325,7 @@ async function envoyerReset() {
     if (status) status.textContent = 'Recherche du compte...';
     try {
         const formula = `AND({Mail}='${email}', {Actif}=1)`;
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const record = (data.records || [])[0];
@@ -371,7 +371,7 @@ async function chargerUtilisateurs() {
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Chargement...</td></tr>';
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const records = data.records || [];
@@ -409,7 +409,7 @@ async function chargerUtilisateurs() {
 async function mettreAJourRolesMembre(recordId, checkboxes) {
     const roles = Array.from(checkboxes).map(cb => cb.dataset.role);
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields: { 'Rôles': roles } })
@@ -463,7 +463,7 @@ async function ajouterUtilisateur(event) {
     };
     console.log('POST Utilisateurs', fields);
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ fields })
@@ -493,7 +493,7 @@ async function lierVolsCarnetANouveauMembre(prenom, nom) {
     const prenomEsc = (prenom || '').replace(/"/g, '\\"');
     const nomEsc = (nom || '').replace(/"/g, '\\"');
     const formula = `AND({Pilote} != '', OR(FIND(UPPER("${prenomEsc}"), UPPER({Pilote})) > 0, FIND(UPPER("${nomEsc}"), UPPER({Pilote})) > 0))`;
-    const baseUrl = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+    const baseUrl = `${API_BASE}/${encodeURIComponent(table)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
     const records = [];
     let offset = '';
     try {
@@ -518,7 +518,7 @@ async function lierVolsCarnetANouveauMembre(prenom, nom) {
         return pilotNorm && pilotNorm.length <= maxLongueur && pilotNorm.includes(pNorm) && pilotNorm.includes(nNorm);
     });
     if (!matches.length) return;
-    const patchBase = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}`;
+    const patchBase = `${API_BASE}/${encodeURIComponent(table)}`;
     await Promise.all(matches.map(r => cachedFetch(`${patchBase}/${r.id}`, {
         method: 'PATCH',
         headers,
@@ -616,7 +616,7 @@ async function sauvegarderMembre(event) {
     if (dateNaissance) fields['Date de naissance'] = dateNaissance;
     fields['Autorisation parentale'] = age !== null && age < 18;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ fields })
@@ -649,7 +649,7 @@ async function supprimerMembreDepuisListe(recordId, nomComplet = '') {
     if (!recordId) return;
     if (!confirm(nomComplet ? `Confirmer la suppression de ${nomComplet} ?` : 'Confirmer la suppression de ce membre ?')) return;
     try {
-        const res = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { method: 'DELETE', headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { method: 'DELETE', headers });
         if (!res.ok) {
             const data = await res.json();
             throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);

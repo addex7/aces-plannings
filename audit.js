@@ -39,7 +39,7 @@ async function enregistrerAudit(action, cible = '', details = '', module = '') {
         }]
     };
     try {
-        const res = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_AUDIT)}`, {
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_AUDIT)}`, {
             method: 'POST',
             headers,
             body: JSON.stringify(body)
@@ -61,7 +61,7 @@ async function chargerAudit(force = false) {
     const tbody = document.getElementById('audit-body');
     if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Chargement...</td></tr>';
     try {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_AUDIT)}?sort[0][field]=${FIELDS_AUDIT.DATE}&sort[0][direction]=desc&pageSize=100`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_AUDIT)}?sort[0][field]=${FIELDS_AUDIT.DATE}&sort[0][direction]=desc&pageSize=100`;
         const res = await cachedFetch(url, { headers }, 30000, force);
         const data = await res.json();
         if (!res.ok) {

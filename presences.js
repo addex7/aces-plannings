@@ -53,7 +53,7 @@ async function modifierCommentaire(recordId, tableName, commentaireActuel, nom =
     const nouveauCommentaire = prompt("Ajouter un commentaire :", commentaireActuel || "");
     if (nouveauCommentaire === null) return;
     try {
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}/${recordId}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(tableName)}/${recordId}`, {
             method: 'PATCH',
             headers: headers,
             body: JSON.stringify({ fields: { "Commentaire": nouveauCommentaire.trim() } })
@@ -81,7 +81,7 @@ async function chargerPresencesClub() {
     listSalle.innerHTML = "";
     const dateIsoStr = dateAffichee.toISOString().split('T')[0];
     try {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
+        const url = `${API_BASE}/${encodeURIComponent('Présences Club')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
         const response = await cachedFetch(url, { headers });
         const data = await response.json();
         if (data.records) {
@@ -107,7 +107,7 @@ async function sinscrireClub(lieu) {
     try {
         const dateStr = dateAffichee.toISOString().split('T')[0];
         const payload = { records: [{ fields: { "Nom du pilote": nomPilote.trim(), "Lieu": lieu, "Date": dateStr } }] };
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Club')}`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(payload)
@@ -131,7 +131,7 @@ async function sinscrireClub(lieu) {
 
 async function desinscrireClub(recordId) {
     try {
-        const recRes = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}/${recordId}`, { headers });
+        const recRes = await apiFetch(`${API_BASE}/${encodeURIComponent('Présences Club')}/${recordId}`, { headers });
         const rec = recRes.ok ? await recRes.json() : null;
         const nomInscrit = (rec && rec.fields && rec.fields['Nom du pilote']) || '';
         const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
@@ -143,7 +143,7 @@ async function desinscrireClub(recordId) {
             return;
         }
         if (!confirm("Voulez-vous supprimer cette inscription ?")) return;
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Club')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Club')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
         if (response.ok) {
             if (typeof enregistrerAudit === 'function' && rec) {
                 const pilote = rec.fields?.['Nom du pilote'] || '';
@@ -167,7 +167,7 @@ async function chargerPresencesPlaneur() {
     listInst.innerHTML = ""; listElev.innerHTML = ""; listPilo.innerHTML = "";
     const dateIsoStr = dateAffichee.toISOString().split('T')[0];
     try {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
+        const url = `${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
         const response = await cachedFetch(url, { headers });
         const data = await response.json();
         if (data.records) {
@@ -202,7 +202,7 @@ async function sinscrirePlaneur(role) {
     try {
         const dateStr = dateAffichee.toISOString().split('T')[0];
         const payload = { records: [{ fields: { "Nom du pilote": nomPilote.trim(), "Rôle": role, "Date": dateStr } }] };
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(payload)
@@ -226,7 +226,7 @@ async function sinscrirePlaneur(role) {
 
 async function desinscrirePlaneur(recordId) {
     try {
-        const recRes = await apiFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}/${recordId}`, { headers });
+        const recRes = await apiFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}/${recordId}`, { headers });
         const rec = recRes.ok ? await recRes.json() : null;
         const nomInscrit = (rec && rec.fields && rec.fields['Nom du pilote']) || '';
         const nomUtilisateur = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
@@ -238,7 +238,7 @@ async function desinscrirePlaneur(recordId) {
             return;
         }
         if (!confirm("Voulez-vous supprimer cette inscription ?")) return;
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Présences Planeur')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
         if (response.ok) {
             if (typeof enregistrerAudit === 'function' && rec) {
                 const pilote = rec.fields?.['Nom du pilote'] || '';
@@ -314,7 +314,7 @@ async function inscrireAutreMembre() {
             const tableName = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'planeur' ? 'VI Planeur' : 'VI Créneaux');
             const fields = vol.source === 'moteur' ? { 'Pilote': [membre.id] } : { 'Pilote': nomPilote };
             if (vol.source === 'creneau') fields['Statut'] = 'Réservé';
-            const patchRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
+            const patchRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(tableName)}`, {
                 method: 'PATCH',
                 headers: headers,
                 body: JSON.stringify({ records: [{ id: vol.id, fields }] })
@@ -332,7 +332,7 @@ async function inscrireAutreMembre() {
     if (table === 'Événements') {
         try {
             const recordId = valeur;
-            const getRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
+            const getRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
             const record = await getRes.json();
             if (!getRes.ok) throw new Error(record.error ? record.error.message : 'Erreur Airtable');
 
@@ -340,7 +340,7 @@ async function inscrireAutreMembre() {
             if (inscrits.some(i => i.nom === nomPilote)) { alert(`${nomPilote} est déjà inscrit.`); return; }
             inscrits.push({ nom: nomPilote, commentaire: '' });
 
-            const patchRes = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
+            const patchRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
                 method: 'PATCH',
                 headers: headers,
                 body: JSON.stringify({ records: [{ id: recordId, fields: { 'Inscrits': formatInscrits(inscrits) } }] })
@@ -363,7 +363,7 @@ async function inscrireAutreMembre() {
         : { 'Nom du pilote': nomPilote, 'Rôle': valeur, 'Date': dateStr };
     try {
         const payload = { records: [{ fields: fields }] };
-        const response = await cachedFetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableName)}`, {
+        const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(tableName)}`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(payload)
