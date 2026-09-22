@@ -2349,6 +2349,19 @@ function initGestionnaireModale() {
             appliquerEtatFormulaire();
         });
     }
+    const debutInput = document.getElementById('form-debut');
+    const finInput = document.getElementById('form-fin');
+    if (debutInput && finInput) {
+        debutInput.addEventListener('change', () => {
+            if (idReservationEnEdition) return;
+            const d = new Date(debutInput.value);
+            if (isNaN(d.getTime())) return;
+            const typesSel = typeof getTypeVolSelectionne === 'function' ? getTypeVolSelectionne() : [];
+            const dureeMin = typesSel.includes('VI Moteur') || typesSel.includes('VI Planeur') ? 45 : 120;
+            finInput.value = formaterDateHeureLocal(new Date(d.getTime() + dureeMin * 60000));
+            verifierAlertesReservation();
+        });
+    }
     const maintenanceCbInput = document.getElementById('form-maintenance');
     if (maintenanceCbInput) {
         maintenanceCbInput.addEventListener('change', () => {
