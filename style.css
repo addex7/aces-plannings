@@ -184,6 +184,11 @@ img, table, video, iframe, svg {
     margin: 0;
     font-size: 22px;
 }
+.header-sub {
+    margin: 2px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
 .planning-titre-groupe {
     display: flex;
     align-items: center;

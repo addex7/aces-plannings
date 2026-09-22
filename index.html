@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=160">
+    <link rel="stylesheet" href="style.css?v=161">
 </head>
 <body>
 
@@ -150,7 +150,10 @@
             <!-- ================= VUE ACCUEIL PILOTE ================= -->
             <section id="view-accueil-pilote" class="view-section" style="display: block;">
                 <div class="header">
-                    <h2>Accueil pilote</h2>
+                    <div>
+                        <h2>Accueil pilote</h2>
+                        <p id="accueil-pilote-sub" class="header-sub"></p>
+                    </div>
                 </div>
                 <div id="accueil-pilote-container" class="accueil-pilote-container">
                     <p class="carnet-empty">Chargement du tableau de bord...</p>
@@ -1266,7 +1269,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=89"></script>
-    <script src="version.js?v=20260922173754"></script>
+    <script src="version.js?v=20260922175428"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=103"></script>
     <script src="presences.js?v=96"></script>
@@ -1283,7 +1286,7 @@
     <script src="instructeur-planning.js?v=91"></script>
     <script src="messagerie.js?v=18"></script>
     <script src="membre-home.js?v=94"></script>
-    <script src="accueil-pilote.js?v=21"></script>
+    <script src="accueil-pilote.js?v=22"></script>
     <!-- Fenêtre Modale : Lecture d'un message -->
     <div id="message-read-modal" class="modal" style="display:none;">
         <div class="modal-content message-read-modal-content">
