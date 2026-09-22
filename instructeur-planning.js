@@ -44,10 +44,15 @@ async function peuplerSelectInstructeurSuivi() {
         const nomComplet = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
         if (nomComplet) instructeurs = [{ nomComplet }];
     }
-    let html = '';
-    instructeurs.forEach(u => {
-        html += `<option value="${u.nomComplet}" ${u.nomComplet === instructeurSelectionne ? 'selected' : ''}>${u.nomComplet}</option>`;
+    let html = '<optgroup label="Vue par activité">';
+    [['avion', '✈️ Avion'], ['ULM', '🛩️ ULM'], ['planeur', '🪂 Planeur']].forEach(([v, l]) => {
+        html += `<option value="__act:${v}" ${activiteSelectionnee === v ? 'selected' : ''}>${l} — tous les instructeurs</option>`;
     });
+    html += '</optgroup><optgroup label="Par instructeur">';
+    instructeurs.forEach(u => {
+        html += `<option value="${u.nomComplet}" ${!activiteSelectionnee && u.nomComplet === instructeurSelectionne ? 'selected' : ''}>${u.nomComplet}</option>`;
+    });
+    html += '</optgroup>';
     sel.innerHTML = html;
 }
 
@@ -106,21 +111,15 @@ function initPlanningInstructeur() {
 
     if (!sel.dataset.ready) {
         sel.addEventListener('change', () => {
-            instructeurSelectionne = sel.value;
+            if (sel.value.startsWith('__act:')) {
+                activiteSelectionnee = sel.value.slice(6);
+            } else {
+                activiteSelectionnee = '';
+                instructeurSelectionne = sel.value;
+            }
             chargerSuiviInstructeur();
         });
         sel.dataset.ready = '1';
-    }
-
-    const selAct = document.getElementById('select-activite-suivi');
-    if (selAct && !selAct.dataset.ready) {
-        selAct.addEventListener('change', () => {
-            activiteSelectionnee = selAct.value;
-            sel.disabled = !!activiteSelectionnee;
-            sel.style.opacity = activiteSelectionnee ? '0.5' : '';
-            chargerSuiviInstructeur();
-        });
-        selAct.dataset.ready = '1';
     }
 
     if (!window.__dragDispoInit) {
@@ -130,10 +129,13 @@ function initPlanningInstructeur() {
 
     peuplerSelectInstructeurSuivi().then(() => {
         if (!instructeurSelectionne && sel.options.length > 0) {
-            sel.value = sel.options[0].value;
-            instructeurSelectionne = sel.value;
+            const premierePers = Array.from(sel.options).find(o => !o.value.startsWith('__act:'));
+            if (premierePers) {
+                sel.value = premierePers.value;
+                instructeurSelectionne = sel.value;
+            }
         }
-        if (instructeurSelectionne) chargerSuiviInstructeur();
+        if (instructeurSelectionne || activiteSelectionnee) chargerSuiviInstructeur();
     });
 }
 

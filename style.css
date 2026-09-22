@@ -705,6 +705,15 @@ img, table, video, iframe, svg {
     color: #1e3d59;
     white-space: nowrap;
 }
+.presence-heures-btn {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+.presence-heures-btn:hover {
+    background: #bbf7d0;
+    outline: 1px dashed #166534;
+}
 /* --- POP-UP MODALE --- */
 .modal {
     display: none;

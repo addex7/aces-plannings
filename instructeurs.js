@@ -428,12 +428,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             const ligne = document.createElement('div');
             ligne.style.cssText = `position:relative; height:${100 / nbLignes}%; display:flex;` + (idx < nbLignes - 1 ? 'border-bottom:1px dashed #cbd5e1; box-sizing:border-box;' : '');
 
-            if (disc) {
-                const lab = document.createElement('div');
-                lab.className = 'dispo-discipline-label';
-                lab.textContent = disc === 'avion' ? 'Avion' : 'ULM';
-                ligne.appendChild(lab);
-            }
+
 
             const discLow = disc.toLowerCase();
             const dispoParHeure = new Array(24).fill('red');
@@ -550,6 +545,25 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
 
         appliquerEchelleGrid(gridBg, hMin, hMax);
         contentWrapper.appendChild(gridBg);
+        if (nbLignes > 1 || lignes[0]) {
+            const labelStack = document.createElement('div');
+            labelStack.style.cssText = 'position:absolute; left:0; top:0; height:100%; z-index:6; display:flex; flex-direction:column; pointer-events:none;';
+            lignes.forEach(disc => {
+                const cell = document.createElement('div');
+                cell.style.cssText = `height:${100 / nbLignes}%; display:flex; align-items:center;`;
+                if (disc) {
+                    const lab = document.createElement('div');
+                    lab.className = 'dispo-discipline-label';
+                    lab.style.position = 'static';
+                    lab.style.transform = 'none';
+                    lab.style.marginLeft = '2px';
+                    lab.textContent = disc === 'avion' ? 'Avion' : 'ULM';
+                    cell.appendChild(lab);
+                }
+                labelStack.appendChild(cell);
+            });
+            contentWrapper.appendChild(labelStack);
+        }
         rowDiv.appendChild(contentWrapper);
         rowsContainer.appendChild(rowDiv);
     });

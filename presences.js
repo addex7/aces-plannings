@@ -318,6 +318,30 @@ async function assurerRecordPresencePlaneur(nom) {
     return post.ok && created.records && created.records[0] ? created.records[0].id : null;
 }
 
+async function modifierHeuresInstructeurPlaneur(recordId, nom) {
+    if (!peutModifierCommentaire(nom)) {
+        alert("Seul l'instructeur concerné peut modifier ses horaires.");
+        return;
+    }
+    const saisie = prompt("Tes horaires de dispo planeur (ex : 13-15, 13h30-15h, Max 17h, à partir de 14h) :", '');
+    if (saisie === null) return;
+    if (!saisie.trim()) return;
+    if (!parseDureesCommentaire(saisie)) {
+        alert("Je n'ai pas reconnu d'horaires.\nExemples : 13-15, 13h30-15h, Max 17h, à partir de 14h");
+        return;
+    }
+    try {
+        const dateStr = dateAffichee.toISOString().split('T')[0];
+        if (!recordId) recordId = await assurerRecordPresencePlaneur(nom);
+        await synchroniserDisposPlaneur(nom, dateStr, saisie);
+        await chargerPresencesPlaneur();
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+    } catch (err) {
+        console.error(err);
+        alert(`Erreur : ${err.message}`);
+    }
+}
+
 async function modifierCommentaireInstructeurPlaneur(recordId, commentaireActuel, nom) {
     if (!peutModifierCommentaire(nom)) {
         alert("Tu ne peux modifier que ton propre commentaire.");
@@ -389,11 +413,14 @@ function creerLigneInstructeurPlaneur(nom, commentaire, briefing, recordId, inte
     const commentaireEscaped = (commentaire || '').replace(/"/g, '&quot;');
     const briefingEscaped = (briefing || '').replace(/"/g, '&quot;');
     const rid = recordId || '';
-    const heures = (intervalles && intervalles.length)
-        ? `<span class="presence-heures">${intervalles.map(iv => `${minutesVersHeure(iv[0])}–${minutesVersHeure(iv[1])}`).join(', ')}</span>`
-        : '';
     const briefingTxt = briefing ? `Briefing à ${briefing.replace(':', 'h')}` : '';
     const modifiable = peutModifierCommentaire(nom);
+    const heuresLabel = (intervalles && intervalles.length)
+        ? intervalles.map(iv => `${minutesVersHeure(iv[0])}–${minutesVersHeure(iv[1])}`).join(', ')
+        : '+ horaires';
+    const heures = modifiable
+        ? `<button class="presence-heures presence-heures-btn" onclick="modifierHeuresInstructeurPlaneur('${rid}', '${nomEscaped}')" title="Modifier mes horaires de dispo">${heuresLabel}</button>`
+        : ((intervalles && intervalles.length) ? `<span class="presence-heures">${heuresLabel}</span>` : '');
     const btnCommentaire = modifiable
         ? `<button class="btn-comment" onclick="modifierCommentaireInstructeurPlaneur('${rid}', '${commentaireEscaped}', '${nomEscaped}')" title="Ajouter/Modifier un commentaire">💬</button>`
         : '';
