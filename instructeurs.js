@@ -334,13 +334,10 @@ async function chargerDisponibilitesInstructeurs(dateCible, forceRefresh = false
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
     const url = `${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
     try {
-        console.log('[DISPOS] URL:', url);
         const res = await cachedFetch(url, { headers }, API_CACHE_TTL, forceRefresh);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur API');
         disposInstructeursCache = data.records || [];
-        console.log('[DISPOS] records count:', disposInstructeursCache.length, 'for', dateStr);
-        if (disposInstructeursCache.length) console.log('[DISPOS] first record:', disposInstructeursCache[0].fields);
     } catch (err) {
         console.error('[DISPOS] error:', err);
         disposInstructeursCache = [];
@@ -353,7 +350,6 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
     if (!listeInstructeursCache.length) return;
     const dispos = disposFournis || disposInstructeursCache;
     const reservations = reservationsFournis || [];
-    console.log('[DISPOS] afficherLignes - liste:', listeInstructeursCache.map(u => u.nomComplet), 'dispos:', dispos.length, 'resas:', reservations.length);
     const instructeurs = [...new Set(listeInstructeursCache.map(u => u.nomComplet))].sort();
     const s = soleil || { aubeAero: 0, leverSoleil: 0, coucherSoleil: 24, crepusculeAero: 24 };
     const aubeAeroPercent = (Math.max(0, s.aubeAero) / 24) * 100;
@@ -432,7 +428,6 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             block.appendChild(overlay);
             block.addEventListener('click', (e) => {
                 e.stopPropagation();
-                console.log('[INSTRUCTEUR CELL CLICK]', nom, h, typeof window.ouvrirModaleNouvelleReservation);
                 if (typeof window.ouvrirModaleNouvelleReservation === 'function') {
                     window.ouvrirModaleNouvelleReservation({ type: 'Instruction', instructeur: nom, heureDebut: h });
                 }
