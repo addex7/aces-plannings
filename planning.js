@@ -2542,14 +2542,20 @@ function initGestionnaireModale() {
             const isVI = isVIPlaneur || isVIMoteur;
             const instructeur = document.getElementById('form-instructeur') ? document.getElementById('form-instructeur').value.trim() : '';
             let machineNom = 'Tous';
+            let typeMachineSel = '';
             if (isVIMoteur || !isVI) {
                 const selectedMachine = getMachineSelectionnee();
                 const avion = (listeAvionsCache || []).find(a => a.id === selectedMachine);
                 machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || selectedMachine || 'Tous';
+                typeMachineSel = (avion && avion.fields && avion.fields['Type'] || '').toString().trim().toLowerCase();
+            } else if (isVIPlaneur) {
+                typeMachineSel = 'planeur';
             }
             if (instructeur && typeof verifierConflitDisponibiliteInstructeur === 'function') {
-                const conflit = await verifierConflitDisponibiliteInstructeur(instructeur, localDebut, localFin, machineNom);
-                if (conflit && !confirm("L'instructeur n'est pas disponible sur ce créneau. Voulez-vous quand même réserver ?")) return;
+                const conflit = await verifierConflitDisponibiliteInstructeur(instructeur, localDebut, localFin, machineNom, typeMachineSel);
+                const libelleDisc = typeMachineSel === 'avion' ? 'en avion' : typeMachineSel === 'ulm' ? 'en ULM' : typeMachineSel === 'planeur' ? 'en planeur' : '';
+                const msg = `L'instructeur n'est pas disponible${libelleDisc ? ' ' + libelleDisc : ''} sur ce créneau. Voulez-vous quand même réserver ?`;
+                if (conflit && !confirm(msg)) return;
             }
             if (isVI) {
                 if (!passagerNom) {

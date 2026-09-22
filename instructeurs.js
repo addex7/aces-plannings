@@ -662,7 +662,7 @@ async function peuplerInstructeursSelect() {
     sel.innerHTML = html;
 }
 
-async function verifierConflitDisponibiliteInstructeur(nom, dateDebut, dateFin, machine) {
+async function verifierConflitDisponibiliteInstructeur(nom, dateDebut, dateFin, machine, disciplineHint) {
     if (!nom) return false;
     const jours = new Set();
     const d = new Date(dateDebut);
@@ -671,6 +671,25 @@ async function verifierConflitDisponibiliteInstructeur(nom, dateDebut, dateFin, 
         jours.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
         d.setDate(d.getDate() + 1);
     }
+
+    let discipline = (disciplineHint || '').toString().trim().toLowerCase();
+    if (!discipline && machine) {
+        const aeronef = (typeof listeAvionsCache !== 'undefined' ? listeAvionsCache : []).find(a =>
+            a && a.fields && (a.fields['Immatriculation'] || '').toString().trim().toUpperCase() === machine.toString().trim().toUpperCase());
+        discipline = (aeronef && aeronef.fields && aeronef.fields['Type'] || '').toString().trim().toLowerCase();
+    }
+
+    const machineCorrespond = (val) => {
+        const v = (val || '').toString().trim();
+        const low = v.toLowerCase();
+        if (!v || low === 'tous') return true;
+        if (v === machine) return true;
+        if (['avion', 'ulm', 'planeur'].includes(low)) {
+            return discipline ? low === discipline : true;
+        }
+        return false;
+    };
+
     const prenom = nom.split(' ')[0] || nom;
     const dates = Array.from(jours).map(j => `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${j}'`);
     const formula = `AND(SEARCH('${prenom.replace(/'/g, "\\'")}', {Instructeur}) > 0, OR(${dates.join(',')}))`;
@@ -687,8 +706,7 @@ async function verifierConflitDisponibiliteInstructeur(nom, dateDebut, dateFin, 
                 if (!correspondanceNom(f['Instructeur'], nom)) return false;
                 const d = (f['Date'] || '').toString().slice(0, 10);
                 if (d !== iso) return false;
-                const m = (f['Machine'] || '').toString().trim();
-                if (m !== 'Tous' && m !== machine) return false;
+                if (!machineCorrespond(f['Machine'])) return false;
                 const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
                 const [hEnd, mEnd] = String(f['Heure fin'] || '00:00').split(':').map(Number);
                 const startMin = hStart * 60 + (mStart || 0);
