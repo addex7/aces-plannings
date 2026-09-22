@@ -62,9 +62,10 @@ function injecterControlesDateSuivi() {
         color: #ffffff;
         border: none;
         border-radius: 6px;
-        padding: 8px 16px;
+        padding: 0 14px;
+        height: 38px;
         font-family: inherit;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
         outline: none;
@@ -437,7 +438,10 @@ async function chargerSuiviAeronef() {
         if (machineActuelle) avionTarifId = machineActuelle.id;
         const btnOptions = document.getElementById('btn-aeronef-options');
         if (btnOptions) {
-            const visible = typeof currentUser !== 'undefined' && currentUser && currentUser.roles && (currentUser.roles.includes('Super admin') || currentUser.roles.includes('Trésorier'));
+            const roles = (typeof currentUser !== 'undefined' && currentUser && currentUser.roles) || [];
+            const visible = roles.includes('Super admin') || roles.includes('Super Admin')
+                || roles.includes('Trésorier') || roles.includes('Mécanicien') || roles.includes('Mecanicien')
+                || roles.some(r => (r || '').toString().toLowerCase().includes('instructeur'));
             btnOptions.style.display = visible ? '' : 'none';
         }
 
@@ -1219,9 +1223,8 @@ function initSuiviDocumentsAeronefs() {
     if (!document.getElementById('btn-documents-aeronef')) {
         const btn = document.createElement('button');
         btn.id = 'btn-documents-aeronef';
-        btn.className = 'btn-primary';
+        btn.className = 'btn-primary aeronef-ctl';
         btn.textContent = 'Suivi documentation machine';
-        btn.style.marginLeft = '8px';
         btn.addEventListener('click', ouvrirModaleDocumentsAeronef);
         btnMaintenance.parentNode.insertBefore(btn, btnMaintenance.nextSibling);
     }

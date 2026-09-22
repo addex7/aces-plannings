@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=172">
+    <link rel="stylesheet" href="style.css?v=173">
 </head>
 <body>
 
@@ -174,7 +174,6 @@
                             <button id="btn-next" class="btn-nav" title="Jour suivant">▶</button>
                         </div>
                         <button id="btn-add-reservation" class="btn-primary">+ Nouvelle Réservation</button>
-                        <button id="btn-creer-evenement" class="btn-primary">+ Créer un évènement</button>
                         <button id="btn-toggle-vi-planeur" class="btn-toggle" title="Afficher/Masquer les VI Planeur">VI Planeur</button>
                     </div>
                 </header>
@@ -252,6 +251,9 @@
                                     <button class="btn-inscription btn-inscription-autre" style="display:none;" onclick="ouvrirInscrireAutre('Présences Club', 'Salle Ernest Meyer')">+ Inscrire autre</button>
                                 </div>
                             </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button id="btn-creer-evenement" class="btn-primary">+ Créer un évènement</button>
                         </div>
                     </section>
 
@@ -334,8 +336,8 @@
                         <select id="select-machine-suivi">
                             <!-- Populé dynamiquement -->
                         </select>
-                        <button id="btn-aeronef-options" class="btn-primary" style="display: none; padding: 8px 14px; border-radius: 6px; font-size: 13px;">⚙️ Options</button>
-                        <button id="btn-maintenance" class="btn-primary" style="padding: 8px 14px; border-radius: 6px; font-size: 13px;">🔧 Maintenance</button>
+                        <button id="btn-aeronef-options" class="btn-primary aeronef-ctl" style="display: none;">⚙️ Options</button>
+                        <button id="btn-maintenance" class="btn-primary aeronef-ctl">🔧 Maintenance</button>
                     </div>
                 </header>
 
@@ -1304,14 +1306,14 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=91"></script>
-    <script src="version.js?v=20260922202131"></script>
+    <script src="version.js?v=20260922203220"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=103"></script>
     <script src="presences.js?v=99"></script>
     <script src="planning.js?v=186"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=110"></script>
-    <script src="aeronefs.js?v=112"></script>
+    <script src="aeronefs.js?v=113"></script>
     <script src="carnet.js?v=144"></script>
     <script src="documents.js?v=85"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
