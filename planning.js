@@ -2056,10 +2056,20 @@ function verifierDatePassee() {
     majAlerteModale('alerte-date-passee', section, passee, '⚠️ La date de la réservation est dans le passé.', 'warning');
 }
 
+function verifierFinAvantDebut() {
+    const debut = document.getElementById('form-debut');
+    const fin = document.getElementById('form-fin');
+    if (!debut || !fin) return;
+    const section = fin.closest('.nr-section');
+    const invalide = !!debut.value && !!fin.value && new Date(fin.value) <= new Date(debut.value);
+    majAlerteModale('alerte-fin-avant-debut', section, invalide, '⛔ La fin du créneau doit être postérieure au début.', 'erreur');
+}
+
 function verifierAlertesReservation() {
     verifierTempsMoteur();
     verifierInstructeurObligatoire();
     verifierDatePassee();
+    verifierFinAvantDebut();
 }
 
 function getTypeVolSelectionne() {
@@ -2507,6 +2517,10 @@ function initGestionnaireModale() {
 
             const localDebut = new Date(document.getElementById('form-debut').value);
             const localFin = new Date(document.getElementById('form-fin').value);
+            if (isNaN(localDebut.getTime()) || isNaN(localFin.getTime()) || localFin <= localDebut) {
+                verifierFinAvantDebut();
+                return;
+            }
             const dateDebut = localDebut.toISOString();
             const dateFin = localFin.toISOString();
             const isVIPlaneur = typesVol.includes('VI Planeur');
