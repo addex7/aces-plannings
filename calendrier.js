@@ -138,6 +138,9 @@ async function chargerDonneesCalendrier(annee, mois) {
             const rEnd = new Date(f['Date de fin']);
             const pilote = f['Pilote'];
             const pilotes = Array.isArray(pilote) ? pilote : (pilote ? [pilote] : []);
+            const instructeur = f['Instructeur'];
+            const instructeurs = Array.isArray(instructeur) ? instructeur : (instructeur ? [instructeur] : []);
+            const participants = pilotes.concat(instructeurs);
             rStart.setHours(0, 0, 0, 0);
             rEnd.setHours(0, 0, 0, 0);
             for (let t = rStart.getTime(); t <= rEnd.getTime(); t += 86400000) {
@@ -146,7 +149,7 @@ async function chargerDonneesCalendrier(annee, mois) {
                 if (d < debutMois || d > finMois) continue;
                 const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
                 info.has = true;
-                const isUser = pilotes.some(p => {
+                const isUser = participants.some(p => {
                     if (userId && p === userId) return true;
                     const ps = (p || '').toString().trim();
                     return ps && (correspondanceNom(ps, userName) || correspondanceNom(ps, userFullName));
