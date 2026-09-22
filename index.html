@@ -255,7 +255,10 @@
                 <div class="club-evenements-row">
                     <!-- Module Présence Club -->
                     <section class="glider-presence-section">
-                        <h3>Présence Club</h3>
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <h3>Présence Club</h3>
+                            <button id="btn-creer-evenement" class="btn-primary">+ Créer un évènement</button>
+                        </div>
                         <div class="glider-presence-container">
                             <!-- Carte Atelier Alain Bernage -->
                             <div class="presence-card">
@@ -275,9 +278,6 @@
                                     <button class="btn-inscription btn-inscription-autre" style="display:none;" onclick="ouvrirInscrireAutre('Présences Club', 'Salle Ernest Meyer')">+ Inscrire autre</button>
                                 </div>
                             </div>
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <button id="btn-creer-evenement" class="btn-primary">+ Créer un évènement</button>
                         </div>
                     </section>
 
@@ -1330,7 +1330,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=91"></script>
-    <script src="version.js?v=20260922203605"></script>
+    <script src="version.js?v=20260922203912"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=104"></script>
     <script src="presences.js?v=99"></script>
