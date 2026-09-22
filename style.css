@@ -2476,6 +2476,16 @@ img, table, video, iframe, svg {
     height: 20px;
     display: block;
 }
+.app-version-watermark {
+    position: fixed;
+    bottom: 4px;
+    right: 8px;
+    font-size: 9px;
+    color: #94a3b8;
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 50;
+}
 .sidebar-icon-btn:active {
     transform: scale(0.95);
 }
