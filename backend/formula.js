@@ -78,13 +78,14 @@ function sqlLit(s) {
 }
 
 // Cast numerique protege (NULL si le contenu n'est pas un nombre)
+// ::text sur l'operande : FIND/strpos renvoient deja un entier, un regex direct planterait
 function sqlNum(expr) {
-    return `(CASE WHEN (${expr}) ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (${expr})::numeric END)`;
+    return `(CASE WHEN ((${expr})::text) ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (${expr})::numeric END)`;
 }
 
-// Cast timestamp protege (NULL si invalide)
+// Cast timestamp protege (NULL si invalide) ; ::text idem pour NOW()/DATETIME_PARSE
 function sqlTs(expr) {
-    return `(CASE WHEN (${expr}) ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN (${expr})::timestamptz END)`;
+    return `(CASE WHEN ((${expr})::text) ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN (${expr})::timestamptz END)`;
 }
 
 function sqlDate(expr) {
@@ -250,6 +251,11 @@ function fnSql(node) {
             return `to_char(${sqlTs(valeurSql(args[0]))} AT TIME ZONE '${TZ}', ${sqlLit(fmtPg)})`;
         }
         case 'DATETIME_PARSE': return sqlTs(args[0] ? valeurSql(args[0]) : 'NULL');
+        case 'DATEADD': {
+            const unite = args[2] && args[2].kind === 'str' ? args[2].value.toLowerCase().replace(/s$/, '') : 'day';
+            const u = ['day','hour','minute','second','week','month','year'].includes(unite) ? unite : 'day';
+            return `(${sqlTs(valeurSql(args[0]))} + (${valeurSql(args[1])})::numeric * INTERVAL '1 ${u}')`;
+        }
         case 'IS_BEFORE': return `(${sqlTs(valeurSql(args[0]))} < ${sqlTs(valeurSql(args[1]))})`;
         case 'IS_AFTER': return `(${sqlTs(valeurSql(args[0]))} > ${sqlTs(valeurSql(args[1]))})`;
         case 'IS_SAME': return `(${sqlDate(valeurSql(args[0]))} = ${sqlDate(valeurSql(args[1]))})`;
@@ -273,10 +279,17 @@ function fnSql(node) {
     }
 }
 
+// Verite "a la Airtable" : null/vide/false/0 -> faux, le reste -> vrai.
+// Couvre les fonctions numeriques (FIND, SEARCH, LEN) utilisees nues dans AND/OR.
+function sqlTruthy(expr) {
+    return `(CASE WHEN (${expr}) IS NULL THEN false WHEN ((${expr})::text) IN ('', 'false', 'FALSE', '0') THEN false ELSE true END)`;
+}
+
 // Un noeud utilise en contexte booleen
 function conditionSql(node) {
     if (node.kind === 'champ') return sqlBoolChamp(node.nom);
-    return valeurSql(node);
+    if (node.kind === 'bool') return node.value ? 'true' : 'false';
+    return sqlTruthy(valeurSql(node));
 }
 
 function formulaToSql(formula) {
