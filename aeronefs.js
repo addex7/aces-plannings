@@ -257,6 +257,56 @@ async function supprimerMaintenance() {
     }
 }
 
+// Persiste un acte de maintenance : enregistrement, recalcul de la butée
+// aéronef, audit et notification des réservations impactées.
+// Utilisable depuis la modale Aéronefs et depuis la modale réservation.
+async function persisterMaintenance({ maintenanceId, immat, avionId, dateTime, dateTimeFin, ancienneButee, nouvelleButee }) {
+    const duree = (dateTimeFin.getTime() - dateTime.getTime()) / 3600000;
+    const isoDate = dateTime.toISOString();
+    const fieldsObj = {
+        'Machine': immat,
+        'Date': isoDate,
+        'Ancienne butée': ancienneButee,
+        'Nouvelle Butée': nouvelleButee,
+        'durée': duree
+    };
+    const method = maintenanceId ? 'PATCH' : 'POST';
+    const url = maintenanceId
+        ? `${API_BASE}/${encodeURIComponent('Maintenance')}/${maintenanceId}`
+        : `${API_BASE}/${encodeURIComponent('Maintenance')}`;
+    const resMaint = await cachedFetch(url, { method, headers, body: JSON.stringify({ fields: fieldsObj }) });
+    if (!resMaint.ok) {
+        throw new Error(await resMaint.text());
+    }
+
+    const maintenancesRes = await cachedFetch(`${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(`{Machine}='${immat}'`)}`, { headers });
+    const maintenancesData = await maintenancesRes.json();
+    const maintenancesMachine = (maintenancesData.records || []).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
+    const derniereMaintenance = maintenancesMachine[maintenancesMachine.length - 1];
+    const nouvelleButeeAvion = derniereMaintenance ? parseFloat(String(derniereMaintenance.fields['Nouvelle Butée'] || '').replace(',', '.')) : nouvelleButee;
+
+    const resAvion = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+            fields: {
+                'Prochaine Butée': nouvelleButeeAvion
+            }
+        })
+    });
+    if (!resAvion.ok) {
+        throw new Error(await resAvion.text());
+    }
+
+    if (typeof enregistrerAudit === 'function') {
+        const action = maintenanceId ? 'Modification maintenance' : 'Création maintenance';
+        const dateStr = isoDate.slice(0,16).replace('T',' ');
+        enregistrerAudit(action, immat, `Date : ${dateStr} | Durée : ${duree}h | Butée : ${nouvelleButee}`, 'Maintenance');
+    }
+
+    await notifierReservationsSurMaintenance(immat, dateTime, duree);
+}
+
 async function enregistrerMaintenance(e) {
     e.preventDefault();
     const maintenanceId = document.getElementById('maintenance-id').value;
@@ -284,52 +334,8 @@ async function enregistrerMaintenance(e) {
         alert('La date de fin doit être postérieure à la date de début.');
         return;
     }
-    const duree = (dateTimeFin.getTime() - dateTime.getTime()) / 3600000;
-    const isoDate = dateTime.toISOString();
-
     try {
-        const fieldsObj = {
-            'Machine': immat,
-            'Date': isoDate,
-            'Ancienne butée': ancienneButee,
-            'Nouvelle Butée': nouvelleButee,
-            'durée': duree
-        };
-        const method = maintenanceId ? 'PATCH' : 'POST';
-        const url = maintenanceId
-            ? `${API_BASE}/${encodeURIComponent('Maintenance')}/${maintenanceId}`
-            : `${API_BASE}/${encodeURIComponent('Maintenance')}`;
-        const resMaint = await cachedFetch(url, { method, headers, body: JSON.stringify({ fields: fieldsObj }) });
-        if (!resMaint.ok) {
-            throw new Error(await resMaint.text());
-        }
-
-        const maintenancesRes = await cachedFetch(`${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(`{Machine}='${immat}'`)}`, { headers });
-        const maintenancesData = await maintenancesRes.json();
-        const maintenancesMachine = (maintenancesData.records || []).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
-        const derniereMaintenance = maintenancesMachine[maintenancesMachine.length - 1];
-        const nouvelleButeeAvion = derniereMaintenance ? parseFloat(String(derniereMaintenance.fields['Nouvelle Butée'] || '').replace(',', '.')) : nouvelleButee;
-
-        const resAvion = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}/${avionId}`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({
-                fields: {
-                    'Prochaine Butée': nouvelleButeeAvion
-                }
-            })
-        });
-        if (!resAvion.ok) {
-            throw new Error(await resAvion.text());
-        }
-
-        if (typeof enregistrerAudit === 'function') {
-            const action = maintenanceId ? 'Modification maintenance' : 'Création maintenance';
-            const dateStr = isoDate.slice(0,16).replace('T',' ');
-            await enregistrerAudit(action, immat, `Date : ${dateStr} | Durée : ${duree}h | Butée : ${nouvelleButee}`, 'Maintenance');
-        }
-
-        await notifierReservationsSurMaintenance(immat, dateTime, duree);
+        await persisterMaintenance({ maintenanceId, immat, avionId, dateTime, dateTimeFin, ancienneButee, nouvelleButee });
         fermerModaleMaintenance();
         chargerSuiviAeronef();
         if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, true, true);

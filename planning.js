@@ -1826,6 +1826,54 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
     }
 }
 
+function estMaintenancePlanningAutorisee() {
+    const roles = (typeof currentUser !== 'undefined' && currentUser ? currentUser.roles || [] : []);
+    return roles.some(r => ['Super admin', 'Mécanicien', 'Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'].includes(r));
+}
+
+async function enregistrerMaintenanceDepuisPlanning() {
+    const machineId = getMachineSelectionnee();
+    if (!machineId) {
+        alert('Veuillez sélectionner un aéronef.');
+        return;
+    }
+    const avion = (listeAvionsCache || []).find(a => a.id === machineId);
+    const immat = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || '';
+    if (!immat) {
+        alert('Aéronef invalide.');
+        return;
+    }
+    const dateTime = new Date(document.getElementById('form-debut').value);
+    const dateTimeFin = new Date(document.getElementById('form-fin').value);
+    if (isNaN(dateTime.getTime()) || isNaN(dateTimeFin.getTime()) || dateTimeFin <= dateTime) {
+        alert('La date de fin doit être postérieure à la date de début.');
+        return;
+    }
+    const ancienneButee = parseFloat(String(document.getElementById('form-ancienne-butee').value).replace(',', '.')) || 0;
+    const changerButee = document.getElementById('form-changer-butee').checked;
+    const nouvelleButee = changerButee
+        ? parseFloat(String(document.getElementById('form-nouvelle-butee').value).replace(',', '.'))
+        : ancienneButee;
+    if (changerButee && isNaN(nouvelleButee)) {
+        alert('Renseigne la nouvelle butée.');
+        return;
+    }
+    try {
+        await persisterMaintenance({ maintenanceId: null, immat, avionId: machineId, dateTime, dateTimeFin, ancienneButee, nouvelleButee });
+        const modalResa = document.getElementById('reservation-modal');
+        if (modalResa) modalResa.style.display = 'none';
+        if (formReservation) formReservation.reset();
+        await chargerDonneesPlanning(true);
+        const viewAeronefs = document.getElementById('view-aeronefs');
+        if (viewAeronefs && viewAeronefs.style.display !== 'none' && typeof chargerSuiviAeronef === 'function') {
+            chargerSuiviAeronef();
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Erreur lors de l'enregistrement de la maintenance.");
+    }
+}
+
 function appliquerEtatFormulaire() {
     const inputPilote = document.getElementById('form-pilote');
     const inputEstimation = document.getElementById('form-estimation');
@@ -1836,6 +1884,41 @@ function appliquerEtatFormulaire() {
     const groupTelephone = document.getElementById('group-telephone');
     const labelPilote = document.getElementById('label-pilote');
     const labelCommentaires = document.getElementById('label-commentaires');
+
+    // Mode maintenance : bandeau reserve aux instructeurs / mecanicien / super admin
+    const maintenanceCb = document.getElementById('form-maintenance');
+    const maintenanceMode = !!(maintenanceCb && maintenanceCb.checked);
+    const bannerMaintenance = document.getElementById('option-maintenance');
+    const enEditionResa = typeof idReservationEnEdition !== 'undefined' && !!idReservationEnEdition;
+    if (bannerMaintenance) {
+        bannerMaintenance.style.display = (estMaintenancePlanningAutorisee() && !enEditionResa) ? 'flex' : 'none';
+    }
+    const groupMaintenance = document.getElementById('group-maintenance');
+    if (maintenanceMode) {
+        if (groupMaintenance) groupMaintenance.style.display = 'block';
+        if (groupMachine) groupMachine.style.display = 'block';
+        if (groupEstimation) groupEstimation.style.display = 'none';
+        if (groupPassager) groupPassager.style.display = 'none';
+        if (groupTelephone) groupTelephone.style.display = 'none';
+        if (groupCommentaires) groupCommentaires.style.display = 'none';
+        const grpInst = document.getElementById('group-instructeur');
+        if (grpInst) grpInst.style.display = 'none';
+        const grpPilote = document.getElementById('group-pilote');
+        if (grpPilote) grpPilote.style.display = 'none';
+        if (inputPilote) inputPilote.required = false;
+        if (inputEstimation) inputEstimation.required = false;
+        const machineIdM = getMachineSelectionnee();
+        const avionM = (listeAvionsCache || []).find(a => a.id === machineIdM);
+        const ancienneInput = document.getElementById('form-ancienne-butee');
+        if (avionM && avionM.fields && ancienneInput) {
+            ancienneInput.value = parseFloat(String(avionM.fields['Prochaine Butée'] || '').replace(',', '.')) || 0;
+        }
+        const changerCb = document.getElementById('form-changer-butee');
+        const grpNouvelle = document.getElementById('group-nouvelle-butee');
+        if (grpNouvelle) grpNouvelle.style.display = (changerCb && changerCb.checked) ? 'block' : 'none';
+        return;
+    }
+    if (groupMaintenance) groupMaintenance.style.display = 'none';
 
     const typeSelectionne = getTypeVolSelectionne();
     const isVIPlaneur = typeSelectionne.includes('VI Planeur');
@@ -2165,6 +2248,7 @@ function populerMachinesCases(avions) {
             if (e.target.checked) {
                 document.querySelectorAll('input[name="form-machine"]').forEach(cb => { if (cb !== e.target) cb.checked = false; });
             }
+            appliquerEtatFormulaire();
         });
         const icon = document.createElement('span');
         icon.className = 'nr-icon';
@@ -2223,6 +2307,8 @@ function initGestionnaireModale() {
                 appliquerEtatFormulaire();
                 return;
             }
+            const cbMaint = document.getElementById('form-maintenance');
+            if (cbMaint) cbMaint.checked = false;
             if (value === 'VI Planeur' || value === 'VI Moteur') {
                 document.querySelectorAll('input[name="form-type-vol"]').forEach(cb => { if (cb !== e.target) cb.checked = false; });
             } else {
@@ -2251,6 +2337,27 @@ function initGestionnaireModale() {
                 document.querySelectorAll('input[name="form-machine"]').forEach(cb => { if (cb !== e.target) cb.checked = false; });
             }
             appliquerEtatFormulaire();
+        });
+    }
+    const maintenanceCbInput = document.getElementById('form-maintenance');
+    if (maintenanceCbInput) {
+        maintenanceCbInput.addEventListener('change', () => {
+            if (maintenanceCbInput.checked) {
+                document.querySelectorAll('input[name="form-type-vol"]').forEach(cb => { cb.checked = false; });
+            }
+            appliquerEtatFormulaire();
+        });
+    }
+    const changerButeeCb = document.getElementById('form-changer-butee');
+    if (changerButeeCb) {
+        changerButeeCb.addEventListener('change', () => {
+            const g = document.getElementById('group-nouvelle-butee');
+            if (g) g.style.display = changerButeeCb.checked ? 'block' : 'none';
+            if (changerButeeCb.checked) {
+                const a = parseFloat(String(document.getElementById('form-ancienne-butee').value).replace(',', '.')) || 0;
+                const n = document.getElementById('form-nouvelle-butee');
+                if (n && !n.value) n.value = a + 50;
+            }
         });
     }
     const instructeurSelect = document.getElementById('form-instructeur');
@@ -2341,6 +2448,11 @@ function initGestionnaireModale() {
     if (formReservation) {
         formReservation.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const cbMaintSubmit = document.getElementById('form-maintenance');
+            if (cbMaintSubmit && cbMaintSubmit.checked) {
+                await enregistrerMaintenanceDepuisPlanning();
+                return;
+            }
             const typesVol = getTypeVolSelectionne();
             const besoinInstructeur = typesVol.includes('Instruction') && !typesVol.includes('VI Moteur') && !typesVol.includes('VI Planeur');
             const selInstructeur = document.getElementById('form-instructeur');

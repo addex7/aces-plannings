@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=158">
+    <link rel="stylesheet" href="style.css?v=159">
 </head>
 <body>
 
@@ -767,6 +767,10 @@
                         <label class="nr-option"><input type="checkbox" name="form-type-vol" value="VI Planeur"><span class="nr-check"></span><span class="nr-icon">🛩️</span><span class="nr-label">VI Planeur</span></label>
                         <label class="nr-option"><input type="checkbox" name="form-type-vol" value="Remorquage"><span class="nr-check"></span><span class="nr-icon">🪝</span><span class="nr-label">Remorquage</span></label>
                     </div>
+                    <label class="nr-maintenance-banner" id="option-maintenance" style="display:none;">
+                        <input type="checkbox" id="form-maintenance" name="form-maintenance" value="1">
+                        <span class="nr-icon">🔧</span><span class="nr-label">Maintenance</span>
+                    </label>
                 </div>
                 <div id="group-machine" class="nr-section">
                     <div class="nr-section-title">AÉRONEF</div>
@@ -806,6 +810,18 @@
                         <button type="button" onclick="document.getElementById('form-estimation').stepUp()">+</button>
                     </div>
                     <div class="nr-hint">Heures décimales autorisées (ex : 1,5)</div>
+                </div>
+                <div id="group-maintenance" class="nr-section" style="display:none;">
+                    <div class="nr-section-title">ANCIENNE BUTÉE</div>
+                    <input type="number" id="form-ancienne-butee" class="nr-input" step="0.01" min="0" readonly>
+                    <label class="checkbox-option" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="form-changer-butee">
+                        <span>Changer la butée</span>
+                    </label>
+                    <div id="group-nouvelle-butee" style="display:none; margin-top:10px;">
+                        <div class="nr-section-title">NOUVELLE BUTÉE</div>
+                        <input type="number" id="form-nouvelle-butee" class="nr-input" step="0.01" min="0">
+                    </div>
                 </div>
                 <div id="group-passager" class="nr-section" style="display:none">
                     <div class="nr-section-title">NOM DU PASSAGER</div>
@@ -1261,14 +1277,14 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=89"></script>
-    <script src="version.js?v=20260922170940"></script>
+    <script src="version.js?v=20260922172730"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=103"></script>
     <script src="presences.js?v=96"></script>
-    <script src="planning.js?v=180"></script>
+    <script src="planning.js?v=181"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=110"></script>
-    <script src="aeronefs.js?v=108"></script>
+    <script src="aeronefs.js?v=109"></script>
     <script src="carnet.js?v=144"></script>
     <script src="documents.js?v=85"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
