@@ -1037,7 +1037,6 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             barresDiv.classList.add('reservation-avec-instructeur');
                             const trigramme = trouverTrigrammeInstructeur(instructeurNom);
                             if (trigramme) libelleEntete += ` — ${trigramme}`;
-                            libelleEntete += ' (Instruction)';
                         }
                         if (isVIMoteur || isAncienVI) {
                             if (!piloteNom || piloteNom.trim() === "") {

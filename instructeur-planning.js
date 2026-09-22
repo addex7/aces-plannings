@@ -489,7 +489,6 @@ function ajouterBarresJour(reservationsJour, dateJour, conteneur, filtreNom, bar
             barresDiv.classList.add('reservation-avec-instructeur');
             const trigramme = trouverTrigrammeInstructeur(instructeurNom);
             if (trigramme) libelleEntete += ` — ${trigramme}`;
-            libelleEntete += ' (Instruction)';
         }
         if (isVIMoteur || isAncienVI) {
             if (!piloteNom || piloteNom.trim() === '') {
