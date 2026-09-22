@@ -17,6 +17,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const nodemailer = require('nodemailer');
 const { formulaToSql } = require('./formula');
 
 const PORT = process.env.PORT || 3000;
@@ -62,6 +63,73 @@ app.use((req, res, next) => {
     const auth = req.headers.authorization || '';
     if (auth !== `Bearer ${API_TOKEN}`) return erreur(res, 401, 'Non autorise');
     next();
+});
+
+// --- ENVOI D'EMAILS VIA LE SERVEUR (SMTP) ---
+// Configure via SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / MAIL_FROM / MAIL_FROM_NAME.
+// Le corps du mail est fixe cote serveur : l'endpoint n'est pas un relais libre.
+const SMTP = {
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    fromName: process.env.MAIL_FROM_NAME || 'ACES'
+};
+
+app.post('/v0/send-email', async (req, res) => {
+    if (!SMTP.host || !SMTP.user || !SMTP.pass) {
+        return erreur(res, 501, 'Envoi de mail non configure cote serveur (variables SMTP_*)');
+    }
+    const { to, prenom, url, type } = req.body || {};
+    if (!to || typeof to !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+        return erreur(res, 400, 'Destinataire invalide');
+    }
+    if (!url || typeof url !== 'string' || !/^https:\/\//.test(url) || url.length > 500) {
+        return erreur(res, 400, 'URL invalide');
+    }
+    const prenomSafe = String(prenom || '').slice(0, 80).replace(/[<>&"']/g, '');
+    const estReset = type === 'reset';
+    const sujet = estReset
+        ? 'ACES - Reinitialisation de votre mot de passe'
+        : 'Invitation ACES - Creation de votre compte';
+    const ligne = estReset
+        ? 'Une demande de reinitialisation de mot de passe a ete faite pour ton compte.'
+        : 'Tu es invite(e) a rejoindre la plateforme ACES.';
+    const action = estReset
+        ? 'Definis ton nouveau mot de passe ici :'
+        : 'Cree ton identifiant et mot de passe ici :';
+    const texte = `Bonjour ${prenomSafe},\n\n${ligne}\n${action}\n${url}\n\nA bientot.\nAeroclub ACES`;
+    const html = `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+            <div style="background:#1e3d59;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Aeroclub ACES</div>
+            <div style="padding:24px;">
+                <p>Bonjour ${prenomSafe},</p>
+                <p>${ligne}</p>
+                <p>${action}</p>
+                <p style="text-align:center;margin:28px 0;">
+                    <a href="${url}" style="background:#1e3d59;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;">Acceder au site</a>
+                </p>
+                <p style="font-size:12px;color:#64748b;word-break:break-all;">Si le bouton ne fonctionne pas : <a href="${url}">${url}</a></p>
+                <p style="margin-top:24px;">A bientot.</p>
+            </div>
+        </div>`;
+    try {
+        const transport = nodemailer.createTransport({
+            host: SMTP.host,
+            port: SMTP.port,
+            secure: SMTP.port === 465,
+            auth: { user: SMTP.user, pass: SMTP.pass }
+        });
+        await transport.sendMail({
+            from: `"${SMTP.fromName}" <${SMTP.from}>`,
+            to, subject: sujet, text: texte, html
+        });
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('Erreur envoi email:', e);
+        erreur(res, 502, 'Echec envoi email : ' + e.message);
+    }
 });
 
 function tableSql(req, res) {

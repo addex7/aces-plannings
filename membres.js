@@ -4,7 +4,22 @@ const EMAILJS_SERVICE_ID = 'service_mzemfef';
 const EMAILJS_TEMPLATE_ID = 'template_1esjy9a';
 const EMAILJS_RESET_TEMPLATE_ID = ''; // ID du template EmailJS dédié au reset ; laisser vide pour utiliser le template d'invitation
 const EMAILJS_PUBLIC_KEY = 'V_q5vuIMURlLXAaVC';
-const PUBLIC_URL = 'https://addex7.github.io/aces-plannings/index.html';
+const PUBLIC_URL = 'https://vps-1a4fbee9.vps.ovh.net/index.html';
+
+// Tente l'envoi via le serveur (SMTP) ; retourne false si non configure/indisponible.
+async function envoyerEmailServeur(to, prenom, url, type) {
+    try {
+        const endpoint = new URL('/v0/send-email', API_BASE).href;
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ to, prenom, url, type })
+        });
+        return res.ok;
+    } catch (err) {
+        return false;
+    }
+}
 
 let idMembreEnEdition = null;
 
@@ -332,9 +347,13 @@ async function envoyerReset() {
         if (!record) { if (status) status.textContent = 'Aucun compte actif trouvé avec cet email.'; return; }
         const f = record.fields || {};
         const resetUrl = `${PUBLIC_URL}?reset=${record.id}`;
-        if (typeof emailjs !== 'undefined') {
+        if (status) status.textContent = 'Envoi de l\'email...';
+        const envoyeServeur = await envoyerEmailServeur(email, f['Prénom'] || '', resetUrl, 'reset');
+        if (envoyeServeur) {
+            if (status) status.textContent = 'Email envoyé. Vérifie ta boîte de réception.';
+            emailInput.value = '';
+        } else if (typeof emailjs !== 'undefined') {
             const templateId = EMAILJS_RESET_TEMPLATE_ID || EMAILJS_TEMPLATE_ID;
-            if (status) status.textContent = 'Envoi de l\'email...';
             emailjs.init(EMAILJS_PUBLIC_KEY);
             await emailjs.send(EMAILJS_SERVICE_ID, templateId, {
                 to_name: f['Prénom'] || '',
@@ -543,21 +562,28 @@ function afficherInvitation(record, email) {
             <div id="membre-email-status" style="margin-top:8px; font-weight:500;">Envoi automatique...</div>
         </div>
     `;
-    if (typeof emailjs !== 'undefined') {
-        emailjs.init(EMAILJS_PUBLIC_KEY);
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-            to_name: f['Prénom'] || '',
-            to_email: destEmail,
-            setup_url: setupUrl
-        }).then(() => {
-            const status = document.getElementById('membre-email-status');
-            if (status) status.textContent = 'Email envoyé avec succès.';
-        }).catch(err => {
-            console.error(err);
-            const status = document.getElementById('membre-email-status');
-            if (status) status.textContent = 'Erreur envoi : ' + (err.text || err.message || 'inconnu');
-        });
-    }
+    const setStatus = (txt) => {
+        const status = document.getElementById('membre-email-status');
+        if (status) status.textContent = txt;
+    };
+    envoyerEmailServeur(destEmail, f['Prénom'] || '', setupUrl, 'invitation').then(ok => {
+        if (ok) { setStatus('Email envoyé avec succès.'); return; }
+        if (typeof emailjs !== 'undefined') {
+            emailjs.init(EMAILJS_PUBLIC_KEY);
+            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+                to_name: f['Prénom'] || '',
+                to_email: destEmail,
+                setup_url: setupUrl
+            }).then(() => {
+                setStatus('Email envoyé avec succès.');
+            }).catch(err => {
+                console.error(err);
+                setStatus('Erreur envoi : ' + (err.text || err.message || 'inconnu'));
+            });
+        } else {
+            setStatus('Service email non disponible.');
+        }
+    });
 }
 
 function ouvrirModaleMembre(record) {
