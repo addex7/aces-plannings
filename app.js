@@ -5,12 +5,10 @@
 let currentUser = null;
 
 // Configuration API (globale pour tous les modules)
-// Migration VPS : remplacer API_BASE par l'URL du backend auto-heberge (ex. https://api.exemple.fr/v0/glide2000)
-// et API_TOKEN par le jeton defini cote serveur.
-const API_TOKEN = 'patbX51fRBLO4v35h.e116a6e20d699408c3a49d07137099bbaf3fe23e734767dea63fa5d890508fff';
+// Backend auto-heberge sur le VPS OVH (PostgreSQL + facade compatible Airtable)
+const API_TOKEN = '487b83e3d804b74ba432d76a5fe4fcb3a8fae00cd4714c0ec2582403b3b55efb';
 const AIRTABLE_PAT = API_TOKEN;
-const BASE_ID = 'appufjvD3gYG6H44n';
-const API_BASE = `https://api.airtable.com/v0/${BASE_ID}`;
+const API_BASE = 'https://vps-1a4fbee9.vps.ovh.net/v0/glide2000';
 const TABLE_NOTIFICATIONS = 'Notifications';
 const headers = { 
     Authorization: `Bearer ${AIRTABLE_PAT}`,
