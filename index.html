@@ -9,6 +9,30 @@
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
     <link rel="stylesheet" href="style.css?v=173">
+    <script>
+    (function () {
+        if (!location.hostname.endsWith('github.io')) return;
+        var url = 'https://vps-1a4fbee9.vps.ovh.net/';
+        document.addEventListener('DOMContentLoaded', function () {
+            document.body.innerHTML =
+                '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#14293e,#1e3d59);font-family:system-ui,-apple-system,sans-serif;">' +
+                '<div style="background:#fff;border-radius:16px;padding:48px 40px;max-width:420px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35);margin:20px;">' +
+                '<img src="logo-aces.png" alt="ACES" style="max-height:70px;margin-bottom:18px;">' +
+                '<h1 style="margin:0 0 10px;color:#1e3d59;font-size:22px;">Le planning a déménagé</h1>' +
+                '<p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 22px;">Cette adresse n\u2019est plus utilisée.<br>Le site est désormais hébergé sur le serveur du club.</p>' +
+                '<a href="' + url + '" style="display:inline-block;background:#1e3d59;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;">Accéder au planning ✈️</a>' +
+                '<p style="margin:18px 0 0;font-size:11px;color:#94a3b8;">Redirection automatique dans <span id="gh-cpt">5</span> s…</p>' +
+                '</div></div>';
+            var n = 5;
+            var el = document.getElementById('gh-cpt');
+            var t = setInterval(function () {
+                n--;
+                if (el) el.textContent = n;
+                if (n <= 0) { clearInterval(t); location.replace(url); }
+            }, 1000);
+        });
+    })();
+    </script>
 </head>
 <body>
 
@@ -1306,9 +1330,9 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=91"></script>
-    <script src="version.js?v=20260922203220"></script>
+    <script src="version.js?v=20260922203605"></script>
     <script src="app.js?v=89"></script>
-    <script src="utils.js?v=103"></script>
+    <script src="utils.js?v=104"></script>
     <script src="presences.js?v=99"></script>
     <script src="planning.js?v=186"></script>
     <script src="calendrier.js?v=90"></script>

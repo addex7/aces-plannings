@@ -19,9 +19,18 @@ function correspondanceNom(a, b) {
 
 // --- FORMATAGE DU NOM DU PILOTE (ex: Benjamin Q.) ---
 function formaterNomPilote(nomComplet) {
+    if (Array.isArray(nomComplet)) nomComplet = nomComplet[0] || '';
     if (!nomComplet) return '';
-    const chaine = nomComplet.trim();
+    let chaine = String(nomComplet).trim();
     if (!chaine) return '';
+
+    if (chaine.startsWith('rec') && typeof listeMembresCache !== 'undefined' && listeMembresCache.length) {
+        const membre = listeMembresCache.find(r => r.id === chaine);
+        if (membre && membre.fields) {
+            const resolu = `${membre.fields['Prénom'] || ''} ${membre.fields['Nom'] || ''}`.trim();
+            if (resolu) chaine = resolu;
+        }
+    }
 
     if (chaine.startsWith('🎯') || chaine.startsWith('VI')) {
         return chaine;
