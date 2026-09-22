@@ -105,7 +105,7 @@ app.get('/v0/:base/:table', async (req, res) => {
             if (!f) break;
             params.push(f);
             const dir = (req.query[`sort[${i}][direction]`] || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-            sorts.push(`(f->>$${params.length}) ${dir} NULLS LAST`);
+            sorts.push(`(f.fields->>$${params.length}) ${dir} NULLS LAST`);
         }
         if (sorts.length) orderBy = `ORDER BY ${sorts.join(', ')}`;
 

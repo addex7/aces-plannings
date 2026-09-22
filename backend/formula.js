@@ -66,11 +66,11 @@ function tokeniser(src) {
 }
 
 function sqlChamp(nom) {
-    return `f->>'${nom.replace(/'/g, "''")}'`;
+    return `f.fields->>'${nom.replace(/'/g, "''")}'`;
 }
 
 function sqlChampJsonb(nom) {
-    return `f->'${nom.replace(/'/g, "''")}'`;
+    return `f.fields->'${nom.replace(/'/g, "''")}'`;
 }
 
 function sqlLit(s) {
