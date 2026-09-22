@@ -10,7 +10,7 @@ let currentUser = null;
 const API_TOKEN = 'patbX51fRBLO4v35h.e116a6e20d699408c3a49d07137099bbaf3fe23e734767dea63fa5d890508fff';
 const AIRTABLE_PAT = API_TOKEN;
 const BASE_ID = 'appufjvD3gYG6H44n';
-const API_BASE = `${API_BASE}`;
+const API_BASE = `https://api.airtable.com/v0/${BASE_ID}`;
 const TABLE_NOTIFICATIONS = 'Notifications';
 const headers = { 
     Authorization: `Bearer ${AIRTABLE_PAT}`,
