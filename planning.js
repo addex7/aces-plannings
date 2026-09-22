@@ -1726,7 +1726,7 @@ async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, ta
             const resData = await response.json();
             const resaId = resData.records?.[0]?.id || reservationId || '';
             const resa = (listeReservationsCache || []).find(r => r.id === reservationId);
-            const pilote = Array.isArray(resa?.fields?.['Pilote']) ? resa.fields['Pilote'][0] : (resa?.fields?.['Pilote'] || '');
+            const pilote = nomUtilisateurDepuisId(resa?.fields?.['Pilote'], listeMembresCache);
             const machine = Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || tableName);
             const avion = (listeAvionsCache || []).find(a => a.id === machine);
             const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machine;
@@ -1795,7 +1795,7 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
             const resData = await response.json();
             const resaId = resData.records?.[0]?.id || volId || '';
             const resa = (listeReservationsCache || []).find(r => r.id === volId);
-            const pilote = Array.isArray(resa?.fields?.['Pilote']) ? resa.fields['Pilote'][0] : (resa?.fields?.['Pilote'] || '');
+            const pilote = nomUtilisateurDepuisId(resa?.fields?.['Pilote'], listeMembresCache);
             const machine = nouvelAvionId || (Array.isArray(resa?.fields?.['Machine']) ? resa.fields['Machine'][0] : (resa?.fields?.['Machine'] || avionId));
             const avion = (listeAvionsCache || []).find(a => a.id === machine);
             const machineNom = (avion && avion.fields && (avion.fields['Immatriculation'] || avion.fields['Nom'])) || machine;
@@ -2097,7 +2097,7 @@ function initGestionnaireModaleVIPlaneur() {
                 });
                 if (response.ok) {
                     if (typeof enregistrerAudit === 'function') {
-                        const pilote = volVIModale?.pilote || '';
+                        const pilote = nomUtilisateurDepuisId(volVIModale?.pilote, listeMembresCache) || '';
                         const dateVol = volVIModale?.debut ? volVIModale.debut.slice(0,16).replace('T',' ') : '';
                         const finVol = volVIModale?.fin ? volVIModale.fin.slice(0,16).replace('T',' ') : '';
                         await enregistrerAudit('Suppression VI Planeur', 'VI Planeur', `Pilote : ${pilote} | ${dateVol} - ${finVol}`, 'Initiation');
@@ -2223,7 +2223,7 @@ function initGestionnaireModaleVIPlaneur() {
                 if (typeof enregistrerAudit === 'function') {
                     const action = idVIModale ? 'Modification' : 'Création';
                     const typeCible = table === 'VI Créneaux' ? 'Créneau VI' : 'VI Planeur';
-                    await enregistrerAudit(`${action} ${typeCible}`, typeCible, `Pilote : ${pilote} | Passager : ${nomComplet} | ${dateDebut.slice(0,16).replace('T',' ')} - ${dateFin.slice(0,16).replace('T',' ')}`, 'Initiation');
+                    await enregistrerAudit(`${action} ${typeCible}`, typeCible, `Pilote : ${nomUtilisateurDepuisId(pilote, listeMembresCache) || pilote} | Passager : ${nomComplet} | ${dateDebut.slice(0,16).replace('T',' ')} - ${dateFin.slice(0,16).replace('T',' ')}`, 'Initiation');
                 }
                 modal.style.display = 'none';
                 form.reset();
@@ -2676,9 +2676,10 @@ function initGestionnaireModale() {
                     const resaOriginale = idReservationEnEdition ? (listeReservationsCache || []).find(r => r.id === idReservationEnEdition) : null;
                     const ancienDebut = resaOriginale?.fields?.['Date de début'] || '';
                     const ancienFin = resaOriginale?.fields?.['Date de fin'] || '';
+                    const piloteNomAudit = nomUtilisateurDepuisId(piloteNom, listeMembresCache) || piloteNom;
                     const details = idReservationEnEdition
-                        ? `Pilote : ${piloteNom} | Type : ${typesVol} | Ancien : ${ancienDebut.slice(0,16).replace('T',' ')} - ${ancienFin.slice(0,16).replace('T',' ')} → Nouveau : ${dateDebut.slice(0,16).replace('T',' ')} - ${dateFin.slice(0,16).replace('T',' ')}`
-                        : `Pilote : ${piloteNom} | Type : ${typesVol} | ${dateDebut.slice(0,16).replace('T',' ')} - ${dateFin.slice(0,16).replace('T',' ')}`;
+                        ? `Pilote : ${piloteNomAudit} | Type : ${typesVol} | Ancien : ${ancienDebut.slice(0,16).replace('T',' ')} - ${ancienFin.slice(0,16).replace('T',' ')} → Nouveau : ${dateDebut.slice(0,16).replace('T',' ')} - ${dateFin.slice(0,16).replace('T',' ')}`
+                        : `Pilote : ${piloteNomAudit} | Type : ${typesVol} | ${dateDebut.slice(0,16).replace('T',' ')} - ${dateFin.slice(0,16).replace('T',' ')}`;
                     if (typeof enregistrerAudit === 'function') {
                         console.log('Tentative log audit réservation', { piloteNom, machineNom, resaId, action });
                         await enregistrerAudit(action, machineNom, details, 'Planning');
@@ -2717,7 +2718,7 @@ function initGestionnaireModale() {
                     headers: headers
                 });
                 if (response.ok) {
-                    const resaPilote = Array.isArray(resa?.fields?.['Pilote']) ? resa.fields['Pilote'][0] : (resa?.fields?.['Pilote'] || '');
+                    const resaPilote = nomUtilisateurDepuisId(resa?.fields?.['Pilote'], listeMembresCache);
                     const resaDebut = resa?.fields?.['Date de début'] || '';
                     const resaFin = resa?.fields?.['Date de fin'] || '';
                     const avion = (listeAvionsCache || []).find(a => a.id === resaMachine);

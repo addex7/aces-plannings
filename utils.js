@@ -17,6 +17,28 @@ function correspondanceNom(a, b) {
     return na === nb || na.startsWith(nb) || nb.startsWith(na);
 }
 
+// --- RESOLUTION DES IDs AIRTABLE (rec...) DANS UN TEXTE ---
+function resoudreIdsTexte(texte) {
+    if (!texte) return texte;
+    return String(texte).replace(/\brec[A-Za-z0-9]{10,}\b/g, (id) => {
+        if (typeof listeMembresCache !== 'undefined' && listeMembresCache.length) {
+            const m = listeMembresCache.find(r => r.id === id);
+            if (m && m.fields) {
+                const nom = `${m.fields['Prénom'] || ''} ${m.fields['Nom'] || ''}`.trim();
+                if (nom) return nom;
+            }
+        }
+        if (typeof listeAvionsCache !== 'undefined' && listeAvionsCache.length) {
+            const a = listeAvionsCache.find(r => r.id === id);
+            if (a && a.fields) {
+                const immat = a.fields['Immatriculation'] || a.fields['Nom'];
+                if (immat) return immat;
+            }
+        }
+        return id;
+    });
+}
+
 // --- FORMATAGE DU NOM DU PILOTE (ex: Benjamin Q.) ---
 function formaterNomPilote(nomComplet) {
     if (Array.isArray(nomComplet)) nomComplet = nomComplet[0] || '';

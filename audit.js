@@ -90,7 +90,8 @@ function filtrerAudit() {
     const m = moduleFiltre ? moduleFiltre.value : '';
     const filtre = auditRecordsCache.filter(r => {
         const f = r.fields || {};
-        const texte = `${f[FIELDS_AUDIT.UTILISATEUR] || ''} ${f[FIELDS_AUDIT.ACTION] || ''} ${f[FIELDS_AUDIT.CIBLE] || ''} ${f[FIELDS_AUDIT.DETAILS] || ''}`.toLowerCase();
+        const resoudre = typeof resoudreIdsTexte === 'function' ? resoudreIdsTexte : (x) => x;
+        const texte = `${resoudre(f[FIELDS_AUDIT.UTILISATEUR] || '')} ${f[FIELDS_AUDIT.ACTION] || ''} ${resoudre(f[FIELDS_AUDIT.CIBLE] || '')} ${resoudre(f[FIELDS_AUDIT.DETAILS] || '')}`.toLowerCase();
         const matchTexte = !q || texte.includes(q);
         const matchModule = !m || (f[FIELDS_AUDIT.MODULE] || '') === m;
         return matchTexte && matchModule;
@@ -105,6 +106,7 @@ function afficherAudit(records) {
         tbody.innerHTML = '<tr><td colspan="5" class="carnet-empty">Aucune action enregistrée.</td></tr>';
         return;
     }
+    const resoudre = typeof resoudreIdsTexte === 'function' ? resoudreIdsTexte : (x) => x;
     tbody.innerHTML = records.map(r => {
         const f = r.fields || {};
         const d = f[FIELDS_AUDIT.DATE] ? new Date(f[FIELDS_AUDIT.DATE]) : null;
@@ -112,10 +114,10 @@ function afficherAudit(records) {
         return `
             <tr>
                 <td class="audit-date">${escHtml(dateHeure)}</td>
-                <td class="audit-user">${escHtml(f[FIELDS_AUDIT.UTILISATEUR] || '')}</td>
+                <td class="audit-user">${escHtml(resoudre(f[FIELDS_AUDIT.UTILISATEUR] || ''))}</td>
                 <td class="audit-action">${escHtml(f[FIELDS_AUDIT.ACTION] || '')}</td>
-                <td class="audit-target">${escHtml(f[FIELDS_AUDIT.CIBLE] || '')}</td>
-                <td class="audit-detail">${escHtml(f[FIELDS_AUDIT.DETAILS] || '')}</td>
+                <td class="audit-target">${escHtml(resoudre(f[FIELDS_AUDIT.CIBLE] || ''))}</td>
+                <td class="audit-detail">${escHtml(resoudre(f[FIELDS_AUDIT.DETAILS] || ''))}</td>
             </tr>
         `;
     }).join('');
