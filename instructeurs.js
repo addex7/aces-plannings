@@ -15,6 +15,14 @@ function correspondanceNom(a, b) {
     return na === nb || na.startsWith(nb) || nb.startsWith(na);
 }
 
+const DISCIPLINES_DISPO = ['avion', 'ulm', 'planeur'];
+function dispoConcerneDiscipline(mach, discLow) {
+    const m = (mach || '').toString().trim().toLowerCase();
+    if (!m || m === 'tous') return true;
+    if (!DISCIPLINES_DISPO.includes(m)) return true;
+    return m === (discLow || '').toLowerCase();
+}
+
 function trouverTrigrammeInstructeur(nom) {
     if (!nom) return '';
     const u = listeInstructeursCache.find(x => correspondanceNom(x.nomComplet, nom));
@@ -154,10 +162,13 @@ function ouvrirModaleDisponibilite() {
     const machineSel = document.getElementById('dispo-machine');
     if (machineSel) {
         let html = '<option value="Tous">Tous</option>';
+        html += '<optgroup label="Discipline"><option value="avion">Avion</option><option value="ULM">ULM</option><option value="planeur">Planeur</option></optgroup>';
+        html += '<optgroup label="Aéronefs">';
         (listeAvionsCache || []).forEach(a => {
             const nom = a.fields && (a.fields['Immatriculation'] || a.fields['Nom']);
             if (nom) html += `<option value="${nom}">${nom}</option>`;
         });
+        html += '</optgroup>';
         machineSel.innerHTML = html;
     }
     document.getElementById('dispo-disponible').checked = true;
@@ -182,10 +193,13 @@ function editerDisponibilite(record) {
     const machineSel = document.getElementById('dispo-machine');
     if (machineSel) {
         let html = '<option value="Tous">Tous</option>';
+        html += '<optgroup label="Discipline"><option value="avion">Avion</option><option value="ULM">ULM</option><option value="planeur">Planeur</option></optgroup>';
+        html += '<optgroup label="Aéronefs">';
         (listeAvionsCache || []).forEach(a => {
             const nom = a.fields && (a.fields['Immatriculation'] || a.fields['Nom']);
             if (nom) html += `<option value="${nom}">${nom}</option>`;
         });
+        html += '</optgroup>';
         machineSel.innerHTML = html;
         if (f['Machine'] && (f['Machine'] === 'Tous' || machineSel.querySelector(`option[value="${f['Machine']}"]`))) {
             machineSel.value = f['Machine'];
@@ -425,8 +439,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             const dispoParHeure = new Array(24).fill('red');
             disposPerso.forEach(d => {
                 const f = d.fields || {};
-                const mach = (f['Machine'] || '').toString().trim().toLowerCase();
-                if (mach && discLow && mach !== discLow) return;
+                if (discLow && !dispoConcerneDiscipline(f['Machine'], discLow)) return;
                 const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
                 const [hEnd, mEnd] = String(f['Heure fin'] || '00:00').split(':').map(Number);
                 const startMin = hStart * 60 + (mStart || 0);

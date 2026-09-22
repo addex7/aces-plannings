@@ -187,7 +187,7 @@ function intervallesDispoPlaneur(nom, dispos) {
         const iv = [hs * 60 + (ms || 0), (he * 60 + (me || 0)) || 1440];
         const mach = (f['Machine'] || '').toString().trim().toLowerCase();
         if (mach === 'planeur') specifiques.push(iv);
-        else if (!mach) generiques.push(iv);
+        else if (!mach || mach === 'tous' || !DISCIPLINES_DISPO.includes(mach)) generiques.push(iv);
     });
     const source = specifiques.length ? specifiques : generiques;
     source.sort((a, b) => a[0] - b[0]);
@@ -232,7 +232,7 @@ function parseDureesCommentaire(texte) {
 }
 
 async function supprimerDisposPlaneurJour(nom, dateStr, inclureGeneriquesSiPlaneurSeul = true) {
-    const formula = `AND({Instructeur}='${String(nom).replace(/'/g, "\\'")}', DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}')`;
+    const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
         const data = await res.json();
@@ -240,8 +240,11 @@ async function supprimerDisposPlaneurJour(nom, dateStr, inclureGeneriquesSiPlane
         const seulementPlaneur = (typeof disciplinesInstructeur === 'function')
             && disciplinesInstructeur(nom).every(d => d.toLowerCase() === 'planeur');
         const ids = (data.records || []).filter(r => {
-            const mach = ((r.fields || {})['Machine'] || '').toString().trim().toLowerCase();
-            return mach === 'planeur' || (!mach && inclureGeneriquesSiPlaneurSeul && seulementPlaneur);
+            const f = r.fields || {};
+            if (!correspondanceNom(f['Instructeur'], nom)) return false;
+            const mach = (f['Machine'] || '').toString().trim().toLowerCase();
+            const estGenerique = !mach || mach === 'tous' || !DISCIPLINES_DISPO.includes(mach);
+            return mach === 'planeur' || (estGenerique && inclureGeneriquesSiPlaneurSeul && seulementPlaneur);
         }).map(r => r.id);
         for (let i = 0; i < ids.length; i += 10) {
             const q = ids.slice(i, i + 10).map(id => `records[]=${encodeURIComponent(id)}`).join('&');
@@ -253,10 +256,11 @@ async function supprimerDisposPlaneurJour(nom, dateStr, inclureGeneriquesSiPlane
 async function synchroniserDisposPlaneur(nom, dateStr, commentaire) {
     if (!nom || !dateStr) return;
     try {
-        const formula = `AND({Instructeur}='${String(nom).replace(/'/g, "\\'")}', DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}')`;
+        const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
         const data = await res.json();
-        const existantes = (res.ok && data.records) || [];
+        const existantes = ((res.ok && data.records) || []).filter(r =>
+            correspondanceNom((r.fields || {})['Instructeur'], nom));
         let intervalles = parseDureesCommentaire(commentaire);
         if (intervalles && intervalles.length) {
             const planeurExistantes = existantes.filter(r => ((r.fields || {})['Machine'] || '').toString().trim().toLowerCase() === 'planeur');
@@ -273,7 +277,7 @@ async function synchroniserDisposPlaneur(nom, dateStr, commentaire) {
                 const f = r.fields || {};
                 const mach = (f['Machine'] || '').toString().trim().toLowerCase();
                 const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
-                return estDispo && (!mach || mach === 'planeur');
+                return estDispo && (!mach || mach === 'tous' || mach === 'planeur' || !DISCIPLINES_DISPO.includes(mach));
             });
             if (dejaCouvert) return;
             intervalles = [[8 * 60, 20 * 60]];
@@ -359,10 +363,18 @@ async function desinscrireInstructeurPlaneur(recordId, nom) {
     }
     if (!confirm(`Retirer ${nom} des instructeurs planeur du jour ?`)) return;
     try {
-        if (recordId) {
-            await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?records[]=${recordId}`, { method: 'DELETE', headers });
-        }
         const dateStr = dateAffichee.toISOString().split('T')[0];
+        const formula = `AND(IS_SAME({Date}, '${dateStr}', 'day'), {Rôle}='Instructeur')`;
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
+        const data = await res.json();
+        const ids = (data.records || [])
+            .filter(r => correspondanceNom((r.fields || {})['Nom du pilote'], nom))
+            .map(r => r.id);
+        if (recordId && !ids.includes(recordId)) ids.push(recordId);
+        for (let i = 0; i < ids.length; i += 10) {
+            const q = ids.slice(i, i + 10).map(id => `records[]=${encodeURIComponent(id)}`).join('&');
+            await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?${q}`, { method: 'DELETE', headers });
+        }
         await supprimerDisposPlaneurJour(nom, dateStr);
         disposInstructeursCache = [];
         await chargerPresencesPlaneur();
@@ -380,13 +392,14 @@ function creerLigneInstructeurPlaneur(nom, commentaire, briefing, recordId, inte
     const heures = (intervalles && intervalles.length)
         ? `<span class="presence-heures">${intervalles.map(iv => `${minutesVersHeure(iv[0])}–${minutesVersHeure(iv[1])}`).join(', ')}</span>`
         : '';
+    const briefingTxt = briefing ? `Briefing à ${briefing.replace(':', 'h')}` : '';
     const modifiable = peutModifierCommentaire(nom);
     const btnCommentaire = modifiable
         ? `<button class="btn-comment" onclick="modifierCommentaireInstructeurPlaneur('${rid}', '${commentaireEscaped}', '${nomEscaped}')" title="Ajouter/Modifier un commentaire">💬</button>`
         : '';
     const briefingHtml = modifiable
-        ? `<button class="btn-comment" onclick="definirBriefingPlaneur('${rid}', '${nomEscaped}', '${briefingEscaped}')" title="Définir l'heure de briefing planeur">${briefing ? `⏱ ${briefing}` : '⏱'}</button>`
-        : (briefing ? `<span class="presence-briefing">⏱ ${briefing}</span>` : '');
+        ? `<button class="btn-comment presence-briefing" onclick="definirBriefingPlaneur('${rid}', '${nomEscaped}', '${briefingEscaped}')" title="Définir l'heure de briefing planeur">${briefing ? `📣 ${briefingTxt}` : '📣 Briefing ?'}</button>`
+        : (briefing ? `<span class="presence-briefing">📣 ${briefingTxt}</span>` : '');
     const btnSupprimer = peutSupprimerPresence(nom)
         ? `<button class="btn-remove-presence" onclick="desinscrireInstructeurPlaneur('${rid}', '${nomEscaped}')">❌</button>`
         : '';
@@ -418,10 +431,13 @@ async function chargerPresencesPlaneur() {
             ? await chargerDisponibilitesInstructeurs(dateAffichee)
             : [];
         const nomsInscrits = [];
+        const nomsVus = { 'Instructeur': [], 'Élève': [], 'Pilote': [] };
         if (data.records) {
             data.records.forEach(rec => {
                 const nom = rec.fields['Nom du pilote'] || 'Anonyme';
                 const role = rec.fields['Rôle'];
+                if (nomsVus[role] && nomsVus[role].some(n => correspondanceNom(n, nom))) return;
+                if (nomsVus[role]) nomsVus[role].push(nom);
                 const commentaire = rec.fields['Commentaire'] || '';
                 const li = document.createElement('li');
                 if (role === 'Instructeur') {
@@ -452,6 +468,9 @@ async function chargerPresencesPlaneur() {
 }
 
 async function sinscrirePlaneur(role) {
+    if (sinscrirePlaneur.enCours) return;
+    sinscrirePlaneur.enCours = true;
+    try {
     const roles = (currentUser && currentUser.roles) || [];
     const roleRequis = { 'Instructeur': 'Instructeur planeur', 'Élève': 'Élève planeur', 'Pilote': 'Pilote planeur' }[role];
     const normaliserRole = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
@@ -488,6 +507,9 @@ async function sinscrirePlaneur(role) {
     } catch (error) {
         console.error(error);
         alert(`Erreur lors de l'inscription : ${error.message}`);
+    }
+    } finally {
+        sinscrirePlaneur.enCours = false;
     }
 }
 

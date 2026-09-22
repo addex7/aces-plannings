@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=169">
+    <link rel="stylesheet" href="style.css?v=170">
 </head>
 <body>
 
@@ -396,6 +396,12 @@
                             <button id="btn-instructeur-next" class="btn-nav" style="background:none; border:none; cursor:pointer; font-size:15px; color:#1e3d59;">▶</button>
                         </div>
                         <select id="select-instructeur-suivi" class="nr-select-instructeur" style="font-family: inherit; min-width: 220px; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #1e3d59; font-size: 14px; cursor: pointer;">
+                        </select>
+                        <select id="select-activite-suivi" style="font-family: inherit; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #1e3d59; font-size: 14px; cursor: pointer;">
+                            <option value="">Par instructeur</option>
+                            <option value="avion">✈️ Activité : Avion</option>
+                            <option value="ULM">🛩️ Activité : ULM</option>
+                            <option value="planeur">🪂 Activité : Planeur</option>
                         </select>
                     </div>
                 </header>
@@ -1267,10 +1273,10 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=91"></script>
-    <script src="version.js?v=20260922190905"></script>
+    <script src="version.js?v=20260922192951"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=103"></script>
-    <script src="presences.js?v=97"></script>
+    <script src="presences.js?v=98"></script>
     <script src="planning.js?v=183"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=110"></script>
@@ -1280,8 +1286,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=6"></script>
     <script src="membres.js?v=103"></script>
-    <script src="instructeurs.js?v=102"></script>
-    <script src="instructeur-planning.js?v=92"></script>
+    <script src="instructeurs.js?v=103"></script>
+    <script src="instructeur-planning.js?v=93"></script>
     <script src="messagerie.js?v=18"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>

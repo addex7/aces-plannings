@@ -6,11 +6,13 @@ const TABLE_RESERVATIONS = 'Réservations';
 
 let dateInstructeurSuivi = new Date();
 let instructeurSelectionne = '';
+let activiteSelectionnee = '';
 let dragDispo = null;
 
-function peutModifierDisposInstructeur() {
-    if (!instructeurSelectionne) return false;
-    return typeof estUtilisateurCourant === 'function' && estUtilisateurCourant(instructeurSelectionne);
+function peutModifierDisposInstructeur(nom) {
+    const cible = nom || instructeurSelectionne;
+    if (!cible) return false;
+    return typeof estUtilisateurCourant === 'function' && estUtilisateurCourant(cible);
 }
 
 function genererFriseHeuresInstructeur() {
@@ -108,6 +110,17 @@ function initPlanningInstructeur() {
             chargerSuiviInstructeur();
         });
         sel.dataset.ready = '1';
+    }
+
+    const selAct = document.getElementById('select-activite-suivi');
+    if (selAct && !selAct.dataset.ready) {
+        selAct.addEventListener('change', () => {
+            activiteSelectionnee = selAct.value;
+            sel.disabled = !!activiteSelectionnee;
+            sel.style.opacity = activiteSelectionnee ? '0.5' : '';
+            chargerSuiviInstructeur();
+        });
+        selAct.dataset.ready = '1';
     }
 
     if (!window.__dragDispoInit) {
@@ -226,11 +239,10 @@ async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, conserve
     } catch (err) { console.error('[SUPPRIMER DISPOS]', err); }
 }
 
-async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo, discipline = '') {
-    if (!instructeurSelectionne && typeof nomPiloteCourant === 'function') instructeurSelectionne = nomPiloteCourant();
-    if (!instructeurSelectionne) { alert('Aucun instructeur sélectionné.'); return; }
-    if (!peutModifierDisposInstructeur()) { alert("Seul l'instructeur concerné peut modifier ses disponibilités."); return; }
-    const nom = instructeurSelectionne;
+async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo, discipline = '', nomCible = '') {
+    const nom = nomCible || instructeurSelectionne || (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '');
+    if (!nom) { alert('Aucun instructeur sélectionné.'); return; }
+    if (typeof estUtilisateurCourant === 'function' && !estUtilisateurCourant(nom)) { alert("Seul l'instructeur concerné peut modifier ses disponibilités."); return; }
     await supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, !dispo, discipline);
     if (!dispo) {
         if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
@@ -263,7 +275,8 @@ function mettreAJourSurlignementDrag() {
     document.querySelectorAll('.grid-hour-block').forEach(el => {
         const h = parseInt(el.dataset.heure, 10);
         const discOk = !dragDispo.discipline || el.dataset.discipline === dragDispo.discipline;
-        const isIn = discOk && el.dataset.date === date && h >= hMin && h <= hMax;
+        const nomOk = !dragDispo.nom || el.dataset.nom === dragDispo.nom;
+        const isIn = discOk && nomOk && el.dataset.date === date && h >= hMin && h <= hMax;
         el.style.outline = isIn ? '2px solid #1e3d59' : '';
     });
 }
@@ -273,15 +286,17 @@ function finaliserDragDisponibilite() {
     const start = dragDispo.start;
     const end = dragDispo.end;
     const dispo = dragDispo.dispo;
+    const nomCible = dragDispo.nom || '';
     dragDispo = null;
     document.querySelectorAll('.grid-hour-block').forEach(el => { el.style.outline = ''; });
     if (start.dataset.date !== end.dataset.date) return;
     if (start.dataset.discipline !== end.dataset.discipline) return;
+    if ((start.dataset.nom || '') !== (end.dataset.nom || '')) return;
     const hStart = parseInt(start.dataset.heure, 10);
     const hEnd = parseInt(end.dataset.heure, 10);
     const hDebut = Math.min(hStart, hEnd);
     const hFin = Math.max(hStart, hEnd);
-    enregistrerPlageDisponibilite(start.dataset.date, hDebut, hFin, dispo, start.dataset.discipline || '');
+    enregistrerPlageDisponibilite(start.dataset.date, hDebut, hFin, dispo, start.dataset.discipline || '', nomCible);
 }
 
 function disciplinesInstructeur(nom) {
@@ -335,8 +350,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         const discLow = disc.toLowerCase();
         disposJour.forEach(d => {
             const f = d.fields || {};
-            const mach = (f['Machine'] || '').toString().trim().toLowerCase();
-            if (mach && mach !== discLow) return;
+            if (typeof dispoConcerneDiscipline === 'function' && !dispoConcerneDiscipline(f['Machine'], discLow)) return;
             const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
             const [hEnd, mEnd] = String(f['Heure fin'] || '00:00').split(':').map(Number);
             const startMin = hStart * 60 + (mStart || 0);
@@ -382,6 +396,11 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
 
     tdCell.appendChild(inner);
 
+    ajouterBarresJour(reservationsJour, dateJour, inner, nom, '8px', '30px');
+    tr.appendChild(tdCell);
+}
+
+function ajouterBarresJour(reservationsJour, dateJour, conteneur, filtreNom, barTop, barHeight) {
     const barresInfos = [];
     reservationsJour.forEach(r => {
         const f = r.fields || {};
@@ -390,6 +409,8 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         const piloteNom = (typeof nomUtilisateurDepuisId === 'function') ? nomUtilisateurDepuisId(f['Pilote'], listeMembresCache) : (f['Pilote'] || '');
         const instructeurNom = (typeof nomUtilisateurDepuisId === 'function') ? nomUtilisateurDepuisId(f['Instructeur'], listeMembresCache) : (f['Instructeur'] || '');
         const passagerNom = (f['Passager'] || f['Nom'] || '').toString().trim();
+        if (filtreNom && typeof correspondanceNom === 'function'
+            && !correspondanceNom(piloteNom, filtreNom) && !correspondanceNom(instructeurNom, filtreNom)) return;
         const debut = new Date(f['Date de début']);
         const fin = new Date(f['Date de fin']);
         if (isNaN(debut.getTime()) || isNaN(fin.getTime())) return;
@@ -439,18 +460,127 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         }
         barresDiv.style.left = `${positionHeure(heureDebut)}%`;
         barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
-        barresDiv.style.top = '8px';
-        barresDiv.style.height = '30px';
+        barresDiv.style.top = barTop;
+        barresDiv.style.height = barHeight;
         barresDiv.title = `${libelleEntete} — ${immat}`;
         barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
         barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
-        inner.appendChild(barresDiv);
+        conteneur.appendChild(barresDiv);
         barresInfos.push({ bar: barresDiv, debut: heureDebut, fin: heureFin });
     });
 
     afficherConflitsReservations(barresInfos);
+}
 
+function instructeursPourDiscipline(discipline) {
+    const roleMap = { avion: 'Instructeur avion', ulm: 'Instructeur ULM', planeur: 'Instructeur planeur' };
+    const role = roleMap[(discipline || '').toLowerCase()];
+    if (!role) return [];
+    return (typeof listeInstructeursCache !== 'undefined' ? listeInstructeursCache : [])
+        .filter(u => (u.roles || []).includes(role))
+        .sort((a, b) => (a.nomComplet || '').localeCompare(b.nomComplet || ''));
+}
+
+function rendreLigneActivite(tr, dateJour, disposJour, reservationsJour, discipline) {
+    const dateStr = `${dateJour.getFullYear()}-${String(dateJour.getMonth() + 1).padStart(2, '0')}-${String(dateJour.getDate()).padStart(2, '0')}`;
+    const tdDate = document.createElement('td');
+    tdDate.style.cssText = 'padding: 12px 10px; font-weight: bold; color: #1e3d59; vertical-align: middle;';
+    tdDate.textContent = dateJour.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    tr.appendChild(tdDate);
+
+    const instructeurs = instructeursPourDiscipline(discipline);
+    const nbLignes = Math.max(1, instructeurs.length);
+    const tdCell = document.createElement('td');
+    tdCell.style.cssText = `padding: 4px; height: ${Math.max(46, nbLignes * 20)}px; vertical-align: middle;`;
+
+    const inner = document.createElement('div');
+    inner.style.cssText = 'display: block; position: relative; height: 100%; width: 100%;';
+    ajouterFondNuit(inner, dateJour);
+
+    const stack = document.createElement('div');
+    stack.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; z-index:2;';
+
+    const discLow = (discipline || '').toLowerCase();
+    if (!instructeurs.length) {
+        const ligne = document.createElement('div');
+        ligne.style.cssText = 'position:relative; height:100%; display:flex; align-items:center; color:#94a3b8; font-size:11px; padding-left:8px;';
+        ligne.textContent = 'Aucun instructeur pour cette activité';
+        stack.appendChild(ligne);
+    }
+    instructeurs.forEach((u, idx) => {
+        const nom = u.nomComplet;
+        const ligne = document.createElement('div');
+        ligne.style.cssText = `position:relative; height:${100 / nbLignes}%; display:flex; overflow:hidden;` + (idx < nbLignes - 1 ? 'border-bottom:1px dashed #cbd5e1; box-sizing:border-box;' : '');
+
+        const lab = document.createElement('div');
+        lab.className = 'dispo-discipline-label';
+        lab.textContent = u.trigramme || (u.prenom || nom);
+        ligne.appendChild(lab);
+
+        const blocks = new Array(24).fill('red');
+        disposJour.forEach(d => {
+            const f = d.fields || {};
+            if (typeof correspondanceNom === 'function' && !correspondanceNom(f['Instructeur'], nom)) return;
+            if (typeof dispoConcerneDiscipline === 'function' && !dispoConcerneDiscipline(f['Machine'], discLow)) return;
+            const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
+            const [hEnd, mEnd] = String(f['Heure fin'] || '00:00').split(':').map(Number);
+            const startMin = hStart * 60 + (mStart || 0);
+            const endMin = (hEnd * 60 + (mEnd || 0)) || 1440;
+            const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
+            for (let m = 0; m < 1440; m += 60) {
+                const h = m / 60;
+                if (m < startMin || m + 60 > endMin) continue;
+                blocks[h] = estDispo ? 'green' : 'red';
+            }
+        });
+
+        const peutModifier = peutModifierDisposInstructeur(nom);
+        for (let h = 0; h < 24; h++) {
+            const d = document.createElement('div');
+            d.className = 'grid-hour-block';
+            d.style.flex = LARGEURS_HEURES[h];
+            d.style.cursor = peutModifier ? 'pointer' : 'default';
+            d.style.userSelect = 'none';
+            d.dataset.date = dateStr;
+            d.dataset.heure = h;
+            d.dataset.dispo = blocks[h];
+            d.dataset.discipline = discipline;
+            d.dataset.nom = nom;
+            if (peutModifier) {
+                d.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    dragDispo = { start: d, end: d, actif: true, dispo: d.dataset.dispo !== 'green', discipline, nom };
+                    mettreAJourSurlignementDrag();
+                });
+                d.addEventListener('mouseenter', () => {
+                    if (!dragDispo || !dragDispo.actif) return;
+                    dragDispo.end = d;
+                    mettreAJourSurlignementDrag();
+                });
+            }
+            const overlay = document.createElement('div');
+            overlay.className = `dispo-hour-overlay dispo-${blocks[h]}`;
+            d.appendChild(overlay);
+            ligne.appendChild(d);
+        }
+        ajouterBarresJour(reservationsJour, dateJour, ligne, nom, '1px', 'calc(100% - 2px)');
+        stack.appendChild(ligne);
+    });
+    inner.appendChild(stack);
+    tdCell.appendChild(inner);
     tr.appendChild(tdCell);
+}
+
+async function chargerReservationsPlage(start, end) {
+    const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    const formula = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${endStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${startStr}')`;
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur API');
+        return data.records || [];
+    } catch (err) { console.error(err); return []; }
 }
 
 async function basculerDisponibiliteHeure(dateStr, heure, estDisponible) {
@@ -480,12 +610,17 @@ async function chargerSuiviInstructeur() {
     if (!tbody) return;
 
     const sel = document.getElementById('select-instructeur-suivi');
-    if (!instructeurSelectionne && sel && sel.value) instructeurSelectionne = sel.value;
-    if (!instructeurSelectionne) {
-        tbody.innerHTML = '<tr><td colspan="2" style="padding:15px;">Sélectionnez un instructeur pour afficher son planning.</td></tr>';
-        return;
+    const selAct = document.getElementById('select-activite-suivi');
+    const activite = selAct ? selAct.value : activiteSelectionnee;
+    activiteSelectionnee = activite;
+    if (!activite) {
+        if (!instructeurSelectionne && sel && sel.value) instructeurSelectionne = sel.value;
+        if (!instructeurSelectionne) {
+            tbody.innerHTML = '<tr><td colspan="2" style="padding:15px;">Sélectionnez un instructeur pour afficher son planning.</td></tr>';
+            return;
+        }
+        if (sel && sel.value !== instructeurSelectionne) sel.value = instructeurSelectionne;
     }
-    if (sel && sel.value !== instructeurSelectionne) sel.value = instructeurSelectionne;
 
     tbody.innerHTML = '<tr><td colspan="2" style="padding:15px;">Chargement...</td></tr>';
 
@@ -497,7 +632,7 @@ async function chargerSuiviInstructeur() {
 
     const [dispos, reservations] = await Promise.all([
         chargerDisposInstructeurPlage(start, end),
-        chargerReservationsInstructeurPlage(instructeurSelectionne, start, end)
+        activite ? chargerReservationsPlage(start, end) : chargerReservationsInstructeurPlage(instructeurSelectionne, start, end)
     ]);
 
     tbody.innerHTML = '';
@@ -509,10 +644,11 @@ async function chargerSuiviInstructeur() {
         const disposJour = dispos.filter(r => {
             const f = r.fields || {};
             const d = f['Date'] ? new Date(f['Date']).toISOString().split('T')[0] : '';
-            const nomOk = typeof correspondanceNom === 'function'
+            if (d !== dateJourStr) return false;
+            if (activite) return true;
+            return typeof correspondanceNom === 'function'
                 ? correspondanceNom(f['Instructeur'], instructeurSelectionne)
                 : (f['Instructeur'] || '').toString().trim() === instructeurSelectionne;
-            return d === dateJourStr && nomOk;
         });
 
         const reservationsJour = reservations.filter(r => {
@@ -526,7 +662,8 @@ async function chargerSuiviInstructeur() {
 
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #e2e8f0';
-        rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, instructeurSelectionne);
+        if (activite) rendreLigneActivite(tr, dateJour, disposJour, reservationsJour, activite);
+        else rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, instructeurSelectionne);
         tbody.appendChild(tr);
     }
 }
