@@ -2377,26 +2377,30 @@ img, table, video, iframe, svg {
 
 /* --- ICONES HAUT DE SIDEBAR --- */
 .sidebar-icon-btn {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     border: none;
-    background: #f1f5f9;
-    color: #1e3d59;
-    font-size: 17px;
+    background: #14293e;
+    color: #ffffff;
+    font-size: 18px;
     cursor: pointer;
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
     transition: background .2s, transform .1s, box-shadow .2s;
 }
 .sidebar-icon-btn:hover {
-    background: #ffffff;
+    background: #1a3550;
     transform: translateY(-1px);
-    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.4);
+}
+.sidebar-icon-glyph {
+    filter: brightness(0) invert(1);
+    line-height: 1;
 }
 .sidebar-icon-btn:active {
     transform: scale(0.95);
