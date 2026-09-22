@@ -207,7 +207,7 @@ function afficherConflitsReservations(barresInfos) {
 
 // --- CACHE POUR REQUÊTES AIRTABLE (GET) ---
 const API_CACHE = {};
-const API_CACHE_TTL = 30000; // 30 secondes
+const API_CACHE_TTL = 120000; // 2 minutes (le cache est vide a chaque ecriture, donc pas de risque de donnees propres obsoletes)
 
 // --- RATE-LIMITER + RETRY POUR L'API AIRTABLE ---
 // Airtable limite a ~5 requetes/seconde par base : on espace les requetes et on reessaie sur 429/5xx.

@@ -114,12 +114,13 @@ function initMessagerie() {
     if (tousBtn) tousBtn.addEventListener('click', basculerTousLesDestinataires);
     chargerDestinataires();
 
-    // Auto-rafraîchissement
+    // Auto-rafraîchissement (uniquement quand l'onglet est visible, pour limiter les appels API)
     setInterval(() => {
+        if (document.hidden) return;
         if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
         const vue = document.getElementById('view-messagerie');
         if (vue && vue.style.display !== 'none' && typeof chargerMessagerie === 'function') chargerMessagerie();
-    }, 15000);
+    }, 60000);
 }
 
 function renderDestinatairesListe() {
