@@ -1505,6 +1505,38 @@ img, table, video, iframe, svg {
     font-size: 11px;
     color: #cbd5e1;
 }
+.prochains-evenements-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.prochains-evenements-header h4 {
+    margin: 0;
+    font-size: 10px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.btn-add-event {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.btn-add-event:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
 #prochains-evenements h4 {
     margin: 0 0 6px;
     font-size: 10px;

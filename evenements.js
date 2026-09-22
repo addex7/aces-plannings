@@ -343,12 +343,13 @@ async function chargerProchainsEvenements() {
         if (!res.ok) throw new Error(data.error ? data.error.message : 'Erreur Airtable');
 
         const events = (data.records || []).slice(0, 5);
+        const headerHtml = '<div class="prochains-evenements-header"><h4>Prochains événements</h4><button type="button" class="btn-add-event" title="Créer un événement" onclick="ouvrirModaleEvenement()">+</button></div>';
         if (!events.length) {
-            container.innerHTML = '<div class="prochains-evenements-empty">Aucun événement à venir</div>';
+            container.innerHTML = headerHtml + '<div class="prochains-evenements-empty">Aucun événement à venir</div>';
             return;
         }
 
-        container.innerHTML = '<h4 style="margin:0 0 6px; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Prochains</h4>' +
+        container.innerHTML = headerHtml +
             events.map(r => {
                 const f = r.fields || {};
                 const titre = escapeHtml(f[FIELDS.TITRE] || 'Événement');
