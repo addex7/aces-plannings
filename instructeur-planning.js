@@ -46,7 +46,7 @@ async function peuplerSelectInstructeurSuivi() {
     }
     let html = '<optgroup label="Vue par activité">';
     [['avion', '✈️ Avion'], ['ULM', '🛩️ ULM'], ['planeur', '🪂 Planeur']].forEach(([v, l]) => {
-        html += `<option value="__act:${v}" ${activiteSelectionnee === v ? 'selected' : ''}>${l} — tous les instructeurs</option>`;
+        html += `<option value="__act:${v}" ${activiteSelectionnee === v ? 'selected' : ''}>${l}</option>`;
     });
     html += '</optgroup><optgroup label="Par instructeur">';
     instructeurs.forEach(u => {
@@ -605,7 +605,7 @@ function rendreLigneActivite(tr, dateJour, disposJour, reservationsJour, discipl
                 });
             }
             const overlay = document.createElement('div');
-            overlay.className = `dispo-hour-overlay dispo-${blocks[h]}`;
+            overlay.className = `dispo-hour-overlay dispo-${blocks[s]}`;
             d.appendChild(overlay);
             ligne.appendChild(d);
         }
