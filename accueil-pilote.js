@@ -77,7 +77,8 @@ async function chargerAccueilPilote() {
                 <div class="ap-card-number">${resas.text}</div>
                 <div class="ap-card-icon">📅</div>
             </div>
-            <div class="ap-card-label">${resas.label}</div>
+            <div class="ap-card-label">${resas.detail ? escHtml(resas.detail) : escHtml(resas.label === 'Prochaine journée' ? 'Inscription à venir' : resas.label)}</div>
+            <div class="ap-card-hint">Prochaine journée</div>
             <button type="button" id="accueil-btn-planning" class="btn-primary" style="width:100%;">Voir le planning</button>
         </div>`;
 
@@ -308,7 +309,7 @@ async function chargerProchaineJournee() {
                 if (s.presence(r.fields || {})) {
                     const dateStr = r.fields[s.dateField];
                     const d = new Date(dateStr);
-                    if (!isNaN(d.getTime())) matches.push({ date: d, dateStr, source: s.table });
+                    if (!isNaN(d.getTime())) matches.push({ date: d, dateStr, source: s.table, detail: detailProchaineJournee(s.table, r.fields || {}) });
                 }
             });
         } catch (err) {
@@ -317,8 +318,26 @@ async function chargerProchaineJournee() {
     }
     matches.sort((a, b) => a.date - b.date);
     const next = matches[0];
-    if (!next) return { text: '-', date: null, label: 'Aucune inscription' };
-    return { text: formaterDateAccueil(next.dateStr), date: next.dateStr, label: 'Prochaine journée', source: next.source };
+    if (!next) return { text: '-', date: null, label: 'Aucune inscription', detail: '' };
+    return { text: formaterDateAccueil(next.dateStr), date: next.dateStr, label: 'Prochaine journée', source: next.source, detail: next.detail || '' };
+}
+
+function detailProchaineJournee(table, f) {
+    const fmtH = (v) => {
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    };
+    if (table === 'Réservations') {
+        const mach = Array.isArray(f['Machine']) ? f['Machine'].join(', ') : (f['Machine'] || '');
+        const hDeb = fmtH(f['Date de début']);
+        const hFin = fmtH(f['Date de fin']);
+        const horaire = hDeb && hFin ? `${hDeb} → ${hFin}` : (hDeb || '');
+        return [mach, horaire].filter(Boolean).join(' — ') || 'Réservation';
+    }
+    if (table === 'Événements') return f['Nom'] || f['Titre'] || 'Événement';
+    if (table === 'Présences Planeur') return 'Présence planeur';
+    if (table === 'Présences Club') return 'Présence club';
+    return '';
 }
 
 async function chargerSoldeAccueil() {
