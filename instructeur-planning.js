@@ -282,12 +282,16 @@ function mettreAJourSurlignementDrag() {
     const dMax = dA > dB ? dA : dB;
     const sMin = Math.min(sStart, sEnd);
     const sMax = Math.max(sStart, sEnd);
+    const lA = parseInt(dragDispo.start.dataset.ligne, 10);
+    const lB = parseInt(dragDispo.end.dataset.ligne, 10);
+    const lMin = isNaN(lA) ? -Infinity : Math.min(lA, isNaN(lB) ? lA : lB);
+    const lMax = isNaN(lA) ? Infinity : Math.max(lA, isNaN(lB) ? lA : lB);
     document.querySelectorAll('.grid-hour-block').forEach(el => {
         const s = parseInt(el.dataset.slot, 10);
         const d = el.dataset.date || '';
-        const discOk = !dragDispo.discipline || el.dataset.discipline === dragDispo.discipline;
+        const l = parseInt(el.dataset.ligne, 10);
         const nomOk = !dragDispo.nom || el.dataset.nom === dragDispo.nom;
-        const isIn = discOk && nomOk && d >= dMin && d <= dMax && s >= sMin && s <= sMax;
+        const isIn = nomOk && d >= dMin && d <= dMax && s >= sMin && s <= sMax && l >= lMin && l <= lMax;
         el.style.outline = isIn ? '2px solid #1e3d59' : '';
     });
 }
@@ -298,10 +302,8 @@ async function finaliserDragDisponibilite() {
     const end = dragDispo.end;
     const dispo = dragDispo.dispo;
     const nomCible = dragDispo.nom || '';
-    const discipline = start.dataset.discipline || '';
     dragDispo = null;
     document.querySelectorAll('.grid-hour-block').forEach(el => { el.style.outline = ''; });
-    if (start.dataset.discipline !== end.dataset.discipline) return;
     if ((start.dataset.nom || '') !== (end.dataset.nom || '')) return;
     const sStart = parseInt(start.dataset.slot, 10);
     const sEnd = parseInt(end.dataset.slot, 10);
@@ -310,6 +312,24 @@ async function finaliserDragDisponibilite() {
     const sMax = Math.max(sStart, sEnd);
     const dMin = start.dataset.date < end.dataset.date ? start.dataset.date : end.dataset.date;
     const dMax = start.dataset.date > end.dataset.date ? start.dataset.date : end.dataset.date;
+
+    const lStart = parseInt(start.dataset.ligne, 10);
+    const lEnd = parseInt(end.dataset.ligne, 10);
+    const lMin = isNaN(lStart) ? 0 : Math.min(lStart, isNaN(lEnd) ? lStart : lEnd);
+    const lMax = isNaN(lStart) ? Infinity : Math.max(lStart, isNaN(lEnd) ? lStart : lEnd);
+
+    const disciplines = new Set();
+    document.querySelectorAll('.grid-hour-block').forEach(el => {
+        const s = parseInt(el.dataset.slot, 10);
+        const d = el.dataset.date || '';
+        const l = parseInt(el.dataset.ligne, 10);
+        const nomOk = !nomCible || el.dataset.nom === nomCible;
+        if (nomOk && el.dataset.discipline && d >= dMin && d <= dMax && s >= sMin && s <= sMax && l >= lMin && l <= lMax) {
+            disciplines.add(el.dataset.discipline);
+        }
+    });
+    if (!disciplines.size) return;
+
     const curseur = new Date(dMin + 'T12:00:00');
     const dernier = new Date(dMax + 'T12:00:00');
     const dates = [];
@@ -318,7 +338,9 @@ async function finaliserDragDisponibilite() {
         curseur.setDate(curseur.getDate() + 1);
     }
     for (const ds of dates) {
-        await enregistrerPlageDisponibilite(ds, sMin * 30, (sMax + 1) * 30, dispo, discipline, nomCible, false);
+        for (const disc of disciplines) {
+            await enregistrerPlageDisponibilite(ds, sMin * 30, (sMax + 1) * 30, dispo, disc, nomCible, false);
+        }
     }
     if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
     if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
@@ -396,6 +418,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
             d.dataset.slot = s;
             d.dataset.dispo = blocks[s];
             d.dataset.discipline = disc;
+            d.dataset.ligne = idx;
             if (peutModifier) {
                 d.addEventListener('mousedown', (e) => {
                     e.preventDefault();
@@ -568,6 +591,7 @@ function rendreLigneActivite(tr, dateJour, disposJour, reservationsJour, discipl
             d.dataset.dispo = blocks[s];
             d.dataset.discipline = discipline;
             d.dataset.nom = nom;
+            d.dataset.ligne = idx;
             if (peutModifier) {
                 d.addEventListener('mousedown', (e) => {
                     e.preventDefault();
