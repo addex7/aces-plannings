@@ -690,6 +690,21 @@ img, table, video, iframe, svg {
     color: #64748b;
     font-style: italic;
 }
+.presence-heures {
+    font-size: 11px;
+    font-weight: 700;
+    color: #166534;
+    background: #dcfce7;
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.presence-briefing {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1e3d59;
+    white-space: nowrap;
+}
 /* --- POP-UP MODALE --- */
 .modal {
     display: none;

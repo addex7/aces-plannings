@@ -1,5 +1,5 @@
 const TABLE_DISPONIBILITES = 'Disponibilités instructeurs';
-const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur ULM'];
+const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'];
 let afficherDisposInstructeurs = localStorage.getItem('planning_afficherDispos') === '1';
 let disposInstructeursCache = [];
 let listeInstructeursCache = [];
@@ -402,38 +402,62 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
         ajouterZoneNuit(gridBg, `${coucherPercent}%`, `${crepusculeAeroPercent - coucherPercent}%`, 'night-civil');
         ajouterZoneNuit(gridBg, `${crepusculeAeroPercent}%`, `${100 - crepusculeAeroPercent}%`, 'night-aero');
 
-        const gridCells = creerWrapperCellulesGrille(gridBg);
-        const dispoParHeure = new Array(24).fill('red');
-        disposPerso.forEach(d => {
-            const f = d.fields || {};
-            const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
-            const [hEnd, mEnd] = String(f['Heure fin'] || '00:00').split(':').map(Number);
-            const startMin = hStart * 60 + (mStart || 0);
-            const endMin = hEnd * 60 + (mEnd || 0);
-            const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
-            for (let m = 0; m < 1440; m += 60) {
-                const h = m / 60;
-                if (m < startMin || m + 60 > endMin) continue;
-                if (estDispo) dispoParHeure[h] = 'green';
-            }
-        });
+        const disciplinesToutes = (typeof disciplinesInstructeur === 'function') ? disciplinesInstructeur(nom) : ['avion'];
+        const disciplines = disciplinesToutes.filter(d => d.toLowerCase() !== 'planeur');
+        const lignes = disciplines.length ? disciplines : [''];
+        const nbLignes = lignes.length;
 
-        for (let h = 0; h < 24; h++) {
-            const block = document.createElement('div');
-            block.className = 'grid-hour-block';
-            block.style.flex = LARGEURS_HEURES[h];
-            block.style.cursor = 'pointer';
-            const overlay = document.createElement('div');
-            overlay.className = `dispo-hour-overlay dispo-${dispoParHeure[h]}`;
-            block.appendChild(overlay);
-            block.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (typeof window.ouvrirModaleNouvelleReservation === 'function') {
-                    window.ouvrirModaleNouvelleReservation({ type: 'Instruction', instructeur: nom, heureDebut: h });
+        const stack = document.createElement('div');
+        stack.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; z-index:2;';
+
+        lignes.forEach((disc, idx) => {
+            const ligne = document.createElement('div');
+            ligne.style.cssText = `position:relative; height:${100 / nbLignes}%; display:flex;` + (idx < nbLignes - 1 ? 'border-bottom:1px dashed #cbd5e1; box-sizing:border-box;' : '');
+
+            if (disc) {
+                const lab = document.createElement('div');
+                lab.className = 'dispo-discipline-label';
+                lab.textContent = disc === 'avion' ? 'Avion' : 'ULM';
+                ligne.appendChild(lab);
+            }
+
+            const discLow = disc.toLowerCase();
+            const dispoParHeure = new Array(24).fill('red');
+            disposPerso.forEach(d => {
+                const f = d.fields || {};
+                const mach = (f['Machine'] || '').toString().trim().toLowerCase();
+                if (mach && discLow && mach !== discLow) return;
+                const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
+                const [hEnd, mEnd] = String(f['Heure fin'] || '00:00').split(':').map(Number);
+                const startMin = hStart * 60 + (mStart || 0);
+                const endMin = hEnd * 60 + (mEnd || 0);
+                const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
+                for (let m = 0; m < 1440; m += 60) {
+                    const h = m / 60;
+                    if (m < startMin || m + 60 > endMin) continue;
+                    if (estDispo) dispoParHeure[h] = 'green';
                 }
             });
-            gridCells.appendChild(block);
-        }
+
+            for (let h = 0; h < 24; h++) {
+                const block = document.createElement('div');
+                block.className = 'grid-hour-block';
+                block.style.flex = LARGEURS_HEURES[h];
+                block.style.cursor = 'pointer';
+                const overlay = document.createElement('div');
+                overlay.className = `dispo-hour-overlay dispo-${dispoParHeure[h]}`;
+                block.appendChild(overlay);
+                block.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (typeof window.ouvrirModaleNouvelleReservation === 'function') {
+                        window.ouvrirModaleNouvelleReservation({ type: 'Instruction', instructeur: nom, heureDebut: h });
+                    }
+                });
+                ligne.appendChild(block);
+            }
+            stack.appendChild(ligne);
+        });
+        gridBg.appendChild(stack);
 
         const resasPerso = reservations.filter(r => {
             const f = r.fields || {};
