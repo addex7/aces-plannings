@@ -211,6 +211,29 @@ async function majRecords(req, res, remplacer) {
 app.patch('/v0/:base/:table', (req, res) => majRecords(req, res, false));
 app.put('/v0/:base/:table', (req, res) => majRecords(req, res, true));
 
+// Mise a jour unitaire : PATCH/PUT /:table/:id avec { fields } (Airtable accepte aussi cette forme)
+async function majRecordUnitaire(req, res, remplacer) {
+    const table = tableSql(req, res);
+    if (!table) return;
+    try {
+        const fields = req.body.fields;
+        if (!fields) return erreur(res, 422, 'fields manquant');
+        const { rows } = await pool.query(
+            remplacer
+                ? `UPDATE ${table} SET fields = $2 WHERE id = $1 RETURNING id, fields, created_at`
+                : `UPDATE ${table} SET fields = fields || $2 WHERE id = $1 RETURNING id, fields, created_at`,
+            [req.params.id, fields]
+        );
+        if (!rows.length) return erreur(res, 404, `Record introuvable: ${req.params.id}`);
+        res.json(formatRecord(rows[0]));
+    } catch (e) {
+        console.error('PATCH/PUT one:', e);
+        erreur(res, 500, e.message);
+    }
+}
+app.patch('/v0/:base/:table/:id', (req, res) => majRecordUnitaire(req, res, false));
+app.put('/v0/:base/:table/:id', (req, res) => majRecordUnitaire(req, res, true));
+
 // --- SUPPRESSION ---
 async function supprimerIds(res, table, ids) {
     for (const id of ids) {
