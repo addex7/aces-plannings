@@ -78,7 +78,7 @@ async function chargerAccueilPilote() {
                 <div class="ap-card-icon">📅</div>
             </div>
             <div class="ap-card-label">${resas.label}</div>
-            <button type="button" id="accueil-btn-planning" class="btn-primary" style="width:100%; margin-top:12px;">Voir le planning</button>
+            <button type="button" id="accueil-btn-planning" class="btn-primary" style="width:100%;">Voir le planning</button>
         </div>`;
 
     const htmlVols = vols ? `
@@ -88,7 +88,8 @@ async function chargerAccueilPilote() {
                 <div class="ap-card-icon">✈️</div>
             </div>
             <div class="ap-card-label">${escHtml(vols.machine)} — ${escHtml(vols.duree)}</div>
-            <button type="button" id="accueil-btn-carnet-retour" class="btn-primary" style="width:100%; margin-top:8px;">Retour de vol</button>
+            <div class="ap-card-hint">Dernier vol réalisé</div>
+            <button type="button" id="accueil-btn-carnet-retour" class="btn-primary" style="width:100%;">Retour de vol</button>
         </div>` : `
         <div class="ap-card ap-card-orange">
             <div class="ap-card-header">
@@ -96,7 +97,8 @@ async function chargerAccueilPilote() {
                 <div class="ap-card-icon">✈️</div>
             </div>
             <div class="ap-card-label">Aucun vol connu</div>
-            <button type="button" id="accueil-btn-carnet-retour" class="btn-primary" style="width:100%; margin-top:8px;">Retour de vol</button>
+            <div class="ap-card-hint">Dernier vol réalisé</div>
+            <button type="button" id="accueil-btn-carnet-retour" class="btn-primary" style="width:100%;">Retour de vol</button>
         </div>`;
 
     const soldeClasse = solde >= 0 ? 'ap-card-blue' : (solde >= -300 ? 'ap-card-orange' : 'ap-card-red');
@@ -110,7 +112,7 @@ async function chargerAccueilPilote() {
                 <div class="ap-card-icon">💳</div>
             </div>
             <div class="ap-card-label">Solde corrigé de mon compte pilote</div>
-            <button type="button" id="accueil-btn-compte" class="btn-primary" style="width:100%; margin-top:12px;">Consulter mon compte</button>
+            <button type="button" id="accueil-btn-compte" class="btn-primary" style="width:100%;">Consulter mon compte</button>
         </div>`;
 
     const htmlSignalements = `

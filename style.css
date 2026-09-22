@@ -2814,6 +2814,15 @@ img, table, video, iframe, svg {
     font-weight: 500;
     margin-bottom: 12px;
 }
+.ap-card-hint {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: -8px;
+    margin-bottom: 12px;
+}
+.ap-card .btn-primary {
+    margin-top: auto;
+}
 .ap-card .btn-primary,
 .ap-card .btn-secondary {
     border: none;
