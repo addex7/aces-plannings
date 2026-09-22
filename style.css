@@ -2073,6 +2073,23 @@ img, table, video, iframe, svg {
 .dispo-hour-overlay.dispo-red {
     background: #ef4444;
 }
+.dispo-discipline-label {
+    position: absolute;
+    left: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #475569;
+    background: rgba(255, 255, 255, 0.75);
+    padding: 1px 4px;
+    border-radius: 3px;
+    pointer-events: none;
+    line-height: 1.2;
+}
 #instructeur-suivi-modal .instructeur-suivi-grid {
     overflow-x: auto;
     margin-top: 15px;
