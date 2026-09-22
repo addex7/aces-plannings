@@ -995,17 +995,23 @@ function initNavigationTabs() {
         });
     }
 
+    const ouvrirEspaceMembres = () => {
+        if (!currentUser) return;
+        if (isSuperAdmin()) {
+            activerTab(tabMembres, viewMembres);
+            if (typeof chargerUtilisateurs === 'function') chargerUtilisateurs();
+        } else {
+            activerTab(tabMembres, viewAccueilMembre);
+            if (typeof chargerAccueilMembre === 'function') chargerAccueilMembre(currentUser.id);
+        }
+    };
     const avatar = document.getElementById('user-avatar');
-    if (avatar) {
-        avatar.addEventListener('click', () => {
-            if (isSuperAdmin()) {
-                activerTab(tabMembres, viewMembres);
-                if (typeof chargerUtilisateurs === 'function') chargerUtilisateurs();
-            } else {
-                activerTab(tabMembres, viewAccueilMembre);
-                if (typeof chargerAccueilMembre === 'function') chargerAccueilMembre(currentUser ? currentUser.id : null);
-            }
-        });
+    if (avatar) avatar.addEventListener('click', ouvrirEspaceMembres);
+    const profileName = document.getElementById('user-profile-name');
+    if (profileName) {
+        profileName.style.cursor = 'pointer';
+        profileName.title = 'Mon espace membre';
+        profileName.addEventListener('click', ouvrirEspaceMembres);
     }
 
     // Menus déroulants
