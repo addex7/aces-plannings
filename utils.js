@@ -209,47 +209,47 @@ function afficherConflitsReservations(barresInfos) {
 const API_CACHE = {};
 const API_CACHE_TTL = 30000; // 30 secondes
 
-// --- LIMITATION DE CONCURRENCE + RETRY POUR L'API AIRTABLE ---
-// Airtable limite a ~5 requetes/seconde : on bride le parallelisme et on reessaie sur 429/5xx.
-const _apiSemaphore = { enCours: 0, file: [] };
-const API_MAX_PARALLEL = 4;
-function _apiDistribuer() {
-    while (_apiSemaphore.enCours < API_MAX_PARALLEL && _apiSemaphore.file.length) {
-        _apiSemaphore.enCours++;
-        _apiSemaphore.file.shift()();
+// --- RATE-LIMITER + RETRY POUR L'API AIRTABLE ---
+// Airtable limite a ~5 requetes/seconde par base : on espace les requetes et on reessaie sur 429/5xx.
+const _apiFile = [];
+let _apiPompeActive = false;
+const API_INTERVAL_MS = 250;
+
+async function _apiExecuterAvecRetry(url, options, maxEssais) {
+    let delai = 700;
+    for (let essai = 0; essai < maxEssais; essai++) {
+        let res;
+        try {
+            res = await fetch(url, options);
+        } catch (err) {
+            if (essai === maxEssais - 1) throw err;
+            await new Promise(r => setTimeout(r, delai));
+            delai *= 2;
+            continue;
+        }
+        if (res.status !== 429 && res.status < 500) return res;
+        if (essai === maxEssais - 1) return res;
+        const attente = parseInt(res.headers.get('Retry-After') || '0', 10) * 1000;
+        await new Promise(r => setTimeout(r, Math.max(delai, attente) + Math.random() * 250));
+        delai *= 2;
     }
-}
-function _apiAcquerir() {
-    return new Promise(resolve => { _apiSemaphore.file.push(resolve); _apiDistribuer(); });
-}
-function _apiRelacher() {
-    _apiSemaphore.enCours--;
-    _apiDistribuer();
 }
 
-async function apiFetch(url, options = {}, maxEssais = 6) {
-    await _apiAcquerir();
-    try {
-        let delai = 700;
-        for (let essai = 0; essai < maxEssais; essai++) {
-            let res;
-            try {
-                res = await fetch(url, options);
-            } catch (err) {
-                if (essai === maxEssais - 1) throw err;
-                await new Promise(r => setTimeout(r, delai));
-                delai *= 2;
-                continue;
+function apiFetch(url, options = {}, maxEssais = 6) {
+    return new Promise((resolve, reject) => {
+        _apiFile.push({ url, options, maxEssais, resolve, reject });
+        if (_apiPompeActive) return;
+        _apiPompeActive = true;
+        (async () => {
+            while (_apiFile.length) {
+                const t = _apiFile.shift();
+                try { t.resolve(await _apiExecuterAvecRetry(t.url, t.options, t.maxEssais)); }
+                catch (e) { t.reject(e); }
+                if (_apiFile.length) await new Promise(r => setTimeout(r, API_INTERVAL_MS));
             }
-            if (res.status !== 429 && res.status < 500) return res;
-            if (essai === maxEssais - 1) return res;
-            const attente = parseInt(res.headers.get('Retry-After') || '0', 10) * 1000;
-            await new Promise(r => setTimeout(r, Math.max(delai, attente) + Math.random() * 250));
-            delai *= 2;
-        }
-    } finally {
-        _apiRelacher();
-    }
+            _apiPompeActive = false;
+        })();
+    });
 }
 
 function viderApiCache() {
