@@ -333,12 +333,7 @@
                         <select id="select-machine-suivi">
                             <!-- Populé dynamiquement -->
                         </select>
-                        <div id="prix-heure-suivi-group" style="display: none; align-items: center; gap: 6px;">
-                            <label for="prix-heure-suivi" style="font-size: 13px; font-weight: 600;">Prix / h :</label>
-                            <input type="number" id="prix-heure-suivi" step="0.01" min="0" style="width: 70px; padding: 6px 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;">
-                            <span style="font-size: 13px;">€</span>
-                            <button id="btn-save-prix-heure" class="btn-submit" style="padding: 6px 12px; border-radius: 6px; font-size: 12px;">OK</button>
-                        </div>
+                        <button id="btn-aeronef-options" class="btn-primary" style="display: none; padding: 8px 14px; border-radius: 6px; font-size: 13px;">⚙️ Options</button>
                         <button id="btn-maintenance" class="btn-primary" style="padding: 8px 14px; border-radius: 6px; font-size: 13px;">🔧 Maintenance</button>
                     </div>
                 </header>
@@ -1102,6 +1097,47 @@
         </div>
     </div>
 
+    <!-- Fenêtre Modale : Options de l'aéronef -->
+    <div id="aeronef-options-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal" id="close-aeronef-options">&times;</span>
+            <h3 class="nr-title">Options — <span id="aeronef-options-immat"></span></h3>
+            <form id="aeronef-options-form" class="nr-form">
+                <div class="nr-section" id="aeronef-options-prix-section">
+                    <div class="nr-section-title">PRIX À L'HEURE DE VOL</div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="number" id="opt-prix-heure" class="nr-input" step="0.01" min="0" style="width:110px;">
+                        <span style="font-weight:600; color:#1e3d59;">€ / h</span>
+                    </div>
+                </div>
+                <div class="nr-section">
+                    <div class="nr-section-title">TYPE DE MACHINE</div>
+                    <div class="nr-options-grid">
+                        <label class="nr-option">
+                            <input type="radio" name="aeronef-type" value="avion">
+                            <span class="nr-icon">✈️</span>
+                            <span class="nr-label">Avion</span>
+                        </label>
+                        <label class="nr-option">
+                            <input type="radio" name="aeronef-type" value="ULM">
+                            <span class="nr-icon">🛩️</span>
+                            <span class="nr-label">ULM</span>
+                        </label>
+                        <label class="nr-option">
+                            <input type="radio" name="aeronef-type" value="planeur">
+                            <span class="nr-icon">🪂</span>
+                            <span class="nr-label">Planeur</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="nr-footer">
+                    <button type="button" class="nr-btn-cancel" onclick="document.getElementById('aeronef-options-modal').style.display='none'">Annuler</button>
+                    <button type="submit" class="nr-btn-save"><span class="nr-icon-save">💾</span> Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modale Butée horamètre -->
     <div id="butee-modal" class="modal" style="display: none;">
         <div class="modal-content">
@@ -1267,14 +1303,14 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=91"></script>
-    <script src="version.js?v=20260922195801"></script>
+    <script src="version.js?v=20260922200509"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=103"></script>
     <script src="presences.js?v=99"></script>
     <script src="planning.js?v=184"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=110"></script>
-    <script src="aeronefs.js?v=111"></script>
+    <script src="aeronefs.js?v=112"></script>
     <script src="carnet.js?v=144"></script>
     <script src="documents.js?v=85"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>

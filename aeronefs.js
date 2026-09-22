@@ -435,16 +435,10 @@ async function chargerSuiviAeronef() {
             : valSelectionnee;
 
         if (machineActuelle) avionTarifId = machineActuelle.id;
-        const prixInput = document.getElementById('prix-heure-suivi');
-        const prixGroup = document.getElementById('prix-heure-suivi-group');
-        if (prixInput && machineActuelle && machineActuelle.fields) {
-            const prix = machineActuelle.fields['Prix heure'];
-            prixInput.value = (prix !== undefined && prix !== null) ? String(prix).replace('.', ',') : '';
-        }
-        if (prixGroup) {
+        const btnOptions = document.getElementById('btn-aeronef-options');
+        if (btnOptions) {
             const visible = typeof currentUser !== 'undefined' && currentUser && currentUser.roles && (currentUser.roles.includes('Super admin') || currentUser.roles.includes('Trésorier'));
-            const isBLIO = immatMachine.toString().trim().toUpperCase() === 'F-BLIO';
-            prixGroup.style.display = (visible && !isBLIO) ? 'flex' : 'none';
+            btnOptions.style.display = visible ? '' : 'none';
         }
 
         const horametreActuelAeronef = (machineActuelle && machineActuelle.fields && machineActuelle.fields['Horamètre actuel'] !== undefined && machineActuelle.fields['Horamètre actuel'] !== null && machineActuelle.fields['Horamètre actuel'] !== '')
@@ -1662,24 +1656,54 @@ async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures)
 }
 
 function initGestionTarifAeronefs() {
-    const input = document.getElementById('prix-heure-suivi');
-    const btn = document.getElementById('btn-save-prix-heure');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
+    const btnOptions = document.getElementById('btn-aeronef-options');
+    const modal = document.getElementById('aeronef-options-modal');
+    const form = document.getElementById('aeronef-options-form');
+    const input = document.getElementById('opt-prix-heure');
+    const prixSection = document.getElementById('aeronef-options-prix-section');
+    const titreImmat = document.getElementById('aeronef-options-immat');
+    const closeBtn = document.getElementById('close-aeronef-options');
+    if (!btnOptions || !modal || !form) return;
+
+    closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+
+    btnOptions.addEventListener('click', () => {
+        const machine = (listeAvionsCache || []).find(m => m.id === avionTarifId);
+        const f = (machine && machine.fields) || {};
+        const immat = (f['Immatriculation'] || '').toString().trim().toUpperCase();
+        if (titreImmat) titreImmat.textContent = f['Immatriculation'] || 'aéronef';
+        const prix = f['Prix heure'];
+        input.value = (prix !== undefined && prix !== null) ? String(prix).replace('.', ',') : '';
+        prixSection.style.display = immat === 'F-BLIO' ? 'none' : '';
+        const type = (f['Type'] || '').toString().toLowerCase();
+        form.querySelectorAll('input[name="aeronef-type"]').forEach(r => {
+            r.checked = r.value.toLowerCase() === type;
+        });
+        modal.style.display = 'flex';
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
         if (!avionTarifId) return;
         const prix = parseFloat(String(input.value).replace(',', '.')) || 0;
+        const typeSel = form.querySelector('input[name="aeronef-type"]:checked');
+        const fields = { 'Prix heure': prix };
+        if (typeSel) fields['Type'] = typeSel.value;
         try {
             const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}/${avionTarifId}`, {
                 method: 'PATCH',
                 headers,
-                body: JSON.stringify({ fields: { 'Prix heure': prix } })
+                body: JSON.stringify({ fields })
             });
             if (!res.ok) throw new Error(await res.text());
-            alert('Tarif horaire enregistré.');
+            const machine = (listeAvionsCache || []).find(m => m.id === avionTarifId);
+            if (machine && machine.fields) Object.assign(machine.fields, fields);
+            modal.style.display = 'none';
             if (typeof chargerSuiviAeronef === 'function') chargerSuiviAeronef();
-        } catch (e) {
-            console.error(e);
-            alert('Erreur lors de l\'enregistrement du tarif.');
+        } catch (err) {
+            console.error(err);
+            alert('Erreur lors de l\'enregistrement des options.');
         }
     });
 }
