@@ -87,7 +87,7 @@ async function chargerAccueilPilote() {
                 <div class="ap-card-number">${vols.dateText}</div>
                 <div class="ap-card-icon">✈️</div>
             </div>
-            <div class="ap-card-label">${escHtml(vols.machine)} — ${escHtml(vols.duree)} ${vols.instructeur ? `— ${escHtml(vols.instructeur)}` : ''}</div>
+            <div class="ap-card-label">${escHtml(vols.machine)} — ${escHtml(vols.duree)}</div>
             <button type="button" id="accueil-btn-carnet-retour" class="btn-primary" style="width:100%; margin-top:8px;">Retour de vol</button>
         </div>` : `
         <div class="ap-card ap-card-orange">
