@@ -1442,6 +1442,10 @@ img, table, video, iframe, svg {
 .cal-header button:hover {
     background: rgba(255, 255, 255, 0.25);
 }
+.cal-month {
+    flex: 1;
+    text-align: center;
+}
 .cal-grid {
     gap: 2px;
 }
