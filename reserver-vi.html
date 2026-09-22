@@ -146,6 +146,8 @@
 <script>
 const AIRTABLE_PAT = 'patbX51fRBLO4v35h.e116a6e20d699408c3a49d07137099bbaf3fe23e734767dea63fa5d890508fff';
 const BASE_ID = 'appufjvD3gYG6H44n';
+// Migration VPS : remplacer par l'URL du backend auto-heberge
+const API_BASE = `https://api.airtable.com/v0/${BASE_ID}`;
 const headers = {
     Authorization: `Bearer ${AIRTABLE_PAT}`,
     'Content-Type': 'application/json'
@@ -188,7 +190,7 @@ async function enregistrerAudit(action, cible = '', details = '', module = '') {
         }]
     };
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Audit')}`, { method: 'POST', headers, body: JSON.stringify(body) });
+        const res = await fetch(`${API_BASE}/${encodeURIComponent('Audit')}`, { method: 'POST', headers, body: JSON.stringify(body) });
         if (!res.ok) console.warn('Échec audit:', await res.text());
     } catch (e) { console.error('Erreur audit:', e); }
 }
@@ -242,7 +244,7 @@ async function loadCreneaux(type) {
     if (container) container.innerHTML = '<div class="loading">Chargement des créneaux...</div>';
     try {
         const formula = type ? `AND({Statut}='Disponible', {Type}='${type}')` : `{Statut}='Disponible'`;
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc&pageSize=100`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc&pageSize=100`;
         const res = await fetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
@@ -259,12 +261,12 @@ async function loadCreneaux(type) {
             if (dates.length) {
                 const dateMin = dates[0];
                 const dateMax = dates[dates.length - 1];
-                const aeronefsRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Aéronefs')}`, { headers });
+                const aeronefsRes = await fetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers });
                 const aeronefsData = await aeronefsRes.json();
                 const avionsMap = {};
                 (aeronefsData.records || []).forEach(a => { avionsMap[a.id] = a.fields; });
                 const conflitFormula = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateMax}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateMin}', OR(FIND('F-JVIO', ARRAYJOIN({Machine},',')), FIND('F-GASB', ARRAYJOIN({Machine},','))))`;
-                const resaRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(conflitFormula)}&pageSize=100`, { headers });
+                const resaRes = await fetch(`${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(conflitFormula)}&pageSize=100`, { headers });
                 const resaData = await resaRes.json();
                 if (!resaRes.ok) throw new Error(resaData.error?.message || 'Erreur Airtable');
                 const reservations = resaData.records || [];
@@ -400,7 +402,7 @@ async function onSubmitReservation(e) {
             await cancelByToken(currentToken, recordId);
         }
 
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+        const res = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ records: [{ id: recordId, fields }] })
@@ -436,7 +438,7 @@ async function onSubmitReservation(e) {
 }
 
 async function cancelByToken(token, excludeRecordId) {
-    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(`{Token}='${token}'`)}`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(`{Token}='${token}'`)}`;
     const res = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message);
@@ -455,7 +457,7 @@ async function cancelByToken(token, excludeRecordId) {
             'Date réservation': null
         }
     }));
-    const patch = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+    const patch = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify({ records: updates })
@@ -544,7 +546,7 @@ function showConfirmation(record, token, contact) {
 
 async function loadByToken(token) {
     try {
-        const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(`{Token}='${token}'`)}&maxRecords=1`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(`{Token}='${token}'`)}&maxRecords=1`;
         const res = await fetch(url, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
@@ -625,7 +627,7 @@ async function onManageUpdate(e) {
         'Bon cadeau': document.getElementById('manage-bon').value.trim()
     };
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+        const res = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ records: [{ id: currentRecord.id, fields }] })
@@ -658,7 +660,7 @@ async function onManageCancel() {
     }
     if (!confirm('Es-tu sûr de vouloir annuler cette réservation ?')) return;
     try {
-        const res = await fetch(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+        const res = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ records: [{ id: currentRecord.id, fields: {
