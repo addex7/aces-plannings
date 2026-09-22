@@ -177,9 +177,9 @@ function ajouterFondNuit(cellule, dateJour) {
     cellule.insertAdjacentHTML('afterbegin', genererFondNuitHTML(dateJour));
 }
 
-async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, conserverRestes = false, discipline = '') {
-    const selStart = hDebut * 60;
-    const selEnd = (hFin + 1) * 60;
+async function supprimerDisposChevauchantes(dateStr, debutMin, finMin, nom, conserverRestes = false, discipline = '') {
+    const selStart = debutMin;
+    const selEnd = finMin;
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
@@ -241,18 +241,19 @@ async function supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, conserve
     } catch (err) { console.error('[SUPPRIMER DISPOS]', err); }
 }
 
-async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo, discipline = '', nomCible = '') {
+async function enregistrerPlageDisponibilite(dateStr, debutMin, finMin, dispo, discipline = '', nomCible = '') {
     const nom = nomCible || instructeurSelectionne || (typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '');
     if (!nom) { alert('Aucun instructeur sélectionné.'); return; }
     if (typeof estUtilisateurCourant === 'function' && !estUtilisateurCourant(nom)) { alert("Seul l'instructeur concerné peut modifier ses disponibilités."); return; }
-    await supprimerDisposChevauchantes(dateStr, hDebut, hFin, nom, !dispo, discipline);
+    await supprimerDisposChevauchantes(dateStr, debutMin, finMin, nom, !dispo, discipline);
     if (!dispo) {
         if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
         if (typeof chargerSuiviInstructeur === 'function') await chargerSuiviInstructeur();
         return;
     }
-    const debut = `${String(hDebut).padStart(2, '0')}:00`;
-    const fin = hFin < 23 ? `${String(hFin + 1).padStart(2, '0')}:00` : '23:59';
+    const fmtMin = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const debut = fmtMin(debutMin);
+    const fin = finMin >= 1440 ? '23:59' : fmtMin(finMin);
     const fields = { 'Date': dateStr, 'Heure début': debut, 'Heure fin': fin, 'Machine': discipline || '', 'Disponible': dispo, 'Instructeur': nom };
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}`, { method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] }) });
@@ -269,13 +270,13 @@ async function enregistrerPlageDisponibilite(dateStr, hDebut, hFin, dispo, disci
 
 function mettreAJourSurlignementDrag() {
     if (!dragDispo || !dragDispo.actif) return;
-    const hStart = parseInt(dragDispo.start.dataset.heure, 10);
-    const hEnd = parseInt(dragDispo.end.dataset.heure, 10);
+    const hStart = parseInt(dragDispo.start.dataset.slot, 10);
+    const hEnd = parseInt(dragDispo.end.dataset.slot, 10);
     const date = dragDispo.start.dataset.date;
     const hMin = Math.min(hStart, hEnd);
     const hMax = Math.max(hStart, hEnd);
     document.querySelectorAll('.grid-hour-block').forEach(el => {
-        const h = parseInt(el.dataset.heure, 10);
+        const h = parseInt(el.dataset.slot, 10);
         const discOk = !dragDispo.discipline || el.dataset.discipline === dragDispo.discipline;
         const nomOk = !dragDispo.nom || el.dataset.nom === dragDispo.nom;
         const isIn = discOk && nomOk && el.dataset.date === date && h >= hMin && h <= hMax;
@@ -294,11 +295,11 @@ function finaliserDragDisponibilite() {
     if (start.dataset.date !== end.dataset.date) return;
     if (start.dataset.discipline !== end.dataset.discipline) return;
     if ((start.dataset.nom || '') !== (end.dataset.nom || '')) return;
-    const hStart = parseInt(start.dataset.heure, 10);
-    const hEnd = parseInt(end.dataset.heure, 10);
-    const hDebut = Math.min(hStart, hEnd);
-    const hFin = Math.max(hStart, hEnd);
-    enregistrerPlageDisponibilite(start.dataset.date, hDebut, hFin, dispo, start.dataset.discipline || '', nomCible);
+    const hStart = parseInt(start.dataset.slot, 10);
+    const hEnd = parseInt(end.dataset.slot, 10);
+    const sDebut = Math.min(hStart, hEnd);
+    const sFin = Math.max(hStart, hEnd);
+    enregistrerPlageDisponibilite(start.dataset.date, sDebut * 30, (sFin + 1) * 30, dispo, start.dataset.discipline || '', nomCible);
 }
 
 function disciplinesInstructeur(nom) {
@@ -347,8 +348,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
         lab.textContent = disc === 'avion' ? 'Avion' : (disc === 'ULM' ? 'ULM' : 'Planeur');
         ligne.appendChild(lab);
 
-        const blocks = [];
-        for (let h = 0; h < 24; h++) blocks.push('red');
+        const blocks = new Array(48).fill('red');
         const discLow = disc.toLowerCase();
         disposJour.forEach(d => {
             const f = d.fields || {};
@@ -358,22 +358,21 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
             const startMin = hStart * 60 + (mStart || 0);
             const endMin = hEnd * 60 + (mEnd || 0);
             const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
-            for (let m = 0; m < 1440; m += 60) {
-                const h = m / 60;
-                if (m < startMin || m + 60 > endMin) continue;
-                blocks[h] = estDispo ? 'green' : 'red';
+            for (let s = 0; s < 48; s++) {
+                if (s * 30 < startMin || (s + 1) * 30 > endMin) continue;
+                blocks[s] = estDispo ? 'green' : 'red';
             }
         });
 
-        for (let h = 0; h < 24; h++) {
+        for (let s = 0; s < 48; s++) {
             const d = document.createElement('div');
             d.className = 'grid-hour-block';
-            d.style.flex = LARGEURS_HEURES[h];
+            d.style.flex = LARGEURS_HEURES[Math.floor(s / 2)] / 2;
             d.style.cursor = peutModifier ? 'pointer' : 'default';
             d.style.userSelect = 'none';
             d.dataset.date = dateStr;
-            d.dataset.heure = h;
-            d.dataset.dispo = blocks[h];
+            d.dataset.slot = s;
+            d.dataset.dispo = blocks[s];
             d.dataset.discipline = disc;
             if (peutModifier) {
                 d.addEventListener('mousedown', (e) => {
@@ -388,7 +387,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
                 });
             }
             const overlay = document.createElement('div');
-            overlay.className = `dispo-hour-overlay dispo-${blocks[h]}`;
+            overlay.className = `dispo-hour-overlay dispo-${blocks[s]}`;
             d.appendChild(overlay);
             ligne.appendChild(d);
         }
@@ -519,7 +518,7 @@ function rendreLigneActivite(tr, dateJour, disposJour, reservationsJour, discipl
         lab.textContent = u.trigramme || (u.prenom || nom);
         ligne.appendChild(lab);
 
-        const blocks = new Array(24).fill('red');
+        const blocks = new Array(48).fill('red');
         disposJour.forEach(d => {
             const f = d.fields || {};
             if (typeof correspondanceNom === 'function' && !correspondanceNom(f['Instructeur'], nom)) return;
@@ -529,23 +528,22 @@ function rendreLigneActivite(tr, dateJour, disposJour, reservationsJour, discipl
             const startMin = hStart * 60 + (mStart || 0);
             const endMin = (hEnd * 60 + (mEnd || 0)) || 1440;
             const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
-            for (let m = 0; m < 1440; m += 60) {
-                const h = m / 60;
-                if (m < startMin || m + 60 > endMin) continue;
-                blocks[h] = estDispo ? 'green' : 'red';
+            for (let s = 0; s < 48; s++) {
+                if (s * 30 < startMin || (s + 1) * 30 > endMin) continue;
+                blocks[s] = estDispo ? 'green' : 'red';
             }
         });
 
         const peutModifier = peutModifierDisposInstructeur(nom);
-        for (let h = 0; h < 24; h++) {
+        for (let s = 0; s < 48; s++) {
             const d = document.createElement('div');
             d.className = 'grid-hour-block';
-            d.style.flex = LARGEURS_HEURES[h];
+            d.style.flex = LARGEURS_HEURES[Math.floor(s / 2)] / 2;
             d.style.cursor = peutModifier ? 'pointer' : 'default';
             d.style.userSelect = 'none';
             d.dataset.date = dateStr;
-            d.dataset.heure = h;
-            d.dataset.dispo = blocks[h];
+            d.dataset.slot = s;
+            d.dataset.dispo = blocks[s];
             d.dataset.discipline = discipline;
             d.dataset.nom = nom;
             if (peutModifier) {

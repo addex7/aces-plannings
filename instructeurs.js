@@ -431,7 +431,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
 
 
             const discLow = disc.toLowerCase();
-            const dispoParHeure = new Array(24).fill('red');
+            const dispoParCreneau = new Array(48).fill('red');
             disposPerso.forEach(d => {
                 const f = d.fields || {};
                 if (discLow && !dispoConcerneDiscipline(f['Machine'], discLow)) return;
@@ -440,25 +440,24 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
                 const startMin = hStart * 60 + (mStart || 0);
                 const endMin = hEnd * 60 + (mEnd || 0);
                 const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
-                for (let m = 0; m < 1440; m += 60) {
-                    const h = m / 60;
-                    if (m < startMin || m + 60 > endMin) continue;
-                    if (estDispo) dispoParHeure[h] = 'green';
+                for (let s = 0; s < 48; s++) {
+                    if (s * 30 < startMin || (s + 1) * 30 > endMin) continue;
+                    if (estDispo) dispoParCreneau[s] = 'green';
                 }
             });
 
-            for (let h = 0; h < 24; h++) {
+            for (let s = 0; s < 48; s++) {
                 const block = document.createElement('div');
                 block.className = 'grid-hour-block';
-                block.style.flex = LARGEURS_HEURES[h];
+                block.style.flex = LARGEURS_HEURES[Math.floor(s / 2)] / 2;
                 block.style.cursor = 'pointer';
                 const overlay = document.createElement('div');
-                overlay.className = `dispo-hour-overlay dispo-${dispoParHeure[h]}`;
+                overlay.className = `dispo-hour-overlay dispo-${dispoParCreneau[s]}`;
                 block.appendChild(overlay);
                 block.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (typeof window.ouvrirModaleNouvelleReservation === 'function') {
-                        window.ouvrirModaleNouvelleReservation({ type: 'Instruction', instructeur: nom, heureDebut: h });
+                        window.ouvrirModaleNouvelleReservation({ type: 'Instruction', instructeur: nom, heureDebut: s / 2 });
                     }
                 });
                 ligne.appendChild(block);
@@ -613,8 +612,7 @@ async function chargerSuiviInstructeur14Jours(nom, start) {
                 const d = f['Date'] ? new Date(f['Date']).toISOString().split('T')[0] : '';
                 return d === dateTr;
             });
-            const blocks = [];
-            for (let h = 0; h < 24; h++) blocks.push('red');
+            const blocks = new Array(48).fill('red');
             dispos.forEach(d => {
                 const f = d.fields || {};
                 const [hStart, mStart] = String(f['Heure début'] || '00:00').split(':').map(Number);
@@ -622,10 +620,9 @@ async function chargerSuiviInstructeur14Jours(nom, start) {
                 const startMin = hStart * 60 + (mStart || 0);
                 const endMin = hEnd * 60 + (mEnd || 0);
                 const estDispo = f['Disponible'] === true || f['Disponible'] === 'true' || f['Disponible'] === 1 || f['Disponible'] === '1';
-                for (let m = 0; m < 1440; m += 60) {
-                    const h = m / 60;
-                    if (m < startMin || m + 60 > endMin) continue;
-                    blocks[h] = estDispo ? 'green' : 'red';
+                for (let s = 0; s < 48; s++) {
+                    if (s * 30 < startMin || (s + 1) * 30 > endMin) continue;
+                    blocks[s] = estDispo ? 'green' : 'red';
                 }
             });
             blocks.forEach(c => {

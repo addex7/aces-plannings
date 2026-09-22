@@ -2421,7 +2421,9 @@ function initGestionnaireModale() {
         const finInput = document.getElementById('form-fin');
         if (debutInput) {
             if (options.heureDebut !== undefined) {
-                debutInput.value = `${dateBase}T${String(options.heureDebut).padStart(2, '0')}:00`;
+                const hh = Math.floor(options.heureDebut);
+                const mm = Math.round((options.heureDebut - hh) * 60);
+                debutInput.value = `${dateBase}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
             } else {
                 const maintenant = new Date();
                 debutInput.value = formaterPourInput(new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate(), maintenant.getHours() + 1, 0));
