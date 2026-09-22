@@ -211,27 +211,10 @@ const API_CACHE_TTL = 120000; // 2 minutes (le cache est vide a chaque ecriture,
 
 // --- RATE-LIMITER + RETRY POUR L'API AIRTABLE ---
 // Airtable limite a ~5 requetes/seconde par base : on espace les requetes et on reessaie sur 429/5xx.
-const _apiFile = [];
 const _apiEnVol = new Map();
-let _apiPompeActive = false;
-const API_INTERVAL_MS = 300;
-const API_CLE_DEPART = 'acesApiDernierDepart';
-
-// Reserve le prochain creneau de depart, partage entre onglets via localStorage.
-function _apiAttendreTour() {
-    const maintenant = Date.now();
-    let depart = maintenant;
-    try {
-        const dernier = parseInt(localStorage.getItem(API_CLE_DEPART) || '0', 10);
-        depart = Math.max(maintenant, dernier + API_INTERVAL_MS);
-        localStorage.setItem(API_CLE_DEPART, String(depart));
-    } catch (e) {}
-    const attente = depart - maintenant;
-    return attente > 0 ? new Promise(r => setTimeout(r, attente)) : Promise.resolve();
-}
 
 async function _apiExecuterAvecRetry(url, options, maxEssais) {
-    let delai = 700;
+    let delai = 400;
     for (let essai = 0; essai < maxEssais; essai++) {
         let res;
         try {
@@ -242,33 +225,19 @@ async function _apiExecuterAvecRetry(url, options, maxEssais) {
             delai *= 2;
             continue;
         }
-        if (res.status !== 429 && res.status < 500) return res;
+        if (res.status < 500) return res;
         if (essai === maxEssais - 1) return res;
-        const attente = parseInt(res.headers.get('Retry-After') || '0', 10) * 1000;
-        await new Promise(r => setTimeout(r, Math.max(delai, attente) + Math.random() * 250));
+        await new Promise(r => setTimeout(r, delai));
         delai *= 2;
     }
 }
 
-function apiFetch(url, options = {}, maxEssais = 6) {
+function apiFetch(url, options = {}, maxEssais = 3) {
     const method = (options.method || 'GET').toUpperCase();
     const cle = `${method} ${url}`;
-    // Dedoublonne les GET identiques deja en file ou en vol (clone pour ne pas consommer le body partage).
+    // Dedoublonne les GET identiques deja en vol (clone pour ne pas consommer le body partage).
     if (method === 'GET' && _apiEnVol.has(cle)) return _apiEnVol.get(cle).then(r => r.clone());
-    const promesse = new Promise((resolve, reject) => {
-        _apiFile.push({ url, options, maxEssais, resolve, reject });
-        if (_apiPompeActive) return;
-        _apiPompeActive = true;
-        (async () => {
-            while (_apiFile.length) {
-                const t = _apiFile.shift();
-                await _apiAttendreTour();
-                try { t.resolve(await _apiExecuterAvecRetry(t.url, t.options, t.maxEssais)); }
-                catch (e) { t.reject(e); }
-            }
-            _apiPompeActive = false;
-        })();
-    });
+    const promesse = _apiExecuterAvecRetry(url, options, maxEssais);
     if (method === 'GET') {
         _apiEnVol.set(cle, promesse);
         promesse.finally(() => _apiEnVol.delete(cle)).catch(() => {});
