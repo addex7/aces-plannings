@@ -767,6 +767,16 @@ img, table, video, iframe, svg {
     height: auto;
     padding: 12px 16px 6px 16px;
 }
+#carnet-modal.carnet-modal-observation .modal-content {
+    width: 480px;
+    max-width: 90vw;
+    height: auto;
+    max-height: 90vh;
+    padding: 20px 24px;
+}
+#carnet-modal.carnet-modal-observation .remarques-group textarea {
+    min-height: 70px;
+}
 #carnet-modal .modal-header {
     display: flex;
     justify-content: space-between;

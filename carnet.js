@@ -202,6 +202,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         mettreAJourStyleChampsAuto(selectMachine ? selectMachine.value : 'F-GASB');
         if (!recordId) cocherFonctionParDefaut();
     }
+    modal.classList.toggle('carnet-modal-observation', form.dataset.mode === 'observation');
     document.getElementById('carnet-id').value = recordId || '';
     if (recordId) {
         const record = listeVolsCarnetCache.find(r => r.id === recordId);
