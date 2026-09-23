@@ -740,7 +740,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         if (forceRefresh || listeAvionsCache.length === 0) {
             const resAvions = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers });
             const dataAvions = await resAvions.json();
-            if (dataAvions.records) listeAvionsCache = dataAvions.records;
+            if (dataAvions.records) listeAvionsCache = trierAvionsParImmat(dataAvions.records);
         }
         const trouverAvionParImmat = (immat) => (listeAvionsCache || []).find(a => (a.fields['Immatriculation'] || a.fields['Nom'] || '').toString().trim().toUpperCase() === immat.toUpperCase());
         const avionJVIO = trouverAvionParImmat('F-JVIO');

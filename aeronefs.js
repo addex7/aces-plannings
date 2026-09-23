@@ -420,7 +420,7 @@ async function chargerSuiviAeronef() {
             console.warn('Erreur chargement Maintenance:', err);
         }
 
-        const recordsMachines = dataMachines.records || [];
+        const recordsMachines = trierAvionsParImmat(dataMachines.records || []);
         listeAvionsCache = recordsMachines;
         populerSelectAvions(recordsMachines);
 

@@ -197,6 +197,15 @@ function formaterDateHeureLocal(d) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// PostgreSQL renvoie les lignes dans un ordre arbitraire — tri alphabetique par immatriculation.
+function trierAvionsParImmat(records) {
+    return (records || []).slice().sort((a, b) => {
+        const ia = (((a.fields || {})['Immatriculation'] || (a.fields || {})['Nom']) || '').toString().trim().toUpperCase();
+        const ib = (((b.fields || {})['Immatriculation'] || (b.fields || {})['Nom']) || '').toString().trim().toUpperCase();
+        return ia.localeCompare(ib);
+    });
+}
+
 function afficherConflitsReservations(barresInfos) {
     if (!Array.isArray(barresInfos) || barresInfos.length < 2) return;
     for (let i = 0; i < barresInfos.length; i++) {
