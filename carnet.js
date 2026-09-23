@@ -1075,17 +1075,24 @@ function afficherAlarmeObservation(records) {
         <button class="btn-statut-obs" data-statut="En cours de traitement" style="padding: 4px 8px; border: 1px solid #854d0e; background: transparent; color: #854d0e; border-radius: 4px; cursor: pointer; font-size: 12px;">En cours</button>
         <button class="btn-statut-obs" data-statut="Observation traitée" style="padding: 4px 8px; border: 1px solid #854d0e; background: transparent; color: #854d0e; border-radius: 4px; cursor: pointer; font-size: 12px;">Traité</button>
     `;
+    const COULEURS_STATUT_OBS = {
+        'Non pris en compte': '#dc2626',
+        'Pris en compte': '#d97706',
+        'En cours de traitement': '#2563eb',
+        'Observation traitée': '#16a34a'
+    };
     let html = '';
     avecObs.forEach(obs => {
         const f = obs.fields || {};
         const dateObj = f['Date'] ? new Date(f['Date']) : null;
         const dateStr = dateObj ? dateObj.toLocaleDateString('fr-FR') : '-';
         const statut = (f['Statut observation'] || 'Non pris en compte').toString();
+        const couleur = COULEURS_STATUT_OBS[statut] || '#dc2626';
         html += `
-            <div data-record-id="${obs.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(180, 83, 9, 0.2);">
+            <div data-record-id="${obs.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0 6px 10px; border-bottom: 1px solid rgba(180, 83, 9, 0.2); border-left: 4px solid ${couleur};">
                 <div>
                     <strong>🛠️ ${f['Machine'] || ''} — ${dateStr}</strong> — ${(f['Observations'] || '').trim()}
-                    <span class="obs-statut" style="font-style: italic; margin-left: 8px; color: #92400e;">(${statut})</span>
+                    <span class="obs-statut" style="font-style: italic; margin-left: 8px; font-weight: 700; color: ${couleur};">(${statut})</span>
                 </div>
                 <div class="obs-btns" style="display: flex; gap: 6px; flex-shrink: 0;">${btnsHtml}</div>
             </div>
@@ -1483,10 +1490,20 @@ function genererGrillesPlaneur(categorie) {
             box.dataset.immat = immat;
             box.innerHTML = `
                 <h3>${formaterImmatPlaneur(immat)}</h3>
-                <button type="button" class="btn-doc-planeur" title="Consulter les documents">Docs</button>
+                <div class="planeur-box-btns">
+                    <button type="button" class="btn-doc-planeur btn-remarque" title="Ajouter une remarque mécanique">Remarque</button>
+                    <button type="button" class="btn-doc-planeur" title="Consulter les documents">Docs</button>
+                </div>
             `;
+            const btnRemarque = box.querySelector('.btn-remarque');
+            if (btnRemarque) {
+                btnRemarque.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    ouvrirModaleCarnet(null, immat);
+                });
+            }
             box.addEventListener('click', () => ouvrirModaleCarnet(null, immat));
-            const btnDoc = box.querySelector('.btn-doc-planeur');
+            const btnDoc = box.querySelector('.btn-doc-planeur:not(.btn-remarque)');
             if (btnDoc) {
                 btnDoc.addEventListener('click', (e) => {
                     e.stopPropagation();

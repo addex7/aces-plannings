@@ -2658,8 +2658,13 @@ img, table, video, iframe, svg {
     font-weight: 700;
     letter-spacing: 0.5px;
 }
-.btn-doc-planeur {
+.planeur-box-btns {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
     margin-top: 12px;
+}
+.btn-doc-planeur {
     padding: 5px 14px;
     font-size: 12px;
     font-weight: 600;
@@ -2673,10 +2678,17 @@ img, table, video, iframe, svg {
 .btn-doc-planeur:hover {
     background: #cbd5e1;
 }
+.btn-remarque {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+.btn-remarque:hover {
+    background: #fde68a;
+}
 
 /* --- MODALE OBSERVATION PLANEUR --- */
 #carnet-form[data-mode="observation"] .form-group:not(.observation-only),
-#carnet-form[data-mode="observation"] .form-row,
+#carnet-form[data-mode="observation"] .form-row:not(:has(.observation-only)),
 #carnet-form[data-mode="observation"] .checkbox-group {
     display: none !important;
 }
