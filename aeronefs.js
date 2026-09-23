@@ -506,6 +506,7 @@ async function chargerSuiviAeronef() {
 
         tbody.innerHTML = '';
         const SEUIL_ALERTE = 10.0;
+        let buteeJourPrecedente = null;
 
         for (let i = 0; i < 14; i++) {
             const dateJour = new Date(dateDepart);
@@ -547,7 +548,13 @@ async function chargerSuiviAeronef() {
                 return sum + (isNaN(t) ? 0 : t);
             }, 0);
             const horametreJour = horametreActuel - tempsCarnetDepuisJour;
-            potentielCourant = buteeJour - horametreJour;
+            const potentielBaseJour = buteeJour - horametreJour;
+            if (i === 0 || buteeJour !== buteeJourPrecedente) {
+                potentielCourant = potentielBaseJour;
+            } else {
+                potentielCourant = Math.min(potentielCourant, potentielBaseJour);
+            }
+            buteeJourPrecedente = buteeJour;
             if (i === 0) {
                 potentielInitial = potentielCourant;
                 buteeInitiale = buteeJour;
