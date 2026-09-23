@@ -171,6 +171,13 @@
                 Un email de confirmation vient de vous être envoyé. Pensez à vérifier vos spams.
             </p>
         </section>
+
+        <section id="annulation-section" style="display: none; text-align: center; padding: 40px 20px;">
+            <div style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 12px; padding: 30px; max-width: 520px; margin: 0 auto;">
+                <h2 style="color: #b91c1c; margin-top: 0;">Réservation annulée</h2>
+                <p style="color: #7f1d1d; margin-bottom: 0;">Votre vol d'initiation a été annulé.<br>Vous pouvez maintenant fermer cette page.</p>
+            </div>
+        </section>
     </main>
 </div>
 
@@ -269,7 +276,7 @@ function clearMessage() {
 }
 
 function showSection(id) {
-    ['type-section', 'persons-section', 'list-section', 'form-section', 'manage-section', 'confirmation-section'].forEach(sid => {
+    ['type-section', 'persons-section', 'list-section', 'form-section', 'manage-section', 'confirmation-section', 'annulation-section'].forEach(sid => {
         const s = document.getElementById(sid);
         if (s) s.style.display = 'none';
     });
@@ -754,8 +761,8 @@ async function onManageCancel() {
         currentToken = null;
         currentRecord = null;
         recordReservation = null;
-        showMessage('info', 'Réservation annulée. Le créneau est de nouveau disponible.');
-        loadCreneaux();
+        showSection('annulation-section');
+        showMessage('error', 'Réservation annulée.');
     } catch (err) {
         console.error(err);
         showMessage('error', err.message || 'Erreur lors de l\'annulation.');
