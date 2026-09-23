@@ -503,8 +503,8 @@ function setAfficherVIPPlaneur(val) {
     mettreAJourBoutonVIPPlaneur();
 }
 
-async function peuplerSelectPilotesVI(valeurSelectionnee = '') {
-    const sel = document.getElementById('form-vi-pilote');
+async function peuplerSelectPilotesVI(valeurSelectionnee = '', selectId = 'form-vi-pilote') {
+    const sel = document.getElementById(selectId);
     if (!sel) return;
     await chargerListeMembresCache();
     let cible = (valeurSelectionnee || '').toString().trim();
@@ -3180,14 +3180,14 @@ function afficherVolsInitiation() {
         const boutonInscrireAutre = peutInscrireAutre ? `<button class="btn-reserver-initiation" data-inscrire-autre="1" data-id="${vol.id}" data-source="${vol.source}" data-vol="${volData}">Inscrire autre</button>` : '';
         const caseSelection = regrouperParJour && vol.categorie === 'creneaux'
             ? `<input type="checkbox" class="creneau-check" data-id="${vol.id}" title="Sélectionner pour suppression groupée">` : '';
-        const boutonLiberer = (!estArchive && (isAPourvoir || isPris) && vol.source === 'creneau' && hasRoleGestionVI())
+        const gestionVI = hasRoleGestionVI();
+        const peutGerer = !estArchive && (isAPourvoir || isPris) && gestionVI;
+        const boutonLiberer = peutGerer
             ? `<button class="btn-liberer-initiation" title="Retirer le passager et remettre le créneau à disposition">Libérer</button>` : '';
-        const boutonDecaler = (!estArchive && (isAPourvoir || isPris) && vol.source === 'creneau' && vol.passager && hasRoleGestionVI())
-            ? `<button class="btn-decaler-initiation" title="Ouvrir la page passager pour déplacer la réservation">Décaler le vol</button>` : '';
-        const boutonPilote = (!estArchive && isPris && vol.pilote && hasRoleGestionVI())
+        const boutonDecaler = (peutGerer && vol.passager)
+            ? `<button class="btn-decaler-initiation" title="Déplacer cette réservation sur un autre créneau">Décaler le vol</button>` : '';
+        const boutonPilote = (!estArchive && isPris && vol.pilote && (gestionVI || hasRolePiloteVI()))
             ? `<button class="btn-pilote-initiation" title="Changer le pilote attribué à ce vol">Changer de pilote</button>` : '';
-        const boutonEdit = (!estArchive && hasRoleGestionVI())
-            ? `<button class="btn-edit-vi" title="Modifier ce vol d'initiation">Modifier</button>` : '';
         const card = document.createElement('div');
         const classeType = `type-${(vol.type || 'vi').toLowerCase()}`;
         card.className = `initiation-card ${vol.classe} ${classeType}`;
@@ -3200,7 +3200,6 @@ function afficherVolsInitiation() {
                 </div>
                 <div class="initiation-meta">
                     <strong>${piloteText}</strong>
-                    ${boutonEdit}
                     ${caseSelection}
                     <button class="btn-supprimer-initiation" title="Supprimer ce créneau">✕</button>
                 </div>
@@ -3220,7 +3219,6 @@ function afficherVolsInitiation() {
                     ${boutonPilote}
                     ${boutonDecaler}
                     ${boutonLiberer}
-                    ${boutonEdit}
                     <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
                 </div>
             `;
@@ -3230,9 +3228,18 @@ function afficherVolsInitiation() {
             e.stopPropagation();
             libererCreneauVI(vol);
         });
+        if (isAdminCreneaux) {
+            card.style.cursor = 'pointer';
+            card.title = 'Cliquer pour réserver ce créneau au nom d\'un passager';
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button, input')) return;
+                ouvrirResaAdminVI(vol);
+            });
+        }
         const btnDecaler = card.querySelector('.btn-decaler-initiation');
         if (btnDecaler) btnDecaler.addEventListener('click', async (e) => {
             e.stopPropagation();
+            if (vol.source !== 'creneau') { editerVolInitiation(vol); return; }
             let token = vol.token;
             if (!token) {
                 token = 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
@@ -3254,12 +3261,7 @@ function afficherVolsInitiation() {
         const btnPilote = card.querySelector('.btn-pilote-initiation');
         if (btnPilote) btnPilote.addEventListener('click', (e) => {
             e.stopPropagation();
-            editerVolInitiation(vol);
-        });
-        const btnEdit = card.querySelector('.btn-edit-vi');
-        if (btnEdit) btnEdit.addEventListener('click', (e) => {
-            e.stopPropagation();
-            editerVolInitiation(vol);
+            ouvrirChoixPiloteVI(vol);
         });
         card.querySelector('.btn-supprimer-initiation').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -3340,28 +3342,23 @@ async function supprimerCreneauxSelection(ids) {
 }
 
 async function libererCreneauVI(vol) {
-    if (!vol || !vol.id || vol.source !== 'creneau') return;
+    if (!vol || !vol.id) return;
+    const table = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'creneau' ? 'VI Créneaux' : 'VI Planeur');
+    const champs = vol.source === 'creneau'
+        ? { 'Statut': 'Disponible', 'Prénom': null, 'Nom': null, 'Email': null, 'Téléphone': null, 'Bon cadeau': null, 'Token': null, 'Date réservation': null }
+        : (vol.source === 'planeur' ? { 'Nom': null, 'Téléphone': null } : { 'Passager': null, 'Téléphone': null });
     const detail = [vol.passager, vol.dateStr, `${vol.heureDebut || ''} - ${vol.heureFin || ''}`].filter(Boolean).join(' • ');
     afficherModaleConfirmation(
         'Libérer ce créneau ?',
         `<p><strong>${escapeHtml(detail || 'Créneau')}</strong></p><p>Les informations du passager seront effacées et le créneau redeviendra disponible.</p>`,
         async () => {
             try {
-                const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
+                const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}`, {
                     method: 'PATCH',
                     headers,
                     body: JSON.stringify({ records: [{
                         id: vol.id,
-                        fields: {
-                            'Statut': 'Disponible',
-                            'Prénom': null,
-                            'Nom': null,
-                            'Email': null,
-                            'Téléphone': null,
-                            'Bon cadeau': null,
-                            'Token': null,
-                            'Date réservation': null
-                        }
+                        fields: champs
                     }] })
                 });
                 if (response.ok) {
@@ -3380,6 +3377,98 @@ async function libererCreneauVI(vol) {
             }
         }
     );
+}
+
+let volPiloteModale = null;
+async function ouvrirChoixPiloteVI(vol) {
+    const modal = document.getElementById('vi-pilote-modal');
+    if (!modal) return;
+    volPiloteModale = vol;
+    const info = document.getElementById('vi-pilote-info');
+    if (info) info.textContent = `${vol.passager || 'Créneau'} — ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}`;
+    await peuplerSelectPilotesVI((vol.pilote || '').toString().trim(), 'vi-pilote-select');
+    modal.style.display = 'flex';
+}
+
+async function validerChoixPiloteVI() {
+    const vol = volPiloteModale;
+    const sel = document.getElementById('vi-pilote-select');
+    if (!vol || !sel) return;
+    const nom = sel.value || null;
+    const table = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'creneau' ? 'VI Créneaux' : 'VI Planeur');
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ records: [{ id: vol.id, fields: { 'Pilote': nom } }] })
+        });
+        if (!res.ok) throw new Error('Echec');
+        document.getElementById('vi-pilote-modal').style.display = 'none';
+        if (typeof enregistrerAudit === 'function') {
+            await enregistrerAudit('Changement pilote VI', vol.type || 'VI', `Pilote : ${nomPiloteCourant()} | Nouveau pilote : ${nom || 'Aucun'} | ${vol.dateStr} ${vol.heureDebut}-${vol.heureFin}`, 'Initiation');
+        }
+        await chargerVolsInitiation();
+        if (typeof chargerDonneesPlanning === 'function') await chargerDonneesPlanning();
+    } catch (e) {
+        console.error(e);
+        alert('Erreur lors de l\'attribution du pilote.');
+    }
+}
+
+let volResaAdmin = null;
+function ouvrirResaAdminVI(vol) {
+    const modal = document.getElementById('vi-resa-modal');
+    if (!modal) return;
+    volResaAdmin = vol;
+    const info = document.getElementById('vi-resa-info');
+    if (info) info.textContent = `${vol.type || 'VI'} — ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}`;
+    ['prenom', 'nom', 'email', 'tel', 'bon'].forEach(k => {
+        const el = document.getElementById('vi-resa-' + k);
+        if (el) el.value = '';
+    });
+    modal.style.display = 'flex';
+}
+
+async function validerResaAdminVI(e) {
+    if (e) e.preventDefault();
+    const vol = volResaAdmin;
+    if (!vol) return;
+    const prenom = document.getElementById('vi-resa-prenom').value.trim();
+    const nom = document.getElementById('vi-resa-nom').value.trim();
+    const email = document.getElementById('vi-resa-email').value.trim();
+    const tel = document.getElementById('vi-resa-tel').value.trim();
+    const bon = document.getElementById('vi-resa-bon').value.trim();
+    if (!prenom || !nom || !email || !tel) {
+        alert('Prénom, nom, email et téléphone sont obligatoires.');
+        return;
+    }
+    const token = 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ records: [{ id: vol.id, fields: {
+                'Statut': 'Réservé',
+                'Prénom': prenom,
+                'Nom': nom,
+                'Email': email,
+                'Téléphone': tel,
+                'Bon cadeau': bon,
+                'Token': token,
+                'Date réservation': new Date().toISOString()
+            }}] })
+        });
+        if (!res.ok) throw new Error('Echec');
+        document.getElementById('vi-resa-modal').style.display = 'none';
+        if (typeof enregistrerAudit === 'function') {
+            await enregistrerAudit('Réservation créneau VI (admin)', vol.type || 'VI', `Passager : ${prenom} ${nom} | Email : ${email} | Tél. : ${tel} | 📅 ${vol.dateStr} • 🕐 ${vol.heureDebut} - ${vol.heureFin}`, 'Initiation');
+        }
+        await chargerVolsInitiation();
+        if (typeof chargerDonneesPlanning === 'function') await chargerDonneesPlanning();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la réservation.');
+    }
 }
 
 async function chargerVolsInitiation() {
@@ -3540,6 +3629,30 @@ function initGestionnaireVolsInitiation() {
         });
     }
     initGestionnaireChoixModifier();
+
+    const modalPilote = document.getElementById('vi-pilote-modal');
+    if (modalPilote) {
+        const fermerPilote = () => { modalPilote.style.display = 'none'; };
+        const closePilote = modalPilote.querySelector('.close-modal-vi-pilote');
+        if (closePilote) closePilote.addEventListener('click', fermerPilote);
+        window.addEventListener('click', (e) => { if (e.target === modalPilote) fermerPilote(); });
+        const btnAnnulerPilote = document.getElementById('btn-vi-pilote-annuler');
+        if (btnAnnulerPilote) btnAnnulerPilote.addEventListener('click', fermerPilote);
+        const btnValiderPilote = document.getElementById('btn-vi-pilote-valider');
+        if (btnValiderPilote) btnValiderPilote.addEventListener('click', validerChoixPiloteVI);
+    }
+
+    const modalResa = document.getElementById('vi-resa-modal');
+    if (modalResa) {
+        const fermerResa = () => { modalResa.style.display = 'none'; };
+        const closeResa = modalResa.querySelector('.close-modal-vi-resa');
+        if (closeResa) closeResa.addEventListener('click', fermerResa);
+        window.addEventListener('click', (e) => { if (e.target === modalResa) fermerResa(); });
+        const btnAnnulerResa = document.getElementById('btn-vi-resa-annuler');
+        if (btnAnnulerResa) btnAnnulerResa.addEventListener('click', fermerResa);
+        const formResa = document.getElementById('vi-resa-form');
+        if (formResa) formResa.addEventListener('submit', validerResaAdminVI);
+    }
 }
 
 function editerVolInitiation(vol) {

@@ -948,6 +948,60 @@
         </div>
     </div>
 
+    <!-- Fenêtre Modale : Changer de pilote VI -->
+    <div id="vi-pilote-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="width: 400px; max-width: 92vw; position: relative;">
+            <span class="close-modal-vi-pilote" style="position:absolute;top:15px;right:20px;font-size:24px;cursor:pointer;color:#64748b;">&times;</span>
+            <h3 style="margin-top:0;">Changer de pilote</h3>
+            <p id="vi-pilote-info" style="font-size:13px;color:#475569;margin-top:0;"></p>
+            <div class="form-group">
+                <label for="vi-pilote-select">Pilote VI :</label>
+                <select id="vi-pilote-select"></select>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="btn-vi-pilote-annuler" class="btn-secondary">Annuler</button>
+                <button type="button" id="btn-vi-pilote-valider" class="btn-submit">Attribuer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fenêtre Modale : Réserver un créneau pour un passager -->
+    <div id="vi-resa-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="width: 480px; max-width: 92vw; position: relative;">
+            <span class="close-modal-vi-resa" style="position:absolute;top:15px;right:20px;font-size:24px;cursor:pointer;color:#64748b;">&times;</span>
+            <h3 style="margin-top:0;">Réserver ce créneau pour un passager</h3>
+            <p id="vi-resa-info" style="font-size:13px;color:#475569;margin-top:0;"></p>
+            <form id="vi-resa-form">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group">
+                        <label for="vi-resa-prenom">Prénom *</label>
+                        <input type="text" id="vi-resa-prenom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vi-resa-nom">Nom *</label>
+                        <input type="text" id="vi-resa-nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vi-resa-email">Email *</label>
+                        <input type="email" id="vi-resa-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vi-resa-tel">Téléphone *</label>
+                        <input type="tel" id="vi-resa-tel" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="vi-resa-bon">Numéro de bon cadeau</label>
+                    <input type="text" id="vi-resa-bon">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="btn-vi-resa-annuler" class="btn-secondary">Annuler</button>
+                    <button type="submit" class="btn-submit">Réserver et envoyer le mail</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Fenêtre Modale : Saisie Carnet de Route -->
     <div id="carnet-modal" class="modal" style="display: none;">
         <div class="modal-content">
@@ -1340,11 +1394,11 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=91"></script>
-    <script src="version.js?v=20260923234847"></script>
+    <script src="version.js?v=20260923235858"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=106"></script>
     <script src="presences.js?v=99"></script>
-    <script src="planning.js?v=184"></script>
+    <script src="planning.js?v=185"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=110"></script>
     <script src="aeronefs.js?v=115"></script>
@@ -1354,7 +1408,7 @@
     <script src="audit.js?v=7"></script>
     <script src="membres.js?v=105"></script>
     <script src="instructeurs.js?v=107"></script>
-    <script src="instructeur-planning.js?v=184"></script>
+    <script src="instructeur-planning.js?v=185"></script>
     <script src="messagerie.js?v=18"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>
