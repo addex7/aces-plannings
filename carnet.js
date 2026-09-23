@@ -12,8 +12,8 @@ let machineCarnetSelectionnee = 'F-GASB';
 let carnetPageJVIO = 1;
 const LIGNES_PAR_PAGE_JVIO = 9;
 const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CEQJ', 'F-CDVN', 'F-CFRK', 'F-CHDT', 'F-CEQZ', 'F-CESL', 'F-CGOV'];
-const REMOQUES_PLANEURS = IMMATS_PLANEURS.map(i => `Remorque ${i}`);
-const MATERIEL_AUTRES = ['Tracteur landini', 'Tracteur tondeuse', 'Remorque 100LL', 'Remorque SP98', 'Golfette', 'Peugeot'];
+const REMOQUES_PLANEURS = [...IMMATS_PLANEURS.map(i => `Remorque ${i}`), 'Remorque 100LL', 'Remorque SP98'];
+const MATERIEL_AUTRES = ['Tracteur landini', 'Tracteur tondeuse', 'Golfette', 'Peugeot'];
 const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS, ...MATERIEL_AUTRES];
 const MACHINES_MOTEURS = ['F-BLIO', 'F-GASB', 'F-JVIO'];
 const CATEGORIES_CARNET = {
