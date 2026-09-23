@@ -833,16 +833,20 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         });
         const formulaJour = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${debutJour}'`;
         const urlCarnetPilotes = `${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
+        const urlCarnetPilotesTous = `${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}?pageSize=100`;
         const urlMaintenance = `${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
-        const [resCarnetPilotes, resMaintenance] = await Promise.all([
+        const [resCarnetPilotes, resCarnetPilotesTous, resMaintenance] = await Promise.all([
             cachedFetch(urlCarnetPilotes, { headers }, API_CACHE_TTL, forceRefresh),
+            cachedFetch(urlCarnetPilotesTous, { headers }, API_CACHE_TTL, forceRefresh),
             cachedFetch(urlMaintenance, { headers }, API_CACHE_TTL, forceRefresh)
         ]);
-        const [dataCarnetPilotes, dataMaintenance] = await Promise.all([
+        const [dataCarnetPilotes, dataCarnetPilotesTous, dataMaintenance] = await Promise.all([
             resCarnetPilotes.json(),
+            resCarnetPilotesTous.json(),
             resMaintenance.json()
         ]);
         const carnetsPilotes = dataCarnetPilotes.records || [];
+        const carnetsPilotesTous = dataCarnetPilotesTous.records || [];
         const maintenancesJour = dataMaintenance.records || [];
         rowsContainer.innerHTML = "";
         if (listeAvionsCache.length === 0) {
@@ -910,7 +914,25 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             });
             const creneauxMotorAvion = creneauxVIMotor.filter(c => (c.fields['Machine'] || []).includes(avionId));
             volsAvion = volsAvion.concat(creneauxMotorAvion);
-            const potentielActuel = avion.fields['Potentiel restant'] !== undefined ? parseFloat(avion.fields['Potentiel restant']) : 0;
+            const immatBadge = avionNom.toString().trim().toUpperCase();
+            const horaCarnet = (carnetsPilotesTous || []).reduce((max, c) => {
+                const f = c.fields || {};
+                if ((f['Machine'] || '').toString().trim().toUpperCase() !== immatBadge) return max;
+                const h = parseFloat(String(f['Horamètre arrivée'] || '').replace(',', '.'));
+                return !isNaN(h) && h > max ? h : max;
+            }, 0);
+            const horaStocke = parseFloat(String(avion.fields['Horamètre actuel'] || '0').replace(',', '.')) || 0;
+            const tempsCarnetDepuisJour = (carnetsPilotesTous || []).reduce((sum, c) => {
+                const f = c.fields || {};
+                if ((f['Machine'] || '').toString().trim().toUpperCase() !== immatBadge) return sum;
+                if (!f['Date'] || f['Date'] < debutJour) return sum;
+                const t = parseTempsDeVol(f['Temps de vol']);
+                return sum + (isNaN(t) ? 0 : t);
+            }, 0);
+            const buteeBadge = parseFloat(String(avion.fields['Prochaine Butée'] || '').replace(',', '.')) || 0;
+            const potentielActuel = buteeBadge > 0
+                ? buteeBadge - (Math.max(horaStocke, horaCarnet) - tempsCarnetDepuisJour)
+                : (avion.fields['Potentiel restant'] !== undefined ? parseFloat(avion.fields['Potentiel restant']) || 0 : 0);
             let couleurStatus = "status-green";
             let textPotentiel = `Potentiel actuel : ${potentielActuel.toFixed(1)}h`;
             if (potentielActuel <= 5) {
