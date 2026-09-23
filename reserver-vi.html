@@ -11,7 +11,7 @@
 <div style="min-height: 100vh; background: #f8fafc;">
     <header style="background: #1e3d59; color: white; padding: 20px; text-align: center;">
         <img src="logo-aces.png" alt="ACES" style="max-height: 50px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; border-radius: 8px;">
-        <h1 style="margin: 0; font-size: 22px;">Réserver mon vol d'initiation</h1>
+        <h1 id="page-titre" style="margin: 0; font-size: 22px;">Réserver mon vol d'initiation</h1>
         <p style="margin: 5px 0 0; font-size: 13px; opacity: 0.9;">Aéroclub de l'Estuaire de la Seine (ACES) — Vol d'initiation planeur</p>
     </header>
 
@@ -51,7 +51,7 @@
 
         <section id="list-section" style="display: none;">
             <div style="margin-bottom: 15px;">
-                <button type="button" id="btn-retour-type2" class="btn-secondary" style="margin-bottom: 10px; cursor: pointer;">← Changer de type</button>
+                <button type="button" id="btn-retour-type2" class="btn-secondary" style="margin-bottom: 10px; cursor: pointer;">← Changer de type de vol d'initiation</button>
                 <button type="button" id="btn-retour-manage" class="btn-secondary" style="margin-bottom: 10px; cursor: pointer; display: none;">← Retour à ma réservation</button>
                 <button type="button" id="btn-decalage-manuel" class="btn-secondary" style="margin-bottom: 10px; margin-left: 10px; display: none; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; cursor: pointer;">Décaler le vol sur un créneau non-existant</button>
                 <h2 style="color: #1e3d59; margin-top: 0; margin-bottom: 5px;">Créneaux disponibles</h2>
@@ -356,6 +356,7 @@ function renderCreneaux() {
 
         const wrapper = document.createElement('div');
         wrapper.className = 'initiation-list';
+        const enModification = !!(currentToken && currentRecord);
         groups[date].forEach(r => {
             const card = document.createElement('div');
             card.className = 'initiation-card disponible';
@@ -368,7 +369,7 @@ function renderCreneaux() {
                     <p>🕐 ${heure}</p>
                 </div>
                 <div class="initiation-meta">
-                    <button class="btn-reserver-initiation" data-id="${r.id}">Réserver</button>
+                    <button class="btn-reserver-initiation" data-id="${r.id}">${enModification ? 'Modifier pour ce créneau' : 'Réserver'}</button>
                 </div>
             `;
             wrapper.appendChild(card);
@@ -594,6 +595,9 @@ async function loadByToken(token) {
         currentToken = token;
         currentRecord = record;
         recordIdOrigine = record.id;
+        const titre = document.getElementById('page-titre');
+        if (titre) titre.textContent = 'Modifier mon vol d\'initiation';
+        document.title = 'Modifier mon vol d\'initiation - ACES';
         if (modeDecalage) {
             ouvrirListePourDecalage(record);
         } else {
@@ -606,17 +610,15 @@ async function loadByToken(token) {
     }
 }
 
-function majBoutonsRetourListe(depuisReservation) {
-    const bType = document.getElementById('btn-retour-type2');
+function majBoutonsRetourListe() {
     const bManage = document.getElementById('btn-retour-manage');
-    if (bType) bType.style.display = depuisReservation ? 'none' : '';
-    if (bManage) bManage.style.display = depuisReservation ? '' : 'none';
+    if (bManage) bManage.style.display = (currentToken && currentRecord) ? '' : 'none';
 }
 
 function ouvrirListePourDecalage(record) {
     const f = record.fields || {};
     typeSelectionne = f['Type'] || null;
-    majBoutonsRetourListe(true);
+    majBoutonsRetourListe();
     document.getElementById('client-prenom').value = f['Prénom'] || '';
     document.getElementById('client-nom').value = f['Nom'] || '';
     document.getElementById('client-email').value = f['Email'] || '';
@@ -881,7 +883,7 @@ function onManageChanger() {
     }
     recordIdOrigine = currentRecord ? currentRecord.id : null;
     typeSelectionne = currentRecord && currentRecord.fields ? (currentRecord.fields['Type'] || null) : null;
-    majBoutonsRetourListe(true);
+    majBoutonsRetourListe();
     showSection('list-section');
     const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
     const labelEl = document.getElementById('type-selectionne-label');
@@ -917,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
                 const labelEl = document.getElementById('type-selectionne-label');
                 if (labelEl) labelEl.textContent = label;
-                majBoutonsRetourListe(false);
+                majBoutonsRetourListe();
                 showSection('list-section');
                 loadCreneaux(typeSelectionne);
             } else if (choix === 'moteur') {
@@ -935,7 +937,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
         const labelEl = document.getElementById('type-selectionne-label');
         if (labelEl) labelEl.textContent = `${label} — ${nb} personne${nb > 1 ? 's' : ''}`;
-        majBoutonsRetourListe(false);
+        majBoutonsRetourListe();
         showSection('list-section');
         loadCreneaux(typeSelectionne);
     });
