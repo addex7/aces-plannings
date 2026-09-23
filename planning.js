@@ -3162,21 +3162,35 @@ function afficherVolsInitiation() {
         const card = document.createElement('div');
         const classeType = `type-${(vol.type || 'vi').toLowerCase()}`;
         card.className = `initiation-card ${vol.classe} ${classeType}`;
-        card.innerHTML = `
-            <div class="initiation-info">
-                <h4>🎯 Vol d'Initiation ${typeText} — ${nomClient}</h4>
-                <p>📅 ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}</p>
-                <p>${machineText}📞 ${vol.telephone || 'Non renseigné'}</p>
-                ${vol.commentaire ? `<p style="margin-top:6px; font-style:italic;">💬 ${vol.commentaire}</p>` : ''}
-            </div>
-            <div class="initiation-meta">
-                <strong>${piloteText}</strong>
-                ${boutonSInscrire}
-                ${boutonInscrireAutre}
-                ${caseSelection}
-                <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
-            </div>
-        `;
+        if (isAdminCreneaux) {
+            card.classList.add('initiation-card-compact');
+            card.innerHTML = `
+                <div class="initiation-info initiation-info-compact">
+                    <h4>🎯 ${typeText}</h4>
+                    <p>📅 ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}</p>
+                </div>
+                <div class="initiation-meta">
+                    <strong>${piloteText}</strong>
+                    ${caseSelection}
+                    <button class="btn-supprimer-initiation" title="Supprimer ce créneau">✕</button>
+                </div>
+            `;
+        } else {
+            card.innerHTML = `
+                <div class="initiation-info">
+                    <h4>🎯 Vol d'Initiation ${typeText} — ${nomClient}</h4>
+                    <p>📅 ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}</p>
+                    <p>${machineText}📞 ${vol.telephone || 'Non renseigné'}</p>
+                    ${vol.commentaire ? `<p style="margin-top:6px; font-style:italic;">💬 ${vol.commentaire}</p>` : ''}
+                </div>
+                <div class="initiation-meta">
+                    <strong>${piloteText}</strong>
+                    ${boutonSInscrire}
+                    ${boutonInscrireAutre}
+                    <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
+                </div>
+            `;
+        }
         card.style.cursor = 'pointer';
         card.title = 'Cliquer pour modifier';
         card.addEventListener('click', (e) => {
@@ -3626,6 +3640,21 @@ function initGestionCreneauxVI() {
             if (!listeDatesGV.includes(d)) listeDatesGV.push(d);
             input.value = '';
             majChipsDatesGV();
+            genererApercuCreneauxVI();
+        });
+    }
+    const selType = document.getElementById('gv-type');
+    if (selType) {
+        selType.addEventListener('change', () => {
+            const defs = selType.value === 'VIP'
+                ? { d: '14:30', f: '18:15', n: 5 }
+                : { d: '10:00', f: '12:00', n: 2 };
+            const elD = document.getElementById('gv-debut');
+            const elF = document.getElementById('gv-fin');
+            const elN = document.getElementById('gv-nombre');
+            if (elD) elD.value = defs.d;
+            if (elF) elF.value = defs.f;
+            if (elN) elN.value = defs.n;
             genererApercuCreneauxVI();
         });
     }

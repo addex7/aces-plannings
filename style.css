@@ -1141,6 +1141,20 @@ img, table, video, iframe, svg {
     font-size: 15px;
     color: #1e3d59;
 }
+.initiation-card-compact {
+    flex-wrap: nowrap;
+    padding: 8px 15px;
+}
+.initiation-info-compact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+}
+.initiation-info-compact h4,
+.initiation-info-compact p {
+    margin: 0;
+}
 .initiation-info p {
     margin: 0;
     font-size: 13px;
@@ -1280,6 +1294,12 @@ img, table, video, iframe, svg {
 #gestion-vi-toolbar .form-group textarea {
     padding: 6px;
     font-size: 13px;
+}
+#gestion-vi-toolbar .form-group input,
+#gestion-vi-toolbar .form-group select,
+#gestion-vi-toolbar .form-group button {
+    height: 34px;
+    box-sizing: border-box;
 }
 #gv-type {
     width: 100%;
