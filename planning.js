@@ -3113,6 +3113,15 @@ function afficherVolsInitiation() {
     }
     container.innerHTML = '';
     const regrouperParJour = filtreInitiationActif === 'creneaux';
+    if (regrouperParJour) {
+        const barre = document.createElement('div');
+        barre.className = 'initiation-selection-barre';
+        barre.innerHTML = `
+            <label><input type="checkbox" id="creneau-tout"> Tout</label>
+            <span id="creneau-sel-compteur">0 sélectionné(s)</span>
+            <button type="button" id="btn-suppr-selection" class="btn-supprimer-selection" disabled>Supprimer la sélection</button>`;
+        container.appendChild(barre);
+    }
     let dernierJourAffiche = '';
     vols.forEach(vol => {
         if (regrouperParJour && vol.dateStr !== dernierJourAffiche) {
@@ -3148,8 +3157,11 @@ function afficherVolsInitiation() {
         const peutInscrireAutre = !estArchive && isAPourvoir && (currentUser?.roles || []).some(r => rolesInscrireAutre.includes(r));
         const volData = encodeURIComponent(JSON.stringify({ id: vol.id, source: vol.source }));
         const boutonInscrireAutre = peutInscrireAutre ? `<button class="btn-reserver-initiation" data-inscrire-autre="1" data-id="${vol.id}" data-source="${vol.source}" data-vol="${volData}">Inscrire autre</button>` : '';
+        const caseSelection = regrouperParJour && vol.categorie === 'creneaux'
+            ? `<input type="checkbox" class="creneau-check" data-id="${vol.id}" title="Sélectionner pour suppression groupée">` : '';
         const card = document.createElement('div');
-        card.className = `initiation-card ${vol.classe}`;
+        const classeType = `type-${(vol.type || 'vi').toLowerCase()}`;
+        card.className = `initiation-card ${vol.classe} ${classeType}`;
         card.innerHTML = `
             <div class="initiation-info">
                 <h4>🎯 Vol d'Initiation ${typeText} — ${nomClient}</h4>
@@ -3161,13 +3173,14 @@ function afficherVolsInitiation() {
                 <strong>${piloteText}</strong>
                 ${boutonSInscrire}
                 ${boutonInscrireAutre}
+                ${caseSelection}
                 <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
             </div>
         `;
         card.style.cursor = 'pointer';
         card.title = 'Cliquer pour modifier';
         card.addEventListener('click', (e) => {
-            if (e.target.closest('.btn-reserver-initiation, .btn-supprimer-initiation')) return;
+            if (e.target.closest('.btn-reserver-initiation, .btn-supprimer-initiation, .creneau-check')) return;
             editerVolInitiation(vol);
         });
         card.querySelector('.btn-supprimer-initiation').addEventListener('click', (e) => {
@@ -3176,6 +3189,46 @@ function afficherVolsInitiation() {
         });
         container.appendChild(card);
     });
+    if (regrouperParJour) {
+        const cbs = [...container.querySelectorAll('.creneau-check')];
+        const tout = container.querySelector('#creneau-tout');
+        const btnSel = container.querySelector('#btn-suppr-selection');
+        const compteur = container.querySelector('#creneau-sel-compteur');
+        const maj = () => {
+            const n = cbs.filter(c => c.checked).length;
+            if (compteur) compteur.textContent = `${n} sélectionné(s)`;
+            if (btnSel) btnSel.disabled = n === 0;
+            if (tout) tout.checked = n > 0 && n === cbs.length;
+        };
+        cbs.forEach(c => c.addEventListener('change', maj));
+        if (tout) tout.addEventListener('change', () => { cbs.forEach(c => c.checked = tout.checked); maj(); });
+        if (btnSel) btnSel.addEventListener('click', () => supprimerCreneauxSelection(cbs.filter(c => c.checked).map(c => c.dataset.id)));
+    }
+}
+
+async function supprimerCreneauxSelection(ids) {
+    if (!ids || !ids.length) return;
+    if (!confirm(`Supprimer ${ids.length} créneau(x) sélectionné(s) ?`)) return;
+    try {
+        const qs = ids.map(id => `records[]=${encodeURIComponent(id)}`).join('&');
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?${qs}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (res.ok) {
+            if (typeof enregistrerAudit === 'function') {
+                const pilote = nomPiloteCourant();
+                await enregistrerAudit('Suppression créneaux VI', 'VI', `Pilote : ${pilote} | Nombre : ${ids.length}`, 'Initiation');
+            }
+            if (typeof chargerVolsInitiation === 'function') await chargerVolsInitiation();
+            if (typeof chargerDonneesPlanning === 'function') await chargerDonneesPlanning();
+        } else {
+            alert('Erreur lors de la suppression.');
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Erreur lors de la suppression.');
+    }
 }
 
 async function chargerVolsInitiation() {
@@ -3528,9 +3581,10 @@ function updateGestionVI() {
 const listeDatesGV = [];
 
 function getDatesCreneauxVI() {
-    if (listeDatesGV.length) return [...listeDatesGV].sort();
+    const dates = [...listeDatesGV];
     const d = document.getElementById('gv-date')?.value || '';
-    return d ? [d] : [];
+    if (d && !dates.includes(d)) dates.push(d);
+    return dates.sort();
 }
 
 function majChipsDatesGV() {
