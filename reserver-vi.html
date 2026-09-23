@@ -65,7 +65,7 @@
         </section>
 
         <section id="form-section" style="display: none;">
-            <h2 style="color: #1e3d59; margin-top: 0;">Réserver mon créneau</h2>
+            <h2 id="form-titre" style="color: #1e3d59; margin-top: 0;">Réserver mon créneau</h2>
             <div id="selected-creneau-info" class="initiation-card disponible" style="margin-bottom: 15px;"></div>
             <form id="reservation-form">
                 <input type="hidden" id="selected-record-id">
@@ -94,7 +94,7 @@
                 <div class="form-actions">
                     <button type="button" class="btn-secondary btn-retour-manage" style="display: none;">← Ma réservation</button>
                     <button type="button" id="btn-retour-liste" class="btn-secondary">Retour</button>
-                    <button type="submit" class="btn-submit">Confirmer ma réservation</button>
+                    <button type="submit" id="btn-confirmer-resa" class="btn-submit">Confirmer ma réservation</button>
                 </div>
             </form>
         </section>
@@ -210,6 +210,7 @@ let creneauxDisponibles = [];
 let currentToken = null;
 let currentRecord = null;
 let recordIdOrigine = null;
+let recordReservation = null;
 let typeSelectionne = null;
 let modeDecalage = false;
 
@@ -392,8 +393,13 @@ function renderCreneaux() {
 }
 
 function selectCreneau(record) {
+    const enModif = !!(currentToken && recordIdOrigine);
     currentRecord = record;
     clearMessage();
+    const titreForm = document.getElementById('form-titre');
+    if (titreForm) titreForm.textContent = enModif ? 'Modifier pour ce créneau' : 'Réserver mon créneau';
+    const btnConf = document.getElementById('btn-confirmer-resa');
+    if (btnConf) btnConf.textContent = enModif ? 'Confirmer la modification' : 'Confirmer ma réservation';
     showSection('form-section');
     const typeValue = record.fields['Type'] || 'VI';
     const type = escapeHtml(TYPE_LABELS[typeValue] || typeValue);
@@ -459,6 +465,7 @@ async function onSubmitReservation(e) {
         currentToken = token;
         currentRecord = record;
         recordIdOrigine = record.id;
+        recordReservation = record;
         // L'email de confirmation est envoye cote serveur au moment du PATCH.
         const f = record.fields || {};
         const dateVol = f['Date'] ? formatDate(f['Date']) : '';
@@ -601,6 +608,7 @@ async function loadByToken(token) {
         currentToken = token;
         currentRecord = record;
         recordIdOrigine = record.id;
+        recordReservation = record;
         const titre = document.getElementById('page-titre');
         if (titre) titre.textContent = 'Modifier mon vol d\'initiation';
         document.title = 'Modifier mon vol d\'initiation - ACES';
@@ -697,6 +705,7 @@ async function onManageUpdate(e) {
         if (!res.ok) throw new Error(data.error?.message || 'Erreur lors de la mise à jour');
         const record = (data.records || [])[0];
         currentRecord = record;
+        recordReservation = record;
         showManageView(record);
         showMessage('success', 'Informations mises à jour.');
         const fUpd = record.fields || {};
@@ -744,6 +753,7 @@ async function onManageCancel() {
         await enregistrerAudit('Annulation créneau VI', typeCancel, `Passager : ${passagerCancel} | 📅 ${dateCancel} • 🕐 ${heureCancel}`, 'Initiation');
         currentToken = null;
         currentRecord = null;
+        recordReservation = null;
         showMessage('info', 'Réservation annulée. Le créneau est de nouveau disponible.');
         loadCreneaux();
     } catch (err) {
@@ -866,6 +876,7 @@ async function decalerSurCreneauManuel() {
         showMessage('success', `Vol décalé au ${dateStr} • ${debut} - ${fin}.`);
         currentRecord = null;
         currentToken = null;
+        recordReservation = null;
         loadCreneaux(typeSelectionne);
     } catch (err) {
         console.error(err);
@@ -942,13 +953,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-retour-type2').addEventListener('click', () => showSection('type-section'));
     document.querySelectorAll('.btn-retour-manage').forEach(b => {
         b.addEventListener('click', () => {
-            if (currentRecord) showManageView(currentRecord);
+            if (recordReservation) {
+                currentRecord = recordReservation;
+                showManageView(recordReservation);
+            }
         });
     });
     document.getElementById('reservation-form').addEventListener('submit', onSubmitReservation);
     document.getElementById('btn-retour-liste').addEventListener('click', () => {
         showSection('list-section');
-        currentRecord = null;
+        currentRecord = recordReservation;
     });
     document.getElementById('manage-form').addEventListener('submit', onManageUpdate);
     document.getElementById('btn-manage-annuler').addEventListener('click', onManageCancel);
