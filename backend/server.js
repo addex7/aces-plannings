@@ -474,6 +474,14 @@ app.post('/v0/:base/:table', async (req, res) => {
                 decalage = true;
                 delete r.fields._decalage;
             }
+            if (tableNom === 'VI Créneaux') {
+                const f = r.fields || {};
+                const { rows: dup } = await pool.query(
+                    `SELECT id FROM ${table} WHERE fields->>'Date' = $1 AND fields->>'Heure début' = $2 AND fields->>'Heure fin' = $3 AND fields->>'Type' = $4 AND COALESCE(fields->>'Statut','Disponible') <> 'Annulé' LIMIT 1`,
+                    [f['Date'] || '', f['Heure début'] || '', f['Heure fin'] || '', f['Type'] || '']
+                );
+                if (dup.length) return erreur(res, 409, `Un créneau ${f['Type'] || ''} existe déjà le ${f['Date'] || ''} de ${f['Heure début'] || ''} à ${f['Heure fin'] || ''}.`);
+            }
             const { rows } = await pool.query(
                 `INSERT INTO ${table} (id, fields) VALUES ($1, $2) RETURNING id, fields, created_at`,
                 [id, r.fields || {}]

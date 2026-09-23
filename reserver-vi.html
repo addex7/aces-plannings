@@ -752,6 +752,10 @@ async function decalerSurCreneauManuel() {
     }
     const f = currentRecord.fields || {};
     const type = f['Type'] || 'VI';
+    if (date === f['Date'] && debut === f['Heure début'] && fin === f['Heure fin']) {
+        info.textContent = 'Ce vol est déjà réservé sur ce créneau. Choisis une autre date ou un autre horaire.';
+        return;
+    }
     const btn = document.getElementById('btn-decal-valider');
     btn.disabled = true;
     info.textContent = 'Vérification des créneaux existants...';
