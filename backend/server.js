@@ -97,7 +97,7 @@ app.post('/v0/send-email', async (req, res) => {
     if (!url || typeof url !== 'string' || !/^https:\/\//.test(url) || url.length > 500) {
         return erreur(res, 400, 'URL invalide');
     }
-    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
+    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"]/g, '');
     const prenomSafe = nettoie(prenom, 80);
     const estReset = type === 'reset';
     const estVI = type === 'vi' || type === 'vi-modification';
@@ -192,7 +192,7 @@ async function envoyerMailConfirmationVI(fields) {
     const to = f['Email'];
     const token = f['Token'];
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !token) return;
-    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
+    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"]/g, '');
     const prenomSafe = nettoie(`${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), 80);
     const viTypeSafe = nettoie(libelleTypeVI(f['Type']), 80);
     let viDateSafe = '';
@@ -245,7 +245,7 @@ async function envoyerMailLiberationVI(oldFields) {
     const f = oldFields || {};
     const to = f['Email'];
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return;
-    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
+    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"]/g, '');
     const prenomSafe = nettoie(`${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), 80) || 'Bonjour';
     const viTypeSafe = nettoie(libelleTypeVI(f['Type']), 80);
     let viDateSafe = '';
@@ -297,7 +297,7 @@ async function envoyerMailModificationVI(fields) {
     const to = f['Email'];
     const token = f['Token'];
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !token) return;
-    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
+    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"]/g, '');
     const prenomSafe = nettoie(`${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), 80);
     const viTypeSafe = nettoie(libelleTypeVI(f['Type']), 80);
     let viDateSafe = '';
