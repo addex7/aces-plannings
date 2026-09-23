@@ -657,18 +657,14 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                 const barresDiv = document.createElement('div');
                 const type = (vol.fields['Type'] || 'VI');
                 const isCreneau = vol._table === 'VI Créneaux';
-                const estDispo = isCreneau && nom === 'DISPONIBLE';
-                const estBloque = estDispo && vol._statut === 'Bloqué';
                 const estMoi = estUtilisateurCourant(pilote);
                 const classePilote = pilote ? 'vi-avec-pilote' : 'vi-sans-pilote';
                 barresDiv.className = `reservation-bar ${classePilote}${estMoi ? ' ma-reservation' : ''}`;
-                if (estBloque) barresDiv.classList.add('vi-bloque');
-                else if (estDispo) barresDiv.classList.add('vi-disponible');
                 if (duree <= 2) barresDiv.classList.add('short-reservation');
                 if (duree <= 1) barresDiv.classList.add('very-short-reservation');
                 barresDiv.style.left = `${positionHeure(heureDebut)}%`;
                 barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
-                const libelle = estBloque ? `${type} — BLOQUÉ` : (estDispo ? `${type} — DISPONIBLE` : (pilote ? `${type} (${formaterNomPilote(pilote)})` : `${type} DISPONIBLE`));
+                const libelle = pilote ? `${type} (${formaterNomPilote(pilote)})` : `${type} — ${nom}`;
                 barresDiv.innerHTML = `<strong>${libelle}</strong>`;
                 const debutStr = convertirHeureEnHHMM(heureDebut);
                 const finStr = convertirHeureEnHHMM(heureFin);
@@ -705,16 +701,6 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                 barresDiv.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (isResizing || isDraggingBar) return;
-                    if (estDispo && !estBloque) {
-                        ouvrirResaAdminVI({
-                            id: vol.id,
-                            type: type,
-                            dateStr: dateDebut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
-                            heureDebut: debutStr,
-                            heureFin: finStr
-                        });
-                        return;
-                    }
                     const volPourEdition = {
                         source: isCreneau ? 'creneau' : 'planeur',
                         id: vol.id,
@@ -794,14 +780,14 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             if (!vol.fields) return null;
             const f = vol.fields;
             const statut = f['Statut'] || 'Disponible';
-            if (statut === 'Annulé') return null;
+            if (statut !== 'Réservé') return null;
             const dateRaw = f['Date'];
             if (!dateRaw) return null;
             const dateVol = new Date(dateRaw + 'T00:00:00');
             if (dateVol.getFullYear() !== dateAffichee.getFullYear() ||
                 dateVol.getMonth() !== dateAffichee.getMonth() ||
                 dateVol.getDate() !== dateAffichee.getDate()) return null;
-            const passager = f['Prénom'] && f['Nom'] ? `${f['Prénom']} ${f['Nom']}`.trim() : '';
+            const passager = [f['Prénom'], f['Nom']].filter(Boolean).join(' ').trim();
             const pilote = (f['Pilote'] || '').toString().trim();
             const nom = passager || 'DISPONIBLE';
             const type = f['Type'] || 'VI';
@@ -809,7 +795,6 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                 return {
                     id: vol.id,
                     _table: 'VI Créneaux',
-                    _statut: statut,
                     fields: {
                         'Type': 'VIP',
                         'Nom': nom,
@@ -823,12 +808,10 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                 };
             }
             const avionId = type === 'VIULM' ? avionIdJVIO : (type === 'VIA' ? avionIdGASB : null);
-            if (!avionId) return null;
+            if (!avionId || nom === 'DISPONIBLE') return null;
             creneauxVIMotor.push({
                 id: vol.id,
                 _table: 'VI Créneaux',
-                _typeVI: type,
-                _statut: statut,
                 fields: {
                     'Type de vol': ['VI Moteur'],
                     'Passager': nom,
@@ -846,8 +829,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         volsVIP.push(...creneauxVI);
         volsVIP = volsVIP.filter(vol => {
             const nom = (vol.fields['Nom'] || '').toString().trim();
-            if (!nom) return false;
-            return vol._table === 'VI Créneaux' || nom !== 'DISPONIBLE';
+            return nom && nom !== 'DISPONIBLE';
         });
         const formulaJour = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${debutJour}'`;
         const urlCarnetPilotes = `${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
@@ -1078,10 +1060,6 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             const trigramme = trouverTrigrammeInstructeur(instructeurNom);
                             if (trigramme) libelleEntete += ` — ${trigramme}`;
                         }
-                        const estCreneauDispo = isCreneau && passagerNom === 'DISPONIBLE';
-                        if (estCreneauDispo) {
-                            barresDiv.classList.add(vol._statut === 'Bloqué' ? 'vi-bloque' : 'vi-disponible');
-                        }
                         if (isVIMoteur || isAncienVI) {
                             if (!piloteNom || piloteNom.trim() === "") {
                                 barresDiv.classList.add('vi-sans-pilote');
@@ -1090,9 +1068,6 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             } else {
                                 barresDiv.classList.add('vi-avec-pilote');
                                 libelleEntete = isVIMoteur ? `🎯 VI Moteur (${piloteFormate})` : `🎯 VI (${piloteFormate})`;
-                            }
-                            if (estCreneauDispo) {
-                                libelleEntete = vol._statut === 'Bloqué' ? '🎯 VI Moteur — BLOQUÉ' : `🎯 ${vol._typeVI === 'VIULM' ? 'VIULM' : 'VIA'} — DISPONIBLE`;
                             }
                         }
                         const debutStr = convertirHeureEnHHMM(heureDebut);
@@ -1134,18 +1109,6 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                                 e.stopPropagation();
                                 if (isResizing || isDraggingBar) return;
                                 ouvrirModaleEdition(vol, avionId);
-                            });
-                        } else if (estCreneauDispo && vol._statut !== 'Bloqué') {
-                            barresDiv.style.cursor = 'pointer';
-                            barresDiv.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                ouvrirResaAdminVI({
-                                    id: vol.id,
-                                    type: vol._typeVI || 'VIA',
-                                    dateStr: new Date(vol.fields['Date de début']).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
-                                    heureDebut: debutStr,
-                                    heureFin: finStr
-                                });
                             });
                         }
                         barresDiv.addEventListener('mouseenter', () => { barresDiv.style.zIndex = '100'; });
@@ -3118,8 +3081,6 @@ function initBoutonsNavigation() {
                 ${item('#e11d48', "Vol d'initiation (pilote attribué)")}
                 ${item('#00adb5', "Vol d'initiation à pourvoir")}
                 ${item('#8e44ad', 'VI Planeur')}
-                <div class="legende-ligne"><span class="legende-pastille" style="background:#d1fae5;border:2px dashed #10b981;"></span><span>Créneau d'initiation disponible</span></div>
-                <div class="legende-ligne"><span class="legende-pastille" style="background:#e2e8f0;border:2px dashed #94a3b8;"></span><span>Créneau d'initiation bloqué (conflit)</span></div>
                 ${item('#10b981', 'Mes réservations')}
                 <hr class="legende-separateur">
                 ${item('rgba(34,197,94,0.45)', 'Instructeur disponible')}

@@ -441,24 +441,7 @@ img, table, video, iframe, svg {
     background-color: #e11d48;
     border-left: 4px solid #881337;
 }
-.reservation-bar.vi-disponible {
-    background-color: #d1fae5;
-    border: 2px dashed #10b981;
-    color: #065f46;
-    box-shadow: none;
-}
-.reservation-bar.vi-disponible strong {
-    color: #065f46;
-}
-.reservation-bar.vi-bloque {
-    background-color: #e2e8f0;
-    border: 2px dashed #94a3b8;
-    color: #475569;
-    box-shadow: none;
-}
-.reservation-bar.vi-bloque strong {
-    color: #475569;
-}
+
 .reservation-bar.reservation-instruction,
 .reservation-bar.reservation-avec-instructeur {
     background-color: #3b82f6;
