@@ -240,7 +240,7 @@ async function envoyerMailConfirmationVI(fields) {
     }
 }
 
-async function envoyerMailLiberationVI(oldFields) {
+async function envoyerMailLiberationVI(oldFields, suppression = false) {
     if (!SMTP.host || !SMTP.user || !SMTP.pass) return;
     const f = oldFields || {};
     const to = f['Email'];
@@ -255,13 +255,14 @@ async function envoyerMailLiberationVI(oldFields) {
     const viHeureSafe = nettoie(`${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`, 40);
     const url = 'https://vps-1a4fbee9.vps.ovh.net/reserver-vi.html';
     const sujet = 'Annulation de votre réservation de vol d\'initiation ACES';
-    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de vol d'initiation prévue le ${viDateSafe} (${viHeureSafe}) a été annulée. Le créneau est à nouveau disponible.\n\nVous pouvez réserver un autre créneau ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+    const phraseSuite = suppression ? '' : ' Le créneau est à nouveau disponible.';
+    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de vol d'initiation prévue le ${viDateSafe} (${viHeureSafe}) a été annulée.${phraseSuite}\n\nVous pouvez réserver un autre créneau ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
     const html = `
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
             <div style="background:#dc2626;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre réservation a été annulée</div>
             <div style="padding:24px;">
                 <p>Bonjour ${prenomSafe},</p>
-                <p>Votre réservation de vol d'initiation a été annulée et le créneau est à nouveau disponible.</p>
+                <p>Votre réservation de vol d'initiation a été annulée.${suppression ? '' : ' Le créneau est à nouveau disponible.'}</p>
                 <div style="background:#f1f5f9;border-radius:8px;padding:14px 18px;margin:18px 0;">
                     <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
                     <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
@@ -580,10 +581,22 @@ app.put('/v0/:base/:table/:id', (req, res) => majRecordUnitaire(req, res, true))
 
 // --- SUPPRESSION ---
 async function supprimerIds(res, table, ids) {
+    let viReserves = [];
+    if (table === 'vi_creneaux') {
+        try {
+            const { rows } = await pool.query(`SELECT fields FROM ${table} WHERE id = ANY($1)`, [ids]);
+            viReserves = rows.map(r => r.fields).filter(f => f && f['Statut'] === 'Réservé' && f['Email']);
+        } catch (e) {
+            console.error('Lecture VI avant suppression:', e);
+        }
+    }
     for (const id of ids) {
         await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
     }
     res.json({ records: ids.map(id => ({ id, deleted: true })) });
+    viReserves.forEach(f => {
+        envoyerMailLiberationVI(f, true).catch(e => console.error('Mail suppression VI:', e));
+    });
 }
 app.delete('/v0/:base/:table/:id', async (req, res) => {
     const table = tableSql(req, res);
