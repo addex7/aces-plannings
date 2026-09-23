@@ -2705,6 +2705,11 @@ img, table, video, iframe, svg {
 #carnet-form[data-mode="observation"] .observation-only {
     display: block;
     margin-top: 0;
+    grid-column: 1 / -1;
+}
+#carnet-form[data-mode="observation"] .observation-only textarea {
+    width: 100%;
+    box-sizing: border-box;
 }
 .planeur-section-title {
     margin: 0;
