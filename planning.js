@@ -3159,6 +3159,8 @@ function afficherVolsInitiation() {
         const boutonInscrireAutre = peutInscrireAutre ? `<button class="btn-reserver-initiation" data-inscrire-autre="1" data-id="${vol.id}" data-source="${vol.source}" data-vol="${volData}">Inscrire autre</button>` : '';
         const caseSelection = regrouperParJour && vol.categorie === 'creneaux'
             ? `<input type="checkbox" class="creneau-check" data-id="${vol.id}" title="Sélectionner pour suppression groupée">` : '';
+        const boutonLiberer = (isAPourvoir && vol.source === 'creneau' && hasRoleGestionVI())
+            ? `<button class="btn-liberer-initiation" title="Retirer le passager et remettre le créneau à disposition">Libérer</button>` : '';
         const card = document.createElement('div');
         const classeType = `type-${(vol.type || 'vi').toLowerCase()}`;
         card.className = `initiation-card ${vol.classe} ${classeType}`;
@@ -3178,7 +3180,7 @@ function afficherVolsInitiation() {
         } else {
             card.innerHTML = `
                 <div class="initiation-info">
-                    <h4>🎯 Vol d'Initiation ${typeText} — ${nomClient}</h4>
+                    <h4>🎯 ${typeText} — ${nomClient}</h4>
                     <p>📅 ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}</p>
                     <p>${machineText}📞 ${vol.telephone || 'Non renseigné'}</p>
                     ${vol.commentaire ? `<p style="margin-top:6px; font-style:italic;">💬 ${vol.commentaire}</p>` : ''}
@@ -3187,6 +3189,7 @@ function afficherVolsInitiation() {
                     <strong>${piloteText}</strong>
                     ${boutonSInscrire}
                     ${boutonInscrireAutre}
+                    ${boutonLiberer}
                     <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
                 </div>
             `;
@@ -3194,8 +3197,13 @@ function afficherVolsInitiation() {
         card.style.cursor = 'pointer';
         card.title = 'Cliquer pour modifier';
         card.addEventListener('click', (e) => {
-            if (e.target.closest('.btn-reserver-initiation, .btn-supprimer-initiation, .creneau-check')) return;
+            if (e.target.closest('.btn-reserver-initiation, .btn-supprimer-initiation, .creneau-check, .btn-liberer-initiation')) return;
             editerVolInitiation(vol);
+        });
+        const btnLiberer = card.querySelector('.btn-liberer-initiation');
+        if (btnLiberer) btnLiberer.addEventListener('click', (e) => {
+            e.stopPropagation();
+            libererCreneauVI(vol);
         });
         card.querySelector('.btn-supprimer-initiation').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -3243,6 +3251,49 @@ async function supprimerCreneauxSelection(ids) {
         console.error(error);
         alert('Erreur lors de la suppression.');
     }
+}
+
+async function libererCreneauVI(vol) {
+    if (!vol || !vol.id || vol.source !== 'creneau') return;
+    const detail = [vol.passager, vol.dateStr, `${vol.heureDebut || ''} - ${vol.heureFin || ''}`].filter(Boolean).join(' • ');
+    afficherModaleConfirmation(
+        'Libérer ce créneau ?',
+        `<p><strong>${escapeHtml(detail || 'Créneau')}</strong></p><p>Les informations du passager seront effacées et le créneau redeviendra disponible.</p>`,
+        async () => {
+            try {
+                const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({ records: [{
+                        id: vol.id,
+                        fields: {
+                            'Statut': 'Disponible',
+                            'Prénom': null,
+                            'Nom': null,
+                            'Email': null,
+                            'Téléphone': null,
+                            'Bon cadeau': null,
+                            'Token': null,
+                            'Date réservation': null
+                        }
+                    }] })
+                });
+                if (response.ok) {
+                    if (typeof enregistrerAudit === 'function') {
+                        const pilote = nomPiloteCourant();
+                        await enregistrerAudit('Libération créneau VI', vol.type || 'VI', `Pilote : ${pilote} | ${detail}`, 'Initiation');
+                    }
+                    if (typeof chargerVolsInitiation === 'function') await chargerVolsInitiation();
+                    if (typeof chargerDonneesPlanning === 'function') await chargerDonneesPlanning();
+                } else {
+                    afficherModaleAlerte('Erreur', '<p>La libération a échoué.</p>', '⚠️');
+                }
+            } catch (error) {
+                console.error(error);
+                afficherModaleAlerte('Erreur', '<p>La libération a échoué.</p>', '⚠️');
+            }
+        }
+    );
 }
 
 async function chargerVolsInitiation() {
