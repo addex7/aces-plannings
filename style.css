@@ -1307,6 +1307,52 @@ img, table, video, iframe, svg {
     background: #b91c1c;
 }
 
+/* --- MA RÉSERVATION (reserver-vi.html) : boutons harmonisés --- */
+#manage-form .form-actions {
+    align-items: stretch;
+    gap: 10px;
+}
+#manage-form .form-actions button {
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    transition: background-color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+#manage-form .form-actions #btn-manage-annuler {
+    background: #fff;
+    color: #b91c1c;
+    border-color: #fca5a5;
+}
+#manage-form .form-actions #btn-manage-annuler:hover {
+    background: #fef2f2;
+    border-color: #ef4444;
+}
+#manage-form .form-actions #btn-manage-changer {
+    background: #f1f5f9;
+    color: #1e3d59;
+    border-color: #cbd5e1;
+}
+#manage-form .form-actions #btn-manage-changer:hover {
+    background: #e2e8f0;
+}
+#manage-form .form-actions .btn-submit {
+    flex: 1.4;
+    background-color: #1e3d59;
+}
+#manage-form .form-actions .btn-submit:hover {
+    background-color: #16324a;
+}
+
 /* --- GESTION CRÉNEAUX VI --- */
 #gestion-vi-toolbar {
     padding: 10px;
