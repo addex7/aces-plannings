@@ -221,15 +221,72 @@ async function envoyerMailConfirmationVI(fields) {
     }
 }
 
-function declencherConfirmationVI(req, recordsReponse) {
+async function envoyerMailLiberationVI(oldFields) {
+    if (!SMTP.host || !SMTP.user || !SMTP.pass) return;
+    const f = oldFields || {};
+    const to = f['Email'];
+    if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return;
+    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
+    const prenomSafe = nettoie(`${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), 80) || 'Bonjour';
+    const viTypeSafe = nettoie(f['Type'] || 'VI', 60);
+    let viDateSafe = '';
+    try {
+        viDateSafe = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) { viDateSafe = nettoie(f['Date'], 40); }
+    const viHeureSafe = nettoie(`${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`, 40);
+    const url = 'https://vps-1a4fbee9.vps.ovh.net/reserver-vi.html';
+    const sujet = 'Annulation de votre réservation de baptême de l\'air ACES';
+    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de baptême de l'air prévue le ${viDateSafe} (${viHeureSafe}) a été annulée. Le créneau est à nouveau disponible.\n\nVous pouvez réserver un autre créneau ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+    const html = `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+            <div style="background:#dc2626;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre réservation a été annulée</div>
+            <div style="padding:24px;">
+                <p>Bonjour ${prenomSafe},</p>
+                <p>Votre réservation de baptême de l'air a été annulée et le créneau est à nouveau disponible.</p>
+                <div style="background:#f1f5f9;border-radius:8px;padding:14px 18px;margin:18px 0;">
+                    <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
+                    <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
+                    <p style="margin:4px 0;"><strong>Horaire :</strong> ${viHeureSafe}</p>
+                </div>
+                <p>Vous pouvez réserver un autre créneau en cliquant sur le lien ci-dessous :</p>
+                <p style="text-align:center;margin:28px 0;">
+                    <a href="${url}" style="background:#1e3d59;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;">Réserver un autre créneau</a>
+                </p>
+                <p style="margin-top:24px;color:#64748b;">ACES - Aéroclub de l'Estuaire de la Seine</p>
+            </div>
+        </div>`;
+    try {
+        const transport = nodemailer.createTransport({
+            host: SMTP.host,
+            port: SMTP.port,
+            secure: SMTP.port === 465,
+            auth: { user: SMTP.user, pass: SMTP.pass }
+        });
+        await transport.sendMail({
+            from: `"${SMTP.fromName}" <${SMTP.from}>`,
+            to, subject: sujet, text: texte, html
+        });
+        console.log(`Annulation VI envoyee a ${to}`);
+    } catch (e) {
+        console.error('Erreur envoi annulation VI:', e);
+    }
+}
+
+function declencherConfirmationVI(req, recordsReponse, anciens) {
     try {
         const table = decodeURIComponent(req.params.table || '');
         if (table !== 'VI Créneaux') return;
         const reqs = req.body.records || [];
         (recordsReponse || []).forEach((rec, i) => {
             const reqFields = (reqs[i] && reqs[i].fields) || {};
-            if (reqFields['Statut'] !== 'Réservé' || !reqFields['Date réservation']) return;
-            envoyerMailConfirmationVI(rec.fields);
+            if (reqFields['Statut'] === 'Réservé' && reqFields['Date réservation']) {
+                envoyerMailConfirmationVI(rec.fields);
+            } else if (reqFields['Statut'] === 'Disponible') {
+                const ancien = (anciens || [])[i];
+                if (ancien && ancien['Statut'] === 'Réservé' && ancien['Email']) {
+                    envoyerMailLiberationVI(ancien);
+                }
+            }
         });
     } catch (e) {
         console.error('Declencheur confirmation VI:', e);
@@ -362,9 +419,16 @@ async function majRecords(req, res, remplacer) {
     try {
         const records = req.body.records;
         if (!Array.isArray(records) || !records.length) return erreur(res, 422, 'records manquant');
+        const tableNom = decodeURIComponent(req.params.table || '');
         const maj = [];
+        const anciens = [];
         for (const r of records) {
             if (!r.id) return erreur(res, 422, 'id manquant');
+            let ancien = null;
+            if (tableNom === 'VI Créneaux' && r.fields && r.fields['Statut'] === 'Disponible') {
+                const { rows: ar } = await pool.query(`SELECT fields FROM ${table} WHERE id = $1`, [r.id]);
+                ancien = ar.length ? ar[0].fields : null;
+            }
             const { rows } = await pool.query(
                 remplacer
                     ? `UPDATE ${table} SET fields = $2 WHERE id = $1 RETURNING id, fields, created_at`
@@ -373,9 +437,10 @@ async function majRecords(req, res, remplacer) {
             );
             if (!rows.length) return erreur(res, 404, `Record introuvable: ${r.id}`);
             maj.push(formatRecord(rows[0]));
+            anciens.push(ancien);
         }
         res.json({ records: maj });
-        declencherConfirmationVI(req, maj);
+        declencherConfirmationVI(req, maj, anciens);
     } catch (e) {
         console.error('PATCH/PUT:', e);
         erreur(res, 500, e.message);
