@@ -91,21 +91,32 @@ app.post('/v0/send-email', async (req, res) => {
     const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
     const prenomSafe = nettoie(prenom, 80);
     const estReset = type === 'reset';
-    const estVI = type === 'vi';
+    const estVI = type === 'vi' || type === 'vi-modification';
+    const estVIModif = type === 'vi-modification';
     let sujet, texte, html;
     if (estVI) {
         const viTypeSafe = nettoie(viType, 60);
         const viDateSafe = nettoie(viDate, 40);
         const viHeureSafe = nettoie(viHeure, 40);
         const viLieuSafe = nettoie(viLieu, 60);
-        sujet = 'Confirmation de votre baptême de l\'air ACES';
-        texte = `Bonjour ${prenomSafe},\n\nVotre réservation de baptême de l'air est bien enregistrée.\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ${viLieuSafe}\n\nVous pouvez modifier ou annuler votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+        sujet = estVIModif
+            ? 'Modification de votre réservation de baptême de l\'air ACES'
+            : 'Confirmation de votre baptême de l\'air ACES';
+        const viPhrase = estVIModif
+            ? 'Votre réservation de baptême de l\'air a été modifiée.'
+            : 'Votre réservation de baptême de l\'air est bien enregistrée.';
+        const viPhraseHtml = estVIModif
+            ? 'Votre réservation de baptême de l\'air a été modifiée. Voici vos informations à jour :'
+            : 'Votre réservation est bien enregistrée.';
+        const viBandeau = estVIModif ? 'Votre réservation a été modifiée' : 'Votre baptême de l\'air est réservé';
+        const viCouleur = estVIModif ? '#3f51b5' : '#1e3d59';
+        texte = `Bonjour ${prenomSafe},\n\n${viPhrase}\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ${viLieuSafe}\n\nVous pouvez modifier ou annuler votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
         html = `
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-            <div style="background:#1e3d59;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre baptême de l'air est réservé</div>
+            <div style="background:${viCouleur};color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">${viBandeau}</div>
             <div style="padding:24px;">
                 <p>Bonjour ${prenomSafe},</p>
-                <p>Votre réservation est bien enregistrée.</p>
+                <p>${viPhraseHtml}</p>
                 <div style="background:#f1f5f9;border-radius:8px;padding:14px 18px;margin:18px 0;">
                     <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
                     <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
@@ -272,16 +283,73 @@ async function envoyerMailLiberationVI(oldFields) {
     }
 }
 
-function declencherConfirmationVI(req, recordsReponse, anciens) {
+async function envoyerMailModificationVI(fields) {
+    if (!SMTP.host || !SMTP.user || !SMTP.pass) return;
+    const f = fields || {};
+    const to = f['Email'];
+    const token = f['Token'];
+    if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !token) return;
+    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
+    const prenomSafe = nettoie(`${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), 80);
+    const viTypeSafe = nettoie(f['Type'] || 'VI', 60);
+    let viDateSafe = '';
+    try {
+        viDateSafe = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) { viDateSafe = nettoie(f['Date'], 40); }
+    const viHeureSafe = nettoie(`${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`, 40);
+    const url = `https://vps-1a4fbee9.vps.ovh.net/reserver-vi.html?token=${encodeURIComponent(token)}`;
+    const sujet = 'Modification de votre réservation de baptême de l\'air ACES';
+    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de baptême de l'air a été modifiée. Voici votre nouveau créneau :\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ACES\n\nVous pouvez consulter ou modifier votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+    const html = `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+            <div style="background:#3f51b5;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre réservation a été modifiée</div>
+            <div style="padding:24px;">
+                <p>Bonjour ${prenomSafe},</p>
+                <p>Votre réservation de baptême de l'air a été modifiée. Voici votre nouveau créneau :</p>
+                <div style="background:#f1f5f9;border-radius:8px;padding:14px 18px;margin:18px 0;">
+                    <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
+                    <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
+                    <p style="margin:4px 0;"><strong>Horaire :</strong> ${viHeureSafe}</p>
+                    <p style="margin:4px 0;"><strong>Lieu :</strong> ACES</p>
+                </div>
+                <p>Vous pouvez consulter ou modifier votre réservation en cliquant sur le lien ci-dessous :</p>
+                <p style="text-align:center;margin:28px 0;">
+                    <a href="${url}" style="background:#1e3d59;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;">Gérer ma réservation</a>
+                </p>
+                <p style="font-size:12px;color:#64748b;word-break:break-all;">Si le bouton ne s'affiche pas, copiez ce lien : <a href="${url}">${url}</a></p>
+                <p style="margin-top:24px;color:#64748b;">ACES - Aéroclub de l'Estuaire de la Seine</p>
+            </div>
+        </div>`;
+    try {
+        const transport = nodemailer.createTransport({
+            host: SMTP.host,
+            port: SMTP.port,
+            secure: SMTP.port === 465,
+            auth: { user: SMTP.user, pass: SMTP.pass }
+        });
+        await transport.sendMail({
+            from: `"${SMTP.fromName}" <${SMTP.from}>`,
+            to, subject: sujet, text: texte, html
+        });
+        console.log(`Modification VI envoyee a ${to}`);
+    } catch (e) {
+        console.error('Erreur envoi modification VI:', e);
+    }
+}
+
+function declencherConfirmationVI(req, recordsReponse, anciens, decalages) {
     try {
         const table = decodeURIComponent(req.params.table || '');
         if (table !== 'VI Créneaux') return;
         const reqs = req.body.records || [];
         (recordsReponse || []).forEach((rec, i) => {
             const reqFields = (reqs[i] && reqs[i].fields) || {};
+            const estDecalage = !!(decalages || [])[i];
             if (reqFields['Statut'] === 'Réservé' && reqFields['Date réservation']) {
-                envoyerMailConfirmationVI(rec.fields);
+                if (estDecalage) envoyerMailModificationVI(rec.fields);
+                else envoyerMailConfirmationVI(rec.fields);
             } else if (reqFields['Statut'] === 'Disponible') {
+                if (estDecalage) return;
                 const ancien = (anciens || [])[i];
                 if (ancien && ancien['Statut'] === 'Réservé' && ancien['Email']) {
                     envoyerMailLiberationVI(ancien);
@@ -396,16 +464,31 @@ app.post('/v0/:base/:table', async (req, res) => {
         let records = req.body.records;
         if (!records && req.body.fields) records = [{ fields: req.body.fields }];
         if (!Array.isArray(records) || !records.length) return erreur(res, 422, 'records manquant');
+        const tableNom = decodeURIComponent(req.params.table || '');
         const crees = [];
+        const decalages = [];
         for (const r of records) {
             const id = nouvelId();
+            let decalage = false;
+            if (r.fields && r.fields._decalage) {
+                decalage = true;
+                delete r.fields._decalage;
+            }
             const { rows } = await pool.query(
                 `INSERT INTO ${table} (id, fields) VALUES ($1, $2) RETURNING id, fields, created_at`,
                 [id, r.fields || {}]
             );
             crees.push(formatRecord(rows[0]));
+            decalages.push(decalage);
         }
         res.json({ records: crees });
+        if (tableNom === 'VI Créneaux') {
+            crees.forEach((rec, i) => {
+                if (decalages[i] && rec.fields && rec.fields['Statut'] === 'Réservé') {
+                    envoyerMailModificationVI(rec.fields);
+                }
+            });
+        }
     } catch (e) {
         console.error('POST:', e);
         erreur(res, 500, e.message);
@@ -422,8 +505,14 @@ async function majRecords(req, res, remplacer) {
         const tableNom = decodeURIComponent(req.params.table || '');
         const maj = [];
         const anciens = [];
+        const decalages = [];
         for (const r of records) {
             if (!r.id) return erreur(res, 422, 'id manquant');
+            let decalage = false;
+            if (r.fields && r.fields._decalage) {
+                decalage = true;
+                delete r.fields._decalage;
+            }
             let ancien = null;
             if (tableNom === 'VI Créneaux' && r.fields && r.fields['Statut'] === 'Disponible') {
                 const { rows: ar } = await pool.query(`SELECT fields FROM ${table} WHERE id = $1`, [r.id]);
@@ -438,9 +527,10 @@ async function majRecords(req, res, remplacer) {
             if (!rows.length) return erreur(res, 404, `Record introuvable: ${r.id}`);
             maj.push(formatRecord(rows[0]));
             anciens.push(ancien);
+            decalages.push(decalage);
         }
         res.json({ records: maj });
-        declencherConfirmationVI(req, maj, anciens);
+        declencherConfirmationVI(req, maj, anciens, decalages);
     } catch (e) {
         console.error('PATCH/PUT:', e);
         erreur(res, 500, e.message);

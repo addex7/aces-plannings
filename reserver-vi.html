@@ -51,8 +51,8 @@
 
         <section id="list-section" style="display: none;">
             <div style="margin-bottom: 15px;">
-                <button type="button" id="btn-retour-type2" class="btn-secondary" style="margin-bottom: 10px;">← Changer de type</button>
-                <button type="button" id="btn-decalage-manuel" class="btn-secondary" style="margin-bottom: 10px; margin-left: 10px; display: none; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;">Décaler le vol sur un créneau non-existant</button>
+                <button type="button" id="btn-retour-type2" class="btn-secondary" style="margin-bottom: 10px; cursor: pointer;">← Changer de type</button>
+                <button type="button" id="btn-decalage-manuel" class="btn-secondary" style="margin-bottom: 10px; margin-left: 10px; display: none; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; cursor: pointer;">Décaler le vol sur un créneau non-existant</button>
                 <h2 style="color: #1e3d59; margin-top: 0; margin-bottom: 5px;">Créneaux disponibles</h2>
                 <p id="type-selectionne-label" style="color: #64748b; font-size: 14px; margin: 0;"></p>
             </div>
@@ -411,6 +411,7 @@ async function onSubmitReservation(e) {
     }
 
     const token = currentToken || genererToken();
+    const isDeplacement = !!(currentToken && recordIdOrigine && recordIdOrigine !== recordId);
     const fields = {
         'Statut': 'Réservé',
         'Prénom': prenom,
@@ -421,6 +422,7 @@ async function onSubmitReservation(e) {
         'Date réservation': new Date().toISOString(),
         'Token': token
     };
+    if (isDeplacement) fields['_decalage'] = true;
 
     const submitBtn = e.target.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.disabled = true;
@@ -478,7 +480,8 @@ async function cancelByToken(token, excludeRecordId) {
             'Téléphone': null,
             'Bon cadeau': null,
             'Token': null,
-            'Date réservation': null
+            'Date réservation': null,
+            '_decalage': true
         }
     }));
     const patch = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
@@ -490,7 +493,7 @@ async function cancelByToken(token, excludeRecordId) {
     if (!patch.ok) throw new Error(patchData.error?.message || 'Erreur lors de l\'annulation de l\'ancien créneau');
 }
 
-async function sendConfirmationEmail(record, token, contact) {
+async function sendConfirmationEmail(record, token, contact, estModification) {
     const f = record.fields || {};
     const prenom = (contact && contact.prenom) || f['Prénom'] || '';
     const nom = (contact && contact.nom) || f['Nom'] || '';
@@ -507,7 +510,7 @@ async function sendConfirmationEmail(record, token, contact) {
         to: email,
         prenom: `${prenom} ${nom}`.trim(),
         url: lien,
-        type: 'vi',
+        type: estModification ? 'vi-modification' : 'vi',
         viType: type,
         viDate: date,
         viHeure: heure,
@@ -686,7 +689,7 @@ async function onManageUpdate(e) {
         const typeUpd = fUpd['Type'] || 'VI';
         const passagerUpd = `${fields['Prénom']} ${fields['Nom']}`.trim();
         await enregistrerAudit('Modification coordonnées VI', typeUpd, `Passager : ${passagerUpd} | Email : ${fields['Email']} | Tél. : ${fields['Téléphone']} | 📅 ${dateUpd} • 🕐 ${heureUpd}`, 'Initiation');
-        await sendConfirmationEmail(record, currentToken, { prenom: fields['Prénom'], nom: fields['Nom'], email: fields['Email'] });
+        await sendConfirmationEmail(record, currentToken, { prenom: fields['Prénom'], nom: fields['Nom'], email: fields['Email'] }, true);
     } catch (err) {
         console.error(err);
         showMessage('error', err.message || 'Erreur lors de la mise à jour.');
@@ -753,42 +756,52 @@ async function decalerSurCreneauManuel() {
     btn.disabled = true;
     info.textContent = 'Vérification des créneaux existants...';
     try {
-        const formula = `AND({Date}='${date}', {Heure début}='${debut}', {Type}='${type}')`;
+        const formula = `AND({Date}='${date}', {Type}='${type}')`;
         const res = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(formula)}`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        const existants = (data.records || []).filter(r => r.id !== currentRecord.id && (r.fields['Statut'] || '') !== 'Annulé');
-        if (existants.length) {
-            const ex = existants[0];
-            const statut = ex.fields['Statut'] || 'Disponible';
-            if (statut === 'Disponible') {
-                const dateStr = formatDate(ex.fields['Date']);
-                if (!confirm(`Un créneau ${type} disponible existe déjà le ${dateStr} à ${debut}.\n\nRéserver ce créneau existant plutôt qu'en créer un nouveau ?`)) {
-                    info.textContent = 'Décalage annulé.';
-                    return;
-                }
-                info.textContent = 'Réservation du créneau existant...';
-                const fields = {
-                    'Statut': 'Réservé',
-                    'Prénom': f['Prénom'] || '',
-                    'Nom': f['Nom'] || '',
-                    'Email': f['Email'] || '',
-                    'Téléphone': f['Téléphone'] || '',
-                    'Bon cadeau': f['Bon cadeau'] || '',
-                    'Date réservation': new Date().toISOString(),
-                    'Token': currentToken
-                };
-                const resa = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
-                    method: 'PATCH',
-                    headers,
-                    body: JSON.stringify({ records: [{ id: ex.id, fields }] })
-                });
-                if (!resa.ok) throw new Error((await resa.json()).error?.message || 'Erreur');
-                await cancelByToken(currentToken, ex.id);
-            } else {
-                info.textContent = `Un créneau ${type} existe déjà à cet horaire (statut : ${statut}). Choisis un autre horaire.`;
+        const chevauchements = (data.records || []).filter(r => {
+            if (r.id === currentRecord.id) return false;
+            if ((r.fields['Statut'] || '') === 'Annulé') return false;
+            const exD = r.fields['Heure début'] || '';
+            const exF = r.fields['Heure fin'] || '';
+            return exD && exF && debut < exF && fin > exD;
+        });
+        const exactDisponible = chevauchements.find(r =>
+            (r.fields['Statut'] || '') === 'Disponible' &&
+            r.fields['Heure début'] === debut && r.fields['Heure fin'] === fin);
+        if (chevauchements.length && !exactDisponible) {
+            const liste = chevauchements.map(r =>
+                `${r.fields['Heure début']} - ${r.fields['Heure fin']} (${r.fields['Statut'] || 'Disponible'})`).join(', ');
+            info.textContent = `⚠️ Ce créneau empiète sur : ${liste}. Choisis un autre horaire ou ajuste pour ne pas chevaucher.`;
+            return;
+        }
+        if (exactDisponible) {
+            const ex = exactDisponible;
+            const dateStr = formatDate(ex.fields['Date']);
+            if (!confirm(`Un créneau ${type} disponible existe déjà le ${dateStr} à ${debut}.\n\nRéserver ce créneau existant plutôt qu'en créer un nouveau ?`)) {
+                info.textContent = 'Décalage annulé.';
                 return;
             }
+            info.textContent = 'Réservation du créneau existant...';
+            const fields = {
+                'Statut': 'Réservé',
+                'Prénom': f['Prénom'] || '',
+                'Nom': f['Nom'] || '',
+                'Email': f['Email'] || '',
+                'Téléphone': f['Téléphone'] || '',
+                'Bon cadeau': f['Bon cadeau'] || '',
+                'Date réservation': new Date().toISOString(),
+                'Token': currentToken,
+                '_decalage': true
+            };
+            const resa = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ records: [{ id: ex.id, fields }] })
+            });
+            if (!resa.ok) throw new Error((await resa.json()).error?.message || 'Erreur');
+            await cancelByToken(currentToken, ex.id);
         } else {
             info.textContent = 'Création du nouveau créneau...';
             const resa = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
@@ -806,14 +819,14 @@ async function decalerSurCreneauManuel() {
                     'Téléphone': f['Téléphone'] || '',
                     'Bon cadeau': f['Bon cadeau'] || '',
                     'Token': currentToken,
-                    'Date réservation': new Date().toISOString()
+                    'Date réservation': new Date().toISOString(),
+                    '_decalage': true
                 }}] })
             });
             const resaData = await resa.json();
             if (!resa.ok) throw new Error(resaData.error?.message || 'Erreur');
             const nouveau = (resaData.records || [])[0];
             await cancelByToken(currentToken, nouveau ? nouveau.id : null);
-            if (nouveau) await sendConfirmationEmail(nouveau, currentToken, { prenom: f['Prénom'], nom: f['Nom'], email: f['Email'] });
         }
         const dateStr = formatDate(date);
         const passager = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
