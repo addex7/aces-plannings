@@ -12,9 +12,15 @@ let machineCarnetSelectionnee = 'F-GASB';
 let carnetPageJVIO = 1;
 const LIGNES_PAR_PAGE_JVIO = 9;
 const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CEQJ', 'F-CDVN', 'F-CFRK', 'F-CHDT', 'F-CEQZ', 'F-CESL', 'F-CGOV'];
-const REMOQUES_PLANEURS = [...IMMATS_PLANEURS.map(i => `Remorque ${i}`), 'Remorque SP98', 'Remorque 100LL'];
-const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS];
-const MACHINES_MOTEURS = ['F-GASB', 'F-BLIO', 'F-JVIO'];
+const REMOQUES_PLANEURS = IMMATS_PLANEURS.map(i => `Remorque ${i}`);
+const MATERIEL_AUTRES = ['Tracteur landini', 'Tracteur tondeuse', 'Remorque 100LL', 'Remorque SP98', 'Golfette', 'Peugeot'];
+const MACHINES_PLANEUR_REMOQUE = [...IMMATS_PLANEURS, ...REMOQUES_PLANEURS, ...MATERIEL_AUTRES];
+const MACHINES_MOTEURS = ['F-BLIO', 'F-GASB', 'F-JVIO'];
+const CATEGORIES_CARNET = {
+    'PLANEURS': { titre: 'Planeurs', items: IMMATS_PLANEURS },
+    'REMORQUES': { titre: 'Remorques', items: REMOQUES_PLANEURS },
+    'AUTRES': { titre: 'Autres', items: MATERIEL_AUTRES }
+};
 let tarifsAeronefsCache = null;
 
 async function chargerTarifsAeronefs() {
@@ -1040,9 +1046,10 @@ function afficherAlarmeObservation(records) {
     const avecObs = records.filter(r => {
         const f = r.fields || {};
         const m = f['Machine'];
+        const catCarnet = CATEGORIES_CARNET[machineCarnetSelectionnee];
         const matchMachine = !machineCarnetSelectionnee
-            || (machineCarnetSelectionnee === 'PLANEUR'
-                ? MACHINES_PLANEUR_REMOQUE.includes(m)
+            || (catCarnet
+                ? catCarnet.items.includes(m)
                 : m === machineCarnetSelectionnee);
         return (f['Observations'] || '').trim() !== '' && matchMachine;
     }).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
@@ -1121,7 +1128,8 @@ async function chargerCarnetRoute() {
     const isJVIO = machineCarnetSelectionnee === 'F-JVIO';
     const colspan = isJVIO ? 11 : 15;
 
-    if (machineCarnetSelectionnee === 'PLANEUR') {
+    if (CATEGORIES_CARNET[machineCarnetSelectionnee]) {
+        genererGrillesPlaneur(machineCarnetSelectionnee);
         if (tableContainer) tableContainer.style.display = 'none';
         if (planeurContainer) planeurContainer.style.display = 'block';
         if (btnOuvrir) btnOuvrir.style.display = 'none';
@@ -1462,9 +1470,10 @@ function formaterImmatPlaneur(immat) {
     return `${escHtml(parts[0])} <span style="white-space:nowrap;">${escHtml(parts[1])}</span>`;
 }
 
-function genererGrillesPlaneur() {
+function genererGrillesPlaneur(categorie) {
     const container = document.getElementById('carnet-planeur-container');
     if (!container) return;
+    const cat = CATEGORIES_CARNET[categorie] || CATEGORIES_CARNET['PLANEURS'];
     const createGrid = (items) => {
         const grid = document.createElement('div');
         grid.className = 'planeur-grid';
@@ -1489,17 +1498,11 @@ function genererGrillesPlaneur() {
         return grid;
     };
     container.innerHTML = '';
-    const titrePlaneurs = document.createElement('h3');
-    titrePlaneurs.className = 'planeur-section-title';
-    titrePlaneurs.textContent = 'Planeurs';
-    container.appendChild(titrePlaneurs);
-    container.appendChild(createGrid(IMMATS_PLANEURS));
-    const titreRemorques = document.createElement('h3');
-    titreRemorques.className = 'planeur-section-title';
-    titreRemorques.textContent = 'Remorques';
-    titreRemorques.style.marginTop = '20px';
-    container.appendChild(titreRemorques);
-    container.appendChild(createGrid(REMOQUES_PLANEURS));
+    const titre = document.createElement('h3');
+    titre.className = 'planeur-section-title';
+    titre.textContent = cat.titre;
+    container.appendChild(titre);
+    container.appendChild(createGrid(cat.items));
 }
 
 function initCarnetRoute() {
@@ -1528,6 +1531,11 @@ function initCarnetRoute() {
     }
     if (form) form.addEventListener('submit', soumettreCarnetRoute);
     if (selectFiltre) {
+        if (selectFiltre.querySelector(`option[value="${machineCarnetSelectionnee}"]`)) {
+            selectFiltre.value = machineCarnetSelectionnee;
+        } else {
+            machineCarnetSelectionnee = selectFiltre.value;
+        }
         selectFiltre.addEventListener('change', (e) => {
             machineCarnetSelectionnee = e.target.value;
             chargerCarnetRoute();
