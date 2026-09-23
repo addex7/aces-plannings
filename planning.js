@@ -1903,6 +1903,7 @@ function appliquerEtatFormulaire() {
     const groupEstimation = document.getElementById('group-estimation');
     const groupPassager = document.getElementById('group-passager');
     const groupTelephone = document.getElementById('group-telephone');
+    const groupEmail = document.getElementById('group-email');
     const labelPilote = document.getElementById('label-pilote');
     const labelCommentaires = document.getElementById('label-commentaires');
 
@@ -1921,6 +1922,7 @@ function appliquerEtatFormulaire() {
         if (groupEstimation) groupEstimation.style.display = 'none';
         if (groupPassager) groupPassager.style.display = 'none';
         if (groupTelephone) groupTelephone.style.display = 'none';
+        if (groupEmail) groupEmail.style.display = 'none';
         if (groupCommentaires) groupCommentaires.style.display = 'none';
         const grpInst = document.getElementById('group-instructeur');
         if (grpInst) grpInst.style.display = 'none';
@@ -1990,6 +1992,7 @@ function appliquerEtatFormulaire() {
     if (groupEstimation) groupEstimation.style.display = isVI ? 'none' : 'block';
     if (groupPassager) groupPassager.style.display = isVI ? 'block' : 'none';
     if (groupTelephone) groupTelephone.style.display = isVI ? 'block' : 'none';
+    if (groupEmail) groupEmail.style.display = isVI ? 'block' : 'none';
 
     const fbLio = (listeAvionsCache || []).find(a => {
         const immat = (a.fields['Immatriculation'] || '').toString().trim().toUpperCase();
@@ -2588,10 +2591,81 @@ function initGestionnaireModale() {
                     alert("Le téléphone du passager est obligatoire.");
                     return;
                 }
+                const emailPassager = document.getElementById('form-email') ? document.getElementById('form-email').value.trim() : '';
                 const commentaire = document.getElementById('form-commentaires').value.trim();
                 const commentaireVI = typesSupplementaires.length
                     ? (commentaire ? `${commentaire}\n${typesSupplementaires.join(', ')}` : typesSupplementaires.join(', '))
                     : commentaire;
+                if (!idReservationEnEdition) {
+                    // Creation unifiee dans VI Creneaux : token, mails et decalage passager fonctionnent
+                    if (!isVIPlaneur && !getMachineSelectionnee()) {
+                        alert("Veuillez sélectionner une machine.");
+                        return;
+                    }
+                    const pad2 = n => String(n).padStart(2, '0');
+                    const dateStr = `${localDebut.getFullYear()}-${pad2(localDebut.getMonth() + 1)}-${pad2(localDebut.getDate())}`;
+                    const hDebut = `${pad2(localDebut.getHours())}:${pad2(localDebut.getMinutes())}`;
+                    const hFin = `${pad2(localFin.getHours())}:${pad2(localFin.getMinutes())}`;
+                    const typeVI = isVIPlaneur ? 'VIP' : (machineNom === 'F-JVIO' ? 'VIULM' : 'VIA');
+                    const parties = passagerNom.split(/\s+/).filter(Boolean);
+                    const champsCreneau = {
+                        'Statut': 'Réservé',
+                        'Prénom': parties.length > 1 ? parties[0] : '',
+                        'Nom': parties.length > 1 ? parties.slice(1).join(' ') : (parties[0] || ''),
+                        'Email': emailPassager,
+                        'Téléphone': telephone,
+                        'Pilote': piloteIdEdit ? piloteNomEdit : '',
+                        'Commentaire': commentaireVI,
+                        'Bon cadeau': '',
+                        'Token': 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14),
+                        'Date réservation': new Date().toISOString()
+                    };
+                    try {
+                        const formJour = `DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${dateStr}'`;
+                        const resJour = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formJour)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
+                        const dataJour = await resJour.json();
+                        const existant = (dataJour.records || []).find(r => {
+                            const f = r.fields || {};
+                            return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === typeVI &&
+                                   f['Heure début'] === hDebut && f['Heure fin'] === hFin;
+                        });
+                        let response;
+                        if (existant) {
+                            if ((existant.fields['Statut'] || 'Disponible') !== 'Disponible') {
+                                alert(`Un créneau ${typeVI} existe déjà le ${dateStr} de ${hDebut} à ${hFin} (statut : ${existant.fields['Statut']}).`);
+                                return;
+                            }
+                            response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
+                                method: 'PATCH',
+                                headers: headers,
+                                body: JSON.stringify({ records: [{ id: existant.id, fields: champsCreneau }] })
+                            });
+                        } else {
+                            response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
+                                method: 'POST',
+                                headers: headers,
+                                body: JSON.stringify({ records: [{ fields: { 'Date': dateStr, 'Heure début': hDebut, 'Heure fin': hFin, 'Type': typeVI, ...champsCreneau } }] })
+                            });
+                        }
+                        if (response.ok) {
+                            modal.style.display = 'none';
+                            formReservation.reset();
+                            setAfficherVIPPlaneur(true);
+                            if (typeof enregistrerAudit === 'function') {
+                                enregistrerAudit('Création vol d\'initiation', typeVI, `Passager : ${passagerNom} | ${dateStr} ${hDebut} - ${hFin}`, 'Initiation');
+                            }
+                            await chargerDonneesPlanning(true);
+                            await chargerVolsInitiation();
+                        } else {
+                            const d = await response.json().catch(() => ({}));
+                            alert(d.error?.message || 'Erreur lors de la création du vol d\'initiation.');
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        alert('Erreur lors de la création du vol d\'initiation.');
+                    }
+                    return;
+                }
                 if (isVIPlaneur) {
                     const auteurNom = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
                     const recordData = { fields: { "Nom": passagerNom, "Pilote": piloteNom, "Auteur": auteurNom, "Téléphone": telephone, "Date de début": dateDebut, "Date de fin": dateFin, "Commentaire": commentaireVI } };
@@ -2625,6 +2699,7 @@ function initGestionnaireModale() {
                         "Instructeur": instructeur,
                         "Passager": passagerNom,
                         "Téléphone": telephone,
+                        "Email": emailPassager,
                         "Date de début": dateDebut,
                         "Date de fin": dateFin,
                         "Commentaires VI": commentairesFinal,
@@ -3239,7 +3314,12 @@ function afficherVolsInitiation() {
         const btnDecaler = card.querySelector('.btn-decaler-initiation');
         if (btnDecaler) btnDecaler.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (vol.source !== 'creneau') { editerVolInitiation(vol); return; }
+            if (vol.source !== 'creneau') {
+                const tokenConverti = await convertirVolEnCreneauVI(vol);
+                if (!tokenConverti) return;
+                window.open(`${URL_RESERVER_VI}?token=${encodeURIComponent(tokenConverti)}&decalage=1`, '_blank');
+                return;
+            }
             let token = vol.token;
             if (!token) {
                 token = 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
@@ -3283,6 +3363,85 @@ function afficherVolsInitiation() {
         cbs.forEach(c => c.addEventListener('change', maj));
         if (tout) tout.addEventListener('change', () => { cbs.forEach(c => c.checked = tout.checked); maj(); });
         if (btnSel) btnSel.addEventListener('click', () => supprimerCreneauxSelection(cbs.filter(c => c.checked).map(c => c.dataset.id)));
+    }
+}
+
+async function convertirVolEnCreneauVI(vol) {
+    const debut = new Date(vol.debut);
+    const fin = new Date(vol.fin);
+    if (isNaN(debut.getTime()) || isNaN(fin.getTime())) {
+        alert('Dates du vol invalides, décalage impossible.');
+        return null;
+    }
+    const pad2 = n => String(n).padStart(2, '0');
+    const dateStr = `${debut.getFullYear()}-${pad2(debut.getMonth() + 1)}-${pad2(debut.getDate())}`;
+    const hDebut = `${pad2(debut.getHours())}:${pad2(debut.getMinutes())}`;
+    const hFin = `${pad2(fin.getHours())}:${pad2(fin.getMinutes())}`;
+    let typeVI = vol.type;
+    if (!['VIP', 'VIA', 'VIULM'].includes(typeVI)) {
+        typeVI = vol.source === 'planeur' ? 'VIP' : ((vol.machineName || '') === 'F-JVIO' ? 'VIULM' : 'VIA');
+    }
+    const parties = (vol.passager || '').trim().split(/\s+/).filter(Boolean);
+    const champs = {
+        'Statut': 'Réservé',
+        'Prénom': parties.length > 1 ? parties[0] : '',
+        'Nom': parties.length > 1 ? parties.slice(1).join(' ') : (parties[0] || ''),
+        'Email': vol.email || '',
+        'Téléphone': vol.telephone || '',
+        'Pilote': (vol.pilote || '').toString().trim(),
+        'Commentaire': vol.commentaire || '',
+        'Token': 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14)
+    };
+    try {
+        const formJour = `DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${dateStr}'`;
+        const resJour = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formJour)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
+        const dataJour = await resJour.json();
+        const existant = (dataJour.records || []).find(r => {
+            const f = r.fields || {};
+            return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === typeVI &&
+                   f['Heure début'] === hDebut && f['Heure fin'] === hFin;
+        });
+        let ok = false;
+        if (existant) {
+            if ((existant.fields['Statut'] || 'Disponible') !== 'Disponible') {
+                alert(`Un créneau ${typeVI} existe déjà à cet horaire (statut : ${existant.fields['Statut']}). Décalage impossible.`);
+                return null;
+            }
+            const r = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ records: [{ id: existant.id, fields: champs }] })
+            });
+            ok = r.ok;
+        } else {
+            const r = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ records: [{ fields: { 'Date': dateStr, 'Heure début': hDebut, 'Heure fin': hFin, 'Type': typeVI, ...champs } }] })
+            });
+            if (!r.ok) {
+                const d = await r.json().catch(() => ({}));
+                alert(d.error?.message || 'Impossible de préparer le lien de décalage.');
+                return null;
+            }
+            ok = true;
+        }
+        if (!ok) {
+            alert('Impossible de préparer le lien de décalage.');
+            return null;
+        }
+        const ancienneTable = vol.source === 'moteur' ? 'Réservations' : 'VI Planeur';
+        await cachedFetch(`${API_BASE}/${encodeURIComponent(ancienneTable)}/${vol.id}`, { method: 'DELETE', headers });
+        if (typeof enregistrerAudit === 'function') {
+            enregistrerAudit('Conversion VI en créneau', typeVI, `Passager : ${vol.passager || ''} | ${dateStr} ${hDebut} - ${hFin}`, 'Initiation');
+        }
+        await chargerVolsInitiation();
+        await chargerDonneesPlanning(true);
+        return champs['Token'];
+    } catch (err) {
+        console.error(err);
+        alert('Impossible de préparer le lien de décalage.');
+        return null;
     }
 }
 
