@@ -1170,7 +1170,9 @@ img, table, video, iframe, svg {
     flex-wrap: wrap;
     gap: 8px;
 }
-.initiation-meta .btn-reserver-initiation {
+.initiation-meta .btn-reserver-initiation,
+.initiation-meta .btn-liberer-initiation,
+.initiation-meta .btn-decaler-initiation {
     margin-top: 0;
 }
 .initiation-empty {
@@ -1272,6 +1274,21 @@ img, table, video, iframe, svg {
 }
 .btn-liberer-initiation:hover {
     background-color: #ea580c;
+}
+.btn-decaler-initiation {
+    background-color: #3f51b5;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background-color 0.2s;
+}
+.btn-decaler-initiation:hover {
+    background-color: #303f9f;
 }
 .btn-supprimer-initiation {
     background: #dc2626;

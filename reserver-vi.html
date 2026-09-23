@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Réserver mon baptême de l'air - ACES</title>
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=182">
 </head>
 <body>
 
@@ -52,6 +52,7 @@
         <section id="list-section" style="display: none;">
             <div style="margin-bottom: 15px;">
                 <button type="button" id="btn-retour-type2" class="btn-secondary" style="margin-bottom: 10px;">← Changer de type</button>
+                <button type="button" id="btn-decalage-manuel" class="btn-secondary" style="margin-bottom: 10px; margin-left: 10px; display: none; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;">Décaler le vol sur un créneau non-existant</button>
                 <h2 style="color: #1e3d59; margin-top: 0; margin-bottom: 5px;">Créneaux disponibles</h2>
                 <p id="type-selectionne-label" style="color: #64748b; font-size: 14px; margin: 0;"></p>
             </div>
@@ -129,6 +130,33 @@
             </form>
         </section>
 
+        <div id="modal-decalage" class="modal">
+            <div class="modal-content" style="width: 420px; max-width: 92vw;">
+                <span class="close-modal-decalage" style="position:absolute;top:15px;right:20px;font-size:24px;cursor:pointer;color:#64748b;">&times;</span>
+                <h3 style="margin-top:0;color:#1e3d59;">Décaler le vol sur un créneau non-existant</h3>
+                <p style="font-size:13px;color:#475569;margin-top:0;">Le créneau sera déplacé à la date et à l'horaire choisis.</p>
+                <div class="form-group">
+                    <label for="decal-date">Nouvelle date *</label>
+                    <input type="date" id="decal-date" required>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group">
+                        <label for="decal-debut">Heure début *</label>
+                        <input type="time" id="decal-debut" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="decal-fin">Heure fin *</label>
+                        <input type="time" id="decal-fin" required>
+                    </div>
+                </div>
+                <div id="decalage-info" style="font-size:13px;color:#475569;margin-bottom:10px;"></div>
+                <div class="form-actions" style="display:flex;gap:10px;">
+                    <button type="button" id="btn-decal-annuler" class="btn-secondary">Annuler</button>
+                    <button type="button" id="btn-decal-valider" class="btn-submit">Décaler le vol</button>
+                </div>
+            </div>
+        </div>
+
         <section id="confirmation-section" style="display: none; text-align: center; padding: 40px 20px;">
             <h2 style="color: #1e3d59;">Votre réservation est enregistrée</h2>
             <p id="confirmation-text"></p>
@@ -174,6 +202,7 @@ let currentToken = null;
 let currentRecord = null;
 let recordIdOrigine = null;
 let typeSelectionne = null;
+let modeDecalage = false;
 
 async function enregistrerAudit(action, cible = '', details = '', module = '') {
     const body = {
@@ -556,7 +585,11 @@ async function loadByToken(token) {
         currentToken = token;
         currentRecord = record;
         recordIdOrigine = record.id;
-        showManageView(record);
+        if (modeDecalage) {
+            ouvrirListePourDecalage(record);
+        } else {
+            showManageView(record);
+        }
     } catch (err) {
         console.error(err);
         showMessage('error', 'Erreur lors du chargement de la réservation.');
@@ -564,7 +597,25 @@ async function loadByToken(token) {
     }
 }
 
+function ouvrirListePourDecalage(record) {
+    const f = record.fields || {};
+    typeSelectionne = f['Type'] || null;
+    document.getElementById('client-prenom').value = f['Prénom'] || '';
+    document.getElementById('client-nom').value = f['Nom'] || '';
+    document.getElementById('client-email').value = f['Email'] || '';
+    document.getElementById('client-telephone').value = f['Téléphone'] || '';
+    document.getElementById('client-bon').value = f['Bon cadeau'] || '';
+    showSection('list-section');
+    const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
+    const passager = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+    document.getElementById('type-selectionne-label').textContent = `${label || ''} — décalage du vol de ${passager}`;
+    const btnDecal = document.getElementById('btn-decalage-manuel');
+    if (btnDecal) btnDecal.style.display = '';
+    loadCreneaux(typeSelectionne);
+}
+
 function creneauModifiable(record) {
+    if (modeDecalage) return true;
     const f = record.fields || {};
     const recordDate = f['Date'] ? new Date(f['Date'] + 'T00:00:00') : null;
     if (!recordDate) return false;
@@ -682,6 +733,104 @@ async function onManageCancel() {
     }
 }
 
+async function decalerSurCreneauManuel() {
+    if (!currentRecord) return;
+    const info = document.getElementById('decalage-info');
+    const date = document.getElementById('decal-date').value;
+    const debut = document.getElementById('decal-debut').value;
+    const fin = document.getElementById('decal-fin').value;
+    if (!date || !debut || !fin) {
+        info.textContent = 'Remplis la date et les deux horaires.';
+        return;
+    }
+    if (fin <= debut) {
+        info.textContent = 'L\'heure de fin doit être après l\'heure de début.';
+        return;
+    }
+    const f = currentRecord.fields || {};
+    const type = f['Type'] || 'VI';
+    const btn = document.getElementById('btn-decal-valider');
+    btn.disabled = true;
+    info.textContent = 'Vérification des créneaux existants...';
+    try {
+        const formula = `AND({Date}='${date}', {Heure début}='${debut}', {Type}='${type}')`;
+        const res = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}?filterByFormula=${encodeURIComponent(formula)}`, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        const existants = (data.records || []).filter(r => r.id !== currentRecord.id && (r.fields['Statut'] || '') !== 'Annulé');
+        if (existants.length) {
+            const ex = existants[0];
+            const statut = ex.fields['Statut'] || 'Disponible';
+            if (statut === 'Disponible') {
+                const dateStr = formatDate(ex.fields['Date']);
+                if (!confirm(`Un créneau ${type} disponible existe déjà le ${dateStr} à ${debut}.\n\nRéserver ce créneau existant plutôt qu'en créer un nouveau ?`)) {
+                    info.textContent = 'Décalage annulé.';
+                    return;
+                }
+                info.textContent = 'Réservation du créneau existant...';
+                const fields = {
+                    'Statut': 'Réservé',
+                    'Prénom': f['Prénom'] || '',
+                    'Nom': f['Nom'] || '',
+                    'Email': f['Email'] || '',
+                    'Téléphone': f['Téléphone'] || '',
+                    'Bon cadeau': f['Bon cadeau'] || '',
+                    'Date réservation': new Date().toISOString(),
+                    'Token': currentToken
+                };
+                const resa = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({ records: [{ id: ex.id, fields }] })
+                });
+                if (!resa.ok) throw new Error((await resa.json()).error?.message || 'Erreur');
+                await cancelByToken(currentToken, ex.id);
+            } else {
+                info.textContent = `Un créneau ${type} existe déjà à cet horaire (statut : ${statut}). Choisis un autre horaire.`;
+                return;
+            }
+        } else {
+            info.textContent = 'Création du nouveau créneau...';
+            const resa = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ records: [{ fields: {
+                    'Date': date,
+                    'Heure début': debut,
+                    'Heure fin': fin,
+                    'Type': type,
+                    'Statut': 'Réservé',
+                    'Prénom': f['Prénom'] || '',
+                    'Nom': f['Nom'] || '',
+                    'Email': f['Email'] || '',
+                    'Téléphone': f['Téléphone'] || '',
+                    'Bon cadeau': f['Bon cadeau'] || '',
+                    'Token': currentToken,
+                    'Date réservation': new Date().toISOString()
+                }}] })
+            });
+            const resaData = await resa.json();
+            if (!resa.ok) throw new Error(resaData.error?.message || 'Erreur');
+            const nouveau = (resaData.records || [])[0];
+            await cancelByToken(currentToken, nouveau ? nouveau.id : null);
+            if (nouveau) await sendConfirmationEmail(nouveau, currentToken, { prenom: f['Prénom'], nom: f['Nom'], email: f['Email'] });
+        }
+        const dateStr = formatDate(date);
+        const passager = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+        await enregistrerAudit('Décalage créneau VI', type, `Passager : ${passager} | Nouveau : 📅 ${dateStr} • 🕐 ${debut} - ${fin}`, 'Initiation');
+        document.getElementById('modal-decalage').style.display = 'none';
+        showMessage('success', `Vol décalé au ${dateStr} • ${debut} - ${fin}.`);
+        currentRecord = null;
+        currentToken = null;
+        loadCreneaux(typeSelectionne);
+    } catch (err) {
+        console.error(err);
+        info.textContent = err.message || 'Erreur lors du décalage.';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 function onManageChanger() {
     clearMessage();
     if (!currentRecord || !creneauModifiable(currentRecord)) {
@@ -706,6 +855,11 @@ document.addEventListener('DOMContentLoaded', () => {
     emailjs.init(EMAILJS_PUBLIC_KEY);
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    modeDecalage = params.get('decalage') === '1';
+    if (modeDecalage && !token) {
+        showMessage('error', 'Lien de décalage invalide.');
+        modeDecalage = false;
+    }
     if (token) {
         loadByToken(token);
     } else {
@@ -750,6 +904,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('manage-form').addEventListener('submit', onManageUpdate);
     document.getElementById('btn-manage-annuler').addEventListener('click', onManageCancel);
     document.getElementById('btn-manage-changer').addEventListener('click', onManageChanger);
+    const modalDecalage = document.getElementById('modal-decalage');
+    document.getElementById('btn-decalage-manuel').addEventListener('click', () => {
+        if (!currentRecord) return;
+        document.getElementById('decalage-info').textContent = '';
+        const f = currentRecord.fields || {};
+        if (f['Date']) document.getElementById('decal-date').value = f['Date'];
+        modalDecalage.style.display = 'flex';
+    });
+    document.getElementById('btn-decal-annuler').addEventListener('click', () => modalDecalage.style.display = 'none');
+    document.querySelector('.close-modal-decalage').addEventListener('click', () => modalDecalage.style.display = 'none');
+    window.addEventListener('click', (e) => { if (e.target === modalDecalage) modalDecalage.style.display = 'none'; });
+    document.getElementById('btn-decal-valider').addEventListener('click', decalerSurCreneauManuel);
 });
 </script>
 

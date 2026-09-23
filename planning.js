@@ -3161,6 +3161,8 @@ function afficherVolsInitiation() {
             ? `<input type="checkbox" class="creneau-check" data-id="${vol.id}" title="Sélectionner pour suppression groupée">` : '';
         const boutonLiberer = (isAPourvoir && vol.source === 'creneau' && hasRoleGestionVI())
             ? `<button class="btn-liberer-initiation" title="Retirer le passager et remettre le créneau à disposition">Libérer</button>` : '';
+        const boutonDecaler = (isAPourvoir && vol.source === 'creneau' && vol.token && hasRoleGestionVI())
+            ? `<button class="btn-decaler-initiation" title="Ouvrir la page passager pour déplacer la réservation">Décaler le vol</button>` : '';
         const card = document.createElement('div');
         const classeType = `type-${(vol.type || 'vi').toLowerCase()}`;
         card.className = `initiation-card ${vol.classe} ${classeType}`;
@@ -3189,6 +3191,7 @@ function afficherVolsInitiation() {
                     <strong>${piloteText}</strong>
                     ${boutonSInscrire}
                     ${boutonInscrireAutre}
+                    ${boutonDecaler}
                     ${boutonLiberer}
                     <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
                 </div>
@@ -3197,13 +3200,18 @@ function afficherVolsInitiation() {
         card.style.cursor = 'pointer';
         card.title = 'Cliquer pour modifier';
         card.addEventListener('click', (e) => {
-            if (e.target.closest('.btn-reserver-initiation, .btn-supprimer-initiation, .creneau-check, .btn-liberer-initiation')) return;
+            if (e.target.closest('.btn-reserver-initiation, .btn-supprimer-initiation, .creneau-check, .btn-liberer-initiation, .btn-decaler-initiation')) return;
             editerVolInitiation(vol);
         });
         const btnLiberer = card.querySelector('.btn-liberer-initiation');
         if (btnLiberer) btnLiberer.addEventListener('click', (e) => {
             e.stopPropagation();
             libererCreneauVI(vol);
+        });
+        const btnDecaler = card.querySelector('.btn-decaler-initiation');
+        if (btnDecaler) btnDecaler.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.open(`${URL_RESERVER_VI}?token=${encodeURIComponent(vol.token)}&decalage=1`, '_blank');
         });
         card.querySelector('.btn-supprimer-initiation').addEventListener('click', (e) => {
             e.stopPropagation();
