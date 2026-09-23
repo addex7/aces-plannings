@@ -406,11 +406,13 @@ app.get('/v0/:base/:table', async (req, res) => {
 
         let orderBy = 'ORDER BY created_at ASC';
         const sorts = [];
+        const sortQ = Array.isArray(req.query.sort) ? req.query.sort : (req.query.sort ? [req.query.sort] : []);
         for (let i = 0; i < 16; i++) {
-            const f = req.query[`sort[${i}][field]`];
+            const f = req.query[`sort[${i}][field]`] || (sortQ[i] && sortQ[i].field);
             if (!f) break;
             params.push(f);
-            const dir = (req.query[`sort[${i}][direction]`] || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+            const dirRaw = req.query[`sort[${i}][direction]`] || (sortQ[i] && sortQ[i].direction);
+            const dir = (dirRaw || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
             sorts.push(`(f.fields->>$${params.length}) ${dir} NULLS LAST`);
         }
         if (sorts.length) orderBy = `ORDER BY ${sorts.join(', ')}`;
@@ -429,7 +431,7 @@ app.get('/v0/:base/:table', async (req, res) => {
         if (aPlus) records = records.slice(0, pageSize);
 
         // Projection fields[]
-        let champsDemandes = req.query['fields[]'];
+        let champsDemandes = req.query['fields[]'] || req.query.fields;
         if (champsDemandes && !Array.isArray(champsDemandes)) champsDemandes = [champsDemandes];
         if (Array.isArray(champsDemandes) && champsDemandes.length) {
             records = records.map(r => {
