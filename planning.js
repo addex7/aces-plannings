@@ -3089,12 +3089,22 @@ function normaliserVolsInitiation() {
     return vols.sort((a, b) => new Date(a.debut) - new Date(b.debut));
 }
 
+function normaliserRechercheVI(s) {
+    return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9@.+-]/g, '');
+}
+
 function afficherVolsInitiation() {
     const container = document.getElementById('initiation-list');
     if (!container) return;
     const maintenant = new Date();
+    const terme = normaliserRechercheVI(document.getElementById('recherche-vi') ? document.getElementById('recherche-vi').value : '');
     const vols = normaliserVolsInitiation().filter(v => {
         if (!filtreTypesInitiation.includes(v.type)) return false;
+        if (terme) {
+            if (!v.passager && !v.email && !v.telephone) return false;
+            const cible = normaliserRechercheVI(`${v.passager || ''} ${v.email || ''} ${v.telephone || ''}`);
+            return cible.includes(terme);
+        }
         const passe = new Date(v.debut) < maintenant;
         if (filtreInitiationActif === 'archives') return passe;
         return !passe && v.categorie === filtreInitiationActif;
@@ -3107,7 +3117,7 @@ function afficherVolsInitiation() {
             creneaux: 'Aucun créneau disponible.',
             archives: 'Aucun créneau passé.'
         };
-        const message = messages[filtreInitiationActif] || 'Aucun vol.';
+        const message = terme ? 'Aucune réservation ne correspond à cette recherche.' : (messages[filtreInitiationActif] || 'Aucun vol.');
         container.innerHTML = `<div class="initiation-empty">${message}</div>`;
         return;
     }
@@ -3159,9 +3169,9 @@ function afficherVolsInitiation() {
         const boutonInscrireAutre = peutInscrireAutre ? `<button class="btn-reserver-initiation" data-inscrire-autre="1" data-id="${vol.id}" data-source="${vol.source}" data-vol="${volData}">Inscrire autre</button>` : '';
         const caseSelection = regrouperParJour && vol.categorie === 'creneaux'
             ? `<input type="checkbox" class="creneau-check" data-id="${vol.id}" title="Sélectionner pour suppression groupée">` : '';
-        const boutonLiberer = (isAPourvoir && vol.source === 'creneau' && hasRoleGestionVI())
+        const boutonLiberer = (!estArchive && (isAPourvoir || isPris) && vol.source === 'creneau' && hasRoleGestionVI())
             ? `<button class="btn-liberer-initiation" title="Retirer le passager et remettre le créneau à disposition">Libérer</button>` : '';
-        const boutonDecaler = (isAPourvoir && vol.source === 'creneau' && vol.token && hasRoleGestionVI())
+        const boutonDecaler = (!estArchive && (isAPourvoir || isPris) && vol.source === 'creneau' && vol.token && hasRoleGestionVI())
             ? `<button class="btn-decaler-initiation" title="Ouvrir la page passager pour déplacer la réservation">Décaler le vol</button>` : '';
         const card = document.createElement('div');
         const classeType = `type-${(vol.type || 'vi').toLowerCase()}`;
@@ -3429,6 +3439,9 @@ function initGestionnaireVolsInitiation() {
     if (btnPris) btnPris.addEventListener('click', () => setFiltre('pris'));
     if (btnCreneaux) btnCreneaux.addEventListener('click', () => setFiltre('creneaux'));
     if (btnArchives) btnArchives.addEventListener('click', () => setFiltre('archives'));
+
+    const inputRecherche = document.getElementById('recherche-vi');
+    if (inputRecherche) inputRecherche.addEventListener('input', afficherVolsInitiation);
 
     function setFiltreTypes() {
         filtreTypesInitiation = Array.from(document.querySelectorAll('.initiation-filter-btn.active')).map(btn => btn.dataset.type);
