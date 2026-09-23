@@ -19,6 +19,7 @@
         <div id="message"></div>
 
         <section id="type-section">
+            <button type="button" class="btn-secondary btn-retour-manage" style="margin-bottom: 15px; cursor: pointer; display: none;">← Retour à ma réservation</button>
             <h2 style="color: #1e3d59; margin-top: 0;">Quel type de vol d'initiation ?</h2>
             <div style="display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px;">
                 <button type="button" class="type-choice btn-primary" data-choix="planeur" style="text-align: left; padding: 20px; font-size: 16px; display: flex; align-items: center; gap: 15px;">
@@ -40,6 +41,7 @@
 
         <section id="persons-section" style="display: none;">
             <button type="button" id="btn-retour-type" class="btn-secondary" style="margin-bottom: 15px;">← Retour</button>
+            <button type="button" class="btn-secondary btn-retour-manage" style="margin-bottom: 15px; cursor: pointer; display: none;">← Retour à ma réservation</button>
             <h2 style="color: #1e3d59; margin-top: 0;">Moteur — combien de personnes ?</h2>
             <p style="color: #475569; font-size: 14px;">1 personne → F-JVIO &nbsp;|&nbsp; 2 à 3 personnes → F-GASB</p>
             <div class="form-group" style="max-width: 200px;">
@@ -52,7 +54,7 @@
         <section id="list-section" style="display: none;">
             <div style="margin-bottom: 15px;">
                 <button type="button" id="btn-retour-type2" class="btn-secondary" style="margin-bottom: 10px; cursor: pointer;">← Changer de type de vol d'initiation</button>
-                <button type="button" id="btn-retour-manage" class="btn-secondary" style="margin-bottom: 10px; cursor: pointer; display: none;">← Retour à ma réservation</button>
+                <button type="button" class="btn-secondary btn-retour-manage" style="margin-bottom: 10px; cursor: pointer; display: none;">← Retour à ma réservation</button>
                 <button type="button" id="btn-decalage-manuel" class="btn-secondary" style="margin-bottom: 10px; margin-left: 10px; display: none; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; cursor: pointer;">Décaler le vol sur un créneau non-existant</button>
                 <h2 style="color: #1e3d59; margin-top: 0; margin-bottom: 5px;">Créneaux disponibles</h2>
                 <p id="type-selectionne-label" style="color: #64748b; font-size: 14px; margin: 0;"></p>
@@ -90,6 +92,7 @@
                     <input type="text" id="client-bon" placeholder="Ex : 2026-0001">
                 </div>
                 <div class="form-actions">
+                    <button type="button" class="btn-secondary btn-retour-manage" style="display: none;">← Ma réservation</button>
                     <button type="button" id="btn-retour-liste" class="btn-secondary">Retour</button>
                     <button type="submit" class="btn-submit">Confirmer ma réservation</button>
                 </div>
@@ -271,6 +274,9 @@ function showSection(id) {
     });
     const target = document.getElementById(id);
     if (target) target.style.display = 'block';
+    document.querySelectorAll('.btn-retour-manage').forEach(b => {
+        b.style.display = (currentToken && currentRecord) ? '' : 'none';
+    });
 }
 
 async function loadCreneaux(type) {
@@ -610,15 +616,9 @@ async function loadByToken(token) {
     }
 }
 
-function majBoutonsRetourListe() {
-    const bManage = document.getElementById('btn-retour-manage');
-    if (bManage) bManage.style.display = (currentToken && currentRecord) ? '' : 'none';
-}
-
 function ouvrirListePourDecalage(record) {
     const f = record.fields || {};
     typeSelectionne = f['Type'] || null;
-    majBoutonsRetourListe();
     document.getElementById('client-prenom').value = f['Prénom'] || '';
     document.getElementById('client-nom').value = f['Nom'] || '';
     document.getElementById('client-email').value = f['Email'] || '';
@@ -883,7 +883,6 @@ function onManageChanger() {
     }
     recordIdOrigine = currentRecord ? currentRecord.id : null;
     typeSelectionne = currentRecord && currentRecord.fields ? (currentRecord.fields['Type'] || null) : null;
-    majBoutonsRetourListe();
     showSection('list-section');
     const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
     const labelEl = document.getElementById('type-selectionne-label');
@@ -919,7 +918,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
                 const labelEl = document.getElementById('type-selectionne-label');
                 if (labelEl) labelEl.textContent = label;
-                majBoutonsRetourListe();
                 showSection('list-section');
                 loadCreneaux(typeSelectionne);
             } else if (choix === 'moteur') {
@@ -937,14 +935,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = TYPE_LABELS[typeSelectionne] || typeSelectionne;
         const labelEl = document.getElementById('type-selectionne-label');
         if (labelEl) labelEl.textContent = `${label} — ${nb} personne${nb > 1 ? 's' : ''}`;
-        majBoutonsRetourListe();
         showSection('list-section');
         loadCreneaux(typeSelectionne);
     });
     document.getElementById('btn-retour-type').addEventListener('click', () => showSection('type-section'));
     document.getElementById('btn-retour-type2').addEventListener('click', () => showSection('type-section'));
-    document.getElementById('btn-retour-manage').addEventListener('click', () => {
-        if (currentRecord) showManageView(currentRecord);
+    document.querySelectorAll('.btn-retour-manage').forEach(b => {
+        b.addEventListener('click', () => {
+            if (currentRecord) showManageView(currentRecord);
+        });
     });
     document.getElementById('reservation-form').addEventListener('submit', onSubmitReservation);
     document.getElementById('btn-retour-liste').addEventListener('click', () => {
