@@ -762,7 +762,6 @@ async function onManageCancel() {
         currentRecord = null;
         recordReservation = null;
         showSection('annulation-section');
-        showMessage('error', 'Réservation annulée.');
     } catch (err) {
         console.error(err);
         showMessage('error', err.message || 'Erreur lors de l\'annulation.');
