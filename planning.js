@@ -3132,6 +3132,17 @@ function afficherVolsInitiation() {
             <button type="button" id="btn-suppr-selection" class="btn-supprimer-selection" disabled>Supprimer la sélection</button>`;
         container.appendChild(barre);
     }
+    if (filtreInitiationActif === 'archives' && hasRoleGestionVI()) {
+        const sansPassager = vols.filter(v => !v.passager);
+        const barreArch = document.createElement('div');
+        barreArch.className = 'initiation-selection-barre';
+        barreArch.innerHTML = `
+            <span>🧹 ${sansPassager.length} vol(s) sans passager</span>
+            <button type="button" id="btn-purge-archives" class="btn-supprimer-selection" ${sansPassager.length ? '' : 'disabled'}>Supprimer les vols sans passager</button>`;
+        container.appendChild(barreArch);
+        const btnPurge = barreArch.querySelector('#btn-purge-archives');
+        if (btnPurge) btnPurge.addEventListener('click', () => nettoyerArchivesVI(vols));
+    }
     let dernierJourAffiche = '';
     vols.forEach(vol => {
         if (regrouperParJour && vol.dateStr !== dernierJourAffiche) {
@@ -3171,8 +3182,12 @@ function afficherVolsInitiation() {
             ? `<input type="checkbox" class="creneau-check" data-id="${vol.id}" title="Sélectionner pour suppression groupée">` : '';
         const boutonLiberer = (!estArchive && (isAPourvoir || isPris) && vol.source === 'creneau' && hasRoleGestionVI())
             ? `<button class="btn-liberer-initiation" title="Retirer le passager et remettre le créneau à disposition">Libérer</button>` : '';
-        const boutonDecaler = (!estArchive && (isAPourvoir || isPris) && vol.source === 'creneau' && vol.token && hasRoleGestionVI())
+        const boutonDecaler = (!estArchive && (isAPourvoir || isPris) && vol.source === 'creneau' && vol.passager && hasRoleGestionVI())
             ? `<button class="btn-decaler-initiation" title="Ouvrir la page passager pour déplacer la réservation">Décaler le vol</button>` : '';
+        const boutonPilote = (!estArchive && isPris && vol.pilote && hasRoleGestionVI())
+            ? `<button class="btn-pilote-initiation" title="Changer le pilote attribué à ce vol">Changer de pilote</button>` : '';
+        const boutonEdit = (!estArchive && hasRoleGestionVI())
+            ? `<button class="btn-edit-vi" title="Modifier ce vol d'initiation">Modifier</button>` : '';
         const card = document.createElement('div');
         const classeType = `type-${(vol.type || 'vi').toLowerCase()}`;
         card.className = `initiation-card ${vol.classe} ${classeType}`;
@@ -3185,6 +3200,7 @@ function afficherVolsInitiation() {
                 </div>
                 <div class="initiation-meta">
                     <strong>${piloteText}</strong>
+                    ${boutonEdit}
                     ${caseSelection}
                     <button class="btn-supprimer-initiation" title="Supprimer ce créneau">✕</button>
                 </div>
@@ -3201,27 +3217,49 @@ function afficherVolsInitiation() {
                     <strong>${piloteText}</strong>
                     ${boutonSInscrire}
                     ${boutonInscrireAutre}
+                    ${boutonPilote}
                     ${boutonDecaler}
                     ${boutonLiberer}
+                    ${boutonEdit}
                     <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
                 </div>
             `;
         }
-        card.style.cursor = 'pointer';
-        card.title = 'Cliquer pour modifier';
-        card.addEventListener('click', (e) => {
-            if (e.target.closest('.btn-reserver-initiation, .btn-supprimer-initiation, .creneau-check, .btn-liberer-initiation, .btn-decaler-initiation')) return;
-            editerVolInitiation(vol);
-        });
         const btnLiberer = card.querySelector('.btn-liberer-initiation');
         if (btnLiberer) btnLiberer.addEventListener('click', (e) => {
             e.stopPropagation();
             libererCreneauVI(vol);
         });
         const btnDecaler = card.querySelector('.btn-decaler-initiation');
-        if (btnDecaler) btnDecaler.addEventListener('click', (e) => {
+        if (btnDecaler) btnDecaler.addEventListener('click', async (e) => {
             e.stopPropagation();
-            window.open(`${URL_RESERVER_VI}?token=${encodeURIComponent(vol.token)}&decalage=1`, '_blank');
+            let token = vol.token;
+            if (!token) {
+                token = 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
+                try {
+                    const r = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
+                        method: 'PATCH',
+                        headers,
+                        body: JSON.stringify({ records: [{ id: vol.id, fields: { 'Token': token } }] })
+                    });
+                    if (!r.ok) { alert('Impossible de préparer le lien de décalage.'); return; }
+                    vol.token = token;
+                } catch (err) {
+                    alert('Impossible de préparer le lien de décalage.');
+                    return;
+                }
+            }
+            window.open(`${URL_RESERVER_VI}?token=${encodeURIComponent(token)}&decalage=1`, '_blank');
+        });
+        const btnPilote = card.querySelector('.btn-pilote-initiation');
+        if (btnPilote) btnPilote.addEventListener('click', (e) => {
+            e.stopPropagation();
+            editerVolInitiation(vol);
+        });
+        const btnEdit = card.querySelector('.btn-edit-vi');
+        if (btnEdit) btnEdit.addEventListener('click', (e) => {
+            e.stopPropagation();
+            editerVolInitiation(vol);
         });
         card.querySelector('.btn-supprimer-initiation').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -3243,6 +3281,36 @@ function afficherVolsInitiation() {
         cbs.forEach(c => c.addEventListener('change', maj));
         if (tout) tout.addEventListener('change', () => { cbs.forEach(c => c.checked = tout.checked); maj(); });
         if (btnSel) btnSel.addEventListener('click', () => supprimerCreneauxSelection(cbs.filter(c => c.checked).map(c => c.dataset.id)));
+    }
+}
+
+async function nettoyerArchivesVI(vols) {
+    const cibles = (vols || []).filter(v => !v.passager && v.id);
+    if (!cibles.length) return;
+    if (!confirm(`Supprimer définitivement ${cibles.length} vol(s) sans passager des archives ?`)) return;
+    const parTable = {};
+    cibles.forEach(v => {
+        const table = v.source === 'moteur' ? 'Réservations' : (v.source === 'creneau' ? 'VI Créneaux' : 'VI Planeur');
+        (parTable[table] = parTable[table] || []).push(v.id);
+    });
+    try {
+        for (const [table, ids] of Object.entries(parTable)) {
+            const qs = ids.map(id => `records[]=${encodeURIComponent(id)}`).join('&');
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}?${qs}`, {
+                method: 'DELETE',
+                headers
+            });
+            if (!res.ok) throw new Error('Suppression échouée');
+        }
+        if (typeof enregistrerAudit === 'function') {
+            const pilote = nomPiloteCourant();
+            await enregistrerAudit('Purge archives VI', 'VI', `Pilote : ${pilote} | ${cibles.length} vol(s) sans passager supprimés`, 'Initiation');
+        }
+        if (typeof chargerVolsInitiation === 'function') await chargerVolsInitiation();
+        if (typeof chargerDonneesPlanning === 'function') await chargerDonneesPlanning();
+    } catch (error) {
+        console.error(error);
+        alert('Erreur lors de la suppression.');
     }
 }
 
