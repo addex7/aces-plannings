@@ -415,11 +415,7 @@ async function onSubmitReservation(e) {
         currentToken = token;
         currentRecord = record;
         recordIdOrigine = record.id;
-        if (isModification) {
-            await sendModificationEmail(record, token, { prenom, nom, email });
-        } else {
-            await sendConfirmationEmail(record, token, { prenom, nom, email });
-        }
+        // L'email de confirmation est envoye cote serveur au moment du PATCH.
         const f = record.fields || {};
         const dateVol = f['Date'] ? formatDate(f['Date']) : '';
         const heureVol = `${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`;
@@ -518,47 +514,7 @@ async function envoyerEmailServeurVI(payload) {
     }
 }
 
-async function sendModificationEmail(record, token, contact) {
-    const f = record.fields || {};
-    const prenom = (contact && contact.prenom) || f['Prénom'] || '';
-    const nom = (contact && contact.nom) || f['Nom'] || '';
-    const email = (contact && contact.email) || f['Email'] || '';
-    const date = f['Date'] ? formatDate(f['Date']) : '';
-    const heure = `${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`;
-    const type = f['Type'] || 'VI';
-    const lien = `${PUBLIC_URL}?token=${token}`;
-    if (!email) {
-        console.warn('Aucun email fourni pour la confirmation');
-        return;
-    }
-    const okServeur = await envoyerEmailServeurVI({
-        to: email,
-        prenom: `${prenom} ${nom}`.trim(),
-        url: lien,
-        type: 'vi',
-        viType: type,
-        viDate: date,
-        viHeure: heure,
-        viLieu: 'ACES'
-    });
-    if (okServeur) return;
-    if (!EMAILJS_VI_MODIF_TEMPLATE_ID) {
-        return sendConfirmationEmail(record, token, contact);
-    }
-    try {
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_VI_MODIF_TEMPLATE_ID, {
-            to_email: email,
-            to_name: `${prenom} ${nom}`.trim(),
-            type: type,
-            date: date,
-            heure: heure,
-            lieu: 'ACES',
-            lien: lien
-        });
-    } catch (err) {
-        console.error('EmailJS error:', err);
-    }
-}
+
 
 function showConfirmation(record, token, contact) {
     showSection('confirmation-section');

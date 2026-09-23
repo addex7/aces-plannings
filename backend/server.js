@@ -164,6 +164,78 @@ app.post('/v0/send-email', async (req, res) => {
     }
 });
 
+// --- CONFIRMATION VI DECLENCHEE PAR LE SERVEUR ---
+// Un client qui reserve un creneau envoie 'Date réservation' + Statut 'Réservé'
+// dans le PATCH — ce declencheur ne depend pas du code execute par le navigateur.
+async function envoyerMailConfirmationVI(fields) {
+    if (!SMTP.host || !SMTP.user || !SMTP.pass) return;
+    const f = fields || {};
+    const to = f['Email'];
+    const token = f['Token'];
+    if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !token) return;
+    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
+    const prenomSafe = nettoie(`${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), 80);
+    const viTypeSafe = nettoie(f['Type'] || 'VI', 60);
+    let viDateSafe = '';
+    try {
+        viDateSafe = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) { viDateSafe = nettoie(f['Date'], 40); }
+    const viHeureSafe = nettoie(`${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`, 40);
+    const url = `https://vps-1a4fbee9.vps.ovh.net/reserver-vi.html?token=${encodeURIComponent(token)}`;
+    const sujet = 'Confirmation de votre baptême de l\'air ACES';
+    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de baptême de l'air est bien enregistrée.\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ACES\n\nVous pouvez modifier ou annuler votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+    const html = `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+            <div style="background:#1e3d59;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre baptême de l'air est réservé</div>
+            <div style="padding:24px;">
+                <p>Bonjour ${prenomSafe},</p>
+                <p>Votre réservation est bien enregistrée.</p>
+                <div style="background:#f1f5f9;border-radius:8px;padding:14px 18px;margin:18px 0;">
+                    <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
+                    <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
+                    <p style="margin:4px 0;"><strong>Horaire :</strong> ${viHeureSafe}</p>
+                    <p style="margin:4px 0;"><strong>Lieu :</strong> ACES</p>
+                </div>
+                <p>Vous pouvez modifier ou annuler votre réservation en cliquant sur le lien ci-dessous :</p>
+                <p style="text-align:center;margin:28px 0;">
+                    <a href="${url}" style="background:#1e3d59;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;">Gérer ma réservation</a>
+                </p>
+                <p style="font-size:12px;color:#64748b;word-break:break-all;">Si le bouton ne s'affiche pas, copiez ce lien : <a href="${url}">${url}</a></p>
+                <p style="margin-top:24px;color:#64748b;">ACES - Aéroclub de l'Estuaire de la Seine</p>
+            </div>
+        </div>`;
+    try {
+        const transport = nodemailer.createTransport({
+            host: SMTP.host,
+            port: SMTP.port,
+            secure: SMTP.port === 465,
+            auth: { user: SMTP.user, pass: SMTP.pass }
+        });
+        await transport.sendMail({
+            from: `"${SMTP.fromName}" <${SMTP.from}>`,
+            to, subject: sujet, text: texte, html
+        });
+        console.log(`Confirmation VI envoyee a ${to}`);
+    } catch (e) {
+        console.error('Erreur envoi confirmation VI:', e);
+    }
+}
+
+function declencherConfirmationVI(req, recordsReponse) {
+    try {
+        const table = decodeURIComponent(req.params.table || '');
+        if (table !== 'VI Créneaux') return;
+        const reqs = req.body.records || [];
+        (recordsReponse || []).forEach((rec, i) => {
+            const reqFields = (reqs[i] && reqs[i].fields) || {};
+            if (reqFields['Statut'] !== 'Réservé' || !reqFields['Date réservation']) return;
+            envoyerMailConfirmationVI(rec.fields);
+        });
+    } catch (e) {
+        console.error('Declencheur confirmation VI:', e);
+    }
+}
+
 function tableSql(req, res) {
     const nom = decodeURIComponent(req.params.table);
     const t = TABLES[nom];
@@ -303,6 +375,7 @@ async function majRecords(req, res, remplacer) {
             maj.push(formatRecord(rows[0]));
         }
         res.json({ records: maj });
+        declencherConfirmationVI(req, maj);
     } catch (e) {
         console.error('PATCH/PUT:', e);
         erreur(res, 500, e.message);
