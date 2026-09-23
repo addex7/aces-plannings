@@ -478,6 +478,17 @@ async function sendConfirmationEmail(record, token, contact) {
         console.warn('Aucun email fourni pour la confirmation');
         return;
     }
+    const okServeur = await envoyerEmailServeurVI({
+        to: email,
+        prenom: `${prenom} ${nom}`.trim(),
+        url: lien,
+        type: 'vi',
+        viType: type,
+        viDate: date,
+        viHeure: heure,
+        viLieu: 'ACES'
+    });
+    if (okServeur) return;
     try {
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_VI_TEMPLATE_ID, {
             to_email: email,
@@ -493,10 +504,21 @@ async function sendConfirmationEmail(record, token, contact) {
     }
 }
 
-async function sendModificationEmail(record, token, contact) {
-    if (!EMAILJS_VI_MODIF_TEMPLATE_ID) {
-        return sendConfirmationEmail(record, token, contact);
+// Tente l'envoi via le serveur (SMTP) ; retourne false si non configure/indisponible.
+async function envoyerEmailServeurVI(payload) {
+    try {
+        const res = await fetch(new URL('/v0/send-email', API_BASE).href, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+        });
+        return res.ok;
+    } catch (err) {
+        return false;
     }
+}
+
+async function sendModificationEmail(record, token, contact) {
     const f = record.fields || {};
     const prenom = (contact && contact.prenom) || f['Prénom'] || '';
     const nom = (contact && contact.nom) || f['Nom'] || '';
@@ -508,6 +530,20 @@ async function sendModificationEmail(record, token, contact) {
     if (!email) {
         console.warn('Aucun email fourni pour la confirmation');
         return;
+    }
+    const okServeur = await envoyerEmailServeurVI({
+        to: email,
+        prenom: `${prenom} ${nom}`.trim(),
+        url: lien,
+        type: 'vi',
+        viType: type,
+        viDate: date,
+        viHeure: heure,
+        viLieu: 'ACES'
+    });
+    if (okServeur) return;
+    if (!EMAILJS_VI_MODIF_TEMPLATE_ID) {
+        return sendConfirmationEmail(record, token, contact);
     }
     try {
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_VI_MODIF_TEMPLATE_ID, {

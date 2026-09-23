@@ -81,39 +81,71 @@ app.post('/v0/send-email', async (req, res) => {
     if (!SMTP.host || !SMTP.user || !SMTP.pass) {
         return erreur(res, 501, 'Envoi de mail non configure cote serveur (variables SMTP_*)');
     }
-    const { to, prenom, url, type } = req.body || {};
+    const { to, prenom, url, type, viType, viDate, viHeure, viLieu } = req.body || {};
     if (!to || typeof to !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
         return erreur(res, 400, 'Destinataire invalide');
     }
     if (!url || typeof url !== 'string' || !/^https:\/\//.test(url) || url.length > 500) {
         return erreur(res, 400, 'URL invalide');
     }
-    const prenomSafe = String(prenom || '').slice(0, 80).replace(/[<>&"']/g, '');
+    const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
+    const prenomSafe = nettoie(prenom, 80);
     const estReset = type === 'reset';
-    const sujet = estReset
-        ? 'ACES - Reinitialisation de votre mot de passe'
-        : 'Invitation ACES - Creation de votre compte';
-    const ligne = estReset
-        ? 'Une demande de reinitialisation de mot de passe a ete faite pour ton compte.'
-        : 'Tu es invite(e) a rejoindre la plateforme ACES.';
-    const action = estReset
-        ? 'Definis ton nouveau mot de passe ici :'
-        : 'Cree ton identifiant et mot de passe ici :';
-    const texte = `Bonjour ${prenomSafe},\n\n${ligne}\n${action}\n${url}\n\nA bientot.\nAeroclub ACES`;
-    const html = `
+    const estVI = type === 'vi';
+    let sujet, texte, html;
+    if (estVI) {
+        const viTypeSafe = nettoie(viType, 60);
+        const viDateSafe = nettoie(viDate, 40);
+        const viHeureSafe = nettoie(viHeure, 40);
+        const viLieuSafe = nettoie(viLieu, 60);
+        sujet = 'Confirmation de votre baptême de l\'air ACES';
+        texte = `Bonjour ${prenomSafe},\n\nVotre réservation de baptême de l'air est bien enregistrée.\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ${viLieuSafe}\n\nVous pouvez modifier ou annuler votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+        html = `
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-            <div style="background:#1e3d59;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Aeroclub ACES</div>
+            <div style="background:#1e3d59;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre baptême de l'air est réservé</div>
+            <div style="padding:24px;">
+                <p>Bonjour ${prenomSafe},</p>
+                <p>Votre réservation est bien enregistrée.</p>
+                <div style="background:#f1f5f9;border-radius:8px;padding:14px 18px;margin:18px 0;">
+                    <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
+                    <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
+                    <p style="margin:4px 0;"><strong>Horaire :</strong> ${viHeureSafe}</p>
+                    <p style="margin:4px 0;"><strong>Lieu :</strong> ${viLieuSafe}</p>
+                </div>
+                <p>Vous pouvez modifier ou annuler votre réservation en cliquant sur le lien ci-dessous :</p>
+                <p style="text-align:center;margin:28px 0;">
+                    <a href="${url}" style="background:#1e3d59;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;">Gérer ma réservation</a>
+                </p>
+                <p style="font-size:12px;color:#64748b;word-break:break-all;">Si le bouton ne s'affiche pas, copiez ce lien : <a href="${url}">${url}</a></p>
+                <p style="margin-top:24px;color:#64748b;">ACES - Aéroclub de l'Estuaire de la Seine</p>
+            </div>
+        </div>`;
+    } else {
+        sujet = estReset
+            ? 'ACES - Réinitialisation de votre mot de passe'
+            : 'Invitation ACES - Création de votre compte';
+        const ligne = estReset
+            ? 'Une demande de réinitialisation de mot de passe a été faite pour ton compte.'
+            : 'Tu es invité(e) à rejoindre la plateforme ACES.';
+        const action = estReset
+            ? 'Définis ton nouveau mot de passe ici :'
+            : 'Crée ton identifiant et mot de passe ici :';
+        texte = `Bonjour ${prenomSafe},\n\n${ligne}\n${action}\n${url}\n\nA bientôt.\nAéroclub ACES`;
+        html = `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+            <div style="background:#1e3d59;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Aéroclub ACES</div>
             <div style="padding:24px;">
                 <p>Bonjour ${prenomSafe},</p>
                 <p>${ligne}</p>
                 <p>${action}</p>
                 <p style="text-align:center;margin:28px 0;">
-                    <a href="${url}" style="background:#1e3d59;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;">Acceder au site</a>
+                    <a href="${url}" style="background:#1e3d59;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;">Accéder au site</a>
                 </p>
                 <p style="font-size:12px;color:#64748b;word-break:break-all;">Si le bouton ne fonctionne pas : <a href="${url}">${url}</a></p>
-                <p style="margin-top:24px;">A bientot.</p>
+                <p style="margin-top:24px;">A bientôt.</p>
             </div>
         </div>`;
+    }
     try {
         const transport = nodemailer.createTransport({
             host: SMTP.host,
