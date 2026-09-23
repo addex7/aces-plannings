@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=177">
+    <link rel="stylesheet" href="style.css?v=178">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -310,8 +310,12 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="gv-date">Date</label>
-                                <input type="date" id="gv-date" required>
+                                <label for="gv-date">Dates</label>
+                                <div style="display:flex; gap:6px;">
+                                    <input type="date" id="gv-date" style="flex:1;">
+                                    <button type="button" id="gv-date-add" title="Ajouter cette date à la liste" style="flex-shrink:0; padding:6px 12px; background:#1e3d59; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">+</button>
+                                </div>
+                                <div id="gv-dates-chips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
                             </div>
                             <div class="form-group">
                                 <label for="gv-debut">Début</label>
@@ -932,10 +936,10 @@
             <span class="close-modal-vi-choix">&times;</span>
             <h3>Modifier le créneau</h3>
             <p id="vi-choix-info"></p>
-            <div class="form-actions" style="flex-direction: column; gap: 10px; align-items: stretch;">
-                <button type="button" id="btn-modifier-comme-passager" class="btn-submit">Changer de créneau (liste passager)</button>
-                <button type="button" id="btn-modifier-exception" class="btn-secondary">Modification exceptionnelle (manuelle)</button>
-                <button type="button" id="btn-supprimer-creneau" style="padding:10px 16px;background:#dc2626;color:#fff;border:1px solid #b91c1c;border-radius:8px;cursor:pointer;">Supprimer le créneau</button>
+            <div class="form-actions vi-choix-actions">
+                <button type="button" id="btn-modifier-comme-passager">Changer de créneau (liste passager)</button>
+                <button type="button" id="btn-modifier-exception">Modification exceptionnelle (manuelle)</button>
+                <button type="button" id="btn-supprimer-creneau">Supprimer le créneau</button>
             </div>
         </div>
     </div>
@@ -1332,11 +1336,11 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=91"></script>
-    <script src="version.js?v=20260923182559"></script>
+    <script src="version.js?v=20260923184011"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=106"></script>
     <script src="presences.js?v=99"></script>
-    <script src="planning.js?v=190"></script>
+    <script src="planning.js?v=178"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=110"></script>
     <script src="aeronefs.js?v=115"></script>
@@ -1346,7 +1350,7 @@
     <script src="audit.js?v=7"></script>
     <script src="membres.js?v=105"></script>
     <script src="instructeurs.js?v=107"></script>
-    <script src="instructeur-planning.js?v=99"></script>
+    <script src="instructeur-planning.js?v=178"></script>
     <script src="messagerie.js?v=18"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>

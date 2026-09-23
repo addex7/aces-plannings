@@ -1162,6 +1162,70 @@ img, table, video, iframe, svg {
     padding: 30px;
     font-style: italic;
 }
+.initiation-jour-titre {
+    font-weight: 700;
+    font-size: 14px;
+    color: #1e3d59;
+    text-transform: capitalize;
+    margin: 14px 0 8px 0;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #e2e8f0;
+}
+.initiation-jour-titre:first-child {
+    margin-top: 0;
+}
+.gv-date-chip {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e3d59;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    cursor: pointer;
+}
+.gv-date-chip:hover {
+    background: #fecaca;
+    border-color: #ef4444;
+    color: #b91c1c;
+}
+.vi-choix-actions {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+    display: flex;
+}
+.vi-choix-actions button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.vi-choix-actions #btn-modifier-comme-passager {
+    background: #17b978;
+    color: #fff;
+}
+.vi-choix-actions #btn-modifier-comme-passager:hover {
+    background: #11995d;
+}
+.vi-choix-actions #btn-modifier-exception {
+    background: #e2e8f0;
+    color: #1e3d59;
+}
+.vi-choix-actions #btn-modifier-exception:hover {
+    background: #cbd5e1;
+}
+.vi-choix-actions #btn-supprimer-creneau {
+    background: #dc2626;
+    color: #fff;
+}
+.vi-choix-actions #btn-supprimer-creneau:hover {
+    background: #b91c1c;
+}
 .btn-reserver-initiation {
     background-color: #00adb5;
     color: white;

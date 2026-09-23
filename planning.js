@@ -3112,7 +3112,16 @@ function afficherVolsInitiation() {
         return;
     }
     container.innerHTML = '';
+    const regrouperParJour = filtreInitiationActif === 'creneaux';
+    let dernierJourAffiche = '';
     vols.forEach(vol => {
+        if (regrouperParJour && vol.dateStr !== dernierJourAffiche) {
+            dernierJourAffiche = vol.dateStr;
+            const titreJour = document.createElement('div');
+            titreJour.className = 'initiation-jour-titre';
+            titreJour.textContent = `📅 ${vol.dateStr}`;
+            container.appendChild(titreJour);
+        }
         const isAdminCreneaux = vol.categorie === 'creneaux';
         const isAPourvoir = vol.categorie === 'apourvoir';
         const isPris = vol.categorie === 'pris';
@@ -3416,7 +3425,14 @@ function ouvrirModaleChoixModifierCreneau(vol) {
     if (!modal) return;
     volChoixCreneau = vol;
     const info = document.getElementById('vi-choix-info');
-    if (info) info.innerHTML = `Modifier le créneau de <strong>${escapeHtml(vol.passager || '')}</strong> ?`;
+    const btnPassager = document.getElementById('btn-modifier-comme-passager');
+    const aUnPassager = !!(vol.passager && vol.token);
+    if (btnPassager) btnPassager.style.display = aUnPassager ? '' : 'none';
+    if (info) {
+        info.innerHTML = aUnPassager
+            ? `Modifier le créneau de <strong>${escapeHtml(vol.passager)}</strong> ?`
+            : `Modifier le créneau <strong>${escapeHtml(vol.type || 'VI')}</strong> du ${escapeHtml(vol.dateStr || '')} (${vol.heureDebut} - ${vol.heureFin}) ?`;
+    }
     modal.style.display = 'flex';
 }
 
@@ -3509,30 +3525,72 @@ function updateGestionVI() {
     if (tabCreneaux) tabCreneaux.style.display = hasRoleGestionVI() ? 'inline-block' : 'none';
 }
 
+const listeDatesGV = [];
+
+function getDatesCreneauxVI() {
+    if (listeDatesGV.length) return [...listeDatesGV].sort();
+    const d = document.getElementById('gv-date')?.value || '';
+    return d ? [d] : [];
+}
+
+function majChipsDatesGV() {
+    const cont = document.getElementById('gv-dates-chips');
+    if (!cont) return;
+    cont.innerHTML = '';
+    [...listeDatesGV].sort().forEach(d => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'gv-date-chip';
+        chip.title = 'Retirer cette date';
+        chip.textContent = new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) + ' ✕';
+        chip.addEventListener('click', () => {
+            const i = listeDatesGV.indexOf(d);
+            if (i !== -1) listeDatesGV.splice(i, 1);
+            majChipsDatesGV();
+            genererApercuCreneauxVI();
+        });
+        cont.appendChild(chip);
+    });
+}
+
 function initGestionCreneauxVI() {
     updateGestionVI();
     const form = document.getElementById('form-creneaux-vi');
     if (form) {
         form.addEventListener('submit', creerCreneauxVI);
         form.addEventListener('reset', () => {
-            setTimeout(genererApercuCreneauxVI, 0);
+            listeDatesGV.length = 0;
+            setTimeout(() => { majChipsDatesGV(); genererApercuCreneauxVI(); }, 0);
+        });
+    }
+    const btnAddDate = document.getElementById('gv-date-add');
+    if (btnAddDate) {
+        btnAddDate.addEventListener('click', () => {
+            const input = document.getElementById('gv-date');
+            const d = input?.value;
+            if (!d) return;
+            if (!listeDatesGV.includes(d)) listeDatesGV.push(d);
+            input.value = '';
+            majChipsDatesGV();
+            genererApercuCreneauxVI();
         });
     }
     ['gv-type','gv-date','gv-debut','gv-fin','gv-nombre'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', genererApercuCreneauxVI);
     });
+    majChipsDatesGV();
     genererApercuCreneauxVI();
 }
 
 function genererApercuCreneauxVI() {
     const apercu = document.getElementById('gv-apercu');
     const type = document.getElementById('gv-type')?.value || '';
-    const date = document.getElementById('gv-date')?.value || '';
+    const dates = getDatesCreneauxVI();
     const debut = document.getElementById('gv-debut')?.value || '';
     const fin = document.getElementById('gv-fin')?.value || '';
     const nombre = parseInt(document.getElementById('gv-nombre')?.value, 10);
-    if (!type || !date || !debut || !fin || !nombre) {
+    if (!type || !dates.length || !debut || !fin || !nombre) {
         if (apercu) apercu.innerHTML = 'Remplis les champs pour voir l\'aperçu des créneaux.';
         return [];
     }
@@ -3545,25 +3603,32 @@ function genererApercuCreneauxVI() {
     const totalMin = finMin - debutMin;
     const duree = totalMin / nombre;
     const records = [];
-    const lignes = [];
-    for (let i = 0; i < nombre; i++) {
-        const start = Math.round(debutMin + i * duree);
-        const end = (i === nombre - 1) ? finMin : Math.round(start + duree);
-        records.push({
-            fields: {
-                'Date': date,
-                'Heure début': minutesToTimeString(start),
-                'Heure fin': minutesToTimeString(end),
-                'Type': type,
-                'Statut': 'Disponible'
-            }
-        });
-        const slotMin = end - start;
-        lignes.push(`Créneau ${i + 1} : <strong>${minutesToTimeString(start)} - ${minutesToTimeString(end)}</strong> (${slotMin} min)`);
-    }
+    const groupes = [];
+    dates.forEach(date => {
+        const lignes = [];
+        for (let i = 0; i < nombre; i++) {
+            const start = Math.round(debutMin + i * duree);
+            const end = (i === nombre - 1) ? finMin : Math.round(start + duree);
+            records.push({
+                fields: {
+                    'Date': date,
+                    'Heure début': minutesToTimeString(start),
+                    'Heure fin': minutesToTimeString(end),
+                    'Type': type,
+                    'Statut': 'Disponible'
+                }
+            });
+            const slotMin = end - start;
+            lignes.push(`Créneau ${i + 1} : <strong>${minutesToTimeString(start)} - ${minutesToTimeString(end)}</strong> (${slotMin} min)`);
+        }
+        groupes.push({ date, lignes });
+    });
     if (apercu) {
-        apercu.innerHTML = `<div style="margin-bottom:4px;font-weight:bold;">Aperçu des créneaux :</div>` +
-            `<ul style="margin:0; padding-left:18px; line-height:1.5;">${lignes.map(l => `<li>${l}</li>`).join('')}</ul>`;
+        apercu.innerHTML = `<div style="margin-bottom:4px;font-weight:bold;">Aperçu : ${records.length} créneau(x) sur ${dates.length} date(s)</div>` +
+            groupes.map(g => {
+                const dateStr = new Date(g.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+                return `<div style="margin-top:6px;"><strong style="text-transform:capitalize;">${dateStr}</strong><ul style="margin:2px 0 0; padding-left:18px; line-height:1.5;">${g.lignes.map(l => `<li>${l}</li>`).join('')}</ul></div>`;
+            }).join('');
     }
     return records;
 }
@@ -3571,11 +3636,11 @@ function genererApercuCreneauxVI() {
 async function creerCreneauxVI(e) {
     e.preventDefault();
     const type = document.getElementById('gv-type')?.value;
-    const date = document.getElementById('gv-date')?.value;
+    const dates = getDatesCreneauxVI();
     const debut = document.getElementById('gv-debut')?.value;
     const fin = document.getElementById('gv-fin')?.value;
-    if (!type || !date || !debut || !fin) {
-        alert('Tous les champs sont requis.');
+    if (!type || !dates.length || !debut || !fin) {
+        alert('Choisis au moins une date ainsi que le type, le début et la fin.');
         return;
     }
     const records = genererApercuCreneauxVI();
@@ -3596,9 +3661,9 @@ async function creerCreneauxVI(e) {
         }
         if (typeof enregistrerAudit === 'function') {
             const pilote = nomPiloteCourant();
-            await enregistrerAudit('Création créneaux VI', type, `Pilote : ${pilote} | Date : ${date} | Nombre : ${records.length} | ${debut} - ${fin}`, 'Initiation');
+            await enregistrerAudit('Création créneaux VI', type, `Pilote : ${pilote} | Dates : ${dates.join(', ')} | Nombre : ${records.length} | ${debut} - ${fin}`, 'Initiation');
         }
-        alert(`${records.length} créneau(x) créé(s).`);
+        alert(`${records.length} créneau(x) créé(s) sur ${dates.length} date(s).`);
         document.getElementById('form-creneaux-vi').reset();
         if (typeof chargerVolsInitiation === 'function') chargerVolsInitiation();
     } catch (err) {
