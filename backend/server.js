@@ -77,6 +77,15 @@ const SMTP = {
     fromName: process.env.MAIL_FROM_NAME || 'ACES'
 };
 
+const VI_LIEU = 'Aérodrome de Saint Romain, 1177 Rue de la Brûlerie, 76430 Gommerville';
+const VI_LIEU_URL = 'https://www.google.com/maps/place/AéroClub+de+l%27Estuaire+de+la+Seine/@49.5433082,0.3521124,585m/data=!3m2!1e3!4b1!4m6!3m5!1s0x47e047ad6eb49ffb:0xb41074729aec96fb!8m2!3d49.5433082!4d0.3546873!16s%2Fg%2F11gmw6r8zs';
+const VI_TYPE_LIBELLES = {
+    VIP: "Vol d'initiation planeur",
+    VIA: "Vol d'initiation avion",
+    VIULM: "Vol d'initiation avion"
+};
+const libelleTypeVI = (t) => VI_TYPE_LIBELLES[t] || t || 'VI';
+
 app.post('/v0/send-email', async (req, res) => {
     if (!SMTP.host || !SMTP.user || !SMTP.pass) {
         return erreur(res, 501, 'Envoi de mail non configure cote serveur (variables SMTP_*)');
@@ -95,22 +104,21 @@ app.post('/v0/send-email', async (req, res) => {
     const estVIModif = type === 'vi-modification';
     let sujet, texte, html;
     if (estVI) {
-        const viTypeSafe = nettoie(viType, 60);
+        const viTypeSafe = nettoie(libelleTypeVI(viType), 80);
         const viDateSafe = nettoie(viDate, 40);
         const viHeureSafe = nettoie(viHeure, 40);
-        const viLieuSafe = nettoie(viLieu, 60);
         sujet = estVIModif
-            ? 'Modification de votre réservation de baptême de l\'air ACES'
-            : 'Confirmation de votre baptême de l\'air ACES';
+            ? 'Modification de votre réservation de vol d\'initiation ACES'
+            : 'Confirmation de votre vol d\'initiation ACES';
         const viPhrase = estVIModif
-            ? 'Votre réservation de baptême de l\'air a été modifiée.'
-            : 'Votre réservation de baptême de l\'air est bien enregistrée.';
+            ? 'Votre réservation de vol d\'initiation a été modifiée.'
+            : 'Votre réservation de vol d\'initiation est bien enregistrée.';
         const viPhraseHtml = estVIModif
-            ? 'Votre réservation de baptême de l\'air a été modifiée. Voici vos informations à jour :'
+            ? 'Votre réservation de vol d\'initiation a été modifiée. Voici vos informations à jour :'
             : 'Votre réservation est bien enregistrée.';
-        const viBandeau = estVIModif ? 'Votre réservation a été modifiée' : 'Votre baptême de l\'air est réservé';
+        const viBandeau = estVIModif ? 'Votre réservation a été modifiée' : 'Votre vol d\'initiation est réservé';
         const viCouleur = estVIModif ? '#3f51b5' : '#1e3d59';
-        texte = `Bonjour ${prenomSafe},\n\n${viPhrase}\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ${viLieuSafe}\n\nVous pouvez modifier ou annuler votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+        texte = `Bonjour ${prenomSafe},\n\n${viPhrase}\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ${VI_LIEU}\nPlan : ${VI_LIEU_URL}\n\nVous pouvez modifier ou annuler votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
         html = `
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
             <div style="background:${viCouleur};color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">${viBandeau}</div>
@@ -121,7 +129,7 @@ app.post('/v0/send-email', async (req, res) => {
                     <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
                     <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
                     <p style="margin:4px 0;"><strong>Horaire :</strong> ${viHeureSafe}</p>
-                    <p style="margin:4px 0;"><strong>Lieu :</strong> ${viLieuSafe}</p>
+                    <p style="margin:4px 0;"><strong>Lieu :</strong> <a href="${VI_LIEU_URL}" style="color:#1e3d59;">${VI_LIEU}</a></p>
                 </div>
                 <p>Vous pouvez modifier ou annuler votre réservation en cliquant sur le lien ci-dessous :</p>
                 <p style="text-align:center;margin:28px 0;">
@@ -186,18 +194,18 @@ async function envoyerMailConfirmationVI(fields) {
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !token) return;
     const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
     const prenomSafe = nettoie(`${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), 80);
-    const viTypeSafe = nettoie(f['Type'] || 'VI', 60);
+    const viTypeSafe = nettoie(libelleTypeVI(f['Type']), 80);
     let viDateSafe = '';
     try {
         viDateSafe = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     } catch (e) { viDateSafe = nettoie(f['Date'], 40); }
     const viHeureSafe = nettoie(`${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`, 40);
     const url = `https://vps-1a4fbee9.vps.ovh.net/reserver-vi.html?token=${encodeURIComponent(token)}`;
-    const sujet = 'Confirmation de votre baptême de l\'air ACES';
-    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de baptême de l'air est bien enregistrée.\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ACES\n\nVous pouvez modifier ou annuler votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+    const sujet = 'Confirmation de votre vol d\'initiation ACES';
+    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de vol d'initiation est bien enregistrée.\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ${VI_LIEU}\nPlan : ${VI_LIEU_URL}\n\nVous pouvez modifier ou annuler votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
     const html = `
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-            <div style="background:#1e3d59;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre baptême de l'air est réservé</div>
+            <div style="background:#1e3d59;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre vol d'initiation est réservé</div>
             <div style="padding:24px;">
                 <p>Bonjour ${prenomSafe},</p>
                 <p>Votre réservation est bien enregistrée.</p>
@@ -205,7 +213,7 @@ async function envoyerMailConfirmationVI(fields) {
                     <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
                     <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
                     <p style="margin:4px 0;"><strong>Horaire :</strong> ${viHeureSafe}</p>
-                    <p style="margin:4px 0;"><strong>Lieu :</strong> ACES</p>
+                    <p style="margin:4px 0;"><strong>Lieu :</strong> <a href="${VI_LIEU_URL}" style="color:#1e3d59;">${VI_LIEU}</a></p>
                 </div>
                 <p>Vous pouvez modifier ou annuler votre réservation en cliquant sur le lien ci-dessous :</p>
                 <p style="text-align:center;margin:28px 0;">
@@ -239,21 +247,21 @@ async function envoyerMailLiberationVI(oldFields) {
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return;
     const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
     const prenomSafe = nettoie(`${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), 80) || 'Bonjour';
-    const viTypeSafe = nettoie(f['Type'] || 'VI', 60);
+    const viTypeSafe = nettoie(libelleTypeVI(f['Type']), 80);
     let viDateSafe = '';
     try {
         viDateSafe = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     } catch (e) { viDateSafe = nettoie(f['Date'], 40); }
     const viHeureSafe = nettoie(`${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`, 40);
     const url = 'https://vps-1a4fbee9.vps.ovh.net/reserver-vi.html';
-    const sujet = 'Annulation de votre réservation de baptême de l\'air ACES';
-    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de baptême de l'air prévue le ${viDateSafe} (${viHeureSafe}) a été annulée. Le créneau est à nouveau disponible.\n\nVous pouvez réserver un autre créneau ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+    const sujet = 'Annulation de votre réservation de vol d\'initiation ACES';
+    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de vol d'initiation prévue le ${viDateSafe} (${viHeureSafe}) a été annulée. Le créneau est à nouveau disponible.\n\nVous pouvez réserver un autre créneau ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
     const html = `
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
             <div style="background:#dc2626;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre réservation a été annulée</div>
             <div style="padding:24px;">
                 <p>Bonjour ${prenomSafe},</p>
-                <p>Votre réservation de baptême de l'air a été annulée et le créneau est à nouveau disponible.</p>
+                <p>Votre réservation de vol d'initiation a été annulée et le créneau est à nouveau disponible.</p>
                 <div style="background:#f1f5f9;border-radius:8px;padding:14px 18px;margin:18px 0;">
                     <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
                     <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
@@ -291,26 +299,26 @@ async function envoyerMailModificationVI(fields) {
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !token) return;
     const nettoie = (s, n) => String(s || '').slice(0, n).replace(/[<>&"']/g, '');
     const prenomSafe = nettoie(`${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), 80);
-    const viTypeSafe = nettoie(f['Type'] || 'VI', 60);
+    const viTypeSafe = nettoie(libelleTypeVI(f['Type']), 80);
     let viDateSafe = '';
     try {
         viDateSafe = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     } catch (e) { viDateSafe = nettoie(f['Date'], 40); }
     const viHeureSafe = nettoie(`${f['Heure début'] || ''} - ${f['Heure fin'] || ''}`, 40);
     const url = `https://vps-1a4fbee9.vps.ovh.net/reserver-vi.html?token=${encodeURIComponent(token)}`;
-    const sujet = 'Modification de votre réservation de baptême de l\'air ACES';
-    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de baptême de l'air a été modifiée. Voici votre nouveau créneau :\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ACES\n\nVous pouvez consulter ou modifier votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
+    const sujet = 'Modification de votre réservation de vol d\'initiation ACES';
+    const texte = `Bonjour ${prenomSafe},\n\nVotre réservation de vol d'initiation a été modifiée. Voici votre nouveau créneau :\n\nType : ${viTypeSafe}\nDate : ${viDateSafe}\nHoraire : ${viHeureSafe}\nLieu : ${VI_LIEU}\nPlan : ${VI_LIEU_URL}\n\nVous pouvez consulter ou modifier votre réservation ici :\n${url}\n\nA bientôt.\nACES - Aéroclub de l'Estuaire de la Seine`;
     const html = `
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
             <div style="background:#3f51b5;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Votre réservation a été modifiée</div>
             <div style="padding:24px;">
                 <p>Bonjour ${prenomSafe},</p>
-                <p>Votre réservation de baptême de l'air a été modifiée. Voici votre nouveau créneau :</p>
+                <p>Votre réservation de vol d'initiation a été modifiée. Voici votre nouveau créneau :</p>
                 <div style="background:#f1f5f9;border-radius:8px;padding:14px 18px;margin:18px 0;">
                     <p style="margin:4px 0;"><strong>Type :</strong> ${viTypeSafe}</p>
                     <p style="margin:4px 0;"><strong>Date :</strong> ${viDateSafe}</p>
                     <p style="margin:4px 0;"><strong>Horaire :</strong> ${viHeureSafe}</p>
-                    <p style="margin:4px 0;"><strong>Lieu :</strong> ACES</p>
+                    <p style="margin:4px 0;"><strong>Lieu :</strong> <a href="${VI_LIEU_URL}" style="color:#1e3d59;">${VI_LIEU}</a></p>
                 </div>
                 <p>Vous pouvez consulter ou modifier votre réservation en cliquant sur le lien ci-dessous :</p>
                 <p style="text-align:center;margin:28px 0;">
