@@ -773,8 +773,19 @@ async function decalerSurCreneauManuel() {
         if (chevauchements.length && !exactDisponible) {
             const liste = chevauchements.map(r =>
                 `${r.fields['Heure début']} - ${r.fields['Heure fin']} (${r.fields['Statut'] || 'Disponible'})`).join(', ');
-            info.textContent = `⚠️ Ce créneau empiète sur : ${liste}. Choisis un autre horaire ou ajuste pour ne pas chevaucher.`;
-            return;
+            const tousLibres = chevauchements.every(r => (r.fields['Statut'] || 'Disponible') === 'Disponible');
+            if (!tousLibres) {
+                info.textContent = `⚠️ Ce créneau empiète sur : ${liste}. Choisis un autre horaire ou ajuste pour ne pas chevaucher.`;
+                return;
+            }
+            if (!confirm(`⚠️ Ce créneau empiète sur ${chevauchements.length} créneau(x) disponible(s) : ${liste}.\n\nContinuer quand même ? Les créneaux libres seront supprimés.`)) {
+                info.textContent = 'Décalage annulé.';
+                return;
+            }
+            info.textContent = 'Suppression des créneaux libres chevauchés...';
+            const qs = chevauchements.map(r => `records[]=${encodeURIComponent(r.id)}`).join('&');
+            const del = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}?${qs}`, { method: 'DELETE', headers });
+            if (!del.ok) throw new Error((await del.json()).error?.message || 'Erreur lors de la suppression des créneaux chevauchés');
         }
         if (exactDisponible) {
             const ex = exactDisponible;
