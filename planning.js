@@ -3115,9 +3115,11 @@ function initBoutonsNavigation() {
                 ${item('#ff6e40', 'Réservation')}
                 ${item('#3b82f6', 'Instruction / avec instructeur')}
                 ${item('#eab308', 'Remorquage')}
-                ${item('#e11d48', "Vol d'initiation avion (pilote attribué)")}
+                ${item('#e11d48', "Vol d'initiation (pilote attribué)")}
                 ${item('#00adb5', "Vol d'initiation à pourvoir")}
                 ${item('#8e44ad', 'VI Planeur')}
+                <div class="legende-ligne"><span class="legende-pastille" style="background:#d1fae5;border:2px dashed #10b981;"></span><span>Créneau d'initiation disponible</span></div>
+                <div class="legende-ligne"><span class="legende-pastille" style="background:#e2e8f0;border:2px dashed #94a3b8;"></span><span>Créneau d'initiation bloqué (conflit)</span></div>
                 ${item('#10b981', 'Mes réservations')}
                 <hr class="legende-separateur">
                 ${item('rgba(34,197,94,0.45)', 'Instructeur disponible')}
