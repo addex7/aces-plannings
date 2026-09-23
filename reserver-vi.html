@@ -196,6 +196,11 @@ const TYPE_LABELS = {
     VIULM: 'Moteur — 1 personne (F-JVIO)',
     VIA: 'Moteur — 2 à 3 personnes (F-GASB)'
 };
+const TYPE_VI_LIBELLES = {
+    VIP: "Vol d'initiation planeur",
+    VIA: "Vol d'initiation avion",
+    VIULM: "Vol d'initiation avion"
+};
 
 let creneauxDisponibles = [];
 let currentToken = null;
@@ -551,7 +556,7 @@ async function envoyerEmailServeurVI(payload) {
 function showConfirmation(record, token, contact) {
     showSection('confirmation-section');
     const f = record.fields || {};
-    const type = escapeHtml(f['Type'] || 'VI');
+    const type = escapeHtml(TYPE_VI_LIBELLES[f['Type']] || f['Type'] || 'VI');
     const date = formatDate(f['Date']);
     const heure = `${f['Heure début']} - ${f['Heure fin']}`;
     const prenom = (contact && contact.prenom) || f['Prénom'] || '';
@@ -632,7 +637,7 @@ function showManageView(record) {
     clearMessage();
     showSection('manage-section');
     const f = record.fields || {};
-    const type = escapeHtml(f['Type'] || 'VI');
+    const type = escapeHtml(TYPE_VI_LIBELLES[f['Type']] || f['Type'] || 'VI');
     const date = formatDate(f['Date']);
     const heure = `${f['Heure début']} - ${f['Heure fin']}`;
     const modifiable = creneauModifiable(record);
