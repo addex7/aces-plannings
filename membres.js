@@ -491,7 +491,8 @@ async function ajouterUtilisateur(event) {
             const data = await res.json();
             throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);
         }
-        const record = await res.json();
+        const data = await res.json();
+        const record = data.records ? data.records[0] : data;
         afficherInvitation(record, mail);
         await chargerUtilisateurs();
         if (typeof carnetPilotesCache !== 'undefined') carnetPilotesCache = [];
