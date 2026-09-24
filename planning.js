@@ -1904,6 +1904,8 @@ function appliquerEtatFormulaire() {
     const groupPassager = document.getElementById('group-passager');
     const groupTelephone = document.getElementById('group-telephone');
     const groupEmail = document.getElementById('group-email');
+    const groupPrenom = document.getElementById('group-prenom-passager');
+    const groupBon = document.getElementById('group-bon');
     const labelPilote = document.getElementById('label-pilote');
     const labelCommentaires = document.getElementById('label-commentaires');
 
@@ -1920,9 +1922,11 @@ function appliquerEtatFormulaire() {
         if (groupMaintenance) groupMaintenance.style.display = 'block';
         if (groupMachine) groupMachine.style.display = 'block';
         if (groupEstimation) groupEstimation.style.display = 'none';
+        if (groupPrenom) groupPrenom.style.display = 'none';
         if (groupPassager) groupPassager.style.display = 'none';
-        if (groupTelephone) groupTelephone.style.display = 'none';
         if (groupEmail) groupEmail.style.display = 'none';
+        if (groupTelephone) groupTelephone.style.display = 'none';
+        if (groupBon) groupBon.style.display = 'none';
         if (groupCommentaires) groupCommentaires.style.display = 'none';
         const grpInst = document.getElementById('group-instructeur');
         if (grpInst) grpInst.style.display = 'none';
@@ -1990,9 +1994,11 @@ function appliquerEtatFormulaire() {
 
     if (groupMachine) groupMachine.style.display = isVIPlaneur ? 'none' : 'block';
     if (groupEstimation) groupEstimation.style.display = isVI ? 'none' : 'block';
+    if (groupPrenom) groupPrenom.style.display = isVI ? 'block' : 'none';
     if (groupPassager) groupPassager.style.display = isVI ? 'block' : 'none';
-    if (groupTelephone) groupTelephone.style.display = isVI ? 'block' : 'none';
     if (groupEmail) groupEmail.style.display = isVI ? 'block' : 'none';
+    if (groupTelephone) groupTelephone.style.display = isVI ? 'block' : 'none';
+    if (groupBon) groupBon.style.display = isVI ? 'block' : 'none';
 
     const fbLio = (listeAvionsCache || []).find(a => {
         const immat = (a.fields['Immatriculation'] || '').toString().trim().toUpperCase();
@@ -2352,12 +2358,12 @@ function initGestionnaireModale() {
                     document.querySelectorAll('input[name="form-type-vol"][value="Local"]').forEach(cb => cb.checked = false);
                 }
             }
-            if (value === 'VI Moteur') {
+            if (value === 'VI Planeur' || value === 'VI Moteur') {
                 const debutInput = document.getElementById('form-debut');
                 const finInput = document.getElementById('form-fin');
                 if (debutInput && finInput && debutInput.value) {
                     const d = new Date(debutInput.value);
-                    d.setHours(d.getHours() + 1);
+                    d.setMinutes(d.getMinutes() + (value === 'VI Planeur' ? 45 : 60));
                     finInput.value = formaterPourInput(d);
                 }
             }
@@ -2381,7 +2387,7 @@ function initGestionnaireModale() {
             const d = new Date(debutInput.value);
             if (isNaN(d.getTime())) return;
             const typesSel = typeof getTypeVolSelectionne === 'function' ? getTypeVolSelectionne() : [];
-            const dureeMin = typesSel.includes('VI Moteur') || typesSel.includes('VI Planeur') ? 45 : 120;
+            const dureeMin = typesSel.includes('VI Planeur') ? 45 : (typesSel.includes('VI Moteur') ? 60 : 120);
             finInput.value = formaterDateHeureLocal(new Date(d.getTime() + dureeMin * 60000));
             verifierAlertesReservation();
         });
@@ -2522,7 +2528,9 @@ function initGestionnaireModale() {
                 commentairesFinal = commentairesFinal ? `${commentairesFinal}\n${extra}` : extra;
             }
             const piloteNom = document.getElementById('form-pilote').value.trim();
-            const passagerNom = document.getElementById('form-passager') ? document.getElementById('form-passager').value.trim() : '';
+            const prenomPassager = document.getElementById('form-prenom-passager') ? document.getElementById('form-prenom-passager').value.trim() : '';
+            const nomPassager = document.getElementById('form-passager') ? document.getElementById('form-passager').value.trim() : '';
+            const passagerNom = `${prenomPassager} ${nomPassager}`.trim();
             const telephone = document.getElementById('form-telephone') ? document.getElementById('form-telephone').value.trim() : '';
 
             // Vérification solde et validités
@@ -2583,8 +2591,8 @@ function initGestionnaireModale() {
                 if (conflit && !confirm(msg)) return;
             }
             if (isVI) {
-                if (!passagerNom) {
-                    alert("Le nom du passager est obligatoire.");
+                if (!prenomPassager || !nomPassager) {
+                    alert("Le prénom et le nom du passager sont obligatoires.");
                     return;
                 }
                 if (!telephone) {
@@ -2592,6 +2600,7 @@ function initGestionnaireModale() {
                     return;
                 }
                 const emailPassager = document.getElementById('form-email') ? document.getElementById('form-email').value.trim() : '';
+                const bonCadeau = document.getElementById('form-bon') ? document.getElementById('form-bon').value.trim() : '';
                 const commentaire = document.getElementById('form-commentaires').value.trim();
                 const commentaireVI = typesSupplementaires.length
                     ? (commentaire ? `${commentaire}\n${typesSupplementaires.join(', ')}` : typesSupplementaires.join(', '))
@@ -2607,16 +2616,15 @@ function initGestionnaireModale() {
                     const hDebut = `${pad2(localDebut.getHours())}:${pad2(localDebut.getMinutes())}`;
                     const hFin = `${pad2(localFin.getHours())}:${pad2(localFin.getMinutes())}`;
                     const typeVI = isVIPlaneur ? 'VIP' : (machineNom === 'F-JVIO' ? 'VIULM' : 'VIA');
-                    const parties = passagerNom.split(/\s+/).filter(Boolean);
                     const champsCreneau = {
                         'Statut': 'Réservé',
-                        'Prénom': parties.length > 1 ? parties[0] : '',
-                        'Nom': parties.length > 1 ? parties.slice(1).join(' ') : (parties[0] || ''),
+                        'Prénom': prenomPassager,
+                        'Nom': nomPassager,
                         'Email': emailPassager,
                         'Téléphone': telephone,
                         'Pilote': piloteIdEdit ? piloteNomEdit : '',
                         'Commentaire': commentaireVI,
-                        'Bon cadeau': '',
+                        'Bon cadeau': bonCadeau,
                         'Token': 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14),
                         'Date réservation': new Date().toISOString()
                     };
@@ -2718,6 +2726,7 @@ function initGestionnaireModale() {
                         "Passager": passagerNom,
                         "Téléphone": telephone,
                         "Email": emailPassager,
+                        "Bon cadeau": bonCadeau,
                         "Date de début": dateDebut,
                         "Date de fin": dateFin,
                         "Commentaires VI": commentairesFinal,
@@ -2963,8 +2972,13 @@ async function ouvrirModaleEdition(vol, avionIdOuImmat) {
         selectionnerMachine(idTargetMachine);
     }
     document.getElementById('form-commentaires').value = vol.fields['Commentaires VI'] || '';
-    if (document.getElementById('form-passager')) document.getElementById('form-passager').value = vol.fields['Passager'] || '';
+    const nomCompletPassager = (vol.fields['Passager'] || '').toString().trim();
+    const partiesPassager = nomCompletPassager.split(/\s+/).filter(Boolean);
+    if (document.getElementById('form-prenom-passager')) document.getElementById('form-prenom-passager').value = partiesPassager.length > 1 ? partiesPassager[0] : '';
+    if (document.getElementById('form-passager')) document.getElementById('form-passager').value = partiesPassager.length > 1 ? partiesPassager.slice(1).join(' ') : nomCompletPassager;
     if (document.getElementById('form-telephone')) document.getElementById('form-telephone').value = vol.fields['Téléphone'] || '';
+    if (document.getElementById('form-email')) document.getElementById('form-email').value = vol.fields['Email'] || '';
+    if (document.getElementById('form-bon')) document.getElementById('form-bon').value = vol.fields['Bon cadeau'] || '';
     document.getElementById('form-estimation').value = vol.fields['Temps estimé'] || '';
     document.getElementById('form-debut').value = formaterPourInput(new Date(vol.fields['Date de début']));
     document.getElementById('form-fin').value = formaterPourInput(new Date(vol.fields['Date de fin']));
