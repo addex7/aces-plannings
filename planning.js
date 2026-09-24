@@ -701,7 +701,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                 barresDiv.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (isResizing || isDraggingBar) return;
-                    const volPourEdition = {
+                    ouvrirActionsVI({
                         source: isCreneau ? 'creneau' : 'planeur',
                         id: vol.id,
                         passager: nom,
@@ -713,8 +713,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                         commentaire: vol.fields['Commentaire'] || '',
                         token: vol.fields['Token'] || '',
                         type: type
-                    };
-                    editerVolInitiation(volPourEdition);
+                    });
                 });
                 barresDiv.addEventListener('mouseenter', () => { barresDiv.style.zIndex = '100'; });
                 barresDiv.addEventListener('mouseleave', () => { barresDiv.style.zIndex = '5'; });
@@ -812,11 +811,14 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
             creneauxVIMotor.push({
                 id: vol.id,
                 _table: 'VI Créneaux',
+                _typeVI: type,
                 fields: {
                     'Type de vol': ['VI Moteur'],
                     'Passager': nom,
                     'Pilote': pilote,
                     'Téléphone': f['Téléphone'] || '',
+                    'Email': f['Email'] || '',
+                    'Token': f['Token'] || '',
                     'Machine': [avionId],
                     'Date de début': dateRaw + 'T' + (f['Heure début'] || '00:00') + ':00',
                     'Date de fin': dateRaw + 'T' + (f['Heure fin'] || '00:00') + ':00',
@@ -1108,7 +1110,39 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             barresDiv.addEventListener('click', (e) => {
                                 e.stopPropagation();
                                 if (isResizing || isDraggingBar) return;
+                                if (isVIMoteur || isAncienVI) {
+                                    ouvrirActionsVI({
+                                        source: 'moteur',
+                                        id: vol.id,
+                                        passager: passagerNom,
+                                        pilote: piloteNom,
+                                        telephone: vol.fields['Téléphone'] || '',
+                                        debut: vol.fields['Date de début'],
+                                        fin: vol.fields['Date de fin'],
+                                        commentaire: vol.fields['Commentaires VI'] || '',
+                                        machineName: (avion.fields['Immatriculation'] || '').toString().trim(),
+                                        type: vol._typeVI || 'VI Moteur'
+                                    });
+                                    return;
+                                }
                                 ouvrirModaleEdition(vol, avionId);
+                            });
+                        } else {
+                            barresDiv.style.cursor = 'pointer';
+                            barresDiv.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                ouvrirActionsVI({
+                                    source: 'creneau',
+                                    id: vol.id,
+                                    passager: passagerNom,
+                                    pilote: vol.fields['Pilote'] || '',
+                                    telephone: vol.fields['Téléphone'] || '',
+                                    debut: vol.fields['Date de début'],
+                                    fin: vol.fields['Date de fin'],
+                                    commentaire: vol.fields['Commentaires VI'] || '',
+                                    token: vol.fields['Token'] || '',
+                                    type: vol._typeVI || 'VI Moteur'
+                                });
                             });
                         }
                         barresDiv.addEventListener('mouseenter', () => { barresDiv.style.zIndex = '100'; });
@@ -3346,29 +3380,7 @@ function afficherVolsInitiation() {
         const btnDecaler = card.querySelector('.btn-decaler-initiation');
         if (btnDecaler) btnDecaler.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (vol.source !== 'creneau') {
-                const tokenConverti = await convertirVolEnCreneauVI(vol);
-                if (!tokenConverti) return;
-                window.open(`${URL_RESERVER_VI}?token=${encodeURIComponent(tokenConverti)}&decalage=1`, '_blank');
-                return;
-            }
-            let token = vol.token;
-            if (!token) {
-                token = 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
-                try {
-                    const r = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
-                        method: 'PATCH',
-                        headers,
-                        body: JSON.stringify({ records: [{ id: vol.id, fields: { 'Token': token } }] })
-                    });
-                    if (!r.ok) { alert('Impossible de préparer le lien de décalage.'); return; }
-                    vol.token = token;
-                } catch (err) {
-                    alert('Impossible de préparer le lien de décalage.');
-                    return;
-                }
-            }
-            window.open(`${URL_RESERVER_VI}?token=${encodeURIComponent(token)}&decalage=1`, '_blank');
+            await decalerVolVI(vol);
         });
         const btnPilote = card.querySelector('.btn-pilote-initiation');
         if (btnPilote) btnPilote.addEventListener('click', (e) => {
@@ -3396,6 +3408,73 @@ function afficherVolsInitiation() {
         if (tout) tout.addEventListener('change', () => { cbs.forEach(c => c.checked = tout.checked); maj(); });
         if (btnSel) btnSel.addEventListener('click', () => supprimerCreneauxSelection(cbs.filter(c => c.checked).map(c => c.dataset.id)));
     }
+}
+
+async function decalerVolVI(vol) {
+    if (vol.source !== 'creneau') {
+        const tokenConverti = await convertirVolEnCreneauVI(vol);
+        if (!tokenConverti) return;
+        window.open(`${URL_RESERVER_VI}?token=${encodeURIComponent(tokenConverti)}&decalage=1`, '_blank');
+        return;
+    }
+    let token = vol.token;
+    if (!token) {
+        token = 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
+        try {
+            const r = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ records: [{ id: vol.id, fields: { 'Token': token } }] })
+            });
+            if (!r.ok) { alert('Impossible de préparer le lien de décalage.'); return; }
+            vol.token = token;
+        } catch (err) {
+            alert('Impossible de préparer le lien de décalage.');
+            return;
+        }
+    }
+    window.open(`${URL_RESERVER_VI}?token=${encodeURIComponent(token)}&decalage=1`, '_blank');
+}
+
+let volActionsVI = null;
+function ouvrirActionsVI(vol) {
+    const modal = document.getElementById('vi-actions-modal');
+    if (!modal || !vol) return;
+    const debut = new Date(vol.debut);
+    const fin = new Date(vol.fin);
+    const pad2 = n => String(n).padStart(2, '0');
+    volActionsVI = {
+        id: vol.id,
+        source: vol.source,
+        passager: vol.passager || '',
+        pilote: (vol.pilote || '').toString().trim(),
+        telephone: vol.telephone || '',
+        commentaire: vol.commentaire || '',
+        token: vol.token || '',
+        type: vol.type || 'VI',
+        machineName: vol.machineName || '',
+        debut: vol.debut,
+        fin: vol.fin,
+        dateStr: debut.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+        heureDebut: `${pad2(debut.getHours())}:${pad2(debut.getMinutes())}`,
+        heureFin: `${pad2(fin.getHours())}:${pad2(fin.getMinutes())}`
+    };
+    const titre = document.getElementById('vi-actions-titre');
+    const info = document.getElementById('vi-actions-info');
+    if (titre) titre.textContent = `${volActionsVI.type} — ${volActionsVI.passager || 'Passager non renseigné'}`;
+    if (info) info.textContent = `${volActionsVI.dateStr} • ${volActionsVI.heureDebut} - ${volActionsVI.heureFin}${volActionsVI.pilote ? ' • Pilote : ' + formaterNomPilote(volActionsVI.pilote) : ' • À pourvoir'}`;
+    const aPourvoir = !volActionsVI.pilote;
+    const gestionVI = hasRoleGestionVI();
+    const elInscrire = document.getElementById('vi-act-inscrire');
+    const elInscrireAutre = document.getElementById('vi-act-inscrire-autre');
+    const elDecaler = document.getElementById('vi-act-decaler');
+    const elLiberer = document.getElementById('vi-act-liberer');
+    if (elInscrire) elInscrire.style.display = (aPourvoir && hasRolePiloteVI()) ? '' : 'none';
+    const rolesInscrireAutre = ['Super admin', 'Gestion VI', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
+    if (elInscrireAutre) elInscrireAutre.style.display = (aPourvoir && (currentUser?.roles || []).some(r => rolesInscrireAutre.includes(r))) ? '' : 'none';
+    if (elDecaler) elDecaler.style.display = (gestionVI && volActionsVI.passager) ? '' : 'none';
+    if (elLiberer) elLiberer.style.display = gestionVI ? '' : 'none';
+    modal.style.display = 'flex';
 }
 
 async function convertirVolEnCreneauVI(vol) {
@@ -3861,6 +3940,46 @@ function initGestionnaireVolsInitiation() {
         if (btnAnnulerResa) btnAnnulerResa.addEventListener('click', fermerResa);
         const formResa = document.getElementById('vi-resa-form');
         if (formResa) formResa.addEventListener('submit', validerResaAdminVI);
+    }
+
+    const modalActions = document.getElementById('vi-actions-modal');
+    if (modalActions) {
+        const fermerActions = () => { modalActions.style.display = 'none'; volActionsVI = null; };
+        const closeActions = modalActions.querySelector('.close-modal-vi-actions');
+        if (closeActions) closeActions.addEventListener('click', fermerActions);
+        window.addEventListener('click', (e) => { if (e.target === modalActions) fermerActions(); });
+        const btnInscrire = document.getElementById('vi-act-inscrire');
+        if (btnInscrire) btnInscrire.addEventListener('click', () => {
+            const v = volActionsVI;
+            fermerActions();
+            if (v) reserverVolInitiation(v.id, v.source);
+        });
+        const btnInscrireAutre = document.getElementById('vi-act-inscrire-autre');
+        if (btnInscrireAutre) btnInscrireAutre.addEventListener('click', () => {
+            const v = volActionsVI;
+            fermerActions();
+            if (v && typeof ouvrirInscrireAutre === 'function') {
+                ouvrirInscrireAutre('Initiation', JSON.stringify({ id: v.id, source: v.source }));
+            }
+        });
+        const btnDecalerAct = document.getElementById('vi-act-decaler');
+        if (btnDecalerAct) btnDecalerAct.addEventListener('click', async () => {
+            const v = volActionsVI;
+            fermerActions();
+            if (v) await decalerVolVI(v);
+        });
+        const btnLibererAct = document.getElementById('vi-act-liberer');
+        if (btnLibererAct) btnLibererAct.addEventListener('click', () => {
+            const v = volActionsVI;
+            fermerActions();
+            if (v) libererCreneauVI(v);
+        });
+        const btnSupprAct = document.getElementById('vi-act-supprimer');
+        if (btnSupprAct) btnSupprAct.addEventListener('click', () => {
+            const v = volActionsVI;
+            fermerActions();
+            if (v) supprimerVolInitiation(v);
+        });
     }
 }
 

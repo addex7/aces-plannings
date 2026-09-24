@@ -961,6 +961,22 @@
         </div>
     </div>
 
+    <!-- Fenêtre Modale : Actions sur un VI depuis le planning -->
+    <div id="vi-actions-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="width: 480px; max-width: 92vw; position: relative;">
+            <span class="close-modal-vi-actions" style="position:absolute;top:15px;right:20px;font-size:24px;cursor:pointer;color:#64748b;">&times;</span>
+            <h3 id="vi-actions-titre" style="margin-top:0;">Vol d'initiation</h3>
+            <p id="vi-actions-info" style="font-size:13px;color:#475569;margin-top:0;"></p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px;">
+                <button type="button" id="vi-act-inscrire" class="btn-reserver-initiation">S'inscrire</button>
+                <button type="button" id="vi-act-inscrire-autre" class="btn-reserver-initiation">Inscrire autre</button>
+                <button type="button" id="vi-act-decaler" class="btn-decaler-initiation">Décaler le vol</button>
+                <button type="button" id="vi-act-liberer" class="btn-liberer-initiation">Libérer</button>
+                <button type="button" id="vi-act-supprimer" class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Fenêtre Modale : Changer de pilote VI -->
     <div id="vi-pilote-modal" class="modal" style="display: none;">
         <div class="modal-content" style="width: 400px; max-width: 92vw; position: relative;">
@@ -1407,11 +1423,11 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=91"></script>
-    <script src="version.js?v=20260924175410"></script>
+    <script src="version.js?v=20260924180054"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=106"></script>
     <script src="presences.js?v=99"></script>
-    <script src="planning.js?v=191"></script>
+    <script src="planning.js?v=192"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=110"></script>
     <script src="aeronefs.js?v=115"></script>
@@ -1421,7 +1437,7 @@
     <script src="audit.js?v=8"></script>
     <script src="membres.js?v=105"></script>
     <script src="instructeurs.js?v=107"></script>
-    <script src="instructeur-planning.js?v=191"></script>
+    <script src="instructeur-planning.js?v=192"></script>
     <script src="messagerie.js?v=18"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>
