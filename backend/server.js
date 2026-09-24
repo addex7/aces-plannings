@@ -503,9 +503,9 @@ app.post('/v0/:base/:table', async (req, res) => {
         res.json({ records: crees });
         if (tableNom === 'VI Créneaux') {
             crees.forEach((rec, i) => {
-                if (decalages[i] && rec.fields && rec.fields['Statut'] === 'Réservé') {
-                    envoyerMailModificationVI(rec.fields);
-                }
+                if (!rec.fields || rec.fields['Statut'] !== 'Réservé') return;
+                if (decalages[i]) envoyerMailModificationVI(rec.fields);
+                else envoyerMailConfirmationVI(rec.fields);
             });
         }
     } catch (e) {

@@ -2624,23 +2624,41 @@ function initGestionnaireModale() {
                         const formJour = `DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${dateStr}'`;
                         const resJour = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formJour)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
                         const dataJour = await resJour.json();
-                        const existant = (dataJour.records || []).find(r => {
+                        const toMin = h => { const p = (h || '00:00').split(':'); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); };
+                        const dMin = toMin(hDebut);
+                        const fMin = toMin(hFin);
+                        const memeType = (dataJour.records || []).filter(r => {
                             const f = r.fields || {};
-                            return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === typeVI &&
-                                   f['Heure début'] === hDebut && f['Heure fin'] === hFin;
+                            return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === typeVI;
                         });
+                        const identique = memeType.find(r => r.fields['Heure début'] === hDebut && r.fields['Heure fin'] === hFin);
+                        const chevauches = memeType.filter(r => toMin(r.fields['Heure début']) < fMin && toMin(r.fields['Heure fin']) > dMin);
                         let response;
-                        if (existant) {
-                            if ((existant.fields['Statut'] || 'Disponible') !== 'Disponible') {
-                                alert(`Un créneau ${typeVI} existe déjà le ${dateStr} de ${hDebut} à ${hFin} (statut : ${existant.fields['Statut']}).`);
+                        if (identique) {
+                            if ((identique.fields['Statut'] || 'Disponible') !== 'Disponible') {
+                                alert(`Un créneau ${typeVI} existe déjà le ${dateStr} de ${hDebut} à ${hFin} (statut : ${identique.fields['Statut']}).`);
                                 return;
                             }
+                            if (!confirm(`Un créneau ${typeVI} disponible existe déjà le ${dateStr} de ${hDebut} à ${hFin}.\nLe vol sera réservé sur ce créneau existant. Continuer ?`)) return;
                             response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
                                 method: 'PATCH',
                                 headers: headers,
-                                body: JSON.stringify({ records: [{ id: existant.id, fields: champsCreneau }] })
+                                body: JSON.stringify({ records: [{ id: identique.id, fields: champsCreneau }] })
                             });
                         } else {
+                            const occupes = chevauches.filter(r => (r.fields['Statut'] || 'Disponible') !== 'Disponible');
+                            if (occupes.length) {
+                                const liste = occupes.map(r => `${r.fields['Heure début']} - ${r.fields['Heure fin']} (${r.fields['Statut']})`).join(', ');
+                                alert(`⚠️ Ce vol empiète sur des créneaux déjà occupés :\n${liste}\nChoisis un autre horaire.`);
+                                return;
+                            }
+                            if (chevauches.length) {
+                                const liste = chevauches.map(r => `${r.fields['Heure début']} - ${r.fields['Heure fin']}`).join(', ');
+                                if (!confirm(`⚠️ Ce vol empiète sur ${chevauches.length} créneau(x) libre(s) :\n${liste}\n\nContinuer ? Les créneaux libres chevauchés seront supprimés.`)) return;
+                                for (const r of chevauches) {
+                                    await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}/${r.id}`, { method: 'DELETE', headers });
+                                }
+                            }
                             response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
                                 method: 'POST',
                                 headers: headers,
@@ -3390,17 +3408,22 @@ async function convertirVolEnCreneauVI(vol) {
         'Téléphone': vol.telephone || '',
         'Pilote': (vol.pilote || '').toString().trim(),
         'Commentaire': vol.commentaire || '',
-        'Token': 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14)
+        'Token': 'tok' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14),
+        'Date réservation': new Date().toISOString()
     };
     try {
         const formJour = `DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${dateStr}'`;
         const resJour = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formJour)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
         const dataJour = await resJour.json();
-        const existant = (dataJour.records || []).find(r => {
+        const toMin = h => { const p = (h || '00:00').split(':'); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); };
+        const dMin = toMin(hDebut);
+        const fMin = toMin(hFin);
+        const memeType = (dataJour.records || []).filter(r => {
             const f = r.fields || {};
-            return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === typeVI &&
-                   f['Heure début'] === hDebut && f['Heure fin'] === hFin;
+            return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === typeVI;
         });
+        const existant = memeType.find(r => r.fields['Heure début'] === hDebut && r.fields['Heure fin'] === hFin);
+        const chevauches = memeType.filter(r => toMin(r.fields['Heure début']) < fMin && toMin(r.fields['Heure fin']) > dMin);
         let ok = false;
         if (existant) {
             if ((existant.fields['Statut'] || 'Disponible') !== 'Disponible') {
@@ -3414,6 +3437,19 @@ async function convertirVolEnCreneauVI(vol) {
             });
             ok = r.ok;
         } else {
+            const occupes = chevauches.filter(r => (r.fields['Statut'] || 'Disponible') !== 'Disponible');
+            if (occupes.length) {
+                const liste = occupes.map(r => `${r.fields['Heure début']} - ${r.fields['Heure fin']} (${r.fields['Statut']})`).join(', ');
+                alert(`⚠️ Ce vol empiète sur des créneaux déjà occupés :\n${liste}\nDécalage impossible.`);
+                return null;
+            }
+            if (chevauches.length) {
+                const liste = chevauches.map(r => `${r.fields['Heure début']} - ${r.fields['Heure fin']}`).join(', ');
+                if (!confirm(`⚠️ Ce vol empiète sur ${chevauches.length} créneau(x) libre(s) :\n${liste}\n\nContinuer ? Les créneaux libres chevauchés seront supprimés.`)) return null;
+                for (const r of chevauches) {
+                    await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}/${r.id}`, { method: 'DELETE', headers });
+                }
+            }
             const r = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
                 method: 'POST',
                 headers,
