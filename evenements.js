@@ -184,12 +184,12 @@ function renderEvenement(record) {
         const btnSup = removable ? `<button class="btn-remove-inscrit" onclick="desinscrireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}')" title="Supprimer">×</button>` : '';
         const peutCommenter = i.nom === nomConnecte || estSuperAdmin;
         const btnComment = peutCommenter ? `<button class="btn-comment" onclick="modifierCommentaireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}', '${commentaire.replace(/'/g, "\\'")}')" title="Ajouter/Modifier un commentaire">💬</button>` : '';
-        const commentText = i.commentaire ? `<span class="comment-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${commentaire}</span>` : '';
-        return `<div class="inscrit-ligne" style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow:hidden;">
-            <span style="white-space:nowrap;">- ${nom}</span>
-            ${btnComment}
-            ${commentText}
-            ${btnSup}
+        const commentText = i.commentaire ? escapeHtml(i.commentaire) : '';
+        return `<div class="inscrit-ligne">
+            <span class="inscrit-nom">- ${nom}</span>
+            <span class="inscrit-slot">${btnComment}</span>
+            <span class="comment-text">${commentText}</span>
+            <span class="inscrit-slot">${btnSup}</span>
         </div>`;
     }).join('');
 

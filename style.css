@@ -1941,10 +1941,37 @@ img, table, video, iframe, svg {
     min-height: 30px;
 }
 .inscrit-ligne {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1.2fr) 28px;
     align-items: center;
-    justify-content: space-between;
+    gap: 8px;
     padding: 3px 0;
+}
+.inscrit-ligne .inscrit-nom {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.inscrit-ligne .inscrit-slot {
+    text-align: center;
+}
+.inscrit-ligne .comment-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.presence-ligne {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr) 26px;
+}
+.presence-ligne-instructeur {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1fr) 30px minmax(0, 1fr) 26px;
+}
+.presence-ligne .inscrit-slot {
+    min-width: 0;
+    overflow: hidden;
 }
 .btn-remove-inscrit {
     background: transparent;
@@ -1954,7 +1981,6 @@ img, table, video, iframe, svg {
     font-size: 16px;
     line-height: 1;
     padding: 0 4px;
-    margin-left: 8px;
 }
 .btn-remove-inscrit:hover {
     color: #b91c1c;

@@ -36,12 +36,12 @@ function creerLignePresence(nom, commentaire, recordId, tableName) {
         ? `<button class="btn-comment" onclick="modifierCommentaire('${recordId}', '${tableName}', '${commentaireEscaped}', '${nomEscaped}')" title="Ajouter/Modifier un commentaire">💬</button>`
         : '';
     return `
-        <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow:hidden;">
-            <span style="white-space:nowrap;">- ${nom}</span>
-            ${btnCommentaire}
-            <span class="comment-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${commentaireEscaped}</span>
+        <div class="inscrit-ligne presence-ligne">
+            <span class="inscrit-nom">- ${nom}</span>
+            <span class="inscrit-slot">${btnCommentaire}</span>
+            <span class="comment-text">${commentaireEscaped}</span>
+            <span class="inscrit-slot">${btnSupprimer}</span>
         </div>
-        ${btnSupprimer}
     `;
 }
 
@@ -431,14 +431,14 @@ function creerLigneInstructeurPlaneur(nom, commentaire, briefing, recordId, inte
         ? `<button class="btn-remove-presence" onclick="desinscrireInstructeurPlaneur('${rid}', '${nomEscaped}')">❌</button>`
         : '';
     return `
-        <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow:hidden;">
-            <span style="white-space:nowrap;">- ${nom}</span>
-            ${heures}
-            ${briefingHtml}
-            ${btnCommentaire}
-            <span class="comment-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${commentaireEscaped}</span>
+        <div class="inscrit-ligne presence-ligne presence-ligne-instructeur">
+            <span class="inscrit-nom">- ${nom}</span>
+            <span class="inscrit-slot">${heures}</span>
+            <span class="inscrit-slot">${briefingHtml}</span>
+            <span class="inscrit-slot">${btnCommentaire}</span>
+            <span class="comment-text">${commentaireEscaped}</span>
+            <span class="inscrit-slot">${btnSupprimer}</span>
         </div>
-        ${btnSupprimer}
     `;
 }
 
