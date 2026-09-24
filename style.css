@@ -1347,6 +1347,22 @@ img, table, video, iframe, svg {
 .btn-supprimer-initiation:hover {
     background: #b91c1c;
 }
+.vi-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 14px;
+}
+.vi-actions-row button {
+    margin-top: 0;
+}
+.vi-actions-row .btn-supprimer-initiation {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+}
 
 /* --- MA RÉSERVATION (reserver-vi.html) : boutons harmonisés --- */
 #manage-form .form-actions {

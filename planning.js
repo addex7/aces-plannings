@@ -4318,6 +4318,40 @@ async function creerCreneauxVI(e) {
         return;
     }
     try {
+        const ors = dates.map(d => `DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${d}'`).join(', ');
+        const formConflit = dates.length > 1 ? `OR(${ors})` : ors;
+        const resExist = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formConflit)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
+        const dataExist = await resExist.json();
+        const existants = (dataExist.records || []).filter(r => {
+            const f = r.fields || {};
+            return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === type;
+        });
+        const conflits = existants.filter(r => {
+            const f = r.fields || {};
+            const dEx = (f['Date'] || '').slice(0, 10);
+            const dbEx = timeToMinutes(f['Heure début'] || '00:00');
+            const fnEx = timeToMinutes(f['Heure fin'] || '00:00');
+            return records.some(rec =>
+                rec.fields['Date'] === dEx &&
+                timeToMinutes(rec.fields['Heure début']) < fnEx &&
+                timeToMinutes(rec.fields['Heure fin']) > dbEx
+            );
+        });
+        if (conflits.length) {
+            const lignes = conflits.map(r => {
+                const f = r.fields || {};
+                const dTxt = new Date((f['Date'] || '').slice(0, 10) + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                return `• ${dTxt} ${f['Heure début']} - ${f['Heure fin']} (${f['Statut'] || 'Disponible'})`;
+            }).join('\n');
+            alert(`Création impossible : ${conflits.length} créneau(x) ${type} existant(s) empiètent sur cette plage :\n\n${lignes}\n\nSupprime d'abord ces créneaux (onglet « Créneaux dispos » ou « Archives »), puis recrée ce lot.`);
+            return;
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la vérification des créneaux existants : ' + err.message);
+        return;
+    }
+    try {
         for (let i = 0; i < records.length; i += 10) {
             const batch = records.slice(i, i + 10);
             const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
