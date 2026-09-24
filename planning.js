@@ -1977,6 +1977,8 @@ function appliquerEtatFormulaire() {
         const changerCb = document.getElementById('form-changer-butee');
         const grpNouvelle = document.getElementById('group-nouvelle-butee');
         if (grpNouvelle) grpNouvelle.style.display = (changerCb && changerCb.checked) ? 'block' : 'none';
+        const btnSaveM = document.getElementById('btn-save-reservation');
+        if (btnSaveM) btnSaveM.innerHTML = '<span class="nr-icon-save">💾</span> Enregistrer';
         return;
     }
     if (groupMaintenance) groupMaintenance.style.display = 'none';
@@ -2049,6 +2051,7 @@ function appliquerEtatFormulaire() {
         });
     }
 
+    const btnSave = document.getElementById('btn-save-reservation');
     if (isVI) {
         if (labelPilote) labelPilote.textContent = 'Nom du Pilote (optionnel) :';
         if (inputPilote) {
@@ -2058,9 +2061,11 @@ function appliquerEtatFormulaire() {
         if (labelCommentaires) labelCommentaires.textContent = 'COMMENTAIRES';
         if (groupCommentaires) groupCommentaires.style.display = 'block';
         if (inputEstimation) inputEstimation.required = false;
+        if (btnSave) btnSave.innerHTML = '<span class="nr-icon-save">💾</span> Enregistrer et envoyer le mail';
         return;
     }
 
+    if (btnSave) btnSave.innerHTML = '<span class="nr-icon-save">💾</span> Enregistrer';
     if (labelPilote) labelPilote.textContent = 'Nom du Pilote :';
     if (inputPilote) {
         inputPilote.placeholder = 'Ex: Jean Dupont';

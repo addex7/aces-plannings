@@ -399,7 +399,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
 
     const search = document.createElement('input');
     search.type = 'text';
-    search.placeholder = 'Rechercher...';
+    search.placeholder = 'Rechercher ou saisir un nom...';
     search.autocomplete = 'off';
     search.style.cssText = 'width:100%; padding:8px 12px; border:none; border-bottom:1px solid #e2e8f0; font-size:14px; box-sizing:border-box; outline:none;';
 

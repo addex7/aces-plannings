@@ -598,7 +598,7 @@ function ouvrirInscrireAutre(table, valeur) {
         opt.textContent = nom;
         select.appendChild(opt);
     });
-    select.dataset.allowCustom = pilotesVI ? '0' : '1';
+    select.dataset.allowCustom = '1';
     modal.dataset.table = table;
     modal.dataset.valeur = valeur;
     modal.style.display = 'flex';
@@ -628,7 +628,7 @@ async function inscrireAutreMembre() {
             const vol = JSON.parse(valeur || '{}');
             if (!vol.id || !vol.source) return;
             const tableName = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'planeur' ? 'VI Planeur' : 'VI Créneaux');
-            const fields = vol.source === 'moteur' ? { 'Pilote': [membre.id] } : { 'Pilote': nomPilote };
+            const fields = (vol.source === 'moteur' && membre) ? { 'Pilote': [membre.id] } : { 'Pilote': nomPilote };
             if (vol.source === 'creneau') fields['Statut'] = 'Réservé';
             const patchRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(tableName)}`, {
                 method: 'PATCH',
