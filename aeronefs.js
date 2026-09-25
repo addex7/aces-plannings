@@ -1285,7 +1285,7 @@ function creerModaleDocumentsAeronef() {
                 </div>
                 <div class="form-group">
                     <label for="doc-aeronef-lien">Lien / Référence</label>
-                    <input type="url" id="doc-aeronef-lien" placeholder="https://..." style="width:100%;">
+                    <input type="text" id="doc-aeronef-lien" placeholder="https://... ou fichier importé" style="width:100%;">
                 </div>
                 <div class="form-group" style="display:flex; align-items:center; gap:8px;">
                     <input type="checkbox" id="doc-aeronef-actif" checked style="width:auto;">
