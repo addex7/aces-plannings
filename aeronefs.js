@@ -1479,9 +1479,10 @@ async function ouvrirBilanDocumentsAeronefs() {
         if (!machines.includes(m) && !machinesExclues.includes(m)) machines.push(m);
     });
 
-    const codesPrioritaires = ['CEN', 'Assurance', 'Carte Total'];
+    const codesPrioritaires = ['CEN', 'Assurance', 'Accusé', 'Carte Total'];
+    const LIBELLES_COLONNES = { 'Accusé': 'Décl. ULM' };
     const tousTypes = [
-        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre' && t.code !== 'Accusé'),
+        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre'),
         ...[...typesCustom].sort().map(code => ({ code, nom: code, dateRequise: false }))
     ];
     const colonnes = codesPrioritaires.map(code =>
@@ -1503,7 +1504,7 @@ async function ouvrirBilanDocumentsAeronefs() {
 
     cont.innerHTML = `
         <table class="bilan-docs-table">
-            <thead><tr><th>Machine</th>${colonnes.map(c => `<th title="${c.nom}"${c.separator ? ' class="bilan-sep"' : ''}${c.prioritaire ? ' style="background:#2d5a7b;"' : ''}>${c.code}</th>`).join('')}</tr></thead>
+            <thead><tr><th>Machine</th>${colonnes.map(c => `<th title="${c.nom}"${c.separator ? ' class="bilan-sep"' : ''}${c.prioritaire ? ' style="background:#2d5a7b;"' : ''}>${LIBELLES_COLONNES[c.code] || c.code}</th>`).join('')}</tr></thead>
             <tbody>${lignes}</tbody>
         </table>
     `;
