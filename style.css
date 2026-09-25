@@ -900,6 +900,29 @@ img, table, video, iframe, svg {
     opacity: 0.5;
     cursor: default;
 }
+.form-control {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    background: #ffffff;
+}
+* {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+}
+#view-audit .header-actions .form-control,
+#view-audit .header-actions .btn-primary {
+    height: 36px;
+    box-sizing: border-box;
+}
 button, input[type="checkbox"], input[type="radio"], select, label, summary {
     cursor: pointer;
 }

@@ -63,9 +63,22 @@ function fermerModaleEvenement() {
     if (overlay) overlay.style.display = 'none';
 }
 
+// Nom complet de l'utilisateur + correspondance tolerante avec les anciens
+// enregistrements au format court ("Benjamin Q.")
+function nomCompletUtilisateur() {
+    if (typeof currentUser === 'undefined' || !currentUser) return '';
+    return `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+}
+
+function memeNom(stocke, courant) {
+    if (!stocke || !courant) return false;
+    if (stocke === courant) return true;
+    return typeof formaterNomPilote === 'function' && stocke === formaterNomPilote(courant);
+}
+
 async function enregistrerEvenement(e) {
     e.preventDefault();
-    const nom = nomPiloteCourant();
+    const nom = nomCompletUtilisateur();
     if (!nom) { alert('Connecte-toi pour créer un événement.'); return; }
 
     const titre = document.getElementById('ev-titre').value.trim();
@@ -173,16 +186,16 @@ function renderEvenement(record) {
     const dateTexte = debut === fin ? debut : `${debut} › ${fin}`;
     const horaireTexte = `${hDebut} - ${hFin}`;
     const createur = f[FIELDS.AJOUTE_PAR] || '';
-    const nomConnecte = nomPiloteCourant() || '';
-    const estInscrit = inscrits.some(i => i.nom === nomConnecte);
+    const nomConnecte = nomCompletUtilisateur() || '';
+    const estInscrit = inscrits.some(i => memeNom(i.nom, nomConnecte));
 
     const listeInscrits = inscrits.map(i => {
         const nom = escapeHtml(i.nom);
         const commentaire = escapeHtml(i.commentaire || '');
         const estSuperAdmin = currentUser && currentUser.roles && currentUser.roles.includes('Super admin');
-        const removable = i.nom === nomConnecte || createur === nomConnecte || estSuperAdmin;
+        const removable = memeNom(i.nom, nomConnecte) || memeNom(createur, nomConnecte) || estSuperAdmin;
         const btnSup = removable ? `<button class="btn-remove-inscrit" onclick="desinscrireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}')" title="Supprimer">×</button>` : '';
-        const peutCommenter = i.nom === nomConnecte || estSuperAdmin;
+        const peutCommenter = memeNom(i.nom, nomConnecte) || estSuperAdmin;
         const btnComment = peutCommenter ? `<button class="btn-comment" onclick="modifierCommentaireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}', '${commentaire.replace(/'/g, "\\'")}')" title="Ajouter/Modifier un commentaire">💬</button>` : '';
         const commentText = i.commentaire ? escapeHtml(i.commentaire) : '';
         return `<div class="inscrit-ligne">
@@ -198,7 +211,7 @@ function renderEvenement(record) {
         : `<button class="btn-inscription" onclick="sinscrireEvenement('${record.id}')">M'inscrire</button>`;
     const peutInscrireAutre = typeof roleAutorise === 'function' && roleAutorise(['Super admin', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM']);
     const btnInscrireAutre = peutInscrireAutre ? `<button class="btn-inscription" onclick="ouvrirInscrireAutre('Événements', '${record.id}')">Inscrire quelqu'un d'autre</button>` : '';
-    const peutSupprimer = createur === nomConnecte || (currentUser && currentUser.roles && currentUser.roles.includes('Super admin'));
+    const peutSupprimer = memeNom(createur, nomConnecte) || (currentUser && currentUser.roles && currentUser.roles.includes('Super admin'));
     const btnSupprimer = peutSupprimer ? `<button class="btn-supprimer-evenement" onclick="supprimerEvenement('${record.id}')" title="Supprimer l'évènement">×</button>` : '';
 
     return `
@@ -221,7 +234,7 @@ function renderEvenement(record) {
 }
 
 async function sinscrireEvenement(recordId) {
-    const nom = nomPiloteCourant();
+    const nom = nomCompletUtilisateur();
     if (!nom) { alert('Connecte-toi pour t\'inscrire.'); return; }
 
     try {
@@ -230,7 +243,7 @@ async function sinscrireEvenement(recordId) {
         if (!getRes.ok) throw new Error(record.error ? record.error.message : 'Erreur Airtable');
 
         const inscrits = parseInscrits(record.fields[FIELDS.INSCRITS] || '');
-        if (inscrits.some(i => i.nom === nom)) { alert('Tu es déjà inscrit.'); return; }
+        if (inscrits.some(i => memeNom(i.nom, nom))) { alert('Tu es déjà inscrit.'); return; }
         inscrits.push({ nom, commentaire: '' });
 
         const patchRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
@@ -298,9 +311,9 @@ async function supprimerEvenement(recordId) {
 }
 
 async function modifierCommentaireEvenement(recordId, nom, commentaireActuel) {
-    const nomConnecte = nomPiloteCourant() || '';
+    const nomConnecte = nomCompletUtilisateur() || '';
     const estSuperAdmin = currentUser && currentUser.roles && currentUser.roles.includes('Super admin');
-    if (nom !== nomConnecte && !estSuperAdmin) {
+    if (!memeNom(nom, nomConnecte) && !estSuperAdmin) {
         alert("Tu ne peux modifier le commentaire que de ta propre inscription.");
         return;
     }

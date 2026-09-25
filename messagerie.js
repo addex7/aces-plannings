@@ -704,7 +704,7 @@ function afficherZoneListe(visible) {
         if (!el) return;
         if (sel === '#messages-archive-notice') {
             el.style.display = (visible && ongletMessagerie === 'archives') ? 'block' : 'none';
-        } else if (sel === '.messages-tabs') {
+        } else if (sel === '.messages-tabs' || sel === '#messages-toolbar') {
             el.style.display = visible ? 'flex' : 'none';
         } else if (sel === '#message-form-section') {
             el.style.display = 'none';

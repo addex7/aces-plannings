@@ -206,8 +206,8 @@ function afficherDocuments(records) {
                 ${records.map(rec => creerCarteDocument(rec)).join('')}
             </div>`;
         return `
-            <details style="margin-bottom:20px;">
-                <summary style="color:#1e3d59; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:10px; cursor:pointer; font-size:1.17em; font-weight:bold;">${dossier}</summary>
+            <details style="margin-bottom:4px;">
+                <summary style="color:#1e3d59; border-bottom:1px solid #e2e8f0; padding:7px 4px; margin-bottom:4px; cursor:pointer; font-size:1em; font-weight:bold;">${dossier}</summary>
                 ${content}
             </details>
         `;
@@ -242,9 +242,9 @@ function afficherDocuments(records) {
             `;
         }).join('');
         html += `
-            <details style="margin-bottom:20px;">
-                <summary style="color:#1e3d59; border-bottom:1px solid #cbd5e1; padding-bottom:6px; margin-bottom:10px; cursor:pointer; font-size:1.17em; font-weight:bold;">${machine}</summary>
-                <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px;">
+            <details style="margin-bottom:4px;">
+                <summary style="color:#1e3d59; border-bottom:1px solid #e2e8f0; padding:7px 4px; margin-bottom:4px; cursor:pointer; font-size:1em; font-weight:bold;">${machine}</summary>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; font-size:11px; margin-top:4px;">
                     ${cartes}
                 </div>
             </details>
