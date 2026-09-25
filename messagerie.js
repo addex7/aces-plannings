@@ -63,6 +63,7 @@ function aPieceJointe(pieceVal) {
         if (pieceVal.startsWith('http') || pieceVal.startsWith('/')) return true;
         try {
             const pj = JSON.parse(pieceVal);
+            if (pj && pj.url) return true;
             if (pj && pj.data && pj.filename) return true;
         } catch (e) {}
     }
@@ -81,6 +82,9 @@ function renderPieceJointe(pieceVal) {
         } else {
             try {
                 const pj = JSON.parse(pieceVal);
+                if (pj && pj.url) {
+                    return `<div class="message-attachments"><a href="${escHtml(pj.url)}" target="_blank">📎 ${escHtml(pj.filename || pj.url.split('/').pop())}</a></div>`;
+                }
                 if (pj && pj.data && pj.filename) {
                     return `<div class="message-attachments"><a href="${escHtml(pj.data)}" download="${escHtml(pj.filename)}">📎 Télécharger ${escHtml(pj.filename)}</a></div>`;
                 }
@@ -113,7 +117,20 @@ function initMessagerie() {
 
     if (fileInput) {
         fileInput.addEventListener('change', () => {
-            if (fileName) fileName.textContent = fileInput.files[0]?.name || '';
+            const nom = fileInput.files[0]?.name || '';
+            if (fileName) fileName.textContent = nom;
+            const rename = document.getElementById('message-piece-rename');
+            if (rename) {
+                rename.style.display = nom ? 'block' : 'none';
+                rename.value = nom;
+            }
+        });
+    }
+    const closeForm = document.getElementById('btn-close-message-form');
+    if (closeForm) {
+        closeForm.addEventListener('click', () => {
+            const formSection = document.getElementById('message-form-section');
+            if (formSection) formSection.style.display = 'none';
         });
     }
     if (form) form.addEventListener('submit', envoyerMessage);
@@ -139,8 +156,14 @@ function initMessagerie() {
     const replyFile = document.getElementById('message-detail-reply-file');
     if (replyFile) {
         replyFile.addEventListener('change', () => {
+            const nom = replyFile.files[0]?.name || '';
             const name = document.getElementById('message-detail-reply-file-name');
-            if (name) name.textContent = replyFile.files[0]?.name || '';
+            if (name) name.textContent = nom;
+            const rename = document.getElementById('message-detail-reply-file-rename');
+            if (rename) {
+                rename.style.display = nom ? 'block' : 'none';
+                rename.value = nom;
+            }
         });
     }
     const messagesList = document.getElementById('messages-list');
@@ -619,7 +642,10 @@ async function envoyerMessage(e) {
         if (file) {
             const uploader = typeof uploaderFichierDocument === 'function' ? uploaderFichierDocument : null;
             if (!uploader) throw new Error('Uploader non disponible');
-            pieceJointe = await uploader(file);
+            const url = await uploader(file);
+            const rename = document.getElementById('message-piece-rename');
+            const nomFichier = (rename && rename.value.trim()) || file.name;
+            pieceJointe = JSON.stringify({ url, filename: nomFichier });
         }
 
         const fields = {
@@ -647,6 +673,8 @@ async function envoyerMessage(e) {
         const messageForm = document.getElementById('message-form');
         if (messageForm) messageForm.reset();
         if (fileName) fileName.textContent = '';
+        const rename = document.getElementById('message-piece-rename');
+        if (rename) { rename.value = ''; rename.style.display = 'none'; }
         destinatairesSelectionnes = [];
         renderDestinatairesListe();
         const messageFormSection = document.getElementById('message-form-section');
@@ -710,10 +738,12 @@ function ouvrirDetailThread(thread) {
     const replyText = document.getElementById('message-detail-reply-text');
     const replyFile = document.getElementById('message-detail-reply-file');
     const replyFileName = document.getElementById('message-detail-reply-file-name');
+    const replyRename = document.getElementById('message-detail-reply-file-rename');
     if (replyZone) replyZone.style.display = 'none';
     if (replyText) replyText.value = '';
     if (replyFile) replyFile.value = '';
     if (replyFileName) replyFileName.textContent = '';
+    if (replyRename) { replyRename.value = ''; replyRename.style.display = 'none'; }
 
     if (subject) subject.textContent = thread.subject;
     if (sender) sender.innerHTML = `<strong>De :</strong> ${escHtml(fp[FIELDS_MESSAGE.EXPEDITEUR] || 'Inconnu')}`;
@@ -836,7 +866,10 @@ async function envoyerReponseDetail() {
         if (file) {
             const uploader = typeof uploaderFichierDocument === 'function' ? uploaderFichierDocument : null;
             if (!uploader) throw new Error('Uploader non disponible');
-            pieceJointe = await uploader(file);
+            const url = await uploader(file);
+            const rename = document.getElementById('message-detail-reply-file-rename');
+            const nomFichier = (rename && rename.value.trim()) || file.name;
+            pieceJointe = JSON.stringify({ url, filename: nomFichier });
         }
         const fields = {
             [FIELDS_MESSAGE.DATE]: new Date().toISOString().slice(0, 10),
@@ -861,6 +894,8 @@ async function envoyerReponseDetail() {
         if (fileInput) fileInput.value = '';
         const fileName = document.getElementById('message-detail-reply-file-name');
         if (fileName) fileName.textContent = '';
+        const renameInput = document.getElementById('message-detail-reply-file-rename');
+        if (renameInput) { renameInput.value = ''; renameInput.style.display = 'none'; }
         const zone = document.getElementById('message-detail-replyzone');
         if (zone) zone.style.display = 'none';
         const nvThread = trouverThreadParMessageId(record ? record.id : thread.lastMessage.id) || thread;

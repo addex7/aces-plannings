@@ -3833,6 +3833,30 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     color: #334155;
     font-size: 13px;
     font-weight: 600;
+    min-height: 36px;
+    box-sizing: border-box;
+}
+.form-close-x {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+}
+.form-close-x:hover {
+    background: #b91c1c;
 }
 .messages-selection-info {
     margin-right: auto;
@@ -3845,8 +3869,19 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     align-items: center;
     gap: 6px;
     font-size: 13px;
+    font-weight: 600;
     color: #334155;
     cursor: pointer;
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    box-sizing: border-box;
+    min-height: 36px;
+}
+.messages-selectall-label:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
 }
 .messages-selectall-label input {
     width: auto;
@@ -3858,6 +3893,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     padding: 6px 12px;
     font-size: 13px;
     width: auto;
+    min-height: 36px;
+    box-sizing: border-box;
 }
 .messages-delete-btn {
     padding: 6px 12px;
@@ -3865,6 +3902,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     width: auto;
     color: #dc2626;
     border-color: #fecaca;
+    min-height: 36px;
+    box-sizing: border-box;
 }
 .messages-delete-btn:hover {
     background: #fef2f2;
