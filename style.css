@@ -4502,6 +4502,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     text-decoration: underline;
 }
 .close-documents-bilan,
-.close-documents-aeronef {
+.close-documents-aeronef,
+.close-bilan-membres {
     cursor: pointer;
 }

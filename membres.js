@@ -72,6 +72,8 @@ function updateUIRoles() {
     }
     if (logoutBtn) logoutBtn.style.display = currentUser ? 'inline-block' : 'none';
     if (tabMembres) tabMembres.style.display = currentUser ? 'block' : 'none';
+    const btnBilanMembres = document.getElementById('btn-bilan-membres');
+    if (btnBilanMembres) btnBilanMembres.style.display = peutVoirBilanMembres() ? 'inline-block' : 'none';
     if (tabAudit) tabAudit.style.display = superAdmin ? 'block' : 'none';
     if (tabMessagerie) tabMessagerie.style.display = currentUser ? 'block' : 'none';
     if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
@@ -444,6 +446,114 @@ async function mettreAJourRolesMembre(recordId, checkboxes) {
     }
 }
 
+function peutVoirBilanMembres() {
+    if (!currentUser) return false;
+    const roles = currentUser.roles || [];
+    return roles.includes('Super admin') || roles.includes('Super Admin') || roles.some(r => /instructeur/i.test(r || ''));
+}
+
+const BILAN_PILOTES_TH = {
+    'Cotisation': 'Cotis.',
+    'Licence assurance FFVP': 'FFVP',
+    'Licence assurance FFA': 'FFA',
+    'Licence assurance FFPLUM': 'FFPLUM',
+    'Médical': 'Médical',
+    'Licence SEP': 'SEP',
+    'Autorisation parentale': 'Auto. parent.',
+    'Instructeur avion': 'FI avion',
+    'Instructeur ULM': 'FI ULM'
+};
+
+function creerModaleBilanMembres() {
+    if (document.getElementById('bilan-membres-modal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'bilan-membres-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 1150px; width: 96%; max-height: 88vh; overflow: auto;">
+            <span class="close-bilan-membres">&times;</span>
+            <h3>Bilan des validités — pilotes</h3>
+            <div class="bilan-docs-legende">
+                <span><i class="doc-dot doc-ok"></i> Valide</span>
+                <span><i class="doc-dot doc-bientot"></i> Expire sous 3 mois</span>
+                <span><i class="doc-dot doc-perime"></i> Périmé / non renseigné</span>
+                <span><i class="doc-dot doc-vide"></i> Suivi non activé</span>
+            </div>
+            <div id="bilan-membres-table"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const close = modal.querySelector('.close-bilan-membres');
+    if (close) close.addEventListener('click', () => { modal.style.display = 'none'; });
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+}
+
+function statutValiditePilote(fields, item) {
+    const labels = item.suiviLabels || [item.label];
+    if (item.label === 'Autorisation parentale') {
+        const autorisation = calcAutorisationParentale(fields[MEMBRE_FIELDS.DATE_NAISSANCE], fields[MEMBRE_FIELDS.AUTORISATION_PARENTALE]);
+        if (!autorisation || !estSuiviActif(fields, labels)) return { cls: 'doc-vide', txt: '—' };
+    } else if (!estSuiviActif(fields, labels)) {
+        return { cls: 'doc-vide', txt: '—' };
+    }
+    const val = fields[item.field];
+    const d = val ? new Date(val) : null;
+    if (!d || isNaN(d.getTime())) return { cls: 'doc-perime', txt: 'Non renseigné' };
+    const auj = new Date();
+    auj.setHours(0, 0, 0, 0);
+    const dans3 = new Date(auj);
+    dans3.setMonth(dans3.getMonth() + 3);
+    const txt = d.toLocaleDateString('fr-FR');
+    if (d < auj) return { cls: 'doc-perime', txt: `Périmé ${txt}` };
+    if (d < dans3) return { cls: 'doc-bientot', txt };
+    return { cls: 'doc-ok', txt };
+}
+
+async function ouvrirBilanMembres() {
+    if (!peutVoirBilanMembres()) { alert("Accès réservé aux instructeurs et super admin."); return; }
+    creerModaleBilanMembres();
+    const modal = document.getElementById('bilan-membres-modal');
+    const cont = document.getElementById('bilan-membres-table');
+    if (!modal || !cont) return;
+    modal.style.display = 'flex';
+    cont.innerHTML = '<p style="color:#64748b;">Chargement…</p>';
+    try {
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`;
+        const res = await cachedFetch(url, { headers }, API_CACHE_TTL, true);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur chargement');
+        const records = (data.records || []).filter(r => {
+            const f = r.fields || {};
+            return (f['Prénom'] || f['Nom']);
+        });
+        const items = (typeof VALIDITES !== 'undefined' ? VALIDITES : []);
+        const lignes = records.map(r => {
+            const f = r.fields || {};
+            const nom = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+            const cellules = items.map(item => {
+                const st = statutValiditePilote(f, item);
+                return `<td class="bilan-cell"><i class="doc-dot ${st.cls}"></i><span class="bilan-txt">${st.txt}</span></td>`;
+            }).join('');
+            return `<tr><td class="bilan-machine"><button type="button" class="bilan-machine-btn" data-id="${r.id}">${nom}</button></td>${cellules}</tr>`;
+        }).join('');
+        cont.innerHTML = `
+            <table class="bilan-docs-table">
+                <thead><tr><th>Pilote</th>${items.map(i => `<th title="${i.label}">${BILAN_PILOTES_TH[i.label] || i.label}</th>`).join('')}</tr></thead>
+                <tbody>${lignes}</tbody>
+            </table>
+        `;
+        cont.querySelectorAll('.bilan-machine-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.style.display = 'none';
+                ouvrirSuiviMembre(btn.dataset.id);
+            });
+        });
+    } catch (err) {
+        console.error(err);
+        cont.innerHTML = `<p style="color:#dc2626;">Erreur : ${err.message || 'chargement impossible'}</p>`;
+    }
+}
+
 function ouvrirSuiviMembre(id) {
     const viewMembres = document.getElementById('view-membres');
     const viewAccueilMembre = document.getElementById('view-accueil-membre');
@@ -712,6 +822,8 @@ function initMembres() {
     if (forgotLink) forgotLink.addEventListener('click', (e) => { e.preventDefault(); showForgot(); });
     const backLogin = document.getElementById('link-back-login');
     if (backLogin) backLogin.addEventListener('click', (e) => { e.preventDefault(); showLogin(); });
+    const btnBilan = document.getElementById('btn-bilan-membres');
+    if (btnBilan) btnBilan.addEventListener('click', ouvrirBilanMembres);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

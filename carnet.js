@@ -1151,6 +1151,9 @@ async function chargerCarnetRoute() {
         genererGrillesPlaneur(machineCarnetSelectionnee);
         if (tableContainer) tableContainer.style.display = 'none';
         if (planeurContainer) planeurContainer.style.display = 'block';
+        const btnBilanCat = document.getElementById('btn-bilan-docs-carnet');
+        const peutDocsCat = (typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef());
+        if (btnBilanCat) btnBilanCat.style.display = peutDocsCat ? 'inline-block' : 'none';
         if (btnOuvrir) btnOuvrir.style.display = 'none';
         if (btnDocs) btnDocs.style.display = 'none';
         if (recapDocs) recapDocs.style.display = 'none';
@@ -1178,6 +1181,8 @@ async function chargerCarnetRoute() {
     if (btnOuvrir) btnOuvrir.style.display = 'inline-block';
     const peutGererDocs = (typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef());
     if (btnDocs) btnDocs.style.display = peutGererDocs ? 'inline-block' : 'none';
+    const btnBilanDocsCarnet = document.getElementById('btn-bilan-docs-carnet');
+    if (btnBilanDocsCarnet) btnBilanDocsCarnet.style.display = peutGererDocs ? 'inline-block' : 'none';
     if (alarme) alarme.style.display = 'none';
     const table = tbody ? tbody.closest('table') : null;
     const thead = table ? table.querySelector('thead') : null;

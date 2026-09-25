@@ -1218,8 +1218,10 @@ function peutGererDocumentsAeronef() {
 function appliquerAccesMaintenanceEtDocuments() {
     const btnMaintenance = document.getElementById('btn-maintenance');
     const btnDocs = document.getElementById('btn-documents-aeronef');
+    const btnBilan = document.getElementById('btn-bilan-docs-aeronefs');
     if (btnMaintenance) btnMaintenance.style.display = peutGererMaintenance() ? '' : 'none';
     if (btnDocs) btnDocs.style.display = peutGererDocumentsAeronef() ? '' : 'none';
+    if (btnBilan) btnBilan.style.display = peutGererDocumentsAeronef() ? '' : 'none';
 }
 
 function initSuiviDocumentsAeronefs() {
@@ -1452,6 +1454,7 @@ function statutDocBilan(records, typeInfo) {
 }
 
 async function ouvrirBilanDocumentsAeronefs() {
+    if (!peutGererDocumentsAeronef()) { alert("Accès réservé aux instructeurs, mécaniciens et super admin."); return; }
     const modal = document.getElementById('documents-bilan-modal');
     const cont = document.getElementById('documents-bilan-table');
     if (!modal || !cont) return;
@@ -1515,6 +1518,8 @@ async function ouvrirModaleDocumentsAeronef(immatParam) {
     machineDocumentsCourante = immat;
     const modal = document.getElementById('documents-aeronef-modal');
     const title = document.getElementById('documents-aeronef-modal-title');
+    const btnBilan = document.getElementById('btn-bilan-docs-aeronef');
+    if (btnBilan) btnBilan.style.display = peutGererDocumentsAeronef() ? '' : 'none';
     if (title) title.textContent = `Documents – ${immat}`;
     if (modal) modal.style.display = 'flex';
     await chargerDocumentsAeronef(immat, true);
