@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=188">
+    <link rel="stylesheet" href="style.css?v=189">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -776,6 +776,14 @@
                     <div style="font-size:48px; animation:spin 1s linear infinite;">⏳</div>
                     <p style="margin-top:16px; color:#1e3d59; font-weight:600;">Envoi en cours...</p>
                 </div>
+                <div id="messages-toolbar" class="messages-toolbar">
+                    <span id="messages-selection-info" class="messages-selection-info"></span>
+                    <label class="messages-selectall-label" title="Tout sélectionner / désélectionner">
+                        <input type="checkbox" id="messages-select-all">
+                        <span>Tout</span>
+                    </label>
+                    <button type="button" id="btn-refresh-messages" class="btn-secondary messages-refresh-btn" title="Actualiser la messagerie">↻ Actualiser</button>
+                </div>
                 <div id="messages-list" style="background:white; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); overflow:hidden;">
                     <p class="carnet-empty">Cliquez sur l'onglet pour charger vos messages.</p>
                 </div>
@@ -1423,7 +1431,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=92"></script>
-    <script src="version.js?v=20260925121338"></script>
+    <script src="version.js?v=20260925122343"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=107"></script>
     <script src="presences.js?v=101"></script>
@@ -1438,7 +1446,7 @@
     <script src="membres.js?v=105"></script>
     <script src="instructeurs.js?v=107"></script>
     <script src="instructeur-planning.js?v=192"></script>
-    <script src="messagerie.js?v=18"></script>
+    <script src="messagerie.js?v=19"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>
     <!-- Fenêtre Modale : Lecture d'un message -->

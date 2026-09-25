@@ -11,8 +11,13 @@ const FIELDS_MESSAGE = {
     OBJET: 'Objet',
     CORPS: 'Corps',
     PIECE: 'Pièce jointe',
-    LU: 'Lu'
+    LU: 'Lu',
+    FAVORIS: 'Favoris'
 };
+
+function nomsFavoris(val) {
+    return (val || '').toString().split(';').map(s => s.trim()).filter(Boolean);
+}
 
 function threadKey(objet) {
     return (objet || '').toString().replace(/^(re|ré)\s*:?\s*/i, '').trim().toLowerCase();
@@ -60,6 +65,7 @@ function renderPieceJointe(pieceVal) {
 let messagesCache = [];
 let utilisateursMessagerieCache = [];
 let destinatairesSelectionnes = [];
+let threadsSelectionnes = new Set();
 
 function nomCompletCourant() {
     if (typeof currentUser === 'undefined' || !currentUser) return '';
@@ -100,8 +106,45 @@ function initMessagerie() {
     const messagesList = document.getElementById('messages-list');
     if (messagesList) {
         messagesList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('message-check')) {
+                const key = e.target.dataset.key;
+                if (e.target.checked) threadsSelectionnes.add(key);
+                else threadsSelectionnes.delete(key);
+                mettreAJourSelectAll();
+                const item = e.target.closest('.message-item');
+                if (item) item.classList.toggle('message-thread-selected', e.target.checked);
+                return;
+            }
+            const star = e.target.closest('.message-star');
+            if (star) {
+                const thread = grouperParThread(messagesCache).find(t => t.key === star.dataset.key);
+                if (thread) basculerFavoriThread(thread);
+                return;
+            }
             const item = e.target.closest('.message-item');
             if (item) voirMessage(item.dataset.id);
+        });
+    }
+    const selectAll = document.getElementById('messages-select-all');
+    if (selectAll) {
+        selectAll.addEventListener('change', () => {
+            const threads = grouperParThread(messagesCache);
+            if (selectAll.checked) threads.forEach(t => threadsSelectionnes.add(t.key));
+            else threadsSelectionnes.clear();
+            afficherMessages(messagesCache);
+        });
+    }
+    const refreshBtn = document.getElementById('btn-refresh-messages');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            refreshBtn.disabled = true;
+            try {
+                if (typeof viderApiCache === 'function') viderApiCache();
+                await chargerMessagerie();
+                if (typeof compterMessagesNonLus === 'function') await compterMessagesNonLus();
+            } finally {
+                refreshBtn.disabled = false;
+            }
         });
     }
     if (list) {
@@ -219,7 +262,7 @@ function grouperParThread(records) {
         const f = r.fields || {};
         const key = threadKey(f[FIELDS_MESSAGE.OBJET]);
         if (!groups[key]) {
-            groups[key] = { key, messages: [], participants: new Set(), hasPiece: false, unread: false };
+            groups[key] = { key, messages: [], participants: new Set(), hasPiece: false, unread: false, favori: false };
         }
         const g = groups[key];
         g.messages.push(r);
@@ -232,6 +275,7 @@ function grouperParThread(records) {
             }
         });
         g.hasPiece = g.hasPiece || aPieceJointe(f[FIELDS_MESSAGE.PIECE]);
+        if (nomsFavoris(f[FIELDS_MESSAGE.FAVORIS]).includes(current)) g.favori = true;
         if (!f[FIELDS_MESSAGE.LU] && f[FIELDS_MESSAGE.EXPEDITEUR] !== current) g.unread = true;
     });
     Object.values(groups).forEach(g => {
@@ -260,23 +304,69 @@ function afficherMessages(records) {
         return;
     }
     const threads = grouperParThread(records);
+    const keysVisibles = new Set(threads.map(t => t.key));
+    threadsSelectionnes = new Set([...threadsSelectionnes].filter(k => keysVisibles.has(k)));
     container.innerHTML = threads.map(t => {
-        const expediteur = t.lastMessage.fields[FIELDS_MESSAGE.EXPEDITEUR] || '';
-        const preview = (t.lastMessage.fields[FIELDS_MESSAGE.CORPS] || '').replace(/\s+/g, ' ').trim().substring(0, 80);
+        const preview = (t.lastMessage.fields[FIELDS_MESSAGE.CORPS] || '').replace(/\s+/g, ' ').trim().substring(0, 120);
         const date = formaterDateMessage(t.lastMessage.fields[FIELDS_MESSAGE.DATE]);
-        const piece = t.hasPiece ? '<span class="message-thread-piece">📎</span>' : '';
-        return `<div class="message-item message-thread-item ${t.unread ? 'message-thread-unread' : ''}" data-id="${escHtml(t.lastMessage.id)}" title="${escHtml(t.subject)}">
-            <div class="message-thread-main">
-                <span class="message-thread-sender">${escHtml(formatParticipants(t.participants))}</span>
-                <span class="message-thread-subject">${escHtml(t.subject)} ${piece}</span>
-                <span class="message-thread-preview">${escHtml(preview)}${preview.length >= 80 ? '…' : ''}</span>
-            </div>
-            <div class="message-thread-meta">
-                <span class="message-thread-date">${escHtml(date)}</span>
+        const piece = t.hasPiece ? '<span class="message-thread-piece" title="Pièce jointe">📎</span>' : '';
+        const coche = threadsSelectionnes.has(t.key) ? 'checked' : '';
+        return `<div class="message-item message-thread-item ${t.unread ? 'message-thread-unread' : ''} ${coche ? 'message-thread-selected' : ''}" data-id="${escHtml(t.lastMessage.id)}" title="${escHtml(t.subject)}">
+            <input type="checkbox" class="message-check" data-key="${escHtml(t.key)}" ${coche}>
+            <button type="button" class="message-star ${t.favori ? 'message-star-on' : ''}" data-key="${escHtml(t.key)}" title="${t.favori ? 'Retirer des favoris' : 'Marquer comme favori'}">${t.favori ? '★' : '☆'}</button>
+            <span class="message-thread-sender">${escHtml(formatParticipants(t.participants))}</span>
+            <span class="message-thread-text">
+                <span class="message-thread-subject">${escHtml(t.subject)}</span>
+                ${preview ? `<span class="message-thread-preview">— ${escHtml(preview)}</span>` : ''}
+            </span>
+            <span class="message-thread-right">
+                ${piece}
                 ${t.unread ? '<span class="message-thread-dot"></span>' : ''}
-            </div>
+                <span class="message-thread-date">${escHtml(date)}</span>
+            </span>
         </div>`;
     }).join('');
+    mettreAJourSelectAll();
+}
+
+function mettreAJourSelectAll() {
+    const selectAll = document.getElementById('messages-select-all');
+    const info = document.getElementById('messages-selection-info');
+    const total = grouperParThread(messagesCache).length;
+    const nb = threadsSelectionnes.size;
+    if (selectAll) {
+        selectAll.checked = total > 0 && nb === total;
+        selectAll.indeterminate = nb > 0 && nb < total;
+    }
+    if (info) info.textContent = nb > 0 ? `${nb} sélectionné${nb > 1 ? 's' : ''}` : '';
+}
+
+async function basculerFavoriThread(thread) {
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    if (!current || !thread) return;
+    const want = !thread.favori;
+    try {
+        await Promise.all(thread.messages.map(async r => {
+            const favs = nomsFavoris(r.fields[FIELDS_MESSAGE.FAVORIS]);
+            if (favs.includes(current) === want) return;
+            const nv = want ? [...favs, current] : favs.filter(n => n !== current);
+            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}/${r.id}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ fields: { [FIELDS_MESSAGE.FAVORIS]: nv.join('; ') } })
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error?.message || 'Erreur favori');
+            }
+            r.fields[FIELDS_MESSAGE.FAVORIS] = nv.join('; ');
+        }));
+        thread.favori = want;
+        afficherMessages(messagesCache);
+    } catch (err) {
+        console.error('Erreur favori:', err);
+        alert('Erreur lors de la mise à jour du favori : ' + (err.message || 'inconnue'));
+    }
 }
 
 async function envoyerMessage(e) {
