@@ -110,7 +110,6 @@ function nomCompletCourant() {
 function initMessagerie() {
     const form = document.getElementById('message-form');
     const fileInput = document.getElementById('message-piece');
-    const fileName = document.getElementById('message-piece-name');
     const nouveauBtn = document.getElementById('btn-nouveau-message');
     const list = document.getElementById('message-destinataires-list');
     const tousBtn = document.getElementById('message-destinataires-tous');
@@ -118,7 +117,6 @@ function initMessagerie() {
     if (fileInput) {
         fileInput.addEventListener('change', () => {
             const nom = fileInput.files[0]?.name || '';
-            if (fileName) fileName.textContent = nom;
             const rename = document.getElementById('message-piece-rename');
             if (rename) {
                 rename.style.display = nom ? 'block' : 'none';
@@ -157,8 +155,6 @@ function initMessagerie() {
     if (replyFile) {
         replyFile.addEventListener('change', () => {
             const nom = replyFile.files[0]?.name || '';
-            const name = document.getElementById('message-detail-reply-file-name');
-            if (name) name.textContent = nom;
             const rename = document.getElementById('message-detail-reply-file-rename');
             if (rename) {
                 rename.style.display = nom ? 'block' : 'none';
@@ -623,7 +619,6 @@ async function envoyerMessage(e) {
     const objet = document.getElementById('message-objet');
     const corps = document.getElementById('message-corps');
     const fileInput = document.getElementById('message-piece');
-    const fileName = document.getElementById('message-piece-name');
     const loader = document.getElementById('message-loader');
     if (!objet || !corps) return;
 
@@ -672,7 +667,6 @@ async function envoyerMessage(e) {
         alert('Message envoyé.');
         const messageForm = document.getElementById('message-form');
         if (messageForm) messageForm.reset();
-        if (fileName) fileName.textContent = '';
         const rename = document.getElementById('message-piece-rename');
         if (rename) { rename.value = ''; rename.style.display = 'none'; }
         destinatairesSelectionnes = [];
@@ -737,12 +731,10 @@ function ouvrirDetailThread(thread) {
     const replyZone = document.getElementById('message-detail-replyzone');
     const replyText = document.getElementById('message-detail-reply-text');
     const replyFile = document.getElementById('message-detail-reply-file');
-    const replyFileName = document.getElementById('message-detail-reply-file-name');
     const replyRename = document.getElementById('message-detail-reply-file-rename');
     if (replyZone) replyZone.style.display = 'none';
     if (replyText) replyText.value = '';
     if (replyFile) replyFile.value = '';
-    if (replyFileName) replyFileName.textContent = '';
     if (replyRename) { replyRename.value = ''; replyRename.style.display = 'none'; }
 
     if (subject) subject.textContent = thread.subject;
@@ -892,8 +884,6 @@ async function envoyerReponseDetail() {
         if (typeof viderApiCache === 'function') viderApiCache();
         if (text) text.value = '';
         if (fileInput) fileInput.value = '';
-        const fileName = document.getElementById('message-detail-reply-file-name');
-        if (fileName) fileName.textContent = '';
         const renameInput = document.getElementById('message-detail-reply-file-rename');
         if (renameInput) { renameInput.value = ''; renameInput.style.display = 'none'; }
         const zone = document.getElementById('message-detail-replyzone');
