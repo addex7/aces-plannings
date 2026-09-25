@@ -1235,6 +1235,16 @@ function initSuiviDocumentsAeronefs() {
         btn.addEventListener('click', () => ouvrirModaleDocumentsAeronef());
         btnMaintenance.parentNode.insertBefore(btn, btnMaintenance.nextSibling);
     }
+    if (!document.getElementById('btn-bilan-docs-aeronefs')) {
+        const btnBilan = document.createElement('button');
+        btnBilan.id = 'btn-bilan-docs-aeronefs';
+        btnBilan.className = 'btn-secondary aeronef-ctl';
+        btnBilan.textContent = '📋 Bilan';
+        btnBilan.title = 'Bilan documentation de toutes les machines';
+        btnBilan.addEventListener('click', () => { creerModaleBilanDocuments(); ouvrirBilanDocumentsAeronefs(); });
+        const btnDocsExistant = document.getElementById('btn-documents-aeronef');
+        if (btnDocsExistant) btnDocsExistant.parentNode.insertBefore(btnBilan, btnDocsExistant.nextSibling);
+    }
     appliquerAccesMaintenanceEtDocuments();
 
     if (!document.getElementById('documents-aeronef-recap')) {
@@ -1296,8 +1306,9 @@ function creerModaleDocumentsAeronef() {
                     <button type="button" id="doc-aeronef-cancel" class="btn-toggle">Annuler</button>
                 </div>
             </form>
-            <div class="form-actions" style="margin-top:15px;">
+            <div class="form-actions" style="margin-top:15px; display:flex; gap:8px; flex-wrap:wrap;">
                 <button type="button" id="btn-nouveau-doc-aeronef" class="btn-primary">+ Ajouter un document</button>
+                <button type="button" id="btn-bilan-docs-aeronef" class="btn-secondary">📋 Bilan toutes machines</button>
             </div>
         </div>
     `;
@@ -1307,6 +1318,9 @@ function creerModaleDocumentsAeronef() {
     modal.addEventListener('click', (e) => { if (e.target === modal) fermerModaleDocumentsAeronef(); });
     const btnNouveau = document.getElementById('btn-nouveau-doc-aeronef');
     if (btnNouveau) btnNouveau.addEventListener('click', () => ouvrirFormulaireDocumentAeronef(null));
+    const btnBilan = document.getElementById('btn-bilan-docs-aeronef');
+    if (btnBilan) btnBilan.addEventListener('click', ouvrirBilanDocumentsAeronefs);
+    creerModaleBilanDocuments();
     const form = document.getElementById('form-document-aeronef');
     if (form) form.addEventListener('submit', enregistrerDocumentAeronef);
     const btnCancel = document.getElementById('doc-aeronef-cancel');
@@ -1368,6 +1382,128 @@ function fermerModaleDocumentsAeronef() {
     }
     const btnNouveau = document.getElementById('btn-nouveau-doc-aeronef');
     if (btnNouveau) btnNouveau.style.display = 'inline-block';
+}
+
+function creerModaleBilanDocuments() {
+    if (document.getElementById('documents-bilan-modal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'documents-bilan-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 1150px; width: 96%; max-height: 88vh; overflow: auto;">
+            <span class="close-documents-bilan">&times;</span>
+            <h3>Bilan documentation — toutes machines</h3>
+            <div class="bilan-docs-legende">
+                <span><i class="doc-dot doc-ok"></i> Valide</span>
+                <span><i class="doc-dot doc-bientot"></i> Expire sous 3 mois</span>
+                <span><i class="doc-dot doc-perime"></i> Périmé</span>
+                <span><i class="doc-dot doc-absent"></i> Document requis absent</span>
+                <span><i class="doc-dot doc-vide"></i> Non renseigné</span>
+            </div>
+            <div id="documents-bilan-table"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const close = modal.querySelector('.close-documents-bilan');
+    if (close) close.addEventListener('click', fermerBilanDocumentsAeronefs);
+    modal.addEventListener('click', (e) => { if (e.target === modal) fermerBilanDocumentsAeronefs(); });
+}
+
+function fermerBilanDocumentsAeronefs() {
+    const modal = document.getElementById('documents-bilan-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function chargerTousDocumentsAeronefs(forceRefresh = false) {
+    try {
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?pageSize=100`;
+        const res = await cachedFetch(url, { headers }, API_CACHE_TTL, forceRefresh);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur chargement');
+        return data.records || [];
+    } catch (err) {
+        console.warn('Erreur chargement bilan documents:', err);
+        return [];
+    }
+}
+
+function statutDocBilan(records, typeInfo) {
+    const actifs = records.filter(r => r.fields && r.fields['Activé'] !== false);
+    if (!actifs.length) {
+        return typeInfo && typeInfo.dateRequise
+            ? { cls: 'doc-absent', txt: 'Absent' }
+            : { cls: 'doc-vide', txt: '—' };
+    }
+    const avecDate = actifs.filter(r => r.fields['Date de validité'])
+        .sort((a, b) => String(b.fields['Date de validité']).localeCompare(String(a.fields['Date de validité'])));
+    const doc = avecDate[0] || actifs[0];
+    const f = doc.fields || {};
+    const lien = f['Lien'] || '';
+    if (!f['Date de validité']) return { cls: 'doc-ok', txt: 'OK', lien };
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+    const dans3mois = new Date(aujourdhui);
+    dans3mois.setMonth(dans3mois.getMonth() + 3);
+    const validite = new Date(f['Date de validité'] + 'T00:00:00');
+    const dateTxt = validite.toLocaleDateString('fr-FR');
+    if (validite < aujourdhui) return { cls: 'doc-perime', txt: `Périmé ${dateTxt}`, lien };
+    if (validite < dans3mois) return { cls: 'doc-bientot', txt: dateTxt, lien };
+    return { cls: 'doc-ok', txt: dateTxt, lien };
+}
+
+async function ouvrirBilanDocumentsAeronefs() {
+    const modal = document.getElementById('documents-bilan-modal');
+    const cont = document.getElementById('documents-bilan-table');
+    if (!modal || !cont) return;
+    modal.style.display = 'flex';
+    cont.innerHTML = '<p style="color:#64748b;">Chargement…</p>';
+    const records = await chargerTousDocumentsAeronefs(true);
+
+    const parMachine = {};
+    const typesCustom = new Set();
+    records.forEach(r => {
+        const f = r.fields || {};
+        const m = (f['Machine'] || '').trim() || '(Sans machine)';
+        (parMachine[m] = parMachine[m] || []).push(r);
+        const t = f['Type de document'];
+        if (t && !TYPES_DOCUMENTS_AERONEFS.some(x => x.code === t)) typesCustom.add(t);
+    });
+
+    const machines = [];
+    [MACHINES_MOTEURS, IMMATS_PLANEURS, REMOQUES_PLANEURS, MATERIEL_AUTRES].forEach(liste => {
+        if (Array.isArray(liste)) liste.forEach(m => { if (!machines.includes(m)) machines.push(m); });
+    });
+    Object.keys(parMachine).sort().forEach(m => { if (!machines.includes(m)) machines.push(m); });
+
+    const colonnes = [
+        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre'),
+        ...[...typesCustom].sort().map(code => ({ code, nom: code, dateRequise: false }))
+    ];
+
+    const lignes = machines.map(m => {
+        const docs = parMachine[m] || [];
+        const cellules = colonnes.map(col => {
+            const st = statutDocBilan(docs.filter(r => (r.fields['Type de document'] || '') === col.code), col);
+            const inner = st.lien
+                ? `<a href="${st.lien}" target="_blank" rel="noopener">${st.txt}</a>`
+                : st.txt;
+            return `<td class="bilan-cell"><i class="doc-dot ${st.cls}"></i><span class="bilan-txt">${inner}</span></td>`;
+        }).join('');
+        return `<tr><td class="bilan-machine"><button type="button" class="bilan-machine-btn" data-machine="${m}">${m}</button></td>${cellules}</tr>`;
+    }).join('');
+
+    cont.innerHTML = `
+        <table class="bilan-docs-table">
+            <thead><tr><th>Machine</th>${colonnes.map(c => `<th title="${c.nom}">${c.code}</th>`).join('')}</tr></thead>
+            <tbody>${lignes}</tbody>
+        </table>
+    `;
+    cont.querySelectorAll('.bilan-machine-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            fermerBilanDocumentsAeronefs();
+            ouvrirModaleDocumentsAeronef(btn.dataset.machine);
+        });
+    });
 }
 
 async function ouvrirModaleDocumentsAeronef(immatParam) {

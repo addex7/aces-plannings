@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2026-09-25 14:57:57';
+const APP_VERSION = 'v2026-09-25 15:05:08';
 
 document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('app-version');

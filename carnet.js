@@ -1552,6 +1552,13 @@ function initCarnetRoute() {
     if (btnDocs) btnDocs.addEventListener('click', () => {
         if (typeof ouvrirModaleDocumentsAeronef === 'function') ouvrirModaleDocumentsAeronef(machineCarnetSelectionnee);
     });
+    const btnBilanDocs = document.getElementById('btn-bilan-docs-carnet');
+    if (btnBilanDocs) btnBilanDocs.addEventListener('click', () => {
+        if (typeof ouvrirBilanDocumentsAeronefs === 'function') {
+            if (typeof creerModaleBilanDocuments === 'function') creerModaleBilanDocuments();
+            ouvrirBilanDocumentsAeronefs();
+        }
+    });
     if (btnFermer) btnFermer.addEventListener('click', fermerModaleCarnet);
     if (btnCancel) btnCancel.addEventListener('click', fermerModaleCarnet);
     if (btnDelete) btnDelete.addEventListener('click', supprimerCarnetRoute);
