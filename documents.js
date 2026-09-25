@@ -241,6 +241,7 @@ function afficherDocuments(records) {
                 </div>
             `;
         }).join('');
+        html = `<div class="docs-grid">${html}</div><div class="docs-grid">`;
         html += `
             <details style="margin-bottom:4px;">
                 <summary style="color:#1e3d59; border-bottom:1px solid #e2e8f0; padding:7px 4px; margin-bottom:4px; cursor:pointer; font-size:1em; font-weight:bold;">${machine}</summary>
@@ -250,7 +251,7 @@ function afficherDocuments(records) {
             </details>
         `;
     });
-    list.innerHTML = html;
+    list.innerHTML = html + '</div>';
 }
 
 function creerCarteDocument(rec) {
