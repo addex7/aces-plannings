@@ -1397,8 +1397,7 @@ function creerModaleBilanDocuments() {
                 <span><i class="doc-dot doc-ok"></i> Valide</span>
                 <span><i class="doc-dot doc-bientot"></i> Expire sous 3 mois</span>
                 <span><i class="doc-dot doc-perime"></i> Périmé</span>
-                <span><i class="doc-dot doc-absent"></i> Document requis absent</span>
-                <span><i class="doc-dot doc-vide"></i> Non renseigné</span>
+                <span><i class="doc-dot doc-vide"></i> Cellule vide = non renseigné</span>
             </div>
             <div id="documents-bilan-table"></div>
         </div>
@@ -1429,11 +1428,7 @@ async function chargerTousDocumentsAeronefs(forceRefresh = false) {
 
 function statutDocBilan(records, typeInfo) {
     const actifs = records.filter(r => r.fields && r.fields['Activé'] !== false);
-    if (!actifs.length) {
-        return typeInfo && typeInfo.dateRequise
-            ? { cls: 'doc-absent', txt: 'Absent' }
-            : { cls: 'doc-vide', txt: '—' };
-    }
+    if (!actifs.length) return { cls: '', txt: '' };
     const avecDate = actifs.filter(r => r.fields['Date de validité'])
         .sort((a, b) => String(b.fields['Date de validité']).localeCompare(String(a.fields['Date de validité'])));
     const doc = avecDate[0] || actifs[0];
@@ -1497,6 +1492,7 @@ async function ouvrirBilanDocumentsAeronefs() {
         const cellules = colonnes.map(col => {
             if (col.ulmOnly && !MACHINES_ULM.includes(m)) return `<td class="bilan-cell${col.separator ? ' bilan-sep' : ''}"></td>`;
             const st = statutDocBilan(docs.filter(r => (r.fields['Type de document'] || '') === col.code), col);
+            if (!st.txt) return `<td class="bilan-cell${col.separator ? ' bilan-sep' : ''}"></td>`;
             const inner = st.lien
                 ? `<a href="${st.lien}" target="_blank" rel="noopener">${st.txt}</a>`
                 : st.txt;
