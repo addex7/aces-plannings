@@ -1159,16 +1159,9 @@ async function chargerCarnetRoute() {
         if (recapDocs) recapDocs.style.display = 'none';
         if (tbody) tbody.innerHTML = '';
         try {
-            const url = `${API_BASE}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc`;
-            const response = await cachedFetch(url, { headers });
-            const data = await response.json();
-            if (response.ok) {
-                listeVolsCarnetCache = data.records || [];
-                afficherAlarmeObservation(listeVolsCarnetCache);
-            } else {
-                if (alarme) alarme.style.display = 'none';
-                console.error(data);
-            }
+            const url = `${API_BASE}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc&pageSize=100`;
+            listeVolsCarnetCache = await fetchTousRecords(url, { headers });
+            afficherAlarmeObservation(listeVolsCarnetCache);
         } catch (error) {
             console.error(error);
             if (alarme) alarme.style.display = 'none';
@@ -1190,29 +1183,22 @@ async function chargerCarnetRoute() {
     if (thead) thead.innerHTML = genererHeaderCarnet(isJVIO);
     if (tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" class="carnet-empty">Chargement du carnet de route...</td></tr>`;
     try {
-        const url = `${API_BASE}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc`;
-        const response = await cachedFetch(url, { headers });
-        const data = await response.json();
-        if (response.ok) {
-            listeVolsCarnetCache = data.records || [];
-            await nettoyerCarnetRouteMaintenance(machineCarnetSelectionnee);
-            const volsMachine = listeVolsCarnetCache.filter(r => {
-                const f = r.fields || {};
-                return !machineCarnetSelectionnee || f['Machine'] === machineCarnetSelectionnee;
-            }).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
-            if (isJVIO) {
-                carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / LIGNES_PAR_PAGE_JVIO));
-            }
-            afficherCarnet(volsMachine);
-            afficherAlarmeObservation(volsMachine);
-            await synchroniserHorametreAeronef(machineCarnetSelectionnee, volsMachine);
-            if (typeof chargerDocumentsAeronef === 'function' && typeof afficherRecapDocumentsAeronef === 'function') {
-                await chargerDocumentsAeronef(machineCarnetSelectionnee);
-                afficherRecapDocumentsAeronef(machineCarnetSelectionnee, 'documents-carnet-list', 'documents-carnet-recap');
-            }
-        } else {
-            console.error(data);
-            if (tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" class="carnet-empty">Erreur lors du chargement du carnet.</td></tr>`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc&pageSize=100`;
+        listeVolsCarnetCache = await fetchTousRecords(url, { headers });
+        await nettoyerCarnetRouteMaintenance(machineCarnetSelectionnee);
+        const volsMachine = listeVolsCarnetCache.filter(r => {
+            const f = r.fields || {};
+            return !machineCarnetSelectionnee || f['Machine'] === machineCarnetSelectionnee;
+        }).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
+        if (isJVIO) {
+            carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / LIGNES_PAR_PAGE_JVIO));
+        }
+        afficherCarnet(volsMachine);
+        afficherAlarmeObservation(volsMachine);
+        await synchroniserHorametreAeronef(machineCarnetSelectionnee, volsMachine);
+        if (typeof chargerDocumentsAeronef === 'function' && typeof afficherRecapDocumentsAeronef === 'function') {
+            await chargerDocumentsAeronef(machineCarnetSelectionnee);
+            afficherRecapDocumentsAeronef(machineCarnetSelectionnee, 'documents-carnet-list', 'documents-carnet-recap');
         }
     } catch (error) {
         console.error(error);

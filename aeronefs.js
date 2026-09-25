@@ -392,18 +392,16 @@ async function chargerSuiviAeronef() {
     tbody.innerHTML = "<tr><td colspan='2' style='padding:15px;'>Chargement des données...</td></tr>";
 
     try {
-        const [resMachines, resReservations, resCarnet, resPilotes] = await Promise.all([
+        const [resMachines, resReservations, resPilotes, carnetsPilotes] = await Promise.all([
             apiFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers }),
             apiFetch(`${API_BASE}/${encodeURIComponent('Réservations')}`, { headers }),
-            apiFetch(`${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}`, { headers }),
-            apiFetch(`${API_BASE}/${encodeURIComponent('Utilisateurs')}`, { headers })
+            apiFetch(`${API_BASE}/${encodeURIComponent('Utilisateurs')}`, { headers }),
+            fetchTousRecords(`${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}?pageSize=100`, { headers })
         ]);
 
         const dataMachines = await resMachines.json();
         const dataReservations = await resReservations.json();
-        const dataCarnet = await resCarnet.json();
         const dataPilotes = await resPilotes.json();
-        const carnetsPilotes = dataCarnet.records || [];
         const piloteMap = (dataPilotes.records || []).reduce((acc, p) => {
             const nom = `${p.fields['Prénom'] || ''} ${p.fields['Nom'] || ''}`.trim();
             if (p.id) acc[p.id] = nom;

@@ -286,6 +286,23 @@ function apiFetch(url, options = {}, maxEssais = 3) {
     return promesse;
 }
 
+// Recupere toutes les pages d'une requete GET (l'API pagine a 100 records max).
+async function fetchTousRecords(url, options = {}) {
+    const tous = [];
+    let offset = null;
+    let garde = 0;
+    do {
+        const sep = url.includes('?') ? '&' : '?';
+        const full = offset ? `${url}${sep}offset=${encodeURIComponent(offset)}` : url;
+        const res = await apiFetch(full, options);
+        const data = await res.json();
+        if (!res.ok) throw new Error((data.error && data.error.message) || 'Erreur chargement');
+        tous.push(...(data.records || []));
+        offset = data.offset || null;
+    } while (offset && ++garde < 50);
+    return tous;
+}
+
 function viderApiCache() {
     Object.keys(API_CACHE).forEach(k => delete API_CACHE[k]);
 }
