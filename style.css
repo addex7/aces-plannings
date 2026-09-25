@@ -4501,6 +4501,9 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #e2e8f0;
     text-decoration: underline;
 }
+.bilan-docs-table .bilan-sep {
+    border-left: 3px solid #1e3d59;
+}
 .close-documents-bilan,
 .close-documents-aeronef,
 .close-bilan-membres {

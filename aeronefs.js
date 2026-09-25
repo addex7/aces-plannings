@@ -1479,10 +1479,15 @@ async function ouvrirBilanDocumentsAeronefs() {
         if (!machines.includes(m) && !machinesExclues.includes(m)) machines.push(m);
     });
 
-    const colonnes = [
-        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre' && t.code !== 'Accusé'),
+    const codesPrioritaires = ['CEN', 'Assurance', 'Accusé', 'Carte Total'];
+    const tousTypes = [
+        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre'),
         ...[...typesCustom].sort().map(code => ({ code, nom: code, dateRequise: false }))
     ];
+    const colonnes = codesPrioritaires.map(code =>
+        ({ ...(tousTypes.find(x => x.code === code) || { code, nom: code, dateRequise: true }), prioritaire: true })
+    ).concat(tousTypes.filter(t => !codesPrioritaires.includes(t.code))
+        .map((t, i) => ({ ...t, separator: i === 0 })));
 
     const lignes = machines.map(m => {
         const docs = parMachine[m] || [];
@@ -1491,14 +1496,14 @@ async function ouvrirBilanDocumentsAeronefs() {
             const inner = st.lien
                 ? `<a href="${st.lien}" target="_blank" rel="noopener">${st.txt}</a>`
                 : st.txt;
-            return `<td class="bilan-cell"><i class="doc-dot ${st.cls}"></i><span class="bilan-txt">${inner}</span></td>`;
+            return `<td class="bilan-cell${col.separator ? ' bilan-sep' : ''}"><i class="doc-dot ${st.cls}"></i><span class="bilan-txt">${inner}</span></td>`;
         }).join('');
         return `<tr><td class="bilan-machine"><button type="button" class="bilan-machine-btn" data-machine="${m}">${m}</button></td>${cellules}</tr>`;
     }).join('');
 
     cont.innerHTML = `
         <table class="bilan-docs-table">
-            <thead><tr><th>Machine</th>${colonnes.map(c => `<th title="${c.nom}">${c.code}</th>`).join('')}</tr></thead>
+            <thead><tr><th>Machine</th>${colonnes.map(c => `<th title="${c.nom}"${c.separator ? ' class="bilan-sep"' : ''}${c.prioritaire ? ' style="background:#2d5a7b;"' : ''}>${c.code}</th>`).join('')}</tr></thead>
             <tbody>${lignes}</tbody>
         </table>
     `;
