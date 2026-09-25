@@ -244,7 +244,10 @@ function remplirFormulaireCarnet(f) {
     document.getElementById('carnet-heure-depart').value = f['Heure départ'] || '';
     document.getElementById('carnet-heure-arrivee').value = f['Heure arrivée'] || '';
     const nature = document.getElementById('carnet-nature');
-    if (nature) nature.value = f['Nature'] || (machine === 'F-JVIO' ? 'local' : 'Autre');
+    if (nature) {
+        nature.value = f['Nature'] || (machine === 'F-JVIO' ? 'local' : 'Autre');
+        if (!nature.value && nature.options.length) nature.value = nature.options[0].value;
+    }
     if (machine !== 'F-JVIO') {
         const cbDep = parseCarburant(f['Carburant départ']);
         const cbArr = parseCarburant(f['Carburant arrivée']);
@@ -536,7 +539,7 @@ async function mettreAJourPrixDuVol() {
 function mettreAJourStyleChampsAuto(machine) {
     const heureArrivee = document.getElementById('carnet-heure-arrivee');
     const horametreDepart = document.getElementById('carnet-horametre-depart');
-    const isMoteur = machine && !MACHINES_PLANEUR_REMOQUE.includes(machine);
+    const isMoteur = machine && machine !== 'F-BLIO' && !MACHINES_PLANEUR_REMOQUE.includes(machine);
     if (heureArrivee) {
         heureArrivee.classList.toggle('carnet-champ-auto', isMoteur);
     }
@@ -551,7 +554,7 @@ function mettreAJourHeureArrivee() {
     const hDep = document.getElementById('carnet-horametre-depart').value;
     const hArr = document.getElementById('carnet-horametre-arrivee').value;
     const input = document.getElementById('carnet-heure-arrivee');
-    if (!input || !machine || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
+    if (!input || !machine || machine === 'F-BLIO' || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
     const minutes = dureeHorametreMinutes(machine, hDep, hArr);
     if (minutes === null || !heureDepart) return;
     const arr = ajouterMinutes(heureDepart, minutes);
@@ -576,7 +579,7 @@ function suggererNatureParTrajet() {
         const vi = document.querySelector('input[name="carnet-nature-extra"][value="Vol d\'initiation"]');
         if (vi && vi.checked) return;
         const base = document.querySelector('input[name="carnet-nature-base"]:checked');
-        if (base && base.value === 'Navigation') return;
+        if (base && (base.value === 'Navigation' || base.value === 'Remorquage')) return;
         const nav = document.querySelector('input[name="carnet-nature-base"][value="Navigation"]');
         if (nav) {
             nav.checked = true;
@@ -714,12 +717,13 @@ const CARNET_MOTEUR_FONCTIONS = [
 
 const CARNET_JVIO_NATURES = ['local', 'voyage', 'REV', 'Instruction', 'VLD', 'Activité Particulière'];
 const CARNET_STD_NATURES = ['Autre', 'Instruction', 'Examen'];
-const CARNET_STD_NATURES_BASE = ['Local', 'Navigation'];
+const CARNET_STD_NATURES_BASE = ['Local', 'Navigation', 'Remorquage'];
 const CARNET_STD_NATURES_EXTRA = ['VFR Nuit', "Vol d'initiation"];
 const CARNET_STD_NATURES_QUAL = ['Instruction', 'Examen'];
 const EMOJIS_NATURE_STD = {
     'Local': '🏠',
     'Navigation': '🗺️',
+    'Remorquage': '🪝',
     'VFR Nuit': '🌙',
     "Vol d'initiation": '🎁',
     'Autre': '📝',
@@ -894,6 +898,13 @@ function adapterFormulaireCarnet(machine) {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
+    }
+
+    if (isBLIO) {
+        const cbP = fonctionGroup ? fonctionGroup.querySelector('input[name="carnet-fonction"][value="P"]') : null;
+        if (cbP) cbP.checked = true;
+        const rem = document.querySelector('input[name="carnet-nature-base"][value="Remorquage"]');
+        if (rem) rem.checked = true;
     }
 }
 
@@ -1250,7 +1261,7 @@ async function soumettreCarnetRoute(event) {
     const arrivee = document.getElementById('carnet-arrivee').value.trim();
     const heureDepart = document.getElementById('carnet-heure-depart').value;
     const heureArrivee = document.getElementById('carnet-heure-arrivee').value;
-    const nature = document.getElementById('carnet-nature').value;
+    let nature = document.getElementById('carnet-nature').value;
     let carburantDepart = document.getElementById('carnet-carburant-depart').value;
     let carburantArrivee = document.getElementById('carnet-carburant-arrivee').value;
     const pcDepart = document.getElementById('carnet-pc-depart')?.checked;
@@ -1267,6 +1278,8 @@ async function soumettreCarnetRoute(event) {
         precisionActivite = document.getElementById('carnet-activite-detail').value.trim() || '';
     } else if (MACHINES_MOTEURS.includes(machine) && machine !== 'F-JVIO') {
         precisionActivite = detailNatureStd();
+        const baseRemorquage = document.querySelector('input[name="carnet-nature-base"][value="Remorquage"]:checked');
+        if (baseRemorquage) nature = `${decAt} Rem`;
     }
     const prixVolText = (document.getElementById('carnet-prix-vol') || { value: '' }).value;
 
