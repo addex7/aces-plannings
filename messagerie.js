@@ -60,7 +60,7 @@ function formaterDateMessage(dateStr) {
 function aPieceJointe(pieceVal) {
     if (Array.isArray(pieceVal) && pieceVal.length) return true;
     if (typeof pieceVal === 'string' && pieceVal.trim()) {
-        if (pieceVal.startsWith('http')) return true;
+        if (pieceVal.startsWith('http') || pieceVal.startsWith('/')) return true;
         try {
             const pj = JSON.parse(pieceVal);
             if (pj && pj.data && pj.filename) return true;
@@ -75,8 +75,9 @@ function renderPieceJointe(pieceVal) {
           pieceVal.map(p => `<a href="${escHtml(p.url)}" target="_blank">${escHtml(p.filename || p.url)}</a>`).join('<br>') +
           `</div>`;
     } else if (typeof pieceVal === 'string' && pieceVal.trim()) {
-        if (pieceVal.startsWith('http')) {
-            return `<div class="message-attachments"><a href="${escHtml(pieceVal)}" target="_blank">📎 Ouvrir la pièce jointe</a></div>`;
+        if (pieceVal.startsWith('http') || pieceVal.startsWith('/')) {
+            const nom = pieceVal.split('/').pop();
+            return `<div class="message-attachments"><a href="${escHtml(pieceVal)}" target="_blank">📎 ${escHtml(nom)}</a></div>`;
         } else {
             try {
                 const pj = JSON.parse(pieceVal);
@@ -134,6 +135,13 @@ function initMessagerie() {
         const zone = document.getElementById('message-detail-replyzone');
         if (zone) zone.style.display = 'none';
     });
+    const replyFile = document.getElementById('message-detail-reply-file');
+    if (replyFile) {
+        replyFile.addEventListener('change', () => {
+            const name = document.getElementById('message-detail-reply-file-name');
+            if (name) name.textContent = replyFile.files[0]?.name || '';
+        });
+    }
     const messagesList = document.getElementById('messages-list');
     if (messagesList) {
         messagesList.addEventListener('click', (e) => {
@@ -684,8 +692,12 @@ function ouvrirDetailThread(thread) {
     const replyBtn = document.getElementById('message-detail-reply');
     const replyZone = document.getElementById('message-detail-replyzone');
     const replyText = document.getElementById('message-detail-reply-text');
+    const replyFile = document.getElementById('message-detail-reply-file');
+    const replyFileName = document.getElementById('message-detail-reply-file-name');
     if (replyZone) replyZone.style.display = 'none';
     if (replyText) replyText.value = '';
+    if (replyFile) replyFile.value = '';
+    if (replyFileName) replyFileName.textContent = '';
 
     if (subject) subject.textContent = thread.subject;
     if (sender) sender.innerHTML = `<strong>De :</strong> ${escHtml(fp[FIELDS_MESSAGE.EXPEDITEUR] || 'Inconnu')}`;
@@ -802,17 +814,27 @@ async function envoyerReponseDetail() {
     const sendBtn = document.getElementById('message-detail-reply-send');
     if (sendBtn) sendBtn.disabled = true;
     try {
+        let pieceJointe = null;
+        const fileInput = document.getElementById('message-detail-reply-file');
+        const file = fileInput && fileInput.files[0];
+        if (file) {
+            const uploader = typeof uploaderFichierDocument === 'function' ? uploaderFichierDocument : null;
+            if (!uploader) throw new Error('Uploader non disponible');
+            pieceJointe = await uploader(file);
+        }
+        const fields = {
+            [FIELDS_MESSAGE.DATE]: new Date().toISOString().slice(0, 10),
+            [FIELDS_MESSAGE.EXPEDITEUR]: expediteur,
+            [FIELDS_MESSAGE.DESTINATAIRE]: dests.join('; '),
+            [FIELDS_MESSAGE.OBJET]: objet,
+            [FIELDS_MESSAGE.CORPS]: corps,
+            [FIELDS_MESSAGE.LU]: false
+        };
+        if (pieceJointe !== null) fields[FIELDS_MESSAGE.PIECE] = pieceJointe;
         const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ records: [{ fields: {
-                [FIELDS_MESSAGE.DATE]: new Date().toISOString().slice(0, 10),
-                [FIELDS_MESSAGE.EXPEDITEUR]: expediteur,
-                [FIELDS_MESSAGE.DESTINATAIRE]: dests.join('; '),
-                [FIELDS_MESSAGE.OBJET]: objet,
-                [FIELDS_MESSAGE.CORPS]: corps,
-                [FIELDS_MESSAGE.LU]: false
-            } }] })
+            body: JSON.stringify({ records: [{ fields }] })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur envoi');
@@ -820,6 +842,9 @@ async function envoyerReponseDetail() {
         if (record) messagesCache.push(record);
         if (typeof viderApiCache === 'function') viderApiCache();
         if (text) text.value = '';
+        if (fileInput) fileInput.value = '';
+        const fileName = document.getElementById('message-detail-reply-file-name');
+        if (fileName) fileName.textContent = '';
         const zone = document.getElementById('message-detail-replyzone');
         if (zone) zone.style.display = 'none';
         const nvThread = trouverThreadParMessageId(record ? record.id : thread.lastMessage.id) || thread;

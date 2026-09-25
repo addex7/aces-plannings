@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=192">
+    <link rel="stylesheet" href="style.css?v=193">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -816,7 +816,11 @@
                                 <label style="font-size:13px; font-weight:600; color:#334155;">Destinataires</label>
                                 <div id="message-detail-reply-dests" class="message-reply-dests"></div>
                             </div>
-                            <textarea id="message-detail-reply-text" class="form-control" rows="4" placeholder="Votre réponse..."></textarea>
+                            <textarea id="message-detail-reply-text" class="form-control" rows="6" placeholder="Votre réponse..."></textarea>
+                            <div class="message-reply-file">
+                                <input type="file" id="message-detail-reply-file">
+                                <span id="message-detail-reply-file-name" style="font-size:12px; color:#64748b;"></span>
+                            </div>
                             <div class="message-replyzone-actions">
                                 <button type="button" id="message-detail-reply-send" class="btn-submit">Envoyer</button>
                                 <button type="button" id="message-detail-reply-cancel" class="btn-secondary">Annuler</button>
@@ -1468,7 +1472,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=92"></script>
-    <script src="version.js?v=20260925135519"></script>
+    <script src="version.js?v=20260925135857"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=107"></script>
     <script src="presences.js?v=101"></script>
@@ -1483,7 +1487,7 @@
     <script src="membres.js?v=105"></script>
     <script src="instructeurs.js?v=107"></script>
     <script src="instructeur-planning.js?v=192"></script>
-    <script src="messagerie.js?v=22"></script>
+    <script src="messagerie.js?v=23"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>
     <!-- Modal Inscrire quelqu'un d'autre -->

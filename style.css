@@ -4029,31 +4029,57 @@ img, table, video, iframe, svg {
     border-top: 1px solid #e2e8f0;
 }
 .message-reply-dests {
-    max-height: 150px;
+    max-height: 120px;
     overflow-y: auto;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
     padding: 6px;
     background: #f8fafc;
     margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 .message-reply-dest {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 5px 6px;
-    font-size: 13px;
+    gap: 6px;
+    padding: 3px 10px;
+    font-size: 12px;
     color: #334155;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: 14px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    white-space: nowrap;
 }
-.message-reply-dest-alt {
-    background: #f1f5f9;
+.message-reply-dest:has(input:checked) {
+    background: #dbeafe;
+    border-color: #2563eb;
+    color: #1e3d59;
+    font-weight: 600;
 }
 .message-reply-dest input {
     width: auto;
     margin: 0;
     accent-color: #1e3d59;
+}
+#message-detail-reply-text {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 140px;
+    resize: vertical;
+}
+.message-reply-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 13px;
+}
+.message-reply-file input {
+    font-size: 13px;
 }
 .message-replyzone-actions {
     display: flex;
