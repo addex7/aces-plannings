@@ -988,6 +988,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (f['Date']) document.getElementById('decal-date').value = f['Date'];
         modalDecalage.style.display = 'flex';
     });
+    document.getElementById('decal-debut').addEventListener('input', (e) => {
+        const v = e.target.value;
+        if (!v) return;
+        const [h, m] = v.split(':').map(Number);
+        const fin = new Date(2000, 0, 1, h, m + 45);
+        document.getElementById('decal-fin').value =
+            String(fin.getHours()).padStart(2, '0') + ':' + String(fin.getMinutes()).padStart(2, '0');
+    });
     document.getElementById('btn-decal-annuler').addEventListener('click', () => modalDecalage.style.display = 'none');
     document.querySelector('.close-modal-decalage').addEventListener('click', () => modalDecalage.style.display = 'none');
     window.addEventListener('click', (e) => { if (e.target === modalDecalage) modalDecalage.style.display = 'none'; });
