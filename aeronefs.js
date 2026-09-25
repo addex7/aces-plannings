@@ -1479,20 +1479,23 @@ async function ouvrirBilanDocumentsAeronefs() {
         if (!machines.includes(m) && !machinesExclues.includes(m)) machines.push(m);
     });
 
-    const codesPrioritaires = ['CEN', 'Assurance', 'Accusé', 'Carte Total'];
-    const LIBELLES_COLONNES = { 'Accusé': 'Décl. ULM' };
+    const TYPE_DECL_ULM = "Déclaration d'aptitude au vol d'un ULM";
+    const MACHINES_ULM = ['F-JVIO'];
+    const codesPrioritaires = ['CEN', 'Assurance', TYPE_DECL_ULM, 'Carte Total'];
+    const LIBELLES_COLONNES = { [TYPE_DECL_ULM]: 'Décl. ULM' };
     const tousTypes = [
-        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre'),
+        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre' && t.code !== 'Accusé'),
         ...[...typesCustom].sort().map(code => ({ code, nom: code, dateRequise: false }))
     ];
     const colonnes = codesPrioritaires.map(code =>
-        ({ ...(tousTypes.find(x => x.code === code) || { code, nom: code, dateRequise: true }), prioritaire: true })
+        ({ ...(tousTypes.find(x => x.code === code) || { code, nom: code }), dateRequise: true, prioritaire: true, ulmOnly: code === TYPE_DECL_ULM })
     ).concat(tousTypes.filter(t => !codesPrioritaires.includes(t.code))
         .map((t, i) => ({ ...t, separator: i === 0 })));
 
     const lignes = machines.map(m => {
         const docs = parMachine[m] || [];
         const cellules = colonnes.map(col => {
+            if (col.ulmOnly && !MACHINES_ULM.includes(m)) return `<td class="bilan-cell${col.separator ? ' bilan-sep' : ''}"></td>`;
             const st = statutDocBilan(docs.filter(r => (r.fields['Type de document'] || '') === col.code), col);
             const inner = st.lien
                 ? `<a href="${st.lien}" target="_blank" rel="noopener">${st.txt}</a>`
