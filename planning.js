@@ -4385,3 +4385,24 @@ async function creerCreneauxVI(e) {
 
 setInterval(actualiserLigneHeureCourante, 60000);
 actualiserLigneHeureCourante();
+
+// Rafraichissement auto des donnees quand on revient sur l'onglet
+// (ex. retour de reserver-vi.html apres un decalage de VI).
+let dernierRefreshRetour = 0;
+function rafraichirDonneesAuRetour() {
+    const maintenant = Date.now();
+    if (maintenant - dernierRefreshRetour < 3000) return;
+    dernierRefreshRetour = maintenant;
+    Object.keys(API_CACHE).forEach(k => delete API_CACHE[k]);
+    if (typeof chargerVolsInitiation === 'function') chargerVolsInitiation();
+    if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false, true);
+    if (typeof chargerPresencesPlaneur === 'function') chargerPresencesPlaneur();
+    if (typeof chargerPresencesClub === 'function') chargerPresencesClub();
+    if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
+}
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') rafraichirDonneesAuRetour();
+});
+window.addEventListener('pageshow', (e) => {
+    if (e.persisted) rafraichirDonneesAuRetour();
+});
