@@ -4,8 +4,6 @@
 
 const TABLE_DOCUMENTS = 'Documents';
 const TABLE_DOSSIERS = 'Dossiers';
-const UPLOADCARE_PUBLIC_KEY = '6877913652d895abcd04';
-const UPLOADCARE_CDN_BASE = 'https://2y553dp2sx.ucarecd.net/';
 let documentsCache = [];
 let dossiersCache = [];
 let documentsAeronefsBibliothequeCache = {};
@@ -272,21 +270,17 @@ function creerCarteDocument(rec) {
 }
 
 async function uploaderFichierDocument(file) {
-    const url = 'https://upload.uploadcare.com/base/';
+    const uploadBase = API_BASE.slice(0, API_BASE.lastIndexOf('/'));
     const formData = new FormData();
-    formData.append('UPLOADCARE_PUB_KEY', UPLOADCARE_PUBLIC_KEY);
-    formData.append('store', '1');
     formData.append('file', file);
-    const res = await fetch(url, { method: 'POST', body: formData });
-    const text = await res.text();
-    if (!res.ok) throw new Error(text || 'Erreur Uploadcare');
-    let uuid = text.trim().replace(/"/g, '');
-    if (uuid.startsWith('{')) {
-        const data = JSON.parse(text);
-        uuid = data.file || data.uuid;
-    }
-    if (!uuid) throw new Error('Réponse Uploadcare inattendue');
-    return `${UPLOADCARE_CDN_BASE}${uuid}/`;
+    const res = await fetch(`${uploadBase}/upload`, {
+        method: 'POST',
+        headers: { Authorization: headers.Authorization },
+        body: formData
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.url) throw new Error((data.error && data.error.message) || `Erreur upload (${res.status})`);
+    return data.url;
 }
 
 function ouvrirFormDocument(id = null) {

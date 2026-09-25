@@ -18,6 +18,10 @@ const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const { formulaToSql } = require('./formula');
 
 const PORT = process.env.PORT || 3000;
@@ -391,6 +395,32 @@ function formatRecord(row) {
         fields: row.fields || {}
     };
 }
+
+// --- UPLOAD DE FICHIERS (stockage local, servi par nginx sous /uploads/) ---
+const UPLOAD_DIR = process.env.UPLOAD_DIR || '/uploads';
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const EXT_AUTORISEES = new Set(['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.txt', '.csv', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', '.ods', '.zip']);
+const uploadFichier = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+        filename: (req, file, cb) => {
+            const ext = path.extname(file.originalname || '').toLowerCase();
+            cb(null, `doc-${Date.now().toString(36)}-${crypto.randomBytes(8).toString('hex')}${EXT_AUTORISEES.has(ext) ? ext : '.bin'}`);
+        }
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 }
+});
+
+app.post('/v0/upload', (req, res) => {
+    uploadFichier.single('file')(req, res, (err) => {
+        if (err) {
+            const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Fichier trop volumineux (10 Mo max)' : (err.message || 'Erreur upload');
+            return erreur(res, 400, msg);
+        }
+        if (!req.file) return erreur(res, 400, 'Aucun fichier recu');
+        res.json({ url: `/uploads/${req.file.filename}` });
+    });
+});
 
 // --- LISTE ---
 app.get('/v0/:base/:table', async (req, res) => {
