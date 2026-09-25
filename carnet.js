@@ -947,6 +947,28 @@ function afficherCarnet(records) {
         return { record, f, temps, dateStr };
     });
 
+    // Détection des ruptures de continuité horamètre (en ordre chronologique)
+    const idsEcartHorametre = new Set();
+    if (!isJVIO) {
+        const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? null : n; };
+        const chrono = [...recordsData].sort((a, b) => {
+            const da = a.f['Date'] || '', db = b.f['Date'] || '';
+            if (da !== db) return da < db ? -1 : 1;
+            const ha = a.f['Heure départ'] || '', hb = b.f['Heure départ'] || '';
+            if (ha !== hb) return ha < hb ? -1 : 1;
+            return (num(a.f['Horamètre départ']) || 0) - (num(b.f['Horamètre départ']) || 0);
+        });
+        for (let i = 1; i < chrono.length; i++) {
+            const prevArr = num(chrono[i - 1].f['Horamètre arrivée']);
+            const curDep = num(chrono[i].f['Horamètre départ']);
+            if (prevArr === null || curDep === null) continue;
+            if (Math.abs(prevArr - curDep) > 0.005) {
+                idsEcartHorametre.add(chrono[i - 1].record.id);
+                idsEcartHorametre.add(chrono[i].record.id);
+            }
+        }
+    }
+
     let pageRecords = recordsData;
     let totalPages = 1;
     let totalCumuleMinutes = 0;
@@ -999,7 +1021,7 @@ function afficherCarnet(records) {
                 <td>${afficherHuile(f['Huile départ'])}</td>
                 <td>${afficherHuile(f['Huile arrivée'])}</td>
                 <td>${(f['Observations'] || '').trim() || '-'}</td>
-                <td>${horametre}</td>
+                <td${idsEcartHorametre.has(record.id) ? ' class="horametre-ecart"' : ''}>${horametre}</td>
             `;
         }
         tr.addEventListener('click', () => ouvrirModaleCarnet(record.id));
@@ -1189,7 +1211,17 @@ async function chargerCarnetRoute() {
         const volsMachine = listeVolsCarnetCache.filter(r => {
             const f = r.fields || {};
             return !machineCarnetSelectionnee || f['Machine'] === machineCarnetSelectionnee;
-        }).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
+        }).sort((a, b) => {
+            const fa = a.fields || {}, fb = b.fields || {};
+            if (isJVIO) return new Date(fa['Date']) - new Date(fb['Date']);
+            const da = fa['Date'] || '', db = fb['Date'] || '';
+            if (da !== db) return da < db ? 1 : -1;
+            const ha = fa['Heure départ'] || '', hb = fb['Heure départ'] || '';
+            if (ha !== hb) return ha < hb ? 1 : -1;
+            const xa = parseFloat(String(fa['Horamètre arrivée'] || '').replace(',', '.')) || 0;
+            const xb = parseFloat(String(fb['Horamètre arrivée'] || '').replace(',', '.')) || 0;
+            return xb - xa;
+        });
         if (isJVIO) {
             carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / LIGNES_PAR_PAGE_JVIO));
         }

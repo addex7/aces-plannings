@@ -4506,3 +4506,9 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .close-bilan-membres {
     cursor: pointer;
 }
+
+/* Ecart de continuite horametre dans le carnet de route */
+.carnet-table td.horametre-ecart {
+    color: #dc2626;
+    font-weight: 700;
+}
