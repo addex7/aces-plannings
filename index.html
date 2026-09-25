@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=189">
+    <link rel="stylesheet" href="style.css?v=190">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -776,13 +776,21 @@
                     <div style="font-size:48px; animation:spin 1s linear infinite;">⏳</div>
                     <p style="margin-top:16px; color:#1e3d59; font-weight:600;">Envoi en cours...</p>
                 </div>
+                <div class="messages-tabs">
+                    <button type="button" id="tab-messagerie-recus" class="messages-tab messages-tab-active">📥 Boîte de réception</button>
+                    <button type="button" id="tab-messagerie-archives" class="messages-tab">🗄 Messages archivés</button>
+                </div>
+                <div id="messages-archive-notice" class="messages-archive-notice" style="display:none;">
+                    📦 Les messages archivés sont conservés ici pendant 30 jours, puis supprimés automatiquement.
+                </div>
                 <div id="messages-toolbar" class="messages-toolbar">
-                    <span id="messages-selection-info" class="messages-selection-info"></span>
-                    <label class="messages-selectall-label" title="Tout sélectionner / désélectionner">
+                    <label class="messages-selectall-label" id="messages-selectall-wrap" title="Tout sélectionner / désélectionner">
                         <input type="checkbox" id="messages-select-all">
                         <span>Tout</span>
                     </label>
                     <button type="button" id="btn-refresh-messages" class="btn-secondary messages-refresh-btn" title="Actualiser la messagerie">↻ Actualiser</button>
+                    <button type="button" id="btn-delete-messages" class="btn-secondary messages-delete-btn" style="display:none;" title="Archiver les messages sélectionnés">🗑 Supprimer</button>
+                    <span id="messages-selection-info" class="messages-selection-info"></span>
                 </div>
                 <div id="messages-list" style="background:white; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); overflow:hidden;">
                     <p class="carnet-empty">Cliquez sur l'onglet pour charger vos messages.</p>
@@ -1431,11 +1439,11 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=92"></script>
-    <script src="version.js?v=20260925122343"></script>
+    <script src="version.js?v=20260925123518"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=107"></script>
     <script src="presences.js?v=101"></script>
-    <script src="planning.js?v=196"></script>
+    <script src="planning.js?v=197"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=110"></script>
     <script src="aeronefs.js?v=116"></script>
@@ -1446,7 +1454,7 @@
     <script src="membres.js?v=105"></script>
     <script src="instructeurs.js?v=107"></script>
     <script src="instructeur-planning.js?v=192"></script>
-    <script src="messagerie.js?v=19"></script>
+    <script src="messagerie.js?v=20"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>
     <!-- Fenêtre Modale : Lecture d'un message -->

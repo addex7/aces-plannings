@@ -12,11 +12,38 @@ const FIELDS_MESSAGE = {
     CORPS: 'Corps',
     PIECE: 'Pièce jointe',
     LU: 'Lu',
-    FAVORIS: 'Favoris'
+    FAVORIS: 'Favoris',
+    ARCHIVES: 'Archivés'
 };
+
+const DUREE_ARCHIVES_JOURS = 30;
 
 function nomsFavoris(val) {
     return (val || '').toString().split(';').map(s => s.trim()).filter(Boolean);
+}
+
+// Champ "Archivés" : liste "Nom|AAAA-MM-JJ; Nom|AAAA-MM-JJ" (archive par utilisateur)
+function parseArchives(val) {
+    return (val || '').toString().split(';').map(s => s.trim()).filter(Boolean).map(e => {
+        const i = e.lastIndexOf('|');
+        return i === -1 ? { nom: e, date: '' } : { nom: e.slice(0, i).trim(), date: e.slice(i + 1).trim() };
+    }).filter(e => e.nom);
+}
+
+function serialiserArchives(entries) {
+    return entries.map(e => `${e.nom}|${e.date}`).join('; ');
+}
+
+function entreeArchiveMoi(fields) {
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    return parseArchives(fields[FIELDS_MESSAGE.ARCHIVES]).find(e => e.nom === current) || null;
+}
+
+function archiveExpiree(entry) {
+    if (!entry || !entry.date) return false;
+    const d = new Date(entry.date + 'T00:00:00');
+    if (isNaN(d)) return false;
+    return (Date.now() - d.getTime()) > DUREE_ARCHIVES_JOURS * 86400000;
 }
 
 function threadKey(objet) {
@@ -66,6 +93,8 @@ let messagesCache = [];
 let utilisateursMessagerieCache = [];
 let destinatairesSelectionnes = [];
 let threadsSelectionnes = new Set();
+let ongletMessagerie = 'recus';
+let dernierRenduSignature = '';
 
 function nomCompletCourant() {
     if (typeof currentUser === 'undefined' || !currentUser) return '';
@@ -121,10 +150,22 @@ function initMessagerie() {
                 if (thread) basculerFavoriThread(thread);
                 return;
             }
+            const restore = e.target.closest('.message-restore');
+            if (restore) {
+                const thread = grouperParThread(messagesCache).find(t => t.key === restore.dataset.key);
+                if (thread) restaurerThread(thread);
+                return;
+            }
             const item = e.target.closest('.message-item');
             if (item) voirMessage(item.dataset.id);
         });
     }
+    const tabRecus = document.getElementById('tab-messagerie-recus');
+    const tabArchives = document.getElementById('tab-messagerie-archives');
+    if (tabRecus) tabRecus.addEventListener('click', () => changerOngletMessagerie('recus'));
+    if (tabArchives) tabArchives.addEventListener('click', () => changerOngletMessagerie('archives'));
+    const deleteBtn = document.getElementById('btn-delete-messages');
+    if (deleteBtn) deleteBtn.addEventListener('click', archiverThreadsSelectionnes);
     const selectAll = document.getElementById('messages-select-all');
     if (selectAll) {
         selectAll.addEventListener('change', () => {
@@ -235,10 +276,44 @@ async function chargerMessagesAvecOffset(formula) {
     return all;
 }
 
+async function purgerArchivesExpires(records) {
+    const gardes = [];
+    for (const r of records) {
+        const f = r.fields || {};
+        const entries = parseArchives(f[FIELDS_MESSAGE.ARCHIVES]);
+        if (!entries.length) { gardes.push(r); continue; }
+        const dest = (f[FIELDS_MESSAGE.DESTINATAIRE] || '').toString().trim().toLowerCase();
+        const estTous = dest === 'tous' || dest.startsWith('tous;') || dest.includes('; tous');
+        if (estTous) { gardes.push(r); continue; }
+        const frais = entries.filter(e => !archiveExpiree(e));
+        if (frais.length === entries.length) { gardes.push(r); continue; }
+        try {
+            if (frais.length === 0) {
+                const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}/${r.id}`, { method: 'DELETE', headers });
+                if (res.ok) continue;
+            } else {
+                const val = serialiserArchives(frais);
+                const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}/${r.id}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({ fields: { [FIELDS_MESSAGE.ARCHIVES]: val } })
+                });
+                if (res.ok) f[FIELDS_MESSAGE.ARCHIVES] = val;
+            }
+        } catch (err) {
+            console.error('Erreur purge archives:', err);
+        }
+        gardes.push(r);
+    }
+    return gardes;
+}
+
 async function chargerMessagerie() {
     const container = document.getElementById('messages-list');
     if (!container) return;
-    container.innerHTML = '<div class="loading">Chargement...</div>';
+    if (!container.querySelector('.message-item') && !container.querySelector('.carnet-empty')) {
+        container.innerHTML = '<div class="loading">Chargement...</div>';
+    }
     const nom = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
     if (!nom) {
         container.innerHTML = '<p class="carnet-empty">Connectez-vous pour voir vos messages.</p>';
@@ -247,11 +322,13 @@ async function chargerMessagerie() {
     const escaped = nom.replace(/'/g, "\\'");
     const formula = `OR(FIND('Tous', {Destinataire}) > 0, FIND('${escaped}', {Destinataire}) > 0, {Expéditeur}='${escaped}')`;
     try {
-        messagesCache = await chargerMessagesAvecOffset(formula);
+        messagesCache = await purgerArchivesExpires(await chargerMessagesAvecOffset(formula));
         afficherMessages(messagesCache);
     } catch (err) {
         console.error(err);
-        container.innerHTML = `<p class="carnet-empty">Erreur de chargement : ${escHtml(err.message)}</p>`;
+        if (!container.querySelector('.message-item')) {
+            container.innerHTML = `<p class="carnet-empty">Erreur de chargement : ${escHtml(err.message)}</p>`;
+        }
     }
 }
 
@@ -296,14 +373,35 @@ function formatParticipants(participants) {
     return txt;
 }
 
+function threadArchive(thread) {
+    return thread.messages.some(r => entreeArchiveMoi(r.fields || {}));
+}
+
+function threadsBoite(records) {
+    const threads = grouperParThread(records);
+    if (ongletMessagerie === 'archives') {
+        return threads.filter(t => {
+            const e = entreeArchiveMoi(t.lastMessage.fields || {}) || t.messages.map(r => entreeArchiveMoi(r.fields || {})).find(Boolean);
+            return e && !archiveExpiree(e);
+        });
+    }
+    return threads.filter(t => !threadArchive(t));
+}
+
 function afficherMessages(records) {
     const container = document.getElementById('messages-list');
     if (!container) return;
-    if (!records.length) {
-        container.innerHTML = '<p class="carnet-empty">Aucun message.</p>';
+    const threads = threadsBoite(records);
+    const signature = ongletMessagerie + '|' + threads.map(t =>
+        `${t.key}:${t.lastMessage.id}:${t.unread ? 1 : 0}:${t.favori ? 1 : 0}:${t.hasPiece ? 1 : 0}:${t.messages.length}:${threadsSelectionnes.has(t.key) ? 1 : 0}`
+    ).join(',');
+    if (signature === dernierRenduSignature) { mettreAJourSelectAll(threads); return; }
+    dernierRenduSignature = signature;
+    if (!threads.length) {
+        container.innerHTML = `<p class="carnet-empty">${ongletMessagerie === 'archives' ? 'Aucun message archivé.' : 'Aucun message.'}</p>`;
+        mettreAJourSelectAll(threads);
         return;
     }
-    const threads = grouperParThread(records);
     const keysVisibles = new Set(threads.map(t => t.key));
     threadsSelectionnes = new Set([...threadsSelectionnes].filter(k => keysVisibles.has(k)));
     container.innerHTML = threads.map(t => {
@@ -311,6 +409,22 @@ function afficherMessages(records) {
         const date = formaterDateMessage(t.lastMessage.fields[FIELDS_MESSAGE.DATE]);
         const piece = t.hasPiece ? '<span class="message-thread-piece" title="Pièce jointe">📎</span>' : '';
         const coche = threadsSelectionnes.has(t.key) ? 'checked' : '';
+        if (ongletMessagerie === 'archives') {
+            const entree = entreeArchiveMoi(t.lastMessage.fields || {}) || t.messages.map(r => entreeArchiveMoi(r.fields || {})).find(Boolean);
+            const dateArch = entree && entree.date ? formaterDateMessage(entree.date) : '';
+            return `<div class="message-item message-thread-item" data-id="${escHtml(t.lastMessage.id)}" title="Archivé le ${escHtml(dateArch)}">
+                <button type="button" class="message-restore" data-key="${escHtml(t.key)}" title="Ramener dans la boîte de réception">↩</button>
+                <span class="message-thread-sender">${escHtml(formatParticipants(t.participants))}</span>
+                <span class="message-thread-text">
+                    <span class="message-thread-subject">${escHtml(t.subject)}</span>
+                    ${preview ? `<span class="message-thread-preview">— ${escHtml(preview)}</span>` : ''}
+                </span>
+                <span class="message-thread-right">
+                    ${piece}
+                    <span class="message-thread-date">${escHtml(date)}</span>
+                </span>
+            </div>`;
+        }
         return `<div class="message-item message-thread-item ${t.unread ? 'message-thread-unread' : ''} ${coche ? 'message-thread-selected' : ''}" data-id="${escHtml(t.lastMessage.id)}" title="${escHtml(t.subject)}">
             <input type="checkbox" class="message-check" data-key="${escHtml(t.key)}" ${coche}>
             <button type="button" class="message-star ${t.favori ? 'message-star-on' : ''}" data-key="${escHtml(t.key)}" title="${t.favori ? 'Retirer des favoris' : 'Marquer comme favori'}">${t.favori ? '★' : '☆'}</button>
@@ -326,19 +440,101 @@ function afficherMessages(records) {
             </span>
         </div>`;
     }).join('');
-    mettreAJourSelectAll();
+    mettreAJourSelectAll(threads);
 }
 
-function mettreAJourSelectAll() {
+function mettreAJourSelectAll(threads) {
     const selectAll = document.getElementById('messages-select-all');
     const info = document.getElementById('messages-selection-info');
-    const total = grouperParThread(messagesCache).length;
+    const deleteBtn = document.getElementById('btn-delete-messages');
+    const total = (threads || threadsBoite(messagesCache)).length;
     const nb = threadsSelectionnes.size;
     if (selectAll) {
         selectAll.checked = total > 0 && nb === total;
         selectAll.indeterminate = nb > 0 && nb < total;
     }
+    if (deleteBtn) deleteBtn.style.display = (ongletMessagerie === 'recus' && nb > 0) ? 'inline-block' : 'none';
     if (info) info.textContent = nb > 0 ? `${nb} sélectionné${nb > 1 ? 's' : ''}` : '';
+}
+
+function changerOngletMessagerie(onglet) {
+    if (ongletMessagerie === onglet) return;
+    ongletMessagerie = onglet;
+    threadsSelectionnes.clear();
+    dernierRenduSignature = '';
+    const tabRecus = document.getElementById('tab-messagerie-recus');
+    const tabArchives = document.getElementById('tab-messagerie-archives');
+    if (tabRecus) tabRecus.classList.toggle('messages-tab-active', onglet === 'recus');
+    if (tabArchives) tabArchives.classList.toggle('messages-tab-active', onglet === 'archives');
+    const notice = document.getElementById('messages-archive-notice');
+    if (notice) notice.style.display = onglet === 'archives' ? 'block' : 'none';
+    const wrapSelectAll = document.getElementById('messages-selectall-wrap');
+    if (wrapSelectAll) wrapSelectAll.style.display = onglet === 'archives' ? 'none' : 'flex';
+    afficherMessages(messagesCache);
+}
+
+async function archiverThreadsSelectionnes() {
+    const threads = grouperParThread(messagesCache).filter(t => threadsSelectionnes.has(t.key));
+    if (!threads.length) return;
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    if (!current) return;
+    const nbMsg = threads.reduce((n, t) => n + t.messages.length, 0);
+    if (!confirm(`Archiver ${threads.length} conversation(s) (${nbMsg} message(s)) ? Elles seront conservées 30 jours dans « Messages archivés ».`)) return;
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+        await Promise.all(threads.flatMap(t => t.messages.map(async r => {
+            const f = r.fields || {};
+            const entries = parseArchives(f[FIELDS_MESSAGE.ARCHIVES]);
+            if (entries.some(e => e.nom === current)) return;
+            entries.push({ nom: current, date: today });
+            const val = serialiserArchives(entries);
+            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}/${r.id}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ fields: { [FIELDS_MESSAGE.ARCHIVES]: val } })
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error?.message || 'Erreur archivage');
+            }
+            f[FIELDS_MESSAGE.ARCHIVES] = val;
+        })));
+    } catch (err) {
+        console.error('Erreur archivage:', err);
+        alert('Erreur lors de l\'archivage : ' + (err.message || 'inconnue'));
+    }
+    threadsSelectionnes.clear();
+    afficherMessages(messagesCache);
+    if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
+}
+
+async function restaurerThread(thread) {
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    if (!current || !thread) return;
+    try {
+        await Promise.all(thread.messages.map(async r => {
+            const f = r.fields || {};
+            const entries = parseArchives(f[FIELDS_MESSAGE.ARCHIVES]);
+            const nv = entries.filter(e => e.nom !== current);
+            if (nv.length === entries.length) return;
+            const val = serialiserArchives(nv);
+            const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}/${r.id}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ fields: { [FIELDS_MESSAGE.ARCHIVES]: val } })
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error?.message || 'Erreur restauration');
+            }
+            f[FIELDS_MESSAGE.ARCHIVES] = val;
+        }));
+        afficherMessages(messagesCache);
+        if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
+    } catch (err) {
+        console.error('Erreur restauration:', err);
+        alert('Erreur lors de la restauration : ' + (err.message || 'inconnue'));
+    }
 }
 
 async function basculerFavoriThread(thread) {
@@ -533,7 +729,8 @@ async function compterMessagesNonLus() {
     if (!badge) return;
     const destinataire = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
     if (!destinataire) { badge.style.display = 'none'; return; }
-    const formula = `AND(OR(FIND('Tous', {Destinataire}) > 0, FIND('${destinataire.replace(/'/g, "\\'")}', {Destinataire}) > 0), {Lu}=FALSE())`;
+    const escaped = destinataire.replace(/'/g, "\\'");
+    const formula = `AND(OR(FIND('Tous', {Destinataire}) > 0, FIND('${escaped}', {Destinataire}) > 0), {Lu}=FALSE(), NOT(FIND('${escaped}', {Archivés}) > 0))`;
     try {
         const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`, { headers });
         const data = await res.json();

@@ -4399,6 +4399,8 @@ function rafraichirDonneesAuRetour() {
     if (typeof chargerPresencesPlaneur === 'function') chargerPresencesPlaneur();
     if (typeof chargerPresencesClub === 'function') chargerPresencesClub();
     if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
+    const vueMessagerie = document.getElementById('view-messagerie');
+    if (vueMessagerie && vueMessagerie.style.display !== 'none' && typeof chargerMessagerie === 'function') chargerMessagerie();
 }
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') rafraichirDonneesAuRetour();
