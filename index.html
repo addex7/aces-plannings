@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=190">
+    <link rel="stylesheet" href="style.css?v=191">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -795,6 +795,29 @@
                 <div id="messages-list" style="background:white; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); overflow:hidden;">
                     <p class="carnet-empty">Cliquez sur l'onglet pour charger vos messages.</p>
                 </div>
+                <div id="message-detail" style="display:none;">
+                    <div class="message-detail-toolbar">
+                        <button type="button" id="message-detail-back" class="btn-secondary message-detail-back" title="Retour à la liste">←</button>
+                        <button type="button" id="message-detail-delete" class="btn-secondary message-detail-action">🗑 Supprimer</button>
+                        <button type="button" id="message-detail-unread" class="btn-secondary message-detail-action">✉ Marquer non lu</button>
+                    </div>
+                    <div class="message-detail-card">
+                        <h3 id="message-detail-subject" class="message-detail-subject"></h3>
+                        <div class="message-detail-meta">
+                            <div class="message-detail-meta-left">
+                                <div id="message-detail-sender" class="message-detail-sender"></div>
+                                <div id="message-detail-dest" class="message-detail-dest"></div>
+                            </div>
+                            <button type="button" id="message-detail-reply" class="btn-secondary message-detail-reply">Répondre</button>
+                        </div>
+                        <div id="message-detail-messages" class="message-thread-messages"></div>
+                        <div class="message-thread-actions">
+                            <button type="button" class="btn-secondary" id="message-detail-reply-exp" style="flex:1; min-width:140px;">Répondre à l'expéditeur</button>
+                            <button type="button" class="btn-secondary" id="message-detail-reply-dest" style="flex:1; min-width:140px;">Répondre aux destinataires</button>
+                            <button type="button" class="btn-secondary" id="message-detail-reply-all" style="flex:1; min-width:140px;">Répondre à tout le monde</button>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
@@ -1439,7 +1462,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=92"></script>
-    <script src="version.js?v=20260925123518"></script>
+    <script src="version.js?v=20260925124649"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=107"></script>
     <script src="presences.js?v=101"></script>
@@ -1454,16 +1477,9 @@
     <script src="membres.js?v=105"></script>
     <script src="instructeurs.js?v=107"></script>
     <script src="instructeur-planning.js?v=192"></script>
-    <script src="messagerie.js?v=20"></script>
+    <script src="messagerie.js?v=21"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>
-    <!-- Fenêtre Modale : Lecture d'un message -->
-    <div id="message-read-modal" class="modal" style="display:none;">
-        <div class="modal-content message-read-modal-content">
-            <span class="close-modal" id="message-read-close">&times;</span>
-            <div id="message-read-content"></div>
-        </div>
-    </div>
     <!-- Modal Inscrire quelqu'un d'autre -->
     <div id="modal-inscrire-autre" class="modal" style="display:none;">
         <div class="modal-content" style="max-width:400px;">

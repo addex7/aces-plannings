@@ -106,7 +106,6 @@ function initMessagerie() {
     const fileInput = document.getElementById('message-piece');
     const fileName = document.getElementById('message-piece-name');
     const nouveauBtn = document.getElementById('btn-nouveau-message');
-    const close = document.getElementById('message-read-close');
     const list = document.getElementById('message-destinataires-list');
     const tousBtn = document.getElementById('message-destinataires-tous');
 
@@ -122,16 +121,12 @@ function initMessagerie() {
             if (formSection) formSection.style.display = formSection.style.display === 'none' ? 'block' : 'none';
         });
     }
-    if (close) {
-        close.addEventListener('click', () => {
-            const modal = document.getElementById('message-read-modal');
-            if (modal) modal.style.display = 'none';
-        });
-    }
-    document.addEventListener('click', (e) => {
-        const modal = document.getElementById('message-read-modal');
-        if (modal && e.target === modal) modal.style.display = 'none';
-    });
+    const detailBack = document.getElementById('message-detail-back');
+    if (detailBack) detailBack.addEventListener('click', fermerDetailThread);
+    const detailDelete = document.getElementById('message-detail-delete');
+    if (detailDelete) detailDelete.addEventListener('click', actionSupprimerDetail);
+    const detailUnread = document.getElementById('message-detail-unread');
+    if (detailUnread) detailUnread.addEventListener('click', actionNonLuDetail);
     const messagesList = document.getElementById('messages-list');
     if (messagesList) {
         messagesList.addEventListener('click', (e) => {
@@ -476,10 +471,17 @@ function changerOngletMessagerie(onglet) {
 async function archiverThreadsSelectionnes() {
     const threads = grouperParThread(messagesCache).filter(t => threadsSelectionnes.has(t.key));
     if (!threads.length) return;
-    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
-    if (!current) return;
     const nbMsg = threads.reduce((n, t) => n + t.messages.length, 0);
     if (!confirm(`Archiver ${threads.length} conversation(s) (${nbMsg} message(s)) ? Elles seront conservées 30 jours dans « Messages archivés ».`)) return;
+    await archiverThreads(threads);
+    threadsSelectionnes.clear();
+    afficherMessages(messagesCache);
+    if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
+}
+
+async function archiverThreads(threads) {
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    if (!current || !threads.length) return;
     const today = new Date().toISOString().slice(0, 10);
     try {
         await Promise.all(threads.flatMap(t => t.messages.map(async r => {
@@ -503,9 +505,6 @@ async function archiverThreadsSelectionnes() {
         console.error('Erreur archivage:', err);
         alert('Erreur lors de l\'archivage : ' + (err.message || 'inconnue'));
     }
-    threadsSelectionnes.clear();
-    afficherMessages(messagesCache);
-    if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
 }
 
 async function restaurerThread(thread) {
@@ -636,58 +635,128 @@ function trouverThreadParMessageId(id) {
     return grouperParThread(messagesCache).find(t => t.key === key);
 }
 
+let threadCourant = null;
+
 function voirMessage(id) {
     const thread = trouverThreadParMessageId(id);
     if (!thread) return;
-    afficherThread(thread);
+    ouvrirDetailThread(thread);
 }
 
-function afficherThread(thread) {
-    const modal = document.getElementById('message-read-modal');
-    const content = document.getElementById('message-read-content');
-    if (!modal || !content) return;
+const ZONES_LISTE_MESSAGERIE = ['.messages-tabs', '#messages-archive-notice', '#messages-toolbar', '#messages-list', '#message-form-section'];
 
+function afficherZoneListe(visible) {
+    ZONES_LISTE_MESSAGERIE.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (!el) return;
+        if (sel === '#messages-archive-notice') {
+            el.style.display = (visible && ongletMessagerie === 'archives') ? 'block' : 'none';
+        } else if (sel === '.messages-tabs') {
+            el.style.display = visible ? 'flex' : 'none';
+        } else if (sel === '#message-form-section') {
+            el.style.display = 'none';
+        } else {
+            el.style.display = visible ? 'block' : 'none';
+        }
+    });
+}
+
+function ouvrirDetailThread(thread) {
+    const detail = document.getElementById('message-detail');
+    if (!detail) return;
+    threadCourant = thread;
     const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
-    const messagesHtml = thread.messages.map(r => {
-        const f = r.fields || {};
-        const date = formaterDateMessage(f[FIELDS_MESSAGE.DATE]);
-        const expediteur = f[FIELDS_MESSAGE.EXPEDITEUR] || '';
-        const isMe = expediteur === current;
-        const body = escHtml(f[FIELDS_MESSAGE.CORPS] || '');
-        const pieceHtml = renderPieceJointe(f[FIELDS_MESSAGE.PIECE]);
-        return `<div class="message-bubble ${isMe ? 'message-bubble-me' : 'message-bubble-other'}">
-            <div class="message-bubble-header">
-                <span class="message-bubble-sender">${escHtml(expediteur) || 'Expéditeur'}</span>
-                <span>${escHtml(date)}</span>
-            </div>
-            <div class="message-bubble-body">${body}</div>
-            ${pieceHtml}
-        </div>`;
-    }).join('');
+    const premier = thread.messages[0];
+    const fp = premier.fields || {};
 
-    content.innerHTML = `
-        <div class="message-thread-header">
-            <h3>${escHtml(thread.subject)}</h3>
-            <div class="message-thread-participants">Avec : ${escHtml(formatParticipants(thread.participants))}</div>
-        </div>
-        <div class="message-thread-messages">${messagesHtml}</div>
-        <div class="message-thread-actions">
-            <button type="button" class="btn-secondary message-reply-expediteur" style="flex:1; min-width:140px;">Répondre à l'expéditeur</button>
-            <button type="button" class="btn-secondary message-reply-destinataires" style="flex:1; min-width:140px;">Répondre aux destinataires</button>
-            <button type="button" class="btn-secondary message-reply-tous" style="flex:1; min-width:140px;">Répondre à tout le monde</button>
-        </div>
-    `;
-    modal.style.display = 'flex';
+    const subject = document.getElementById('message-detail-subject');
+    const sender = document.getElementById('message-detail-sender');
+    const dest = document.getElementById('message-detail-dest');
+    const messages = document.getElementById('message-detail-messages');
+    const deleteBtn = document.getElementById('message-detail-delete');
+    const replyBtn = document.getElementById('message-detail-reply');
+    const btnExp = document.getElementById('message-detail-reply-exp');
+    const btnDest = document.getElementById('message-detail-reply-dest');
+    const btnTous = document.getElementById('message-detail-reply-all');
 
-    const btnExp = content.querySelector('.message-reply-expediteur');
-    const btnDest = content.querySelector('.message-reply-destinataires');
-    const btnTous = content.querySelector('.message-reply-tous');
-    if (btnExp) btnExp.addEventListener('click', () => repondreMessageThread(thread, 'expediteur'));
-    if (btnDest) btnDest.addEventListener('click', () => repondreMessageThread(thread, 'destinataires'));
-    if (btnTous) btnTous.addEventListener('click', () => repondreMessageThread(thread, 'tous'));
+    if (subject) subject.textContent = thread.subject;
+    if (sender) sender.innerHTML = `<strong>De :</strong> ${escHtml(fp[FIELDS_MESSAGE.EXPEDITEUR] || 'Inconnu')}`;
+    if (dest) dest.innerHTML = `<strong>À :</strong> ${escHtml(fp[FIELDS_MESSAGE.DESTINATAIRE] || '')}`;
+    if (deleteBtn) {
+        const archive = threadArchive(thread);
+        deleteBtn.innerHTML = archive ? '↩ Restaurer' : '🗑 Supprimer';
+        deleteBtn.title = archive ? 'Ramener dans la boîte de réception' : 'Archiver le message';
+    }
+    if (messages) {
+        messages.innerHTML = thread.messages.map(r => {
+            const f = r.fields || {};
+            const date = formaterDateMessage(f[FIELDS_MESSAGE.DATE]);
+            const expediteur = f[FIELDS_MESSAGE.EXPEDITEUR] || '';
+            const isMe = expediteur === current;
+            const body = escHtml(f[FIELDS_MESSAGE.CORPS] || '');
+            const pieceHtml = renderPieceJointe(f[FIELDS_MESSAGE.PIECE]);
+            return `<div class="message-bubble ${isMe ? 'message-bubble-me' : 'message-bubble-other'}">
+                <div class="message-bubble-header">
+                    <span class="message-bubble-sender">${escHtml(expediteur) || 'Expéditeur'}</span>
+                    <span>${escHtml(date)}</span>
+                </div>
+                <div class="message-bubble-body">${body}</div>
+                ${pieceHtml}
+            </div>`;
+        }).join('');
+    }
+
+    if (replyBtn) replyBtn.onclick = () => repondreMessageThread(thread, 'expediteur');
+    if (btnExp) btnExp.onclick = () => repondreMessageThread(thread, 'expediteur');
+    if (btnDest) btnDest.onclick = () => repondreMessageThread(thread, 'destinataires');
+    if (btnTous) btnTous.onclick = () => repondreMessageThread(thread, 'tous');
+
+    afficherZoneListe(false);
+    detail.style.display = 'block';
+    detail.scrollIntoView({ block: 'start' });
 
     const ids = thread.messages.filter(r => !r.fields[FIELDS_MESSAGE.LU] && r.fields[FIELDS_MESSAGE.EXPEDITEUR] !== current).map(r => r.id);
     if (ids.length) marquerMessagesLus(ids);
+}
+
+function fermerDetailThread() {
+    const detail = document.getElementById('message-detail');
+    if (detail) detail.style.display = 'none';
+    threadCourant = null;
+    afficherZoneListe(true);
+    afficherMessages(messagesCache);
+}
+
+async function actionSupprimerDetail() {
+    if (!threadCourant) return;
+    const thread = threadCourant;
+    if (threadArchive(thread)) {
+        await restaurerThread(thread);
+    } else {
+        await archiverThreads([thread]);
+        if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
+    }
+    fermerDetailThread();
+}
+
+async function actionNonLuDetail() {
+    if (!threadCourant) return;
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    let cibles = threadCourant.messages.filter(r => (r.fields || {})[FIELDS_MESSAGE.EXPEDITEUR] !== current);
+    if (!cibles.length) cibles = [threadCourant.lastMessage];
+    try {
+        await Promise.all(cibles.map(r => apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}/${r.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ fields: { [FIELDS_MESSAGE.LU]: false } })
+        })));
+        cibles.forEach(r => { r.fields[FIELDS_MESSAGE.LU] = false; });
+        if (typeof compterMessagesNonLus === 'function') await compterMessagesNonLus();
+        fermerDetailThread();
+    } catch (err) {
+        console.error('Erreur marquer non lu:', err);
+        alert('Erreur : ' + (err.message || 'inconnue'));
+    }
 }
 
 async function marquerMessagesLus(ids) {
@@ -763,11 +832,10 @@ function trouverNomComplet(short) {
 }
 
 function ouvrirReponse(record, destinataires) {
-    const modal = document.getElementById('message-read-modal');
     const formSection = document.getElementById('message-form-section');
     const objet = document.getElementById('message-objet');
     const corps = document.getElementById('message-corps');
-    if (modal) modal.style.display = 'none';
+    fermerDetailThread();
     if (formSection) formSection.style.display = 'block';
     if (objet) {
         const original = (record.fields || {})[FIELDS_MESSAGE.OBJET] || '';
