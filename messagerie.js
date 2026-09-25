@@ -127,6 +127,13 @@ function initMessagerie() {
     if (detailDelete) detailDelete.addEventListener('click', actionSupprimerDetail);
     const detailUnread = document.getElementById('message-detail-unread');
     if (detailUnread) detailUnread.addEventListener('click', actionNonLuDetail);
+    const replySend = document.getElementById('message-detail-reply-send');
+    if (replySend) replySend.addEventListener('click', envoyerReponseDetail);
+    const replyCancel = document.getElementById('message-detail-reply-cancel');
+    if (replyCancel) replyCancel.addEventListener('click', () => {
+        const zone = document.getElementById('message-detail-replyzone');
+        if (zone) zone.style.display = 'none';
+    });
     const messagesList = document.getElementById('messages-list');
     if (messagesList) {
         messagesList.addEventListener('click', (e) => {
@@ -675,9 +682,10 @@ function ouvrirDetailThread(thread) {
     const messages = document.getElementById('message-detail-messages');
     const deleteBtn = document.getElementById('message-detail-delete');
     const replyBtn = document.getElementById('message-detail-reply');
-    const btnExp = document.getElementById('message-detail-reply-exp');
-    const btnDest = document.getElementById('message-detail-reply-dest');
-    const btnTous = document.getElementById('message-detail-reply-all');
+    const replyZone = document.getElementById('message-detail-replyzone');
+    const replyText = document.getElementById('message-detail-reply-text');
+    if (replyZone) replyZone.style.display = 'none';
+    if (replyText) replyText.value = '';
 
     if (subject) subject.textContent = thread.subject;
     if (sender) sender.innerHTML = `<strong>De :</strong> ${escHtml(fp[FIELDS_MESSAGE.EXPEDITEUR] || 'Inconnu')}`;
@@ -706,10 +714,7 @@ function ouvrirDetailThread(thread) {
         }).join('');
     }
 
-    if (replyBtn) replyBtn.onclick = () => repondreMessageThread(thread, 'expediteur');
-    if (btnExp) btnExp.onclick = () => repondreMessageThread(thread, 'expediteur');
-    if (btnDest) btnDest.onclick = () => repondreMessageThread(thread, 'destinataires');
-    if (btnTous) btnTous.onclick = () => repondreMessageThread(thread, 'tous');
+    if (replyBtn) replyBtn.onclick = () => ouvrirReponseZone(thread);
 
     afficherZoneListe(false);
     detail.style.display = 'block';
@@ -756,6 +761,77 @@ async function actionNonLuDetail() {
     } catch (err) {
         console.error('Erreur marquer non lu:', err);
         alert('Erreur : ' + (err.message || 'inconnue'));
+    }
+}
+
+function ouvrirReponseZone(thread) {
+    const zone = document.getElementById('message-detail-replyzone');
+    const dests = document.getElementById('message-detail-reply-dests');
+    const text = document.getElementById('message-detail-reply-text');
+    if (!zone || !dests) return;
+    const current = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    const tous = (utilisateursMessagerieCache || []).map(r => {
+        const f = r.fields || {};
+        return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+    }).filter(n => n && n !== current).sort();
+    const participants = thread.participants.filter(n => n && n !== current);
+    const tousConvo = participants.some(n => n.toLowerCase() === 'tous');
+    dests.innerHTML = tous.length ? tous.map((nom, i) => {
+        const coche = tousConvo || participants.includes(nom);
+        return `<label class="message-reply-dest ${i % 2 === 1 ? 'message-reply-dest-alt' : ''}">
+            <input type="checkbox" class="reply-dest-check" value="${escHtml(nom)}" ${coche ? 'checked' : ''}>
+            <span>${escHtml(nom)}</span>
+        </label>`;
+    }).join('') : '<span style="color:#94a3b8; font-size:13px;">Aucun destinataire disponible</span>';
+    zone.style.display = 'block';
+    if (text) text.focus();
+    zone.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+async function envoyerReponseDetail() {
+    if (!threadCourant) return;
+    const thread = threadCourant;
+    const text = document.getElementById('message-detail-reply-text');
+    const corps = (text && text.value || '').trim();
+    const dests = [...document.querySelectorAll('#message-detail-reply-dests .reply-dest-check:checked')].map(c => c.value);
+    if (!dests.length) { alert('Veuillez choisir au moins un destinataire.'); return; }
+    if (!corps) { alert('Le message est vide.'); return; }
+    const expediteur = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
+    if (!expediteur) { alert('Vous devez être connecté.'); return; }
+    const objet = thread.subject.toLowerCase().startsWith('re:') ? thread.subject : 'Re: ' + thread.subject;
+    const sendBtn = document.getElementById('message-detail-reply-send');
+    if (sendBtn) sendBtn.disabled = true;
+    try {
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ records: [{ fields: {
+                [FIELDS_MESSAGE.DATE]: new Date().toISOString().slice(0, 10),
+                [FIELDS_MESSAGE.EXPEDITEUR]: expediteur,
+                [FIELDS_MESSAGE.DESTINATAIRE]: dests.join('; '),
+                [FIELDS_MESSAGE.OBJET]: objet,
+                [FIELDS_MESSAGE.CORPS]: corps,
+                [FIELDS_MESSAGE.LU]: false
+            } }] })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur envoi');
+        const record = (data.records || [])[0];
+        if (record) messagesCache.push(record);
+        if (typeof viderApiCache === 'function') viderApiCache();
+        if (text) text.value = '';
+        const zone = document.getElementById('message-detail-replyzone');
+        if (zone) zone.style.display = 'none';
+        const nvThread = trouverThreadParMessageId(record ? record.id : thread.lastMessage.id) || thread;
+        ouvrirDetailThread(nvThread);
+        const detail = document.getElementById('message-detail-messages');
+        if (detail) detail.lastElementChild && detail.lastElementChild.scrollIntoView({ block: 'nearest' });
+        if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
+    } catch (err) {
+        console.error('Erreur envoi réponse:', err);
+        alert('Erreur lors de l\'envoi : ' + (err.message || 'inconnue'));
+    } finally {
+        if (sendBtn) sendBtn.disabled = false;
     }
 }
 

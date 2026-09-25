@@ -4000,14 +4000,70 @@ img, table, video, iframe, svg {
     font-size: 13px;
 }
 .message-thread-dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background: #dc2626;
+    background: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    flex-shrink: 0;
+}
+.message-thread-unread {
+    background: #eaf3fd;
+    border-left: 4px solid #2563eb;
+    padding-left: 10px;
+}
+.message-thread-unread:hover {
+    background: #deecfb;
+}
+.message-thread-unread.message-thread-selected {
+    background: #d4e5f8;
 }
 .message-thread-unread .message-thread-sender,
 .message-thread-unread .message-thread-subject {
     font-weight: 700;
+    color: #0f2740;
+}
+.message-replyzone {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+}
+.message-reply-dests {
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 6px;
+    background: #f8fafc;
+    margin-top: 6px;
+}
+.message-reply-dest {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    font-size: 13px;
+    color: #334155;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.message-reply-dest-alt {
+    background: #f1f5f9;
+}
+.message-reply-dest input {
+    width: auto;
+    margin: 0;
+    accent-color: #1e3d59;
+}
+.message-replyzone-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.message-replyzone-actions .btn-submit,
+.message-replyzone-actions .btn-secondary {
+    width: auto;
+    padding: 8px 20px;
 }
 #message-read-modal .modal-content {
     width: 90vw;

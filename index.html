@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=191">
+    <link rel="stylesheet" href="style.css?v=192">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -811,10 +811,16 @@
                             <button type="button" id="message-detail-reply" class="btn-secondary message-detail-reply">Répondre</button>
                         </div>
                         <div id="message-detail-messages" class="message-thread-messages"></div>
-                        <div class="message-thread-actions">
-                            <button type="button" class="btn-secondary" id="message-detail-reply-exp" style="flex:1; min-width:140px;">Répondre à l'expéditeur</button>
-                            <button type="button" class="btn-secondary" id="message-detail-reply-dest" style="flex:1; min-width:140px;">Répondre aux destinataires</button>
-                            <button type="button" class="btn-secondary" id="message-detail-reply-all" style="flex:1; min-width:140px;">Répondre à tout le monde</button>
+                        <div id="message-detail-replyzone" class="message-replyzone" style="display:none;">
+                            <div class="form-group" style="margin-bottom:10px;">
+                                <label style="font-size:13px; font-weight:600; color:#334155;">Destinataires</label>
+                                <div id="message-detail-reply-dests" class="message-reply-dests"></div>
+                            </div>
+                            <textarea id="message-detail-reply-text" class="form-control" rows="4" placeholder="Votre réponse..."></textarea>
+                            <div class="message-replyzone-actions">
+                                <button type="button" id="message-detail-reply-send" class="btn-submit">Envoyer</button>
+                                <button type="button" id="message-detail-reply-cancel" class="btn-secondary">Annuler</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1462,7 +1468,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=92"></script>
-    <script src="version.js?v=20260925124649"></script>
+    <script src="version.js?v=20260925135519"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=107"></script>
     <script src="presences.js?v=101"></script>
@@ -1477,7 +1483,7 @@
     <script src="membres.js?v=105"></script>
     <script src="instructeurs.js?v=107"></script>
     <script src="instructeur-planning.js?v=192"></script>
-    <script src="messagerie.js?v=21"></script>
+    <script src="messagerie.js?v=22"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>
     <!-- Modal Inscrire quelqu'un d'autre -->
