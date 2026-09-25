@@ -408,13 +408,13 @@ const uploadFichier = multer({
             cb(null, `doc-${Date.now().toString(36)}-${crypto.randomBytes(8).toString('hex')}${EXT_AUTORISEES.has(ext) ? ext : '.bin'}`);
         }
     }),
-    limits: { fileSize: 10 * 1024 * 1024 }
+    limits: { fileSize: 50 * 1024 * 1024 }
 });
 
 app.post('/v0/upload', (req, res) => {
     uploadFichier.single('file')(req, res, (err) => {
         if (err) {
-            const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Fichier trop volumineux (10 Mo max)' : (err.message || 'Erreur upload');
+            const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Fichier trop volumineux (50 Mo max)' : (err.message || 'Erreur upload');
             return erreur(res, 400, msg);
         }
         if (!req.file) return erreur(res, 400, 'Aucun fichier recu');
