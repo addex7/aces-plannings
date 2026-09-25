@@ -4501,3 +4501,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #e2e8f0;
     text-decoration: underline;
 }
+.close-documents-bilan,
+.close-documents-aeronef {
+    cursor: pointer;
+}

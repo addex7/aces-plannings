@@ -1469,14 +1469,17 @@ async function ouvrirBilanDocumentsAeronefs() {
         if (t && !TYPES_DOCUMENTS_AERONEFS.some(x => x.code === t)) typesCustom.add(t);
     });
 
+    const machinesExclues = [...(REMOQUES_PLANEURS || []), ...(MATERIEL_AUTRES || [])];
     const machines = [];
-    [MACHINES_MOTEURS, IMMATS_PLANEURS, REMOQUES_PLANEURS, MATERIEL_AUTRES].forEach(liste => {
+    [MACHINES_MOTEURS, IMMATS_PLANEURS].forEach(liste => {
         if (Array.isArray(liste)) liste.forEach(m => { if (!machines.includes(m)) machines.push(m); });
     });
-    Object.keys(parMachine).sort().forEach(m => { if (!machines.includes(m)) machines.push(m); });
+    Object.keys(parMachine).sort().forEach(m => {
+        if (!machines.includes(m) && !machinesExclues.includes(m)) machines.push(m);
+    });
 
     const colonnes = [
-        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre'),
+        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre' && t.code !== 'Accusé'),
         ...[...typesCustom].sort().map(code => ({ code, nom: code, dateRequise: false }))
     ];
 
