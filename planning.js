@@ -2705,6 +2705,10 @@ function initGestionnaireModale() {
                                 for (const r of chevauches) {
                                     await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}/${r.id}`, { method: 'DELETE', headers });
                                 }
+                                champsCreneau['Créneaux remplacés'] = JSON.stringify(chevauches.map(r => ({
+                                    'Date': r.fields['Date'], 'Heure début': r.fields['Heure début'],
+                                    'Heure fin': r.fields['Heure fin'], 'Type': r.fields['Type']
+                                })));
                             }
                             response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
                                 method: 'POST',
@@ -3547,6 +3551,10 @@ async function convertirVolEnCreneauVI(vol) {
                 for (const r of chevauches) {
                     await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}/${r.id}`, { method: 'DELETE', headers });
                 }
+                champs['Créneaux remplacés'] = JSON.stringify(chevauches.map(r => ({
+                    'Date': r.fields['Date'], 'Heure début': r.fields['Heure début'],
+                    'Heure fin': r.fields['Heure fin'], 'Type': r.fields['Type']
+                })));
             }
             const r = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
                 method: 'POST',

@@ -851,24 +851,31 @@ async function decalerSurCreneauManuel() {
             await cancelByToken(currentToken, ex.id);
         } else {
             info.textContent = 'Création du nouveau créneau...';
+            const champsNouveau = {
+                'Date': date,
+                'Heure début': debut,
+                'Heure fin': fin,
+                'Type': type,
+                'Statut': 'Réservé',
+                'Prénom': f['Prénom'] || '',
+                'Nom': f['Nom'] || '',
+                'Email': f['Email'] || '',
+                'Téléphone': f['Téléphone'] || '',
+                'Bon cadeau': f['Bon cadeau'] || '',
+                'Token': currentToken,
+                'Date réservation': new Date().toISOString(),
+                '_decalage': true
+            };
+            if (chevauchements.length) {
+                champsNouveau['Créneaux remplacés'] = JSON.stringify(chevauchements.map(r => ({
+                    'Date': r.fields['Date'], 'Heure début': r.fields['Heure début'],
+                    'Heure fin': r.fields['Heure fin'], 'Type': r.fields['Type']
+                })));
+            }
             const resa = await fetch(`${API_BASE}/${encodeURIComponent(TABLE_CRENEAUX)}`, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ records: [{ fields: {
-                    'Date': date,
-                    'Heure début': debut,
-                    'Heure fin': fin,
-                    'Type': type,
-                    'Statut': 'Réservé',
-                    'Prénom': f['Prénom'] || '',
-                    'Nom': f['Nom'] || '',
-                    'Email': f['Email'] || '',
-                    'Téléphone': f['Téléphone'] || '',
-                    'Bon cadeau': f['Bon cadeau'] || '',
-                    'Token': currentToken,
-                    'Date réservation': new Date().toISOString(),
-                    '_decalage': true
-                }}] })
+                body: JSON.stringify({ records: [{ fields: champsNouveau }] })
             });
             const resaData = await resa.json();
             if (!resa.ok) throw new Error(resaData.error?.message || 'Erreur');

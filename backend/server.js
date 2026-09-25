@@ -544,6 +544,36 @@ app.post('/v0/:base/:table', async (req, res) => {
     }
 });
 
+// Restaure les creneaux Disponible supprimes par la creation manuelle d'un
+// creneau (champ "Créneaux remplacés" = JSON [{Date, Heure début, Heure fin, Type}]).
+async function restaurerCreneauxRemplaces(ancienFields) {
+    let liste = null;
+    try { liste = JSON.parse((ancienFields || {})['Créneaux remplacés'] || 'null'); } catch (e) { liste = null; }
+    if (!Array.isArray(liste) || !liste.length) return;
+    for (const c of liste) {
+        if (!c || !c['Date'] || !c['Heure début'] || !c['Heure fin']) continue;
+        const type = c['Type'] || 'VI';
+        try {
+            const { rows } = await pool.query(
+                `SELECT id FROM vi_creneaux
+                 WHERE fields->>'Date' = $1
+                   AND COALESCE(fields->>'Type','VI') = $2
+                   AND COALESCE(fields->>'Statut','Disponible') <> 'Annulé'
+                   AND fields->>'Heure début' < $4
+                   AND fields->>'Heure fin' > $3`,
+                [c['Date'], type, c['Heure début'], c['Heure fin']]
+            );
+            if (rows.length) continue;
+            await pool.query(
+                `INSERT INTO vi_creneaux (id, fields) VALUES ($1, $2)`,
+                [nouvelId(), { 'Date': c['Date'], 'Heure début': c['Heure début'], 'Heure fin': c['Heure fin'], 'Type': type, 'Statut': 'Disponible' }]
+            );
+        } catch (e) {
+            console.error('Restauration creneau VI:', e);
+        }
+    }
+}
+
 // --- MISE A JOUR ---
 async function majRecords(req, res, remplacer) {
     const table = tableSql(req, res);
@@ -566,6 +596,16 @@ async function majRecords(req, res, remplacer) {
             if (tableNom === 'VI Créneaux' && r.fields && r.fields['Statut'] === 'Disponible') {
                 const { rows: ar } = await pool.query(`SELECT fields FROM ${table} WHERE id = $1`, [r.id]);
                 ancien = ar.length ? ar[0].fields : null;
+                if (ancien && ancien['Créneaux remplacés']) {
+                    // Creneau cree a la main en ecrasant d'autres creneaux : au lieu de le
+                    // liberer tel quel, on le supprime et on restaure les creneaux d'origine.
+                    await pool.query(`DELETE FROM ${table} WHERE id = $1`, [r.id]);
+                    await restaurerCreneauxRemplaces(ancien);
+                    maj.push({ id: r.id, deleted: true });
+                    anciens.push(ancien);
+                    decalages.push(decalage);
+                    continue;
+                }
             }
             const { rows } = await pool.query(
                 remplacer
@@ -614,10 +654,12 @@ app.put('/v0/:base/:table/:id', (req, res) => majRecordUnitaire(req, res, true))
 // --- SUPPRESSION ---
 async function supprimerIds(res, table, ids) {
     let viReserves = [];
+    let viRemplaces = [];
     if (table === 'vi_creneaux') {
         try {
             const { rows } = await pool.query(`SELECT fields FROM ${table} WHERE id = ANY($1)`, [ids]);
             viReserves = rows.map(r => r.fields).filter(f => f && f['Statut'] === 'Réservé' && f['Email']);
+            viRemplaces = rows.map(r => r.fields).filter(f => f && f['Créneaux remplacés']);
         } catch (e) {
             console.error('Lecture VI avant suppression:', e);
         }
@@ -629,6 +671,9 @@ async function supprimerIds(res, table, ids) {
     viReserves.forEach(f => {
         envoyerMailLiberationVI(f, true).catch(e => console.error('Mail suppression VI:', e));
     });
+    for (const f of viRemplaces) {
+        try { await restaurerCreneauxRemplaces(f); } catch (e) { console.error('Restauration creneaux:', e); }
+    }
 }
 app.delete('/v0/:base/:table/:id', async (req, res) => {
     const table = tableSql(req, res);
