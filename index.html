@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=193">
+    <link rel="stylesheet" href="style.css?v=194">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -751,7 +751,7 @@
                     <form id="message-form">
                         <div class="form-group">
                             <label>Destinataires *</label>
-                            <div id="message-destinataires-list" style="max-height:200px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:6px; padding:8px; background:#f8fafc;"></div>
+                            <div id="message-destinataires-list" style="max-height:120px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:6px; padding:6px; background:#f8fafc; display:flex; flex-wrap:wrap; gap:4px; align-content:flex-start;"></div>
                             <button type="button" id="message-destinataires-tous" class="btn-secondary" style="margin-top:8px; width:100%;">Tout le monde</button>
                         </div>
                         <div class="form-group">
@@ -790,6 +790,12 @@
                     </label>
                     <button type="button" id="btn-refresh-messages" class="btn-secondary messages-refresh-btn" title="Actualiser la messagerie">↻ Actualiser</button>
                     <button type="button" id="btn-delete-messages" class="btn-secondary messages-delete-btn" style="display:none;" title="Archiver les messages sélectionnés">🗑 Supprimer</button>
+                    <select id="messages-filter" class="messages-filter-select" title="Filtrer les messages">
+                        <option value="tous">Tous les messages</option>
+                        <option value="nonlus">Non lus</option>
+                        <option value="favoris">Favoris</option>
+                        <option value="lus">Lus</option>
+                    </select>
                     <span id="messages-selection-info" class="messages-selection-info"></span>
                 </div>
                 <div id="messages-list" style="background:white; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); overflow:hidden;">
@@ -1472,7 +1478,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=92"></script>
-    <script src="version.js?v=20260925135857"></script>
+    <script src="version.js?v=20260925140514"></script>
     <script src="app.js?v=89"></script>
     <script src="utils.js?v=107"></script>
     <script src="presences.js?v=101"></script>
@@ -1487,7 +1493,7 @@
     <script src="membres.js?v=105"></script>
     <script src="instructeurs.js?v=107"></script>
     <script src="instructeur-planning.js?v=192"></script>
-    <script src="messagerie.js?v=23"></script>
+    <script src="messagerie.js?v=24"></script>
     <script src="membre-home.js?v=94"></script>
     <script src="accueil-pilote.js?v=25"></script>
     <!-- Modal Inscrire quelqu'un d'autre -->

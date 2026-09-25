@@ -95,6 +95,7 @@ let utilisateursMessagerieCache = [];
 let destinatairesSelectionnes = [];
 let threadsSelectionnes = new Set();
 let ongletMessagerie = 'recus';
+let filtreMessagerie = 'tous';
 let dernierRenduSignature = '';
 
 function nomCompletCourant() {
@@ -176,6 +177,15 @@ function initMessagerie() {
     if (tabArchives) tabArchives.addEventListener('click', () => changerOngletMessagerie('archives'));
     const deleteBtn = document.getElementById('btn-delete-messages');
     if (deleteBtn) deleteBtn.addEventListener('click', archiverThreadsSelectionnes);
+    const filterSel = document.getElementById('messages-filter');
+    if (filterSel) {
+        filterSel.addEventListener('change', () => {
+            filtreMessagerie = filterSel.value || 'tous';
+            threadsSelectionnes.clear();
+            dernierRenduSignature = '';
+            afficherMessages(messagesCache);
+        });
+    }
     const selectAll = document.getElementById('messages-select-all');
     if (selectAll) {
         selectAll.addEventListener('change', () => {
@@ -230,10 +240,10 @@ function renderDestinatairesListe() {
         return;
     }
     const allSelected = utilisateurs.length > 0 && utilisateurs.every(n => destinatairesSelectionnes.includes(n));
-    container.innerHTML = utilisateurs.map((nom, i) => `
-        <label style="display:flex; align-items:center; gap:8px; padding:6px 4px; cursor:pointer; color:#334155; ${i % 2 === 1 ? 'background:#f1f5f9;' : ''}">
-            <input type="checkbox" class="destinataire-check" style="width:auto; padding:0; border:none; flex-shrink:0;" value="${escHtml(nom)}" ${destinatairesSelectionnes.includes(nom) ? 'checked' : ''}>
-            <span style="flex:1; min-width:0; overflow-wrap:break-word;">${escHtml(nom)}</span>
+    container.innerHTML = utilisateurs.map(nom => `
+        <label class="message-reply-dest">
+            <input type="checkbox" class="destinataire-check" value="${escHtml(nom)}" ${destinatairesSelectionnes.includes(nom) ? 'checked' : ''}>
+            <span>${escHtml(nom)}</span>
         </label>
     `).join('');
     const tousBtn = document.getElementById('message-destinataires-tous');
@@ -389,20 +399,26 @@ function threadArchive(thread) {
 
 function threadsBoite(records) {
     const threads = grouperParThread(records);
+    let visibles;
     if (ongletMessagerie === 'archives') {
-        return threads.filter(t => {
+        visibles = threads.filter(t => {
             const e = entreeArchiveMoi(t.lastMessage.fields || {}) || t.messages.map(r => entreeArchiveMoi(r.fields || {})).find(Boolean);
             return e && !archiveExpiree(e);
         });
+    } else {
+        visibles = threads.filter(t => !threadArchive(t));
     }
-    return threads.filter(t => !threadArchive(t));
+    if (filtreMessagerie === 'nonlus') visibles = visibles.filter(t => t.unread);
+    else if (filtreMessagerie === 'lus') visibles = visibles.filter(t => !t.unread);
+    else if (filtreMessagerie === 'favoris') visibles = visibles.filter(t => t.favori);
+    return visibles;
 }
 
 function afficherMessages(records) {
     const container = document.getElementById('messages-list');
     if (!container) return;
     const threads = threadsBoite(records);
-    const signature = ongletMessagerie + '|' + threads.map(t =>
+    const signature = ongletMessagerie + '|' + filtreMessagerie + '|' + threads.map(t =>
         `${t.key}:${t.lastMessage.id}:${t.unread ? 1 : 0}:${t.favori ? 1 : 0}:${t.hasPiece ? 1 : 0}:${t.messages.length}:${threadsSelectionnes.has(t.key) ? 1 : 0}`
     ).join(',');
     if (signature === dernierRenduSignature) { mettreAJourSelectAll(threads); return; }
@@ -900,7 +916,7 @@ async function compterMessagesNonLus() {
     const destinataire = typeof nomCompletCourant === 'function' ? nomCompletCourant() : '';
     if (!destinataire) { badge.style.display = 'none'; return; }
     const escaped = destinataire.replace(/'/g, "\\'");
-    const formula = `AND(OR(FIND('Tous', {Destinataire}) > 0, FIND('${escaped}', {Destinataire}) > 0), {Lu}=FALSE(), NOT(FIND('${escaped}', {Archivés}) > 0))`;
+    const formula = `AND(OR(FIND('Tous', {Destinataire}) > 0, FIND('${escaped}', {Destinataire}) > 0), {Lu}=FALSE(), {Expéditeur}!='${escaped}', NOT(FIND('${escaped}', {Archivés}) > 0))`;
     try {
         const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_MESSAGERIE)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`, { headers });
         const data = await res.json();

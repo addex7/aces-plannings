@@ -881,6 +881,28 @@ img, table, video, iframe, svg {
 .btn-submit:hover {
     background-color: #11995d;
 }
+.btn-secondary {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.btn-secondary:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+.btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+button, input[type="checkbox"], input[type="radio"], select, label, summary {
+    cursor: pointer;
+}
 #btn-delete-reservation, #btn-delete-vi-planeur, #btn-delete-carnet, #btn-delete-membre, #btn-delete-maintenance {
     flex: 1;
     background-color: #ef4444;
@@ -3795,11 +3817,22 @@ img, table, video, iframe, svg {
 }
 .messages-toolbar {
     display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
     justify-content: flex-start;
     align-items: center;
     gap: 14px;
     margin: 10px 0 6px;
     padding: 0 4px;
+}
+.messages-filter-select {
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
 }
 .messages-selection-info {
     margin-right: auto;
