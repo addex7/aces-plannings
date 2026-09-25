@@ -1232,7 +1232,7 @@ function initSuiviDocumentsAeronefs() {
         btn.id = 'btn-documents-aeronef';
         btn.className = 'btn-primary aeronef-ctl';
         btn.textContent = 'Suivi documentation machine';
-        btn.addEventListener('click', ouvrirModaleDocumentsAeronef);
+        btn.addEventListener('click', () => ouvrirModaleDocumentsAeronef());
         btnMaintenance.parentNode.insertBefore(btn, btnMaintenance.nextSibling);
     }
     appliquerAccesMaintenanceEtDocuments();
@@ -1372,7 +1372,7 @@ function fermerModaleDocumentsAeronef() {
 
 async function ouvrirModaleDocumentsAeronef(immatParam) {
     const selectMachine = document.getElementById('select-machine-suivi');
-    const immat = immatParam || (selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '');
+    const immat = (typeof immatParam === 'string' && immatParam) || (selectMachine && selectMachine.options[selectMachine.selectedIndex] ? selectMachine.options[selectMachine.selectedIndex].textContent : '');
     machineDocumentsCourante = immat;
     const modal = document.getElementById('documents-aeronef-modal');
     const title = document.getElementById('documents-aeronef-modal-title');
