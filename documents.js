@@ -217,6 +217,8 @@ function afficherDocuments(records) {
     const dans3mois = new Date();
     dans3mois.setMonth(dans3mois.getMonth() + 3);
     const aujourdhui = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    html = `<div class="docs-grid">${html}</div>`;
+    let htmlMachines = '';
     machines.forEach(machine => {
         const docs = (documentsAeronefsBibliothequeCache[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
         if (!docs.length) return;
@@ -241,8 +243,7 @@ function afficherDocuments(records) {
                 </div>
             `;
         }).join('');
-        html = `<div class="docs-grid">${html}</div><div class="docs-grid">`;
-        html += `
+        htmlMachines += `
             <details style="margin-bottom:4px;">
                 <summary style="color:#1e3d59; border-bottom:1px solid #e2e8f0; padding:7px 4px; margin-bottom:4px; cursor:pointer; font-size:1em; font-weight:bold;">${machine}</summary>
                 <div style="display:flex; flex-wrap:wrap; gap:8px; font-size:11px; margin-top:4px;">
@@ -251,7 +252,7 @@ function afficherDocuments(records) {
             </details>
         `;
     });
-    list.innerHTML = html + '</div>';
+    list.innerHTML = html + `<div class="docs-grid">${htmlMachines}</div>`;
 }
 
 function creerCarteDocument(rec) {
