@@ -1479,9 +1479,9 @@ async function ouvrirBilanDocumentsAeronefs() {
         if (!machines.includes(m) && !machinesExclues.includes(m)) machines.push(m);
     });
 
-    const codesPrioritaires = ['CEN', 'Assurance', 'Accusé', 'Carte Total'];
+    const codesPrioritaires = ['CEN', 'Assurance', 'Carte Total'];
     const tousTypes = [
-        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre'),
+        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre' && t.code !== 'Accusé'),
         ...[...typesCustom].sort().map(code => ({ code, nom: code, dateRequise: false }))
     ];
     const colonnes = codesPrioritaires.map(code =>
