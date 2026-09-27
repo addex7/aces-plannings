@@ -280,7 +280,8 @@ function afficherResume(records, summary, piloteNom, gvv) {
         if (credit > 0) { recettes += credit; solde += credit; }
     });
 
-    const soldeFinal = solde + enAttente;
+    const soldeGvv = (gvv && gvv['Solde'] !== undefined && gvv['Solde'] !== null && gvv['Solde'] !== '') ? Number(gvv['Solde']) : null;
+    const soldeFinal = (soldeGvv !== null ? soldeGvv : solde) + enAttente;
 
     const html = `
         <div class="comptes-summary-card">
