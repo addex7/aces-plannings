@@ -17,16 +17,14 @@
 const TABLE_COMPTES = 'Comptes Pilotes';
 const TABLE_UTILISATEURS_COMPTES = 'Utilisateurs';
 let utilisateursComptesCache = [];
-let comptesPilotesCache = [];
 let comptesShowAll = false;
 
 function initComptesPilotes() {
-    const btnImport = document.getElementById('comptes-csv-btn');
     const btnSyncGvv = document.getElementById('comptes-gvv-sync');
     const formRecette = document.getElementById('comptes-form-recette');
     const select = document.getElementById('comptes-pilote-select');
 
-    if (btnImport) btnImport.addEventListener('click', importerCSVComptes);
+
     if (btnSyncGvv) btnSyncGvv.addEventListener('click', () => lancerSyncGvv(btnSyncGvv));
     if (formRecette) formRecette.addEventListener('submit', enregistrerRecetteManuelle);
     if (select) select.addEventListener('change', chargerComptesPilotes);
@@ -103,12 +101,15 @@ async function chargerComptesPilotes() {
 
         const records = await fetchComptes(piloteNom);
         const gvv = await fetchSoldeGvv(piloteNom);
-        comptesPilotesCache = records;
-        afficherDernierImport(records);
         afficherResume(records, summary, piloteNom, gvv);
-        afficherTransactions(records, container, piloteNom);
         const gvvLignes = gvv ? await fetchEcrituresGvv(gvv['Compte']) : [];
-        afficherEcrituresGvv(gvvLignes, document.getElementById('comptes-gvv-detail'));
+        const lignes = gvvLignes.map(ecritureVersTransaction);
+        lignes.push(...records.filter(r => {
+            const f = r.fields || {};
+            return f['Source'] === 'Saisie pilote' && f['Statut'] === 'En attente';
+        }));
+        lignes.sort((a, b) => new Date(b.fields?.['Date'] || 0) - new Date(a.fields?.['Date'] || 0));
+        afficherTransactions(lignes.length ? lignes : records, container, piloteNom);
 
         const isCurrent = !select || !select.value || select.value === nomPiloteComptes(currentUser);
         const canEdit = isCurrent || isTresorier();
@@ -174,33 +175,24 @@ async function fetchEcrituresGvv(compteGvv) {
     }
 }
 
-function afficherEcrituresGvv(lignes, container) {
-    if (!container) return;
-    if (!lignes.length) { container.style.display = 'none'; return; }
-    const fmt = (v) => (v === null || v === undefined || v === '') ? '' : `${Number(v).toFixed(2).replace('.', ',')} €`;
-    const fmtDate = (iso) => {
-        const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-        return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || '');
+// Transforme une ecriture GVV en record "Comptes Pilotes" pour reutiliser
+// le meme tableau Transactions (meme colonnes, memes styles).
+function ecritureVersTransaction(l) {
+    const f = l.fields || {};
+    const desc = f['Description'] || '';
+    const ref = f['Référence'] || '';
+    return {
+        id: l.id,
+        fields: {
+            'Date': f['Date'],
+            'Description': desc || ref,
+            'Référence': desc ? ref : '',
+            'Prix': f['Prix'],
+            'Quantité': f['Quantité'],
+            'Débit': f['Débit'],
+            'Crédit': f['Crédit']
+        }
     };
-    container.innerHTML = `
-        <h3 class="comptes-list-title">Détail compta GVV</h3>
-        <table class="gvv-ecritures-table">
-            <thead><tr><th>Date</th><th>Libellé</th><th class="num">Débit</th><th class="num">Crédit</th></tr></thead>
-            <tbody>
-                ${lignes.map(l => {
-                    const f = l.fields || {};
-                    const libelle = f['Description'] || f['Référence'] || '—';
-                    return `<tr>
-                        <td class="gvv-date">${escHtml(fmtDate(f['Date']))}</td>
-                        <td>${escHtml(libelle)}</td>
-                        <td class="num gvv-debit">${fmt(f['Débit'])}</td>
-                        <td class="num gvv-credit">${fmt(f['Crédit'])}</td>
-                    </tr>`;
-                }).join('')}
-            </tbody>
-        </table>
-    `;
-    container.style.display = 'block';
 }
 
 // Lance la synchro GVV complete (soldes + ecritures) via le backend.
@@ -269,28 +261,6 @@ function parseMontantCompte(s) {
     const t = s.toString().trim().replace(/\s/g, '').replace(',', '.');
     const n = parseFloat(t);
     return isNaN(n) ? 0 : n;
-}
-
-function convertirDateFR(d) {
-    const m = d.match(/^\d{2}\/\d{2}\/\d{4}$/);
-    if (!m) return null;
-    const [_, j, m_, a] = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    return `${a}-${m_}-${j}`;
-}
-
-function afficherDernierImport(records) {
-    const lastImportEl = document.getElementById('comptes-last-import');
-    if (!lastImportEl) return;
-    const lastImport = records
-        .filter(r => (r.fields?.['Source'] || '') === 'Import CSV' && r.createdTime)
-        .sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime))[0];
-    if (lastImport) {
-        const d = new Date(lastImport.createdTime);
-        lastImportEl.textContent = `· Dernier import CSV : ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-        lastImportEl.style.display = '';
-    } else {
-        lastImportEl.style.display = 'none';
-    }
 }
 
 function afficherResume(records, summary, piloteNom, gvv) {
@@ -458,215 +428,6 @@ function escHtml(s) {
     return (s || '').toString().replace(/[&<"']/g, c => ({ '&': '&amp;', '<': '&lt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-async function importerCSVComptes() {
-    const input = document.getElementById('comptes-csv-input');
-    const file = input && input.files[0];
-    if (!file) { alert('Veuillez sélectionner un fichier CSV.'); return; }
-
-    const text = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => {
-            const arr = e.target.result;
-            try {
-                resolve(new TextDecoder('utf-8', { fatal: true }).decode(arr));
-            } catch (_) {
-                resolve(new TextDecoder('windows-1252').decode(arr));
-            }
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
-
-    const loading = document.getElementById('comptes-loading');
-    if (loading) loading.style.display = 'flex';
-    try {
-        const extraits = parserCSVComptes(text);
-        if (!extraits.length) { alert('Aucun extrait de compte trouvé dans ce fichier.'); return; }
-
-        await chargerUtilisateursComptes();
-
-        for (const ex of extraits) {
-            const pilote = trouverPiloteParNom(ex.nom);
-            if (!pilote) {
-                console.warn('Pilote non trouvé dans Glide 2000 :', ex.nom);
-                continue;
-            }
-
-            const f = pilote.fields || {};
-            const piloteNom = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
-
-            await supprimerImportCSV(piloteNom);
-
-            for (const t of ex.transactions) {
-                if (t.credit > 0) {
-                    await validerRecetteManuelle(piloteNom, t.credit, t.dateIso);
-                }
-            }
-
-            await creerImportCSV(piloteNom, ex.transactions);
-        }
-
-        // Import terminé sans alerte
-        input.value = '';
-        await chargerComptesPilotes();
-    } catch (err) {
-        console.error(err);
-        alert('Erreur lors de l\'import CSV : ' + err.message);
-    } finally {
-        if (loading) loading.style.display = 'none';
-    }
-}
-
-function parserCSVComptes(text) {
-    const lignes = text.replace(/^\uFEFF/, '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const extraits = [];
-    let courant = null;
-    let inTransactions = false;
-
-    for (let i = 0; i < lignes.length; i++) {
-        const l = lignes[i];
-        if (l.startsWith('Extrait du compte')) {
-            courant = { nom: '', transactions: [] };
-            extraits.push(courant);
-            inTransactions = false;
-            const nomLigne = lignes[i + 1] || '';
-            courant.nom = (nomLigne.split(';').pop() || '').replace(/\s+/g, ' ').trim();
-        } else if (l.startsWith('Date;')) {
-            inTransactions = true;
-        } else if (l.startsWith('Solde avant le')) {
-            inTransactions = false;
-            const sCols = l.split(';').map(c => c.trim());
-            if (sCols.length >= 4 && courant) {
-                const sDate = convertirDateFR(sCols[1]);
-                const sType = (sCols[2] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                const sMontant = Math.abs(parseMontantCompte(sCols[3]));
-                if (sDate && sMontant > 0) {
-                    const isDebit = sType.includes('debit') || sType.includes('debiteur');
-                    courant.transactions.push({
-                        dateIso: sDate,
-                        description: 'Solde initial au ' + sDate,
-                        reference: '',
-                        prix: 0,
-                        quantite: 0,
-                        debit: isDebit ? sMontant : 0,
-                        credit: isDebit ? 0 : sMontant,
-                        ordre: courant.transactions.length
-                    });
-                }
-            }
-        } else if (l.startsWith('Solde au')) {
-            inTransactions = false;
-        } else if (inTransactions && courant) {
-            const cols = l.split(';').map(c => c.trim());
-            if (cols.length < 7) continue;
-
-            const dateIso = convertirDateFR(cols[0]);
-            if (!dateIso) continue;
-
-            const debit = parseMontantCompte(cols[5]);
-            const credit = parseMontantCompte(cols[6]);
-
-            courant.transactions.push({
-                dateIso,
-                description: cols[1] || '',
-                reference: cols[2] || '',
-                prix: parseMontantCompte(cols[3]),
-                quantite: parseMontantCompte(cols[4]),
-                debit,
-                credit,
-                ordre: courant.transactions.length
-            });
-        }
-    }
-    return extraits;
-}
-
-function normaliserNomCompte(n) {
-    return (n || '')
-        .toString()
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function trouverPiloteParNom(csvNom) {
-    if (!csvNom) return null;
-    const csvMots = normaliserNomCompte(csvNom).split(' ').filter(Boolean);
-    if (!csvMots.length) return null;
-    return utilisateursComptesCache.find(r => {
-        const f = r.fields || {};
-        const membre = normaliserNomCompte(`${f['Prénom'] || ''} ${f['Nom'] || ''}`);
-        const membreMots = membre.split(' ').filter(Boolean);
-        if (!membreMots.length) return false;
-        return membreMots.every(m => csvMots.includes(m));
-    });
-}
-
-async function supprimerImportCSV(piloteNom) {
-    const formula = `AND({Pilote}='${piloteNom.replace(/'/g, "\\'")}', {Source}='Import CSV')`;
-    const url = `${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
-    const res = await apiFetch(url, { headers });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Erreur suppression anciennes lignes.');
-
-    const ids = (data.records || []).map(r => r.id);
-    if (!ids.length) return;
-
-    for (let i = 0; i < ids.length; i += 10) {
-        const batch = ids.slice(i, i + 10);
-        const params = batch.map(id => `records[]=${encodeURIComponent(id)}`).join('&');
-        const del = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}?${params}`, {
-            method: 'DELETE',
-            headers
-        });
-        const delData = await del.json();
-        if (!del.ok) throw new Error(delData.error?.message || 'Erreur suppression.');
-    }
-}
-
-async function validerRecetteManuelle(piloteNom, montant, dateIso) {
-    const formula = `AND({Pilote}='${piloteNom.replace(/'/g, "\\'")}', {Source}='Saisie pilote', {Crédit}=${montant}, DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${dateIso}')`;
-    const url = `${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=1`;
-    const res = await apiFetch(url, { headers });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Erreur validation recette.');
-
-    const record = (data.records || [])[0];
-    if (record) {
-        await supprimerRecetteManuelle(record.id, false);
-    }
-    return false;
-}
-
-async function creerImportCSV(piloteNom, transactions) {
-    const records = transactions.map(t => ({
-        fields: {
-            'Pilote': piloteNom,
-            'Date': t.dateIso,
-            'Description': '~#' + String(t.ordre || 0).padStart(4, '0') + '~' + t.description,
-            'Référence': t.reference,
-            'Prix': t.prix,
-            'Quantité': t.quantite,
-            'Débit': t.debit,
-            'Crédit': t.credit,
-            'Source': 'Import CSV',
-            'Statut': 'Validé'
-        }
-    }));
-
-    for (let i = 0; i < records.length; i += 10) {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ records: records.slice(i, i + 10) })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur création lignes.');
-    }
-}
 
 async function enregistrerRecetteManuelle(e) {
     e.preventDefault();

@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=208">
+    <link rel="stylesheet" href="style.css?v=209">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -669,21 +669,14 @@
             <section id="view-comptes" class="view-section" style="display: none;">
                 <header class="header comptes-header">
                     <div class="comptes-titres">
-                        <h2>Compte pilote <span id="comptes-last-import" class="comptes-last-import" style="display:none;"></span></h2>
+                        <h2>Compte pilote</h2>
                         <p class="comptes-subtitle">Gestion de votre compte et suivi des transactions.</p>
                     </div>
                     <div id="comptes-header-actions" class="comptes-actions" style="display:none;">
-                        <input type="file" id="comptes-csv-input" accept=".csv">
-                        <button id="comptes-csv-btn" type="button" class="comptes-import-btn">Importer CSV GVV</button>
                         <button id="comptes-gvv-sync" type="button" class="comptes-import-btn" title="Synchroniser les soldes et écritures depuis GVV">🔄 Synchro GVV</button>
                         <select id="comptes-pilote-select"></select>
                     </div>
                 </header>
-
-                <div id="comptes-loading" class="comptes-loading">
-                    <span class="comptes-spinner"></span>
-                    Import en cours...
-                </div>
 
                 <div id="comptes-summary" class="comptes-summary"></div>
 
@@ -707,7 +700,6 @@
 
                     <div id="comptes-list" class="comptes-list-card"></div>
                 </div>
-                <div id="comptes-gvv-detail" class="comptes-list-card" style="display:none; margin-top:14px;"></div>
             </section>
 
             <!-- ================= VUE JOURNAL D'AUDIT ================= -->
@@ -1486,13 +1478,13 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20260927224134"></script>
+    <script src="version.js?v=20260927225047"></script>
     <script src="app.js?v=90"></script>
     <script src="utils.js?v=108"></script>
     <script src="presences.js?v=101"></script>
     <script src="planning.js?v=197"></script>
     <script src="calendrier.js?v=90"></script>
-    <script src="comptes.js?v=113"></script>
+    <script src="comptes.js?v=114"></script>
     <script src="aeronefs.js?v=126"></script>
     <script src="carnet.js?v=182"></script>
     <script src="documents.js?v=89"></script>

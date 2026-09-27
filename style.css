@@ -2613,35 +2613,12 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     cursor: pointer;
 }
 .comptes-import-btn:hover { background: #15803d; }
-#comptes-pilote-select,
-#comptes-csv-input {
+#comptes-pilote-select {
     padding: 7px 10px;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
     background: #fff;
     font-size: 13px;
-}
-
-.comptes-loading {
-    display: none;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 15px;
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    border-radius: 8px;
-    color: #0369a1;
-    font-weight: 600;
-    margin-bottom: 16px;
-}
-.comptes-spinner {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid #7dd3fc;
-    border-top-color: #0369a1;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
 }
 
 .comptes-summary {
@@ -2680,14 +2657,6 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .gvv-icon { background: rgba(251, 191, 36, 0.2); color: #fbbf24; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; }
 .gvv-val { color: #fbbf24; }
 .comptes-gvv-maj { font-size: 10px; opacity: 0.55; margin-top: 2px; }
-.gvv-ecritures-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.gvv-ecritures-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; font-size: 11px; letter-spacing: 0.5px; color: #64748b; text-transform: uppercase; }
-.gvv-ecritures-table td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-.gvv-ecritures-table tr:hover td { background: #f8fafc; }
-.gvv-ecritures-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.gvv-date { white-space: nowrap; color: #64748b; }
-.gvv-debit { color: #dc2626; }
-.gvv-credit { color: #16a34a; }
 .comptes-summary-label {
     font-size: 11px;
     letter-spacing: 0.5px;
@@ -2860,13 +2829,6 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     align-items: center;
     gap: 12px;
 }
-.comptes-last-import {
-    font-size: 13px;
-    font-weight: 400;
-    color: #64748b;
-    white-space: nowrap;
-}
-
 /* --- ICONES HAUT DE SIDEBAR --- */
 .sidebar-icon-btn {
     width: 42px;
