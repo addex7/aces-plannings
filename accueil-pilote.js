@@ -116,19 +116,25 @@ async function chargerAccueilPilote() {
             <button type="button" id="accueil-btn-compte" class="btn-primary" style="width:100%;">Consulter mon compte</button>
         </div>`;
 
+    const sigRows = signalements.map(s => `
+        <div class="ap-signalement-row" data-immat="${escHtml(s.immat)}" style="cursor:pointer;">
+            <span class="ap-signalement-machine">${escHtml(s.immat)}</span>
+            <span class="ap-signalement-count">${s.items.length} Signalement${s.items.length > 1 ? 's' : ''}</span>
+        </div>`).join('');
+
     const htmlSignalements = `
         <div class="ap-card ap-card-white ap-card-signalements">
             <h3>Signalements en cours</h3>
             ${signalements.length ? `
-                <div class="ap-signalements-list" id="ap-signalements-list">
-                    ${signalements.map(s => `
-                        <div class="ap-signalement-row" data-immat="${escHtml(s.immat)}" style="cursor:pointer;">
-                            <span class="ap-signalement-machine">${escHtml(s.immat)}</span>
-                            <span class="ap-signalement-count">${s.items.length} Signalement${s.items.length > 1 ? 's' : ''}</span>
-                        </div>
-                    `).join('')}
+                <div class="ap-signalements-list" id="ap-signalements-list">${sigRows}</div>
+                <button type="button" class="ap-signalements-toggle" id="ap-signalements-toggle" style="display:none;" aria-expanded="false" aria-label="Afficher tous les signalements"><span class="ap-signalements-chevron">▾</span></button>
+                <div class="ap-signalements-pop" id="ap-signalements-pop" hidden>
+                    <div class="ap-signalements-pop-head">
+                        <h3>Signalements en cours</h3>
+                        <button type="button" class="ap-signalements-close" id="ap-signalements-close" aria-label="Réduire la liste"><span class="ap-signalements-chevron">▴</span></button>
+                    </div>
+                    <div class="ap-signalements-pop-list">${sigRows}</div>
                 </div>
-                <button type="button" class="ap-signalements-toggle" id="ap-signalements-toggle" style="display:none;" aria-label="Afficher plus de signalements"><span class="ap-signalements-chevron">▾</span></button>
             ` : '<p class="carnet-empty">Aucun signalement en cours.</p>'}
         </div>`;
 
@@ -203,12 +209,16 @@ async function chargerAccueilPilote() {
 
     const sigList = container.querySelector('#ap-signalements-list');
     const sigToggle = container.querySelector('#ap-signalements-toggle');
-    if (sigList && sigToggle && sigList.scrollHeight > sigList.clientHeight + 2) {
+    const sigPop = container.querySelector('#ap-signalements-pop');
+    const sigClose = container.querySelector('#ap-signalements-close');
+    if (sigList && sigToggle && sigPop && sigList.scrollHeight > sigList.clientHeight + 2) {
         sigToggle.style.display = 'flex';
-        sigToggle.addEventListener('click', () => {
-            const open = sigList.classList.toggle('ap-expanded');
-            sigToggle.classList.toggle('open', open);
-        });
+        const setSigOpen = (open) => {
+            sigPop.hidden = !open;
+            sigToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+        sigToggle.addEventListener('click', () => setSigOpen(sigPop.hidden));
+        sigClose.addEventListener('click', () => setSigOpen(false));
     }
 
     const btnNew = container.querySelector('#ap-btn-new-msg');
