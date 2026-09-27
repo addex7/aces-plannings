@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initGestionCreneauxVI();
     initCarnetRoute();
     initSidebarToggle();
+    initSidebarResize();
     initEvenements();
     initComptesPilotes();
     initNotifications();
@@ -57,6 +58,60 @@ function initSidebarToggle() {
         toggle.textContent = collapsed ? '❯' : '❮';
         toggle.title = collapsed ? 'Afficher le menu' : 'Masquer le menu';
     });
+}
+
+const SIDEBAR_W_KEY = 'aces-sidebar-width';
+const SIDEBAR_W_MIN = 140;
+const SIDEBAR_W_MAX = 500;
+const SIDEBAR_W_BASE = 170;
+
+function applySidebarWidth(w) {
+    const layout = document.querySelector('.app-layout');
+    const sidebar = document.querySelector('.sidebar');
+    if (!layout || !sidebar) return;
+    w = Math.round(Math.min(SIDEBAR_W_MAX, Math.max(SIDEBAR_W_MIN, w)));
+    // zoom redimensionne aussi le texte/contenu ; sans support, on joue sur la largeur
+    if (window.CSS && CSS.supports && CSS.supports('zoom', '1')) {
+        layout.style.setProperty('--sb-w', SIDEBAR_W_BASE + 'px');
+        sidebar.style.zoom = (w / SIDEBAR_W_BASE).toFixed(4);
+    } else {
+        layout.style.setProperty('--sb-w', w + 'px');
+        sidebar.style.zoom = '';
+    }
+    layout.style.setProperty('--sb-edge', w + 'px');
+    try { localStorage.setItem(SIDEBAR_W_KEY, String(w)); } catch (e) {}
+}
+
+function initSidebarResize() {
+    const layout = document.querySelector('.app-layout');
+    const resizer = document.getElementById('sidebar-resizer');
+    const sidebar = document.querySelector('.sidebar');
+    if (!layout || !resizer || !sidebar) return;
+
+    try {
+        const saved = parseFloat(localStorage.getItem(SIDEBAR_W_KEY));
+        if (saved && !isNaN(saved)) applySidebarWidth(saved);
+    } catch (e) {}
+
+    let dragging = false;
+    resizer.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        layout.classList.add('sidebar-resizing');
+        resizer.setPointerCapture(e.pointerId);
+        e.preventDefault();
+    });
+    resizer.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        applySidebarWidth(e.clientX - layout.getBoundingClientRect().left);
+    });
+    const stop = (e) => {
+        if (!dragging) return;
+        dragging = false;
+        layout.classList.remove('sidebar-resizing');
+        try { resizer.releasePointerCapture(e.pointerId); } catch (err) {}
+    };
+    resizer.addEventListener('pointerup', stop);
+    resizer.addEventListener('pointercancel', stop);
 }
 
 function escHtml(s) {

@@ -17,8 +17,8 @@ img, table, video, iframe, svg {
 }
 /* Barre latérale (RÉDUITE POUR GAGNER DE LA PLACE) */
 .sidebar {
-    width: 170px;
-    min-width: 170px;
+    width: var(--sb-w, 170px);
+    min-width: var(--sb-w, 170px);
     background-color: #1e3d59;
     color: white;
     display: flex;
@@ -138,7 +138,7 @@ img, table, video, iframe, svg {
 #sidebar-toggle {
     position: absolute;
     top: 50%;
-    left: 170px;
+    left: var(--sb-edge, 170px);
     transform: translate(-50%, -50%);
     width: 22px;
     height: 44px;
@@ -164,6 +164,38 @@ img, table, video, iframe, svg {
 .app-layout.sidebar-collapsed #sidebar-toggle {
     left: 0;
     opacity: 1;
+}
+#sidebar-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--sb-edge, 170px) - 5px);
+    width: 10px;
+    cursor: col-resize;
+    z-index: 95;
+    touch-action: none;
+}
+#sidebar-resizer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 2px;
+    background: rgba(255,255,255,0.25);
+    transition: background 0.15s ease, width 0.15s ease;
+}
+#sidebar-resizer:hover::after,
+.app-layout.sidebar-resizing #sidebar-resizer::after {
+    background: rgba(255,255,255,0.6);
+    width: 3px;
+}
+.app-layout.sidebar-collapsed #sidebar-resizer {
+    display: none;
+}
+.app-layout.sidebar-resizing .sidebar,
+.app-layout.sidebar-resizing #sidebar-toggle {
+    transition: none;
 }
 .view-section {
     display: flex;
