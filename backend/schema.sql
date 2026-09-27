@@ -137,3 +137,12 @@ CREATE TABLE IF NOT EXISTS gvv_soldes (
     fields      JSONB NOT NULL DEFAULT '{}',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS gvv_ecritures (
+    id          TEXT PRIMARY KEY,
+    fields      JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_gvv_ecritures_compte ON gvv_ecritures ((fields->>'Compte'));
+CREATE INDEX IF NOT EXISTS idx_gvv_ecritures_date   ON gvv_ecritures ((fields->>'Date'));

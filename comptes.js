@@ -105,6 +105,8 @@ async function chargerComptesPilotes() {
         afficherDernierImport(records);
         afficherResume(records, summary, piloteNom, gvv);
         afficherTransactions(records, container, piloteNom);
+        const gvvLignes = gvv ? await fetchEcrituresGvv(gvv['Compte']) : [];
+        afficherEcrituresGvv(gvvLignes, document.getElementById('comptes-gvv-detail'));
 
         const isCurrent = !select || !select.value || select.value === nomPiloteComptes(currentUser);
         const canEdit = isCurrent || isTresorier();
@@ -156,6 +158,47 @@ async function fetchSoldeGvv(piloteNom) {
         console.warn('Solde GVV indisponible:', e);
         return null;
     }
+}
+
+async function fetchEcrituresGvv(compteGvv) {
+    try {
+        const formula = `{Compte}='${String(compteGvv).replace(/'/g, "\\'")}'`;
+        const url = `${API_BASE}/${encodeURIComponent('Écritures GVV')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+        const records = await fetchTousRecords(url, { headers });
+        return (records || []).sort((a, b) => (b.fields?.['Date'] || '').localeCompare(a.fields?.['Date'] || ''));
+    } catch (e) {
+        console.warn('Écritures GVV indisponibles:', e);
+        return [];
+    }
+}
+
+function afficherEcrituresGvv(lignes, container) {
+    if (!container) return;
+    if (!lignes.length) { container.style.display = 'none'; return; }
+    const fmt = (v) => (v === null || v === undefined || v === '') ? '' : `${Number(v).toFixed(2).replace('.', ',')} €`;
+    const fmtDate = (iso) => {
+        const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || '');
+    };
+    container.innerHTML = `
+        <h3 class="comptes-list-title">Détail compta GVV</h3>
+        <table class="gvv-ecritures-table">
+            <thead><tr><th>Date</th><th>Libellé</th><th class="num">Débit</th><th class="num">Crédit</th></tr></thead>
+            <tbody>
+                ${lignes.map(l => {
+                    const f = l.fields || {};
+                    const libelle = f['Description'] || f['Référence'] || '—';
+                    return `<tr>
+                        <td class="gvv-date">${escHtml(fmtDate(f['Date']))}</td>
+                        <td>${escHtml(libelle)}</td>
+                        <td class="num gvv-debit">${fmt(f['Débit'])}</td>
+                        <td class="num gvv-credit">${fmt(f['Crédit'])}</td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+    container.style.display = 'block';
 }
 
 async function fetchComptes(piloteNom) {

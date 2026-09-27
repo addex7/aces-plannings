@@ -2680,6 +2680,14 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .gvv-icon { background: rgba(251, 191, 36, 0.2); color: #fbbf24; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; }
 .gvv-val { color: #fbbf24; }
 .comptes-gvv-maj { font-size: 10px; opacity: 0.55; margin-top: 2px; }
+.gvv-ecritures-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.gvv-ecritures-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; font-size: 11px; letter-spacing: 0.5px; color: #64748b; text-transform: uppercase; }
+.gvv-ecritures-table td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+.gvv-ecritures-table tr:hover td { background: #f8fafc; }
+.gvv-ecritures-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gvv-date { white-space: nowrap; color: #64748b; }
+.gvv-debit { color: #dc2626; }
+.gvv-credit { color: #16a34a; }
 .comptes-summary-label {
     font-size: 11px;
     letter-spacing: 0.5px;

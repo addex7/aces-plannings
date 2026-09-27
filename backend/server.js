@@ -50,7 +50,8 @@ const TABLES = {
     'Dossiers': 'dossiers',
     'Audit': 'audit',
     'Signalements': 'signalements',
-    'Soldes GVV': 'gvv_soldes'
+    'Soldes GVV': 'gvv_soldes',
+    'Écritures GVV': 'gvv_ecritures'
 };
 
 const pool = new Pool({ connectionString: DATABASE_URL });
