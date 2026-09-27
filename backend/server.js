@@ -22,6 +22,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { spawn } = require('child_process');
 const { formulaToSql } = require('./formula');
 
 const PORT = process.env.PORT || 3000;
@@ -425,6 +426,34 @@ app.post('/v0/upload', (req, res) => {
 });
 
 // --- LISTE ---
+// --- SYNCHRO GVV MANUELLE ---
+// Lance gvv-sync.js en tache de fond (soldes + ecritures, ~2-3 min).
+// Le bouton n'est visible que pour tresorier/super admin cote front ;
+// ici on garde l'endpoint protege par le jeton + anti-doublon.
+let gvvSyncEnCours = false;
+let gvvSyncDernier = null;
+
+app.post('/v0/:base/sync-gvv', (req, res) => {
+    if (gvvSyncEnCours) return erreur(res, 409, 'Synchro GVV déjà en cours');
+    gvvSyncEnCours = true;
+    gvvSyncDernier = null;
+    let log = '';
+    const p = spawn(process.execPath, [path.join(__dirname, 'gvv-sync.js')], { cwd: __dirname });
+    p.stdout.on('data', d => { log += d.toString(); });
+    p.stderr.on('data', d => { log += d.toString(); });
+    const fin = (code) => {
+        gvvSyncEnCours = false;
+        gvvSyncDernier = { fin: new Date().toISOString(), code, log: log.slice(-3000) };
+    };
+    p.on('close', fin);
+    p.on('error', err => { gvvSyncEnCours = false; gvvSyncDernier = { fin: new Date().toISOString(), code: -1, log: String(err) }; });
+    res.json({ status: 'demarre' });
+});
+
+app.get('/v0/:base/sync-gvv/statut', (req, res) => {
+    res.json({ enCours: gvvSyncEnCours, dernier: gvvSyncDernier });
+});
+
 app.get('/v0/:base/:table', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;

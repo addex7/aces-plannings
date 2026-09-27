@@ -22,10 +22,12 @@ let comptesShowAll = false;
 
 function initComptesPilotes() {
     const btnImport = document.getElementById('comptes-csv-btn');
+    const btnSyncGvv = document.getElementById('comptes-gvv-sync');
     const formRecette = document.getElementById('comptes-form-recette');
     const select = document.getElementById('comptes-pilote-select');
 
     if (btnImport) btnImport.addEventListener('click', importerCSVComptes);
+    if (btnSyncGvv) btnSyncGvv.addEventListener('click', () => lancerSyncGvv(btnSyncGvv));
     if (formRecette) formRecette.addEventListener('submit', enregistrerRecetteManuelle);
     if (select) select.addEventListener('change', chargerComptesPilotes);
 
@@ -199,6 +201,48 @@ function afficherEcrituresGvv(lignes, container) {
         </table>
     `;
     container.style.display = 'block';
+}
+
+// Lance la synchro GVV complete (soldes + ecritures) via le backend.
+// La synchro dure ~2-3 min : l'API la demarre en tache de fond et on
+// polle son statut jusqu'a la fin, puis on recharge la vue.
+async function lancerSyncGvv(btn) {
+    const labelInitial = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Synchro en cours…';
+    const finBouton = () => { btn.disabled = false; btn.textContent = labelInitial; };
+    try {
+        const res = await apiFetch(`${API_BASE}/sync-gvv`, { method: 'POST', headers });
+        if (!res.ok && res.status !== 409) {
+            const d = await res.json().catch(() => ({}));
+            throw new Error(d.error?.message || `Erreur ${res.status}`);
+        }
+        const debut = Date.now();
+        const timer = setInterval(async () => {
+            try {
+                const s = await (await apiFetch(`${API_BASE}/sync-gvv/statut`, { headers })).json();
+                if (!s.enCours) {
+                    clearInterval(timer);
+                    finBouton();
+                    if (s.dernier && s.dernier.code === 0) {
+                        btn.textContent = '✅ Synchro terminée';
+                        setTimeout(finBouton, 3000);
+                        btn.disabled = false;
+                        await chargerComptesPilotes();
+                    } else {
+                        btn.textContent = '⚠️ Échec synchro';
+                        setTimeout(finBouton, 4000);
+                        btn.disabled = false;
+                        console.error('Synchro GVV:', s.dernier?.log);
+                    }
+                }
+            } catch (e) { /* retry silencieux */ }
+            if (Date.now() - debut > 8 * 60 * 1000) { clearInterval(timer); finBouton(); }
+        }, 5000);
+    } catch (e) {
+        finBouton();
+        alert('Synchro GVV : ' + e.message);
+    }
 }
 
 async function fetchComptes(piloteNom) {
