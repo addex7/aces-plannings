@@ -198,7 +198,7 @@ function cmpDiff(node) {
     if (gauche.kind === 'champ') {
         if (estBool(droite)) return `${sqlBoolChamp(gauche.nom)} = ${boolVal(droite) ? 'false' : 'true'}`;
         if (droite.kind === 'num') return `(${sqlNum(sqlChamp(gauche.nom))} IS DISTINCT FROM ${droite.value})`;
-        if (droite.kind === 'str') return `(${sqlChamp(gauche.nom)} <> ${sqlLit(droite.value)} AND NOT (${sqlChampJsonb(gauche.nom)} ? ${sqlLit(droite.value)}))`;
+        if (droite.kind === 'str') return `(${sqlChamp(gauche.nom)} IS DISTINCT FROM ${sqlLit(droite.value)} AND NOT COALESCE((${sqlChampJsonb(gauche.nom)} ? ${sqlLit(droite.value)}), false))`;
         return `${valeurSql(gauche)} <> ${valeurSql(droite)}`;
     }
     if (droite.kind === 'champ') return cmpDiff({ kind: 'cmp', op: '!=', gauche: droite, droite: gauche });

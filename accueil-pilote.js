@@ -120,7 +120,7 @@ async function chargerAccueilPilote() {
         <div class="ap-card ap-card-white ap-card-signalements">
             <h3>Signalements en cours</h3>
             ${signalements.length ? `
-                <div class="ap-signalements-list">
+                <div class="ap-signalements-list" id="ap-signalements-list">
                     ${signalements.map(s => `
                         <div class="ap-signalement-row" data-immat="${escHtml(s.immat)}" style="cursor:pointer;">
                             <span class="ap-signalement-machine">${escHtml(s.immat)}</span>
@@ -128,6 +128,7 @@ async function chargerAccueilPilote() {
                         </div>
                     `).join('')}
                 </div>
+                <button type="button" class="ap-signalements-toggle" id="ap-signalements-toggle" style="display:none;" aria-label="Afficher plus de signalements"><span class="ap-signalements-chevron">▾</span></button>
             ` : '<p class="carnet-empty">Aucun signalement en cours.</p>'}
         </div>`;
 
@@ -199,6 +200,16 @@ async function chargerAccueilPilote() {
             if (grp) ouvrirModaleSignalements(grp.immat, grp.items);
         });
     });
+
+    const sigList = container.querySelector('#ap-signalements-list');
+    const sigToggle = container.querySelector('#ap-signalements-toggle');
+    if (sigList && sigToggle && sigList.scrollHeight > sigList.clientHeight + 2) {
+        sigToggle.style.display = 'flex';
+        sigToggle.addEventListener('click', () => {
+            const open = sigList.classList.toggle('ap-expanded');
+            sigToggle.classList.toggle('open', open);
+        });
+    }
 
     const btnNew = container.querySelector('#ap-btn-new-msg');
     const formMsg = container.querySelector('#ap-message-form');
@@ -420,7 +431,7 @@ async function chargerDernierVol() {
 async function chargerSignalementsAccueil() {
     const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
     try {
-        const formula = `AND(TRIM({Observations}) != '', {Statut observation} != 'Observation traitée')`;
+        const formula = `TRIM({Observations}) != ''`;
         const url = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
         const res = await cachedFetch(url, { headers });
         const data = await res.json();
@@ -432,7 +443,8 @@ async function chargerSignalementsAccueil() {
             const description = (f['Observations'] || '').toString().trim() || 'Signalement';
             const etat = (f['Statut observation'] || 'Non pris en compte').toString().trim();
             return { immat, description, etat };
-        }).sort((a, b) => a.immat.localeCompare(b.immat));
+        }).filter(s => s.etat !== 'Observation traitée')
+            .sort((a, b) => a.immat.localeCompare(b.immat));
 
         const groups = {};
         records.forEach(s => {

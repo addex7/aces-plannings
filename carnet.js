@@ -1349,7 +1349,10 @@ async function soumettreCarnetRoute(event) {
         "Horamètre départ": numeric(horametreDepart),
         "Horamètre arrivée": numeric(horametreArrivee),
         "Prix du vol": numeric(prixVolText),
-        "Observations": observations
+        "Observations": observations,
+        "Statut observation": observations
+            ? (['Pris en compte', 'En cours de traitement'].includes(ancienRecord?.fields?.['Statut observation']) ? ancienRecord.fields['Statut observation'] : 'Non pris en compte')
+            : ''
     };
 
     try {

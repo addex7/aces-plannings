@@ -3359,6 +3359,35 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     flex-direction: column;
     gap: 6px;
     margin-top: 8px;
+    max-height: 96px;
+    overflow: hidden;
+}
+.ap-signalements-list.ap-expanded {
+    max-height: none;
+}
+.ap-signalements-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 4px;
+    padding: 2px 0;
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+.ap-signalements-toggle:hover {
+    color: #1e3d59;
+}
+.ap-signalements-chevron {
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+.ap-signalements-toggle.open .ap-signalements-chevron {
+    transform: rotate(180deg);
 }
 .ap-signalement-row {
     display: flex;
