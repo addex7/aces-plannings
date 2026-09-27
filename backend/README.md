@@ -103,3 +103,27 @@ const API_BASE  = 'https://api.<domaine>/v0/glide2000';
 
 C'est la seule modification front necessaire — tous les appels
 `${API_BASE}/<Table>?filterByFormula=...` fonctionnent a l'identique.
+## Synchro GVV (comptes pilotes)
+
+Lecture seule : login GVV puis export CSV de la balance + export du
+journal de chaque compte pilote (annee en cours). Identifiants dans
+`backend/gvv.env` (non commite), passes au conteneur via
+`GVV_BASE/GVV_USER/GVV_PASS` du `.env`.
+
+```bash
+# Manuel
+docker compose run --rm --no-deps -T api node gvv-sync.js
+
+# Decouverte des pages (compte connecte)
+docker compose run --rm --no-deps -T api node gvv-sync.js --discover
+```
+
+Cron quotidien sur le VPS (`/etc/cron.d/gvv-sync`) — synchro a 01h00,
+log dans `/var/log/gvv-sync.log` :
+
+```cron
+0 1 * * * root docker compose -f /opt/glide2000/backend/docker-compose.yml run --rm --no-deps -T api node gvv-sync.js >> /var/log/gvv-sync.log 2>&1
+```
+
+Declenchement manuel depuis le site : `POST /v0/glide2000/sync-gvv`
+(tache de fond, anti-doublon 409), statut via `GET .../sync-gvv/statut`.
