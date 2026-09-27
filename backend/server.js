@@ -49,7 +49,8 @@ const TABLES = {
     'Notifications': 'notifications',
     'Dossiers': 'dossiers',
     'Audit': 'audit',
-    'Signalements': 'signalements'
+    'Signalements': 'signalements',
+    'Soldes GVV': 'gvv_soldes'
 };
 
 const pool = new Pool({ connectionString: DATABASE_URL });

@@ -29,6 +29,9 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       MAIL_FROM: ${MAIL_FROM:-}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ACES}
+      GVV_BASE: ${GVV_BASE:-}
+      GVV_USER: ${GVV_USER:-}
+      GVV_PASS: ${GVV_PASS:-}
     depends_on:
       db:
         condition: service_healthy

@@ -100,9 +100,10 @@ async function chargerComptesPilotes() {
         if (select && select.value) piloteNom = select.value;
 
         const records = await fetchComptes(piloteNom);
+        const gvv = await fetchSoldeGvv(piloteNom);
         comptesPilotesCache = records;
         afficherDernierImport(records);
-        afficherResume(records, summary, piloteNom);
+        afficherResume(records, summary, piloteNom, gvv);
         afficherTransactions(records, container, piloteNom);
 
         const isCurrent = !select || !select.value || select.value === nomPiloteComptes(currentUser);
@@ -135,6 +136,25 @@ function peuplerSelectPilotes(select) {
     else {
         const current = nomPiloteComptes(currentUser);
         if (current && [...select.options].some(o => o.value === current)) select.value = current;
+    }
+}
+
+// Solde GVV : matching "NOM Prénom" (GVV) <-> "Prénom Nom" (site), tolerant accents/casse
+function normaliserNomGvv(s) {
+    return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toUpperCase().replace(/[^A-Z\s-]/g, ' ').trim().split(/\s+/).filter(Boolean).sort().join(' ');
+}
+
+async function fetchSoldeGvv(piloteNom) {
+    try {
+        const url = `${API_BASE}/${encodeURIComponent('Soldes GVV')}?pageSize=100`;
+        const records = await fetchTousRecords(url, { headers });
+        const cible = normaliserNomGvv(piloteNom);
+        const rec = (records || []).find(r => normaliserNomGvv(r.fields?.['Compte']) === cible);
+        return rec ? rec.fields : null;
+    } catch (e) {
+        console.warn('Solde GVV indisponible:', e);
+        return null;
     }
 }
 
@@ -186,7 +206,7 @@ function afficherDernierImport(records) {
     }
 }
 
-function afficherResume(records, summary, piloteNom) {
+function afficherResume(records, summary, piloteNom, gvv) {
     let depenses = 0, recettes = 0, enAttente = 0, solde = 0;
     records.forEach(r => {
         const f = r.fields || {};
@@ -230,6 +250,15 @@ function afficherResume(records, summary, piloteNom) {
                     <div class="comptes-summary-value recette-val">+${recettes.toFixed(2).replace('.', ',')} €</div>
                 </div>
             </div>
+            ${gvv ? `
+            <div class="comptes-summary-item">
+                <div class="comptes-summary-icon gvv-icon">GVV</div>
+                <div>
+                    <div class="comptes-summary-label">SOLDE GVV (compta club)</div>
+                    <div class="comptes-summary-value gvv-val">${(gvv['Solde'] ?? 0).toFixed(2).replace('.', ',')} €</div>
+                    <div class="comptes-gvv-maj">synchro ${new Date(gvv['Synchronisé le']).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} ${new Date(gvv['Synchronisé le']).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+            </div>` : ''}
         </div>
     `;
     if (summary) summary.innerHTML = html;

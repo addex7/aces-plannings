@@ -131,3 +131,9 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_date   ON maintenance ((fields->>'Dat
 CREATE INDEX IF NOT EXISTS idx_carnet_pilotes_date ON carnet_route_pilotes ((fields->>'Date'));
 CREATE INDEX IF NOT EXISTS idx_messagerie_date    ON messagerie ((fields->>'Date'));
 CREATE INDEX IF NOT EXISTS idx_evenements_debut   ON evenements ((fields->>'Date de début'));
+
+CREATE TABLE IF NOT EXISTS gvv_soldes (
+    id          TEXT PRIMARY KEY,
+    fields      JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
