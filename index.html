@@ -1296,6 +1296,11 @@
             <span class="close-modal" id="close-aeronef-options">&times;</span>
             <h3 class="nr-title">Options — <span id="aeronef-options-immat"></span></h3>
             <form id="aeronef-options-form" class="nr-form">
+                <input type="hidden" id="aeronef-options-machine-id">
+                <div class="nr-section">
+                    <div class="nr-section-title">AÉRONEF</div>
+                    <div class="nr-options-grid" id="options-machine-group"></div>
+                </div>
                 <div class="nr-section" id="aeronef-options-prix-section">
                     <div class="nr-section-title">PRIX À L'HEURE DE VOL</div>
                     <div style="display:flex; align-items:center; gap:8px;">
@@ -1315,11 +1320,6 @@
                             <input type="radio" name="aeronef-type" value="ULM">
                             <span class="nr-icon">🛩️</span>
                             <span class="nr-label">ULM</span>
-                        </label>
-                        <label class="nr-option">
-                            <input type="radio" name="aeronef-type" value="planeur">
-                            <span class="nr-icon">🪂</span>
-                            <span class="nr-label">Planeur</span>
                         </label>
                     </div>
                 </div>
@@ -1500,7 +1500,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20260928181655"></script>
+    <script src="version.js?v=20260928183041"></script>
     <script src="app.js?v=91"></script>
     <script src="utils.js?v=108"></script>
     <script src="presences.js?v=103"></script>

@@ -4,13 +4,14 @@
 
 let maintenancesSuiviCache = [];
 
-function populerMachinesChips(containerId, hiddenId, onChange) {
+function populerMachinesChips(containerId, hiddenId, onChange, filtre = null) {
     const container = document.getElementById(containerId);
     const hidden = document.getElementById(hiddenId);
     if (!container || !hidden) return;
     container.innerHTML = '';
     (listeAvionsCache || []).forEach(avion => {
         if (!avion.fields) return;
+        if (filtre && !filtre(avion)) return;
         const label = document.createElement('label');
         label.className = 'nr-option';
         const input = document.createElement('input');
@@ -1846,13 +1847,17 @@ function initGestionTarifAeronefs() {
     const prixSection = document.getElementById('aeronef-options-prix-section');
     const titreImmat = document.getElementById('aeronef-options-immat');
     const closeBtn = document.getElementById('close-aeronef-options');
+    const machineHidden = document.getElementById('aeronef-options-machine-id');
     if (!btnOptions || !modal || !form) return;
 
     closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
 
-    btnOptions.addEventListener('click', () => {
-        const machine = (listeAvionsCache || []).find(m => m.id === avionTarifId);
+    const machinesOptions = () => (listeAvionsCache || []).filter(m =>
+        m.fields && String(m.fields['Type'] || '').toLowerCase() !== 'planeur');
+
+    const remplirPourMachine = (machineId) => {
+        const machine = machinesOptions().find(m => m.id === machineId);
         const f = (machine && machine.fields) || {};
         const immat = (f['Immatriculation'] || '').toString().trim().toUpperCase();
         if (titreImmat) titreImmat.textContent = f['Immatriculation'] || 'aéronef';
@@ -1863,25 +1868,43 @@ function initGestionTarifAeronefs() {
         form.querySelectorAll('input[name="aeronef-type"]').forEach(r => {
             r.checked = r.value.toLowerCase() === type;
         });
+    };
+
+    btnOptions.addEventListener('click', () => {
+        machineHidden.value = '';
+        populerMachinesChips('options-machine-group', 'aeronef-options-machine-id', remplirPourMachine,
+            m => String(m.fields['Type'] || '').toLowerCase() !== 'planeur');
+        const init = (avionTarifId && machinesOptions().some(m => m.id === avionTarifId))
+            ? avionTarifId
+            : (machinesOptions()[0] && machinesOptions()[0].id);
+        if (init) {
+            machineHidden.value = init;
+            document.querySelectorAll('#options-machine-group input[type="checkbox"]').forEach(cb => {
+                cb.checked = cb.value === init;
+            });
+            remplirPourMachine(init);
+        }
         modal.style.display = 'flex';
     });
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!avionTarifId) return;
+        const machineId = machineHidden.value;
+        if (!machineId) { alert('Choisissez une machine.'); return; }
         const prix = parseFloat(String(input.value).replace(',', '.')) || 0;
         const typeSel = form.querySelector('input[name="aeronef-type"]:checked');
         const fields = { 'Prix heure': prix };
         if (typeSel) fields['Type'] = typeSel.value;
         try {
-            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}/${avionTarifId}`, {
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}/${machineId}`, {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify({ fields })
             });
             if (!res.ok) throw new Error(await res.text());
-            const machine = (listeAvionsCache || []).find(m => m.id === avionTarifId);
+            const machine = (listeAvionsCache || []).find(m => m.id === machineId);
             if (machine && machine.fields) Object.assign(machine.fields, fields);
+            avionTarifId = machineId;
             modal.style.display = 'none';
             if (typeof chargerSuiviAeronef === 'function') chargerSuiviAeronef();
         } catch (err) {
