@@ -96,6 +96,20 @@ function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heur
     return formaterDureeMinutes(minutes);
 }
 
+// Cle de tri carnet : date + heure de decollage (les lignes de
+// maintenance n'ont pas de "Heure départ" : leur Date est un datetime ISO).
+function cleDateHeureCarnet(r) {
+    const f = r.fields || {};
+    if (r._estMaintenance) {
+        const t = new Date(f['Date'] || 0).getTime();
+        return isNaN(t) ? 0 : t;
+    }
+    const jour = (f['Date'] || '').slice(0, 10);
+    const h = /^\d{1,2}:\d{2}/.test(f['Heure départ'] || '') ? f['Heure départ'].slice(0, 5) : '00:00';
+    const t = new Date(`${jour}T${h}`).getTime();
+    return isNaN(t) ? 0 : t;
+}
+
 function genererHeaderCarnet(isJVIO) {
     if (isJVIO) {
         return `
@@ -1250,7 +1264,7 @@ async function chargerCarnetRoute() {
             return !machineCarnetSelectionnee || f['Machine'] === machineCarnetSelectionnee;
         }).sort((a, b) => {
             const fa = a.fields || {}, fb = b.fields || {};
-            if (isJVIO) return new Date(fa['Date']) - new Date(fb['Date']);
+            if (isJVIO) return cleDateHeureCarnet(a) - cleDateHeureCarnet(b);
             const da = fa['Date'] || '', db = fb['Date'] || '';
             if (da !== db) return da < db ? 1 : -1;
             const ha = fa['Heure départ'] || '', hb = fb['Heure départ'] || '';
@@ -1266,7 +1280,7 @@ async function chargerCarnetRoute() {
                 (dataMaint.records || []).forEach(r => {
                     volsMachine.push({ id: r.id, fields: r.fields || {}, _estMaintenance: true, _maintenanceRecord: r });
                 });
-                volsMachine.sort((a, b) => new Date(a.fields?.['Date'] || 0) - new Date(b.fields?.['Date'] || 0));
+                volsMachine.sort((a, b) => cleDateHeureCarnet(a) - cleDateHeureCarnet(b));
             } catch (e) { console.warn('Maintenance JVIO indisponible:', e); }
             carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / LIGNES_PAR_PAGE_JVIO));
         }
