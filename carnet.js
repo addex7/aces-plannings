@@ -1049,6 +1049,23 @@ function adapterFormulaireCarnet(machine) {
     }
 }
 
+// --- RECHERCHE DANS LE CARNET (pilote, instructeur, date, terrain, horametre) ---
+function normaliserTexteRecherche(s) {
+    return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+function volCorrespondRecherche(d, q) {
+    const f = d.f || {};
+    const hay = [
+        f['Pilote'], f['Instructeur'], f['Effectué par'],
+        d.dateStr, String(f['Date'] || '').slice(0, 10),
+        f['Départ'], f['Arrivée'],
+        formaterNombre(f['Horamètre départ']), formaterNombre(f['Horamètre arrivée']),
+        f['Horamètre départ'], f['Horamètre arrivée']
+    ].map(normaliserTexteRecherche).join(' ');
+    return q.split(/\s+/).every(m => hay.includes(m));
+}
+
 function formatEquipageCourt(nom) {
     const str = String(nom || '').trim();
     const parts = str.split(/\s+/).filter(Boolean);
@@ -1110,18 +1127,26 @@ function afficherCarnet(records) {
         }
     }
 
-    let pageRecords = recordsData;
+    // Filtre de recherche (apres la detection de continuite, qui porte sur tout le carnet)
+    const rechercheQ = normaliserTexteRecherche(document.getElementById('carnet-recherche')?.value);
+    const affichage = rechercheQ ? recordsData.filter(d => volCorrespondRecherche(d, rechercheQ)) : recordsData;
+    if (affichage.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${isJVIO ? 14 : 15}" class="carnet-empty">Aucun vol ne correspond à la recherche « ${escHtml(rechercheQ)} ».</td></tr>`;
+        return;
+    }
+
+    let pageRecords = affichage;
     let totalPages = 1;
     let totalCumuleMinutes = 0;
 
     if (isJVIO) {
-        totalPages = Math.max(1, Math.ceil(recordsData.length / LIGNES_PAR_PAGE_JVIO));
+        totalPages = Math.max(1, Math.ceil(affichage.length / LIGNES_PAR_PAGE_JVIO));
         if (carnetPageJVIO > totalPages) carnetPageJVIO = totalPages;
         if (carnetPageJVIO < 1) carnetPageJVIO = 1;
         const start = (carnetPageJVIO - 1) * LIGNES_PAR_PAGE_JVIO;
         const end = start + LIGNES_PAR_PAGE_JVIO;
-        pageRecords = recordsData.slice(start, end);
-        totalCumuleMinutes = recordsData.slice(0, end).reduce((sum, d) => sum + dureeStringEnMinutes(d.temps), 0);
+        pageRecords = affichage.slice(start, end);
+        totalCumuleMinutes = affichage.slice(0, end).reduce((sum, d) => sum + dureeStringEnMinutes(d.temps), 0);
     }
 
     tbody.innerHTML = '';
@@ -1338,6 +1363,8 @@ async function chargerCarnetRoute() {
     const isJVIO = machineCarnetSelectionnee === 'F-JVIO';
     const colspan = isJVIO ? 14 : 15;
 
+    const rechercheInput = document.getElementById('carnet-recherche');
+    if (rechercheInput) rechercheInput.style.display = CATEGORIES_CARNET[machineCarnetSelectionnee] ? 'none' : '';
     if (CATEGORIES_CARNET[machineCarnetSelectionnee]) {
         genererGrillesPlaneur(machineCarnetSelectionnee);
         if (tableContainer) tableContainer.style.display = 'none';
@@ -1783,6 +1810,13 @@ function initCarnetRoute() {
     if (btnDelete) btnDelete.addEventListener('click', supprimerCarnetRoute);
     const btnGvv = document.getElementById('btn-gvv-carnet');
     if (btnGvv) btnGvv.addEventListener('click', envoyerVolVersGvv);
+    const rechercheInput = document.getElementById('carnet-recherche');
+    if (rechercheInput) {
+        rechercheInput.addEventListener('input', () => {
+            carnetPageJVIO = 1;
+            chargerCarnetRoute();
+        });
+    }
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) fermerModaleCarnet();

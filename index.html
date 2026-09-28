@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=214">
+    <link rel="stylesheet" href="style.css?v=215">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -480,6 +480,7 @@
                             <option value="REMORQUES">Remorques</option>
                             <option value="AUTRES">Autres</option>
                         </select>
+                        <input type="search" id="carnet-recherche" placeholder="🔍 Rechercher un vol…" title="Recherche par pilote, instructeur, date (JJ/MM/AAAA), terrain ou horamètre">
                         <button id="btn-ouvrir-carnet" class="btn-primary">+ Saisir un vol</button>
                         <button id="btn-documents-carnet" class="btn-primary">Suivi documentation machine</button>
                         <button id="btn-bilan-docs-carnet" class="btn-secondary" title="Bilan documentation de toutes les machines">📋 Bilan</button>
@@ -1503,7 +1504,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20260928193857"></script>
+    <script src="version.js?v=20260928194500"></script>
     <script src="app.js?v=91"></script>
     <script src="utils.js?v=108"></script>
     <script src="presences.js?v=103"></script>
@@ -1511,7 +1512,7 @@
     <script src="calendrier.js?v=91"></script>
     <script src="comptes.js?v=117"></script>
     <script src="aeronefs.js?v=128"></script>
-    <script src="carnet.js?v=190"></script>
+    <script src="carnet.js?v=191"></script>
     <script src="documents.js?v=89"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=8"></script>

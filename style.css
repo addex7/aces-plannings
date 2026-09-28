@@ -1017,6 +1017,20 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     color: #1e3d59;
     font-weight: 600;
 }
+#carnet-recherche {
+    padding: 9px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    min-width: 220px;
+    background: #f8fafc;
+}
+#carnet-recherche:focus {
+    outline: none;
+    border-color: #1e3d59;
+    background: #fff;
+}
 #carnet-machine-filtre {
     background-color: #1e3d59;
     color: white;
