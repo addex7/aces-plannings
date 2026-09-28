@@ -1234,8 +1234,11 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         }
                         const dureeCarnet = Math.max(heureArriveeCarnet - heureDepartCarnet, 0);
                         const heureDepartCarnetLocal = heureDepartCarnet + offsetHeures;
-                        const left = (heureDepartCarnetLocal / 24) * 100;
-                        const widthPct = Math.max((dureeCarnet / 24) * 100, 1.0);
+                        // carnetContainer est hors de gridBg (non etire) : l'echelle
+                        // est la fenetre visible hMin-hMax, pas 0-24h.
+                        const spanH = hMax - hMin;
+                        const left = ((heureDepartCarnetLocal - hMin) / spanH) * 100;
+                        const widthPct = Math.max((dureeCarnet / spanH) * 100, 1.0);
                         const item = document.createElement('div');
                         item.style.cssText = `
                             position: absolute; top: 0; height: 9px;
