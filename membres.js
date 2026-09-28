@@ -824,6 +824,16 @@ function initMembres() {
     if (backLogin) backLogin.addEventListener('click', (e) => { e.preventDefault(); showLogin(); });
     const btnBilan = document.getElementById('btn-bilan-membres');
     if (btnBilan) btnBilan.addEventListener('click', ouvrirBilanMembres);
+    const btnLegendeM = document.getElementById('btn-legende-membres');
+    if (btnLegendeM) btnLegendeM.addEventListener('click', () => {
+        const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
+        if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Légende des statuts', `
+            ${item('#10b981', 'À jour — échéance dans plus de 3 mois')}
+            ${item('#f97316', 'Bientôt à renouveler — échéance dans moins de 3 mois')}
+            ${item('#dc2626', 'Périmé — échéance dépassée ou date non renseignée')}
+            ${item('#cbd5e1', 'Suivi désactivé / non concerné')}
+        `, 'ℹ️');
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
