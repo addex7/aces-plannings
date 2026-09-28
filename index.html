@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=212">
+    <link rel="stylesheet" href="style.css?v=213">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -228,7 +228,7 @@
                             <h4>Instructeurs</h4>
                             <ul id="list-instructeurs" class="presence-list"></ul>
                             <div style="display:flex; gap:5px; flex-wrap:wrap; align-items:center;">
-                                <button class="btn-inscription" onclick="sinscrirePlaneur('Instructeur')">+ S'inscrire</button>
+                                <button class="btn-inscription" id="btn-inscr-planeur-instructeur" onclick="sinscrirePlaneur('Instructeur')">+ S'inscrire</button>
                                 <button class="btn-inscription btn-inscription-autre" style="display:none;" onclick="ouvrirInscrireAutre('Présences Planeur', 'Instructeur')">+ Inscrire autre</button>
                             </div>
                         </div>
@@ -246,7 +246,7 @@
                             <h4>Pilotes</h4>
                             <ul id="list-pilotes" class="presence-list"></ul>
                             <div style="display:flex; gap:5px; flex-wrap:wrap; align-items:center;">
-                                <button class="btn-inscription" onclick="sinscrirePlaneur('Pilote')">+ S'inscrire</button>
+                                <button class="btn-inscription" id="btn-inscr-planeur-pilote" onclick="sinscrirePlaneur('Pilote')">+ S'inscrire</button>
                                 <button class="btn-inscription btn-inscription-autre" style="display:none;" onclick="ouvrirInscrireAutre('Présences Planeur', 'Pilote')">+ Inscrire autre</button>
                             </div>
                         </div>
@@ -1492,10 +1492,10 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20260928154534"></script>
+    <script src="version.js?v=20260928155143"></script>
     <script src="app.js?v=90"></script>
     <script src="utils.js?v=108"></script>
-    <script src="presences.js?v=101"></script>
+    <script src="presences.js?v=102"></script>
     <script src="planning.js?v=200"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=115"></script>
@@ -1504,11 +1504,11 @@
     <script src="documents.js?v=89"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=8"></script>
-    <script src="membres.js?v=106"></script>
+    <script src="membres.js?v=107"></script>
     <script src="instructeurs.js?v=107"></script>
     <script src="instructeur-planning.js?v=192"></script>
     <script src="messagerie.js?v=27"></script>
-    <script src="membre-home.js?v=94"></script>
+    <script src="membre-home.js?v=95"></script>
     <script src="accueil-pilote.js?v=28"></script>
     <!-- Modal Inscrire quelqu'un d'autre -->
     <div id="modal-inscrire-autre" class="modal" style="display:none;">

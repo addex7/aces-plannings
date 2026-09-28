@@ -705,6 +705,14 @@ img, table, video, iframe, svg {
 .btn-inscription:hover {
     color: #ff6e40;
 }
+.btn-inscription:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+.btn-inscription:disabled:hover {
+    color: #1e3d59;
+}
 .btn-comment {
     background: none;
     border: none;

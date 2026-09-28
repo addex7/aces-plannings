@@ -304,6 +304,7 @@ async function synchroniserDisposPlaneur(nom, dateStr, commentaire) {
 }
 
 async function assurerRecordPresencePlaneur(nom) {
+    if (!roleAutorise(['Instructeur planeur', 'Super admin'])) return null;
     const dateStr = dateAffichee.toISOString().split('T')[0];
     const formula = `AND(IS_SAME({Date}, '${dateStr}', 'day'), {Rôle}='Instructeur')`;
     const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
@@ -492,6 +493,23 @@ async function chargerPresencesPlaneur() {
         console.error(error);
     }
     afficherBoutonsInscrireAutre();
+    majAccesInscriptionsPlaneur();
+}
+
+function majAccesInscriptionsPlaneur() {
+    const roles = (currentUser && currentUser.roles) || [];
+    const estAdmin = roles.includes('Super admin');
+    const paires = [
+        ['btn-inscr-planeur-instructeur', 'Instructeur planeur'],
+        ['btn-inscr-planeur-pilote', 'Pilote planeur']
+    ];
+    paires.forEach(([btnId, roleReq]) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        const ok = estAdmin || roles.some(r => normaliserRole(r) === normaliserRole(roleReq));
+        btn.disabled = !ok;
+        btn.title = ok ? '' : `Rôle "${roleReq}" requis`;
+    });
 }
 
 async function sinscrirePlaneur(role) {
@@ -499,7 +517,7 @@ async function sinscrirePlaneur(role) {
     sinscrirePlaneur.enCours = true;
     try {
     const roles = (currentUser && currentUser.roles) || [];
-    const roleRequis = { 'Instructeur': 'Instructeur planeur', 'Élève': 'Élève planeur', 'Pilote': 'Pilote planeur' }[role];
+    const roleRequis = { 'Instructeur': 'Instructeur planeur', 'Pilote': 'Pilote planeur' }[role];
     const normaliserRole = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
     const aLeRole = roleRequis && (roles.includes('Super admin') || roles.some(r => normaliserRole(r) === normaliserRole(roleRequis)));
     if (roleRequis && !aLeRole) {

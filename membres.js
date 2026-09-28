@@ -373,7 +373,7 @@ async function envoyerReset() {
     }
 }
 
-const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Eleve planeur', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier'];
+const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier'];
 
 function initialiserCheckboxesRoles() {
     const rendre = (containerId, name) => {
