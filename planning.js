@@ -3336,7 +3336,7 @@ function afficherVolsInitiation() {
         const caseSelection = regrouperParJour && vol.categorie === 'creneaux'
             ? `<input type="checkbox" class="creneau-check" data-id="${vol.id}" title="Sélectionner pour suppression groupée">` : '';
         const gestionVI = hasRoleGestionVI();
-        const peutGerer = !estArchive && (isAPourvoir || isPris) && gestionVI;
+        const peutGerer = !estArchive && (isAPourvoir || isPris) && peutGererVolVI(vol);
         const boutonLiberer = peutGerer
             ? `<button class="btn-liberer-initiation" title="Retirer le passager et remettre le créneau à disposition">Libérer</button>` : '';
         const boutonDecaler = (peutGerer && vol.passager)
@@ -3428,6 +3428,7 @@ function afficherVolsInitiation() {
 }
 
 async function decalerVolVI(vol) {
+    if (!peutGererVolVI(vol)) return;
     if (vol.source !== 'creneau') {
         const tokenConverti = await convertirVolEnCreneauVI(vol);
         if (!tokenConverti) return;
@@ -3490,8 +3491,9 @@ function ouvrirActionsVI(vol) {
     if (elInscrire) elInscrire.style.display = (aPourvoir && hasRolePiloteVI()) ? '' : 'none';
     const rolesInscrireAutre = ['Super admin', 'Gestion VI', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
     if (elInscrireAutre) elInscrireAutre.style.display = (aPourvoir && (currentUser?.roles || []).some(r => rolesInscrireAutre.includes(r))) ? '' : 'none';
-    if (elDecaler) elDecaler.style.display = (gestionVI && volActionsVI.passager) ? '' : 'none';
-    if (elLiberer) elLiberer.style.display = gestionVI ? '' : 'none';
+    const peutGererCeVol = peutGererVolVI(volActionsVI);
+    if (elDecaler) elDecaler.style.display = (peutGererCeVol && volActionsVI.passager) ? '' : 'none';
+    if (elLiberer) elLiberer.style.display = peutGererCeVol ? '' : 'none';
     if (elSupprimer) elSupprimer.style.display = gestionVI ? '' : 'none';
     modal.style.display = 'flex';
 }
@@ -3654,6 +3656,7 @@ async function supprimerCreneauxSelection(ids) {
 }
 
 async function libererCreneauVI(vol) {
+    if (!peutGererVolVI(vol)) return;
     if (!vol || !vol.id) return;
     const table = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'creneau' ? 'VI Créneaux' : 'VI Planeur');
     const champs = vol.source === 'creneau'
@@ -4186,6 +4189,14 @@ function hasRoleGestionVI() {
     if (!currentUser) return false;
     const roles = currentUser.roles || [];
     return roles.includes('Gestion VI') || roles.includes('Super admin');
+}
+
+function peutGererVolVI(vol) {
+    if (hasRoleGestionVI()) return true;
+    if (!hasRolePiloteVI() || !vol) return false;
+    const pilote = (vol.pilote || '').toString().trim();
+    if (!pilote) return false;
+    return typeof estUtilisateurCourant === 'function' && estUtilisateurCourant(pilote);
 }
 
 function hasRolePiloteVI() {
