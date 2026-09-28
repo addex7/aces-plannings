@@ -156,7 +156,10 @@ app.post('/v0/send-email', async (req, res) => {
         const action = estReset
             ? 'Définis ton nouveau mot de passe ici :'
             : 'Crée ton identifiant et mot de passe ici :';
-        texte = `Bonjour ${prenomSafe},\n\n${ligne}\n${action}\n${url}\n\nA bientôt.\nAéroclub ACES`;
+        const mentionAnnuaire = estReset
+            ? ''
+            : 'En créant ton compte, tu acceptes que ton adresse e-mail et ton numéro de téléphone soient visibles par les autres membres du site dans l\'annuaire.';
+        texte = `Bonjour ${prenomSafe},\n\n${ligne}\n${action}\n${url}\n\n${mentionAnnuaire ? mentionAnnuaire + '\n\n' : ''}A bientôt.\nAéroclub ACES`;
         html = `
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
             <div style="background:#1e3d59;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">Aéroclub ACES</div>
@@ -168,6 +171,7 @@ app.post('/v0/send-email', async (req, res) => {
                     <a href="${url}" style="background:#1e3d59;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;">Accéder au site</a>
                 </p>
                 <p style="font-size:12px;color:#64748b;word-break:break-all;">Si le bouton ne fonctionne pas : <a href="${url}">${url}</a></p>
+                ${mentionAnnuaire ? `<p style="font-size:12px;color:#64748b;background:#f1f5f9;border-radius:8px;padding:10px 14px;">${mentionAnnuaire}</p>` : ''}
                 <p style="margin-top:24px;">A bientôt.</p>
             </div>
         </div>`;
