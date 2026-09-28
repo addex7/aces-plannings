@@ -3621,6 +3621,31 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-size: 13px;
     white-space: nowrap;
 }
+.ap-sig-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.ap-sig-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+.ap-sig-statut-btn {
+    padding: 3px 10px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.ap-sig-statut-btn:hover { border-color: #2563eb; color: #2563eb; }
+.ap-sig-statut-btn.actif { background: #2563eb; border-color: #2563eb; color: #fff; }
+.ap-sig-statut-btn:disabled { opacity: 0.5; cursor: wait; }
 
 /* --- NOUVEAU MODAL RÉSERVATION --- */
 #reservation-modal .modal-content {

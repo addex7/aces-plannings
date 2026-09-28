@@ -269,18 +269,39 @@ function ouvrirModaleSignalements(immat, items) {
                 <button type="button" class="ap-modal-signalements-close" aria-label="Fermer">&times;</button>
             </div>
             <div class="ap-modal-signalements-list">
-                ${items.map(i => `
-                    <div class="ap-modal-signalements-item">
-                        <span class="ap-modal-signalements-desc">${escHtml(i.description)}</span>
-                        <span class="ap-modal-signalements-etat">${escHtml(i.etat)}</span>
-                    </div>
-                `).join('')}
+                ${items.map(i => {
+                    const actions = (typeof peutGererMaintenance === 'function' && peutGererMaintenance()) ? `
+                        <div class="ap-sig-actions">
+                            ${[['Pris en compte', 'Pris en compte'], ['En cours de traitement', 'En cours'], ['Observation traitée', 'Traité']].map(([val, label]) => `
+                                <button type="button" class="ap-sig-statut-btn${i.etat === val ? ' actif' : ''}" data-id="${escHtml(i.id)}" data-statut="${escHtml(val)}">${label}</button>
+                            `).join('')}
+                        </div>` : '';
+                    return `
+                    <div class="ap-sig-entry">
+                        <div class="ap-modal-signalements-item">
+                            <span class="ap-modal-signalements-desc">${escHtml(i.description)}</span>
+                            <span class="ap-modal-signalements-etat">${escHtml(i.etat)}</span>
+                        </div>
+                        ${actions}
+                    </div>`;
+                }).join('')}
             </div>
         </div>
     `;
     document.body.appendChild(overlay);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
     overlay.querySelector('.ap-modal-signalements-close').addEventListener('click', () => overlay.remove());
+    overlay.querySelectorAll('.ap-sig-statut-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+                await mettreAJourStatutObservation(btn.dataset.id, btn.dataset.statut);
+            } finally {
+                overlay.remove();
+                if (typeof chargerAccueilPilote === 'function') chargerAccueilPilote();
+            }
+        });
+    });
 }
 
 async function chargerProchaineJournee() {
@@ -452,14 +473,14 @@ async function chargerSignalementsAccueil() {
             const immat = (f['Machine'] || '').toString().trim() || '?';
             const description = (f['Observations'] || '').toString().trim() || 'Signalement';
             const etat = (f['Statut observation'] || 'Non pris en compte').toString().trim();
-            return { immat, description, etat };
+            return { id: r.id, immat, description, etat };
         }).filter(s => s.etat !== 'Observation traitée')
             .sort((a, b) => a.immat.localeCompare(b.immat));
 
         const groups = {};
         records.forEach(s => {
             if (!groups[s.immat]) groups[s.immat] = { immat: s.immat, items: [] };
-            groups[s.immat].items.push({ description: s.description, etat: s.etat });
+            groups[s.immat].items.push({ id: s.id, description: s.description, etat: s.etat });
         });
         return Object.values(groups).sort((a, b) => a.immat.localeCompare(b.immat));
     } catch (err) {
