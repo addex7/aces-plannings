@@ -103,10 +103,21 @@ function estValideJusqua(str) {
 }
 
 function pastille(ok, dateStr, texteRouge) {
-    const couleur = ok ? 'pastille-verte' : 'pastille-rouge';
-    const texte = ok ? 'À jour' : (dateStr ? 'Non à jour' : (texteRouge || 'Non renseigné'));
+    let couleur = ok ? 'pastille-verte' : 'pastille-rouge';
+    let texte = ok ? 'À jour' : (dateStr ? 'Non à jour' : (texteRouge || 'Non renseigné'));
+    let icone = ok ? '✓' : '✕';
+    if (ok && dateStr) {
+        const d = new Date(dateStr);
+        const seuil = new Date();
+        seuil.setMonth(seuil.getMonth() + 3);
+        if (!isNaN(d.getTime()) && debutJour(d) < debutJour(seuil)) {
+            couleur = 'pastille-orange';
+            texte = 'Bientôt à renouveler';
+            icone = '⚠';
+        }
+    }
     const date = formaterDateFr(dateStr) || '-';
-    return `<span class="pastille ${couleur}">${ok ? '✓' : '✕'} ${texte}</span><span class="validite-date">Valide jusqu'au : ${date}</span>`;
+    return `<span class="pastille ${couleur}">${icone} ${texte}</span><span class="validite-date">Valide jusqu'au : ${date}</span>`;
 }
 
 async function chargerAccueilMembre(id) {
@@ -791,6 +802,16 @@ function initAccueilMembre() {
     if (btnAnnuaire) btnAnnuaire.addEventListener('click', ouvrirAnnuaireMembres);
     const closeAnnuaire = document.getElementById('close-annuaire-membres');
     if (closeAnnuaire) closeAnnuaire.addEventListener('click', fermerAnnuaireMembres);
+    const btnLegendeV = document.getElementById('btn-legende-validites');
+    if (btnLegendeV) btnLegendeV.addEventListener('click', () => {
+        const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
+        if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Légende des statuts', `
+            ${item('#dcfce7', '✓ À jour — échéance dans plus de 3 mois')}
+            ${item('#ffedd5', '⚠ Bientôt à renouveler — échéance dans moins de 3 mois')}
+            ${item('#fee2e2', '✕ Non à jour — échéance dépassée ou date non renseignée')}
+            ${item('#f1f5f9', 'Suivi désactivé (pastille grisée)')}
+        `, 'ℹ️');
+    });
 }
 
 document.addEventListener('DOMContentLoaded', initAccueilMembre);
