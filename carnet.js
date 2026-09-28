@@ -185,10 +185,15 @@ function peutModifierVolCarnet(record) {
     const roles = currentUser.roles || [];
     if (roles.includes('Super admin') || roles.includes('Super Admin')) return true;
     if (roles.some(r => /instructeur/i.test(r || ''))) return true;
-    if (roles.includes('Mécanicien') || roles.includes('Mecanicien')) {
-        return estProprietaireVolCarnet(record);
-    }
-    return true;
+    return estProprietaireVolCarnet(record);
+}
+
+function estMecanicienRestreint() {
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
+    const roles = currentUser.roles || [];
+    if (roles.includes('Super admin') || roles.includes('Super Admin')) return false;
+    if (roles.some(r => /instructeur/i.test(r || ''))) return false;
+    return roles.includes('Mécanicien') || roles.includes('Mecanicien');
 }
 
 function definirLectureSeuleCarnet(actif) {
@@ -977,6 +982,10 @@ function adapterFormulaireCarnet(machine) {
         const rem = document.querySelector('input[name="carnet-nature-base"][value="Remorquage"]');
         if (rem) rem.checked = true;
     }
+
+    if (instSel && !instSel.disabled) {
+        instSel.disabled = estMecanicienRestreint() && !isJVIO;
+    }
 }
 
 function formatEquipageCourt(nom) {
@@ -1383,12 +1392,16 @@ async function soumettreCarnetRoute(event) {
     }
     const date = document.getElementById('carnet-date').value;
     const pilote = document.getElementById('carnet-pilote').value.trim();
-    const instructeur = document.getElementById('carnet-instructeur').value.trim();
+    let instructeur = document.getElementById('carnet-instructeur').value.trim();
     const decAt = parseInt(document.getElementById('carnet-decol-atterr').value, 10) || 0;
     const decollages = decAt;
     const atterrissages = decAt;
     const fonction = Array.from(document.querySelectorAll('input[name="carnet-fonction"]:checked')).map(cb => cb.value).join('/');
     const machine = document.getElementById('carnet-machine').value;
+    if (estMecanicienRestreint() && machine !== 'F-JVIO') {
+        const recEdit = idCarnetEnEdition ? listeVolsCarnetCache.find(r => r.id === idCarnetEnEdition) : null;
+        instructeur = ((recEdit && recEdit.fields && recEdit.fields['Instructeur']) || '').toString().trim();
+    }
     const depart = document.getElementById('carnet-depart').value.trim();
     const arrivee = document.getElementById('carnet-arrivee').value.trim();
     const heureDepart = document.getElementById('carnet-heure-depart').value;
