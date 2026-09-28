@@ -77,7 +77,7 @@ function peutVoirBilansPilotes() {
 
 async function chargerUtilisateursComptes() {
     if (utilisateursComptesCache.length) return;
-    const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&pageSize%3D100`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&fields%5B%5D=Compte%20GVV&pageSize%3D100`;
     const res = await apiFetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Erreur lors du chargement des pilotes.');
@@ -163,12 +163,39 @@ function cleNomGvvLettres(s) {
     return normaliserNomGvv(s).replace(/[\s-]/g, '').split('').sort().join('');
 }
 
+// Alias explicite champ "Compte GVV" sur la fiche membre — pour les comptes
+// dont le nom GVV est différent (ex : "GUITTEAUD Yanis" = Yanis Benmansour).
+function aliasCompteGvvMembre(piloteNom) {
+    const cu = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : null;
+    if (cu) {
+        const nc = `${cu.prenom || ''} ${cu.nom || ''}`.trim();
+        if (nc && (nc === piloteNom || (typeof correspondanceNom === 'function' && correspondanceNom(nc, piloteNom)))) {
+            const alias = cu.compteGvv;
+            if (alias) return alias.toString().trim();
+        }
+    }
+    const sources = [];
+    if (typeof listeMembresCache !== 'undefined' && Array.isArray(listeMembresCache)) sources.push(listeMembresCache);
+    if (typeof utilisateursComptesCache !== 'undefined') sources.push(utilisateursComptesCache);
+    for (const src of sources) {
+        const m = (src || []).find(r => {
+            const f = r.fields || {};
+            const nc = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+            return nc && (nc === piloteNom || (typeof correspondanceNom === 'function' && correspondanceNom(nc, piloteNom)));
+        });
+        const alias = m && (m.fields || {})['Compte GVV'];
+        if (alias) return alias.toString().trim();
+    }
+    return null;
+}
+
 async function fetchSoldeGvv(piloteNom) {
     try {
         const url = `${API_BASE}/${encodeURIComponent('Soldes GVV')}?pageSize=100`;
         const records = await fetchTousRecords(url, { headers });
-        const cible = normaliserNomGvv(piloteNom);
-        const cibleLettres = cleNomGvvLettres(piloteNom);
+        const alias = aliasCompteGvvMembre(piloteNom);
+        const cible = normaliserNomGvv(alias || piloteNom);
+        const cibleLettres = cleNomGvvLettres(alias || piloteNom);
         const rec = (records || []).find(r =>
             normaliserNomGvv(r.fields?.['Compte']) === cible ||
             cleNomGvvLettres(r.fields?.['Compte']) === cibleLettres);

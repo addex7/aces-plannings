@@ -257,7 +257,8 @@ async function seConnecter() {
             mail: f['Mail'],
             telephone: f['Téléphone'],
             identifiant: f['Identifiant'],
-            roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean)
+            roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean),
+            compteGvv: f['Compte GVV'] || ''
         };
         setCurrentUser(currentUser);
         showApp();
@@ -309,7 +310,8 @@ async function validerSetup() {
             mail: f['Mail'],
             telephone: f['Téléphone'],
             identifiant: f['Identifiant'],
-            roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean)
+            roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean),
+            compteGvv: f['Compte GVV'] || ''
         };
         setCurrentUser(currentUser);
         if (typeof enregistrerAudit === 'function') enregistrerAudit('Activation de compte', `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), `Mode : ${mode}`, 'Membres');
@@ -711,6 +713,8 @@ function ouvrirModaleMembre(record) {
     pwdInput.value = '';
     pwdInput.placeholder = 'Laisser vide pour ne pas changer';
     document.getElementById('edit-membre-trigramme').value = f['Trigramme'] || '';
+    const inputGvv = document.getElementById('edit-membre-compte-gvv');
+    if (inputGvv) inputGvv.value = f['Compte GVV'] || '';
     const dateNaissance = f['Date de naissance'];
     const dateInput = document.getElementById('edit-membre-date-naissance');
     if (dateInput) dateInput.value = dateNaissance ? new Date(dateNaissance).toISOString().split('T')[0] : '';
@@ -749,6 +753,8 @@ async function sauvegarderMembre(event) {
     if (!prenom || !nom || !mail || !identifiant) { alert('Prénom, Nom, Mail et Identifiant sont requis.'); return; }
     const fields = { 'Prénom': prenom, 'Nom': nom, 'Mail': mail, 'Téléphone': telephone, 'Identifiant': identifiant, 'Rôles': roles };
     if (trigramme) fields['Trigramme'] = trigramme;
+    const inputCompteGvv = document.getElementById('edit-membre-compte-gvv');
+    if (inputCompteGvv) fields['Compte GVV'] = inputCompteGvv.value.trim() || null;
     if (motDePasse) fields['Mot de passe'] = await hacherMotDePasse(motDePasse);
     if (dateNaissance) fields['Date de naissance'] = dateNaissance;
     fields['Autorisation parentale'] = age !== null && age < 18;
