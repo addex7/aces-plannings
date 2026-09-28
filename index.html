@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=210">
+    <link rel="stylesheet" href="style.css?v=211">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -1269,6 +1269,14 @@
                         <input type="number" id="maintenance-nouvelle-butee" class="nr-input" step="0.01" min="0">
                     </div>
                 </div>
+                <div class="nr-section">
+                    <div class="nr-section-title">EFFECTUÉE PAR</div>
+                    <input type="text" id="maintenance-effectue-par" class="nr-input" placeholder="Prénom Nom">
+                </div>
+                <div class="nr-section">
+                    <div class="nr-section-title">TÂCHES ACCOMPLIES</div>
+                    <textarea id="maintenance-taches" class="nr-input" rows="2" placeholder="Ex: vidange, remplacement bougies, niveaux..."></textarea>
+                </div>
                 <div class="nr-footer">
                     <button type="button" class="nr-btn-cancel" onclick="document.getElementById('maintenance-modal').style.display='none'">Annuler</button>
                     <button type="submit" class="nr-btn-save"><span class="nr-icon-save">💾</span> Enregistrer</button>
@@ -1484,15 +1492,15 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20260928094153"></script>
+    <script src="version.js?v=20260928104625"></script>
     <script src="app.js?v=90"></script>
     <script src="utils.js?v=108"></script>
     <script src="presences.js?v=101"></script>
     <script src="planning.js?v=197"></script>
     <script src="calendrier.js?v=90"></script>
     <script src="comptes.js?v=115"></script>
-    <script src="aeronefs.js?v=126"></script>
-    <script src="carnet.js?v=183"></script>
+    <script src="aeronefs.js?v=127"></script>
+    <script src="carnet.js?v=184"></script>
     <script src="documents.js?v=89"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=8"></script>

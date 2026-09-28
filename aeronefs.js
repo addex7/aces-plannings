@@ -154,7 +154,14 @@ function parseTempsDeVol(tempsStr) {
     return h + m / 60;
 }
 
-function ouvrirModaleMaintenance(record = null) {
+async function ouvrirModaleMaintenance(record = null) {
+    if (!(listeAvionsCache || []).length) {
+        try {
+            const res = await apiFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers });
+            const data = await res.json();
+            listeAvionsCache = trierAvionsParImmat(data.records || []);
+        } catch (e) { console.warn('Aéronefs indisponibles:', e); }
+    }
     const modal = document.getElementById('maintenance-modal');
     const select = document.getElementById('select-machine-suivi');
     let machine;
@@ -222,6 +229,10 @@ function ouvrirModaleMaintenance(record = null) {
     if (checkbox) checkbox.checked = aChanger;
     if (nouvelleGroup) nouvelleGroup.style.display = aChanger ? 'block' : 'none';
     if (nouvelleInput) nouvelleInput.value = aChanger ? nouvelle : (parseFloat(ancienne) + 50);
+    const effPar = document.getElementById('maintenance-effectue-par');
+    if (effPar) effPar.value = (f['Effectué par'] || `${currentUser?.prenom || ''} ${currentUser?.nom || ''}`.trim());
+    const tachesInput = document.getElementById('maintenance-taches');
+    if (tachesInput) tachesInput.value = f['Tâches'] || '';
     if (modal) modal.style.display = 'flex';
     const btnDelete = document.getElementById('btn-delete-maintenance');
     if (btnDelete) {
@@ -259,15 +270,18 @@ async function supprimerMaintenance() {
 // Persiste un acte de maintenance : enregistrement, recalcul de la butée
 // aéronef, audit et notification des réservations impactées.
 // Utilisable depuis la modale Aéronefs et depuis la modale réservation.
-async function persisterMaintenance({ maintenanceId, immat, avionId, dateTime, dateTimeFin, ancienneButee, nouvelleButee }) {
+async function persisterMaintenance({ maintenanceId, immat, avionId, dateTime, dateTimeFin, ancienneButee, nouvelleButee, effectuePar, taches }) {
     const duree = (dateTimeFin.getTime() - dateTime.getTime()) / 3600000;
     const isoDate = dateTime.toISOString();
+    const nomCourant = (typeof currentUser !== 'undefined' && currentUser) ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
     const fieldsObj = {
         'Machine': immat,
         'Date': isoDate,
         'Ancienne butée': ancienneButee,
         'Nouvelle Butée': nouvelleButee,
-        'durée': duree
+        'durée': duree,
+        'Effectué par': effectuePar !== undefined ? effectuePar : nomCourant,
+        'Tâches': taches || ''
     };
     const method = maintenanceId ? 'PATCH' : 'POST';
     const url = maintenanceId
@@ -332,10 +346,14 @@ async function enregistrerMaintenance(e) {
         return;
     }
     try {
-        await persisterMaintenance({ maintenanceId, immat, avionId, dateTime, dateTimeFin, ancienneButee, nouvelleButee });
+        const effectuePar = (document.getElementById('maintenance-effectue-par')?.value || '').trim();
+        const taches = (document.getElementById('maintenance-taches')?.value || '').trim();
+        await persisterMaintenance({ maintenanceId, immat, avionId, dateTime, dateTimeFin, ancienneButee, nouvelleButee, effectuePar, taches });
         fermerModaleMaintenance();
         chargerSuiviAeronef();
         if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, true, true);
+        const viewCarnet = document.getElementById('view-carnet');
+        if (viewCarnet && viewCarnet.style.display !== 'none' && typeof chargerCarnetRoute === 'function') chargerCarnetRoute();
     } catch (err) {
         console.error(err);
         alert("Erreur lors de l'enregistrement de la maintenance.");

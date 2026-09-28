@@ -106,7 +106,7 @@ function genererHeaderCarnet(isJVIO) {
                 <th rowspan="2" style="white-space: normal;">Nature du vol<br><small>local<br>voyage<br>REV<br>Instruction<br>VLO<br>VLD<br>Activité Particulière : (préciser laquelle)<br>autre,...</small></th>
                 <th colspan="2" class="sub-header">Lieu<br><small>(LFxxxx ou OACI)</small></th>
                 <th colspan="2" class="sub-header">Heures<br><small>(HH:mm en H.Loc)</small></th>
-                <th colspan="2" class="sub-header">Cumul heures</th>
+                <th class="sub-header">Cumul heures</th>
                 <th colspan="2" class="sub-header">Carburant<br><small>(avant/après plein complet)</small></th>
                 <th rowspan="2" style="white-space: normal;">Opérations de maintenance</th>
                 <th rowspan="2" style="white-space: normal;">Commentaires / Observations</th>
@@ -119,7 +119,6 @@ function genererHeaderCarnet(isJVIO) {
                 <th>Départ</th>
                 <th>Arrivée</th>
                 <th>Horamètre arrivée</th>
-                <th>Report</th>
                 <th>Départ</th>
                 <th>Arrivée</th>
             </tr>
@@ -947,7 +946,7 @@ function afficherCarnet(records) {
         if (existingPagination) existingPagination.remove();
     }
     if (!records || records.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="15" class="carnet-empty">Aucun vol enregistré dans le carnet de route.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${isJVIO ? 14 : 15}" class="carnet-empty">Aucun vol enregistré dans le carnet de route.</td></tr>`;
         return;
     }
 
@@ -1002,7 +1001,18 @@ function afficherCarnet(records) {
     pageRecords.forEach(({ record, f, temps, dateStr }) => {
         const tr = document.createElement('tr');
         tr.dataset.id = record.id;
-        if (isJVIO) {
+        if (isJVIO && record._estMaintenance) {
+            tr.className = 'carnet-row-maintenance';
+            const qui = (f['Effectué par'] || '').toString().trim() || '-';
+            const taches = (f['Tâches'] || '').toString().trim() || '-';
+            tr.innerHTML = `
+                <td>${dateStr}</td>
+                <td colspan="9">🔧 Maintenance — <strong>${escHtml(qui)}</strong></td>
+                <td colspan="2"></td>
+                <td>${escHtml(taches)}</td>
+                <td></td>
+            `;
+        } else if (isJVIO) {
             tr.innerHTML = `
                 <td>${dateStr}</td>
                 <td>${formatEquipageCourt(f['Pilote']) || '-'}</td>
@@ -1014,7 +1024,6 @@ function afficherCarnet(records) {
                 <td>${f['Heure départ'] || ''}</td>
                 <td>${f['Heure arrivée'] || ''}</td>
                 <td>${formaterNombre(f['Horamètre arrivée']) || '-'}</td>
-                <td>${temps || '-'}</td>
                 <td>${afficherCarburant(f['Carburant départ'])}</td>
                 <td>${afficherCarburant(f['Carburant arrivée'])}</td>
                 <td>${(f['Maintenance'] || '').toString().trim() || '-'}</td>
@@ -1043,7 +1052,15 @@ function afficherCarnet(records) {
                 <td${idsEcartHorametre.has(record.id) ? ' class="horametre-ecart"' : ''}>${horametre}</td>
             `;
         }
-        tr.addEventListener('click', () => ouvrirModaleCarnet(record.id));
+        tr.addEventListener('click', () => {
+            if (record._estMaintenance) {
+                if (typeof peutGererMaintenance === 'function' && peutGererMaintenance() && typeof ouvrirModaleMaintenance === 'function') {
+                    ouvrirModaleMaintenance(record._maintenanceRecord || record);
+                }
+            } else {
+                ouvrirModaleCarnet(record.id);
+            }
+        });
         tbody.appendChild(tr);
     });
 
@@ -1051,7 +1068,7 @@ function afficherCarnet(records) {
         for (let i = pageRecords.length; i < LIGNES_PAR_PAGE_JVIO; i++) {
             const tr = document.createElement('tr');
             tr.className = 'carnet-ligne-vide';
-            tr.innerHTML = `<td colspan="15">&nbsp;</td>`;
+            tr.innerHTML = `<td colspan="14">&nbsp;</td>`;
             tbody.appendChild(tr);
         }
     }
@@ -1060,7 +1077,7 @@ function afficherCarnet(records) {
         const newTfoot = document.createElement('tfoot');
         newTfoot.innerHTML = `
             <tr class="carnet-total-cumule">
-                <td colspan="10" style="text-align:right; font-weight:600;">Total cumulé :</td>
+                <td colspan="9" style="text-align:right; font-weight:600;">Total cumulé :</td>
                 <td style="font-weight:600;">${formaterDureeMinutes(totalCumuleMinutes)}</td>
                 <td colspan="4"></td>
             </tr>
@@ -1187,7 +1204,7 @@ async function chargerCarnetRoute() {
     const recapDocs = document.getElementById('documents-carnet-recap');
     const alarme = document.getElementById('carnet-observation-alarme');
     const isJVIO = machineCarnetSelectionnee === 'F-JVIO';
-    const colspan = 15;
+    const colspan = isJVIO ? 14 : 15;
 
     if (CATEGORIES_CARNET[machineCarnetSelectionnee]) {
         genererGrillesPlaneur(machineCarnetSelectionnee);
@@ -1243,6 +1260,14 @@ async function chargerCarnetRoute() {
             return xb - xa;
         });
         if (isJVIO) {
+            try {
+                const resMaint = await cachedFetch(`${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent("{Machine}='F-JVIO'")}`, { headers });
+                const dataMaint = await resMaint.json();
+                (dataMaint.records || []).forEach(r => {
+                    volsMachine.push({ id: r.id, fields: r.fields || {}, _estMaintenance: true, _maintenanceRecord: r });
+                });
+                volsMachine.sort((a, b) => new Date(a.fields?.['Date'] || 0) - new Date(b.fields?.['Date'] || 0));
+            } catch (e) { console.warn('Maintenance JVIO indisponible:', e); }
             carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / LIGNES_PAR_PAGE_JVIO));
         }
         afficherCarnet(volsMachine);
