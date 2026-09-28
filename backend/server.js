@@ -550,6 +550,37 @@ function resumeChamps(fields, max = 400) {
     return s.length > max ? s.slice(0, max) + '…' : s;
 }
 
+// Libelle lisible d'un enregistrement pour la colonne Cible de l'audit
+function libelleRecord(fields) {
+    if (!fields) return '';
+    const prenomNom = `${fields['Prénom'] || ''} ${fields['Nom'] || ''}`.trim();
+    if (prenomNom && (fields['Prénom'] || fields['Identifiant'] || fields['Mail'])) return prenomNom;
+    const cles = ['Immatriculation', 'Titre', 'Pilote', 'Compte', 'Objet', 'Libellé', 'Instructeur', 'Passager'];
+    for (const c of cles) { if (fields[c]) return String(fields[c]); }
+    if (prenomNom) return prenomNom;
+    for (const c of ['Nom', 'Type', 'Date']) { if (fields[c]) return String(fields[c]); }
+    return '';
+}
+
+function fmtValAudit(v) {
+    if (v === undefined || v === null || v === '') return '';
+    let s = typeof v === 'object' ? JSON.stringify(v) : String(v);
+    return s.length > 80 ? s.slice(0, 80) + '…' : s;
+}
+
+// Diff lisible entre l'ancien etat et les champs envoyes : « champ : avant → apres »
+function diffChamps(ancien, nouveau) {
+    const lignes = [];
+    for (const k of Object.keys(nouveau || {})) {
+        const a = fmtValAudit(ancien ? ancien[k] : undefined);
+        const b = fmtValAudit(nouveau[k]);
+        if (a === b) continue;
+        lignes.push(`${k} : ${a || '∅'} → ${b || '∅'}`);
+    }
+    const s = lignes.join(' | ') || '(aucun changement de valeur)';
+    return s.length > 600 ? s.slice(0, 600) + '…' : s;
+}
+
 function journaliserEcriture(req, tableNom, action, details, cible = '') {
     if (!tableNom || String(tableNom).toLowerCase() === 'audit') return;
     pool.query(
@@ -601,7 +632,8 @@ app.post('/v0/:base/:table', async (req, res) => {
         journaliserEcriture(req, tableNom, 'Création',
             crees.length === 1
                 ? `${crees[0].id} | ${resumeChamps(crees[0].fields)}`
-                : `${crees.length} enregistrements : ${crees.map(c => c.id).join(', ')}`);
+                : `${crees.length} enregistrements : ${crees.map(c => c.id).join(', ')}`,
+            crees.length === 1 ? (libelleRecord(crees[0].fields) || tableNom) : tableNom);
         if (tableNom === 'VI Créneaux') {
             crees.forEach((rec, i) => {
                 if (!rec.fields || rec.fields['Statut'] !== 'Réservé') return;
@@ -653,6 +685,14 @@ async function majRecords(req, res, remplacer) {
         const records = req.body.records;
         if (!Array.isArray(records) || !records.length) return erreur(res, 422, 'records manquant');
         const tableNom = decodeURIComponent(req.params.table || '');
+        let anciensMap = {};
+        try {
+            const idsMaj = records.map(r => r.id).filter(Boolean);
+            if (idsMaj.length) {
+                const { rows: av } = await pool.query(`SELECT id, fields FROM ${table} WHERE id = ANY($1)`, [idsMaj]);
+                anciensMap = Object.fromEntries(av.map(x => [x.id, x.fields]));
+            }
+        } catch (e) { console.error('Audit diff:', e); }
         const maj = [];
         const anciens = [];
         const decalages = [];
@@ -690,10 +730,16 @@ async function majRecords(req, res, remplacer) {
             decalages.push(decalage);
         }
         res.json({ records: maj });
-        journaliserEcriture(req, tableNom, 'Modification',
-            maj.length === 1
-                ? `${maj[0].id} | ${resumeChamps((records[0] || {}).fields)}`
-                : `${maj.length} enregistrements : ${maj.map(m => m.id).join(', ')}`);
+        {
+            const parties = maj.map((m, i) => {
+                if (m.deleted) return `enregistrement ${m.id} supprimé`;
+                const envoye = (records[i] && records[i].fields) || {};
+                return diffChamps(anciensMap[m.id], envoye);
+            });
+            journaliserEcriture(req, tableNom, 'Modification',
+                maj.length === 1 ? parties[0] : `${maj.length} enregistrements | ${parties.slice(0, 4).join(' || ')}${maj.length > 4 ? ' || …' : ''}`,
+                maj.length === 1 ? (libelleRecord(maj[0].fields) || tableNom) : tableNom);
+        }
         declencherConfirmationVI(req, maj, anciens, decalages);
     } catch (e) {
         console.error('PATCH/PUT:', e);
@@ -710,6 +756,11 @@ async function majRecordUnitaire(req, res, remplacer) {
     try {
         const fields = req.body.fields;
         if (!fields) return erreur(res, 422, 'fields manquant');
+        let ancien = null;
+        try {
+            const { rows: av } = await pool.query(`SELECT fields FROM ${table} WHERE id = $1`, [req.params.id]);
+            ancien = av.length ? av[0].fields : null;
+        } catch (e) { console.error('Audit diff:', e); }
         const { rows } = await pool.query(
             remplacer
                 ? `UPDATE ${table} SET fields = $2 WHERE id = $1 RETURNING id, fields, created_at`
@@ -719,7 +770,8 @@ async function majRecordUnitaire(req, res, remplacer) {
         if (!rows.length) return erreur(res, 404, `Record introuvable: ${req.params.id}`);
         res.json(formatRecord(rows[0]));
         journaliserEcriture(req, decodeURIComponent(req.params.table || ''), 'Modification',
-            `${req.params.id} | ${resumeChamps(fields)}`);
+            diffChamps(ancien, fields),
+            libelleRecord(rows[0].fields) || decodeURIComponent(req.params.table || ''));
     } catch (e) {
         console.error('PATCH/PUT one:', e);
         erreur(res, 500, e.message);
@@ -732,21 +784,26 @@ app.put('/v0/:base/:table/:id', (req, res) => majRecordUnitaire(req, res, true))
 async function supprimerIds(req, res, table, ids) {
     let viReserves = [];
     let viRemplaces = [];
-    if (table === 'vi_creneaux') {
-        try {
-            const { rows } = await pool.query(`SELECT fields FROM ${table} WHERE id = ANY($1)`, [ids]);
+    let anciensMap = {};
+    try {
+        const { rows } = await pool.query(`SELECT id, fields FROM ${table} WHERE id = ANY($1)`, [ids]);
+        anciensMap = Object.fromEntries(rows.map(x => [x.id, x.fields]));
+        if (table === 'vi_creneaux') {
             viReserves = rows.map(r => r.fields).filter(f => f && f['Statut'] === 'Réservé' && f['Email']);
             viRemplaces = rows.map(r => r.fields).filter(f => f && f['Créneaux remplacés']);
-        } catch (e) {
-            console.error('Lecture VI avant suppression:', e);
         }
+    } catch (e) {
+        console.error('Lecture enregistrements avant suppression:', e);
     }
     for (const id of ids) {
         await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
     }
     res.json({ records: ids.map(id => ({ id, deleted: true })) });
     journaliserEcriture(req, decodeURIComponent(req.params.table || ''), 'Suppression',
-        `${ids.length} enregistrement(s) : ${ids.join(', ')}`);
+        ids.length === 1
+            ? `id ${ids[0]} | ${resumeChamps(anciensMap[ids[0]], 300)}`
+            : `${ids.length} enregistrements : ${ids.join(', ')}`,
+        libelleRecord(anciensMap[ids[0]]) || decodeURIComponent(req.params.table || ''));
     viReserves.forEach(f => {
         envoyerMailLiberationVI(f, true).catch(e => console.error('Mail suppression VI:', e));
     });
