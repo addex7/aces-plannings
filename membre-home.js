@@ -256,7 +256,10 @@ function renderAccueilMembre(fields) {
         <div class="accueil-documents" style="margin-top:0; margin-bottom:15px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
                 <h3 style="margin:0;">Annuaire des membres</h3>
-                <button type="button" id="btn-annuaire-membres" class="btn-primary">Voir l'annuaire</button>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" id="btn-bilan-validites-accueil" class="btn-secondary" style="display:none;" title="Bilan des validités de tous les pilotes">📋 Bilan validités</button>
+                    <button type="button" id="btn-annuaire-membres" class="btn-primary">Voir l'annuaire</button>
+                </div>
             </div>
             <p style="font-size:13px; color:#64748b; margin:0;">Consulter les coordonnées (mail, téléphone) des membres du club.</p>
         </div>
@@ -686,6 +689,15 @@ function attacherListenersAccueil() {
 
     const btnAnnuaire = document.getElementById('btn-annuaire-membres');
     if (btnAnnuaire) btnAnnuaire.addEventListener('click', ouvrirAnnuaireMembres);
+
+    const btnBilanAccueil = document.getElementById('btn-bilan-validites-accueil');
+    if (btnBilanAccueil) {
+        const voitBilan = typeof peutVoirBilanMembres === 'function' && peutVoirBilanMembres();
+        btnBilanAccueil.style.display = voitBilan ? 'inline-block' : 'none';
+        if (voitBilan) btnBilanAccueil.addEventListener('click', () => {
+            if (typeof ouvrirBilanMembres === 'function') ouvrirBilanMembres();
+        });
+    }
 
     if (!isSuperAdmin()) return;
 
