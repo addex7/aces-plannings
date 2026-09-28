@@ -1217,7 +1217,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                 if (volsCarnetJour.length > 0) {
                     const carnetContainer = document.createElement('div');
                     carnetContainer.style.cssText = 'position: relative; height: 10px; margin-top: 4px; width: 100%;';
-                    const offsetHeures = -dateAffichee.getTimezoneOffset() / 60;
+                    // Heures carnet : UTC pour les avions moteur, heure locale pour F-JVIO
+                    const offsetHeures = immatAvion === 'F-JVIO' ? 0 : -dateAffichee.getTimezoneOffset() / 60;
                     volsCarnetJour.forEach(c => {
                         const f = c.fields || {};
                         const [hD, mD] = String(f['Heure départ'] || '').split(':').map(Number);
@@ -3157,6 +3158,7 @@ function initBoutonsNavigation() {
                 ${item('#00adb5', "Vol d'initiation à pourvoir")}
                 ${item('#8e44ad', 'VI Planeur')}
                 ${item('#10b981', 'Mes réservations')}
+                ${item('#475569', 'Vol effectué (carnet de route)')}
                 <hr class="legende-separateur">
                 ${item('rgba(34,197,94,0.45)', 'Instructeur disponible')}
                 ${item('rgba(239,68,68,0.45)', 'Instructeur indisponible')}
