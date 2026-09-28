@@ -107,6 +107,9 @@ function genererHeaderCarnet(isJVIO) {
                 <th colspan="2" class="sub-header">Lieu<br><small>(LFxxxx ou OACI)</small></th>
                 <th colspan="2" class="sub-header">Heures<br><small>(HH:mm en H.Loc)</small></th>
                 <th colspan="2" class="sub-header">Cumul heures</th>
+                <th colspan="2" class="sub-header">Carburant<br><small>(avant/après plein complet)</small></th>
+                <th rowspan="2" style="white-space: normal;">Opérations de maintenance</th>
+                <th rowspan="2" style="white-space: normal;">Commentaires / Observations</th>
             </tr>
             <tr>
                 <th>Nom 1</th>
@@ -117,6 +120,8 @@ function genererHeaderCarnet(isJVIO) {
                 <th>Arrivée</th>
                 <th>Horamètre arrivée</th>
                 <th>Report</th>
+                <th>Départ</th>
+                <th>Arrivée</th>
             </tr>
         `;
     }
@@ -248,15 +253,17 @@ function remplirFormulaireCarnet(f) {
         nature.value = f['Nature'] || (machine === 'F-JVIO' ? 'local' : 'Autre');
         if (!nature.value && nature.options.length) nature.value = nature.options[0].value;
     }
+    const cbDep = parseCarburant(f['Carburant départ']);
+    const cbArr = parseCarburant(f['Carburant arrivée']);
+    document.getElementById('carnet-carburant-depart').value = cbDep.q;
+    document.getElementById('carnet-carburant-arrivee').value = cbArr.q;
+    const pcDep = document.getElementById('carnet-pc-depart');
+    const pcArr = document.getElementById('carnet-pc-arrivee');
+    if (pcDep) pcDep.checked = cbDep.pc;
+    if (pcArr) pcArr.checked = cbArr.pc;
+    const maintEl = document.getElementById('carnet-maintenance');
+    if (maintEl) maintEl.value = f['Maintenance'] || '';
     if (machine !== 'F-JVIO') {
-        const cbDep = parseCarburant(f['Carburant départ']);
-        const cbArr = parseCarburant(f['Carburant arrivée']);
-        document.getElementById('carnet-carburant-depart').value = cbDep.q;
-        document.getElementById('carnet-carburant-arrivee').value = cbArr.q;
-        const pcDep = document.getElementById('carnet-pc-depart');
-        const pcArr = document.getElementById('carnet-pc-arrivee');
-        if (pcDep) pcDep.checked = cbDep.pc;
-        if (pcArr) pcArr.checked = cbArr.pc;
         document.getElementById('carnet-huile-depart').value = f['Huile départ'] || '';
         document.getElementById('carnet-huile-arrivee').value = f['Huile arrivée'] || '';
         restaurerDetailNatureStd(f['Précision activité'] || '');
@@ -890,14 +897,22 @@ function adapterFormulaireCarnet(machine) {
         });
     }
 
-    if (carbuRow) carbuRow.style.display = isJVIO ? 'none' : '';
+    if (carbuRow) carbuRow.style.display = '';
     if (huileRow) huileRow.style.display = isJVIO ? 'none' : '';
 
+    const maintenanceRow = document.getElementById('carnet-maintenance-row');
+    if (maintenanceRow) maintenanceRow.style.display = isJVIO ? '' : 'none';
+    const obsLabel = document.querySelector('label[for="carnet-observations"]');
+    if (obsLabel) obsLabel.textContent = isJVIO ? 'Commentaires / Observations :' : 'Remarques mécaniques :';
+
     if (isJVIO) {
-        ['carnet-carburant-depart', 'carnet-carburant-arrivee', 'carnet-huile-depart', 'carnet-huile-arrivee'].forEach(id => {
+        ['carnet-huile-depart', 'carnet-huile-arrivee'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
+    } else {
+        const maint = document.getElementById('carnet-maintenance');
+        if (maint) maint.value = '';
     }
 
     if (isBLIO) {
@@ -924,7 +939,7 @@ function afficherCarnet(records) {
     const thead = table ? table.querySelector('thead') : null;
     const tfoot = table ? table.querySelector('tfoot') : null;
     const tableContainer = table ? table.closest('.carnet-table-container') : null;
-    if (table) table.style.minWidth = isJVIO ? '950px' : '1100px';
+    if (table) table.style.minWidth = isJVIO ? '1400px' : '1100px';
     if (thead) thead.innerHTML = genererHeaderCarnet(isJVIO);
     if (tfoot) tfoot.remove();
     if (tableContainer) {
@@ -932,7 +947,7 @@ function afficherCarnet(records) {
         if (existingPagination) existingPagination.remove();
     }
     if (!records || records.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${isJVIO ? 11 : 15}" class="carnet-empty">Aucun vol enregistré dans le carnet de route.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="15" class="carnet-empty">Aucun vol enregistré dans le carnet de route.</td></tr>`;
         return;
     }
 
@@ -1000,6 +1015,10 @@ function afficherCarnet(records) {
                 <td>${f['Heure arrivée'] || ''}</td>
                 <td>${formaterNombre(f['Horamètre arrivée']) || '-'}</td>
                 <td>${temps || '-'}</td>
+                <td>${afficherCarburant(f['Carburant départ'])}</td>
+                <td>${afficherCarburant(f['Carburant arrivée'])}</td>
+                <td>${(f['Maintenance'] || '').toString().trim() || '-'}</td>
+                <td>${(f['Observations'] || '').trim() || '-'}</td>
             `;
         } else {
             const equipage = [f['Pilote'], f['Instructeur']].filter(Boolean).map(formatEquipageCourt).join(' / ') || '-';
@@ -1032,7 +1051,7 @@ function afficherCarnet(records) {
         for (let i = pageRecords.length; i < LIGNES_PAR_PAGE_JVIO; i++) {
             const tr = document.createElement('tr');
             tr.className = 'carnet-ligne-vide';
-            tr.innerHTML = `<td colspan="11">&nbsp;</td>`;
+            tr.innerHTML = `<td colspan="15">&nbsp;</td>`;
             tbody.appendChild(tr);
         }
     }
@@ -1043,6 +1062,7 @@ function afficherCarnet(records) {
             <tr class="carnet-total-cumule">
                 <td colspan="10" style="text-align:right; font-weight:600;">Total cumulé :</td>
                 <td style="font-weight:600;">${formaterDureeMinutes(totalCumuleMinutes)}</td>
+                <td colspan="4"></td>
             </tr>
         `;
         table.appendChild(newTfoot);
@@ -1167,7 +1187,7 @@ async function chargerCarnetRoute() {
     const recapDocs = document.getElementById('documents-carnet-recap');
     const alarme = document.getElementById('carnet-observation-alarme');
     const isJVIO = machineCarnetSelectionnee === 'F-JVIO';
-    const colspan = isJVIO ? 11 : 15;
+    const colspan = 15;
 
     if (CATEGORIES_CARNET[machineCarnetSelectionnee]) {
         genererGrillesPlaneur(machineCarnetSelectionnee);
@@ -1201,7 +1221,7 @@ async function chargerCarnetRoute() {
     if (alarme) alarme.style.display = 'none';
     const table = tbody ? tbody.closest('table') : null;
     const thead = table ? table.querySelector('thead') : null;
-    if (table) table.style.minWidth = isJVIO ? '950px' : '1100px';
+    if (table) table.style.minWidth = isJVIO ? '1400px' : '1100px';
     if (thead) thead.innerHTML = genererHeaderCarnet(isJVIO);
     if (tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" class="carnet-empty">Chargement du carnet de route...</td></tr>`;
     try {
@@ -1349,6 +1369,7 @@ async function soumettreCarnetRoute(event) {
         "Horamètre départ": numeric(horametreDepart),
         "Horamètre arrivée": numeric(horametreArrivee),
         "Prix du vol": numeric(prixVolText),
+        "Maintenance": (document.getElementById('carnet-maintenance')?.value || '').trim(),
         "Observations": observations,
         "Statut observation": observations
             ? (['Pris en compte', 'En cours de traitement'].includes(ancienRecord?.fields?.['Statut observation']) ? ancienRecord.fields['Statut observation'] : 'Non pris en compte')
