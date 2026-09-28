@@ -215,8 +215,10 @@ function setupError(msg) {
 function showApp() {
     const overlay = document.getElementById('login-overlay');
     const setup = document.getElementById('setup-overlay');
+    const layout = document.querySelector('.app-layout');
     if (overlay) overlay.style.display = 'none';
     if (setup) setup.style.display = 'none';
+    if (layout) layout.style.display = '';
     updateUIRoles();
     const tabAccueil = document.getElementById('tab-accueil');
     if (tabAccueil) tabAccueil.click();

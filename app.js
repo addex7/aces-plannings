@@ -243,3 +243,67 @@ async function creerNotification(piloteNom, message, type = 'info', lien = '') {
         body: JSON.stringify(body)
     });
 }
+
+/* ==========================================================================
+   ACTUALISATION AUTOMATIQUE DE LA VUE COURANTE
+   Recharge les donnees de la vue affichee toutes les 60 s et au retour de
+   focus sur l'onglet, sans intervention de l'utilisateur. Suspendu quand
+   une modale est ouverte, un champ est modifie ou un glisser-deposer est
+   en cours (pour ne pas detruire une saisie).
+   ========================================================================== */
+const REFRESH_AUTO_INTERVAL_MS = 60000;
+const REFRESH_AUTO_MIN_ECART_MS = 15000;
+let dernierRefreshAuto = 0;
+
+const RAFRAICHSSEURS_VUES = {
+    'view-accueil-pilote': () => typeof chargerAccueilPilote === 'function' && chargerAccueilPilote(),
+    'view-planning': () => typeof chargerDonneesPlanning === 'function' && chargerDonneesPlanning(true, false, true),
+    'view-initiation': () => typeof chargerVolsInitiation === 'function' && chargerVolsInitiation(),
+    'view-aeronefs': () => typeof chargerSuiviAeronef === 'function' && chargerSuiviAeronef(),
+    'view-instructeur': () => typeof chargerSuiviInstructeur === 'function' && chargerSuiviInstructeur(),
+    'view-carnet': () => typeof chargerCarnetRoute === 'function' && chargerCarnetRoute(),
+    'view-membres': () => typeof chargerUtilisateurs === 'function' && chargerUtilisateurs(),
+    'view-documents': () => typeof chargerDocuments === 'function' && chargerDocuments(),
+    'view-accueil-membre': () => typeof chargerAccueilMembre === 'function' && chargerAccueilMembre(
+        (typeof membreSelectionne !== 'undefined' && membreSelectionne) ? membreSelectionne.id : (currentUser ? currentUser.id : null)),
+    'view-comptes': () => typeof chargerComptesPilotes === 'function' && chargerComptesPilotes(),
+    'view-audit': () => typeof chargerAudit === 'function' && chargerAudit(true),
+    'view-messagerie': () => typeof chargerMessagerie === 'function' && chargerMessagerie()
+};
+
+function saisieEnCours(vue) {
+    const ae = document.activeElement;
+    if (ae && (['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName) || ae.isContentEditable)) return true;
+    // Modale ouverte ?
+    if ([...document.querySelectorAll('.modal')].some(m => m.style.display === 'flex' || m.style.display === 'block')) return true;
+    const saving = document.getElementById('saving-overlay');
+    if (saving && saving.style.display && saving.style.display !== 'none') return true;
+    // Glisser-deposer / redimensionnement planning
+    if ((typeof isDraggingBar !== 'undefined' && isDraggingBar) || (typeof isResizing !== 'undefined' && isResizing)) return true;
+    // Champ modifie par l'utilisateur dans la vue courante (brouillon, filtre...)
+    if (vue) {
+        const champsModifies = [...vue.querySelectorAll('input, textarea, select')].some(el => {
+            if (el.type === 'checkbox' || el.type === 'radio') return el.checked !== el.defaultChecked;
+            if (el.type === 'button' || el.type === 'submit' || el.type === 'file' || el.type === 'hidden') return false;
+            return el.value !== el.defaultValue;
+        });
+        if (champsModifies) return true;
+    }
+    return false;
+}
+
+function rafraichirVueCourante() {
+    if (!currentUser || document.hidden) return;
+    const vue = [...document.querySelectorAll('.view-section')].find(v => v.style.display !== 'none');
+    if (!vue) return;
+    const fn = RAFRAICHSSEURS_VUES[vue.id];
+    if (!fn || saisieEnCours(vue)) return;
+    dernierRefreshAuto = Date.now();
+    if (typeof viderApiCache === 'function') viderApiCache();
+    Promise.resolve().then(fn).catch(e => console.warn('Actualisation auto:', e));
+}
+
+setInterval(rafraichirVueCourante, REFRESH_AUTO_INTERVAL_MS);
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Date.now() - dernierRefreshAuto > REFRESH_AUTO_MIN_ECART_MS) rafraichirVueCourante();
+});
