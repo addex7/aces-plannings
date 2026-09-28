@@ -165,13 +165,53 @@ function genererHeaderCarnet(isJVIO) {
     `;
 }
 
+function estProprietaireVolCarnet(record) {
+    if (typeof currentUser === 'undefined' || !currentUser || !record || !record.fields) return false;
+    const f = record.fields;
+    const moi = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    const tester = (nom) => {
+        const n = (nom || '').toString().trim();
+        if (!n) return false;
+        if (typeof estUtilisateurCourant === 'function' && estUtilisateurCourant(n)) return true;
+        if (typeof correspondanceNom === 'function' && (correspondanceNom(n, moi)
+            || (typeof nomPiloteCourant === 'function' && correspondanceNom(n, nomPiloteCourant())))) return true;
+        return n.toLowerCase() === moi.toLowerCase();
+    };
+    return tester(f['Pilote']) || tester(f['Instructeur']);
+}
+
+function peutModifierVolCarnet(record) {
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
+    const roles = currentUser.roles || [];
+    if (roles.includes('Super admin') || roles.includes('Super Admin')) return true;
+    if (roles.some(r => /instructeur/i.test(r || ''))) return true;
+    if (roles.includes('Mécanicien') || roles.includes('Mecanicien')) {
+        return estProprietaireVolCarnet(record);
+    }
+    return true;
+}
+
+function definirLectureSeuleCarnet(actif) {
+    const form = document.getElementById('carnet-form');
+    if (!form) return;
+    form.querySelectorAll('input, select, textarea').forEach(el => {
+        if (el.type === 'hidden') return;
+        el.disabled = !!actif;
+    });
+    const btnSave = form.querySelector('.btn-submit');
+    if (btnSave) btnSave.style.display = actif ? 'none' : '';
+}
+
 async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const modal = document.getElementById('carnet-modal');
     const form = document.getElementById('carnet-form');
     const titre = modal ? modal.querySelector('h3') : null;
     if (!modal || !form) return;
     form.reset();
+    definirLectureSeuleCarnet(false);
     idCarnetEnEdition = recordId || null;
+    const recordEdit = recordId ? listeVolsCarnetCache.find(r => r.id === recordId) : null;
+    const lectureSeule = !!(recordEdit && !peutModifierVolCarnet(recordEdit));
     const btnDelete = document.getElementById('btn-delete-carnet');
     const dateInput = document.getElementById('carnet-date');
     const selectMachine = document.getElementById('carnet-machine');
@@ -181,13 +221,15 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const heureDepart = document.getElementById('carnet-heure-depart');
     const heureArrivee = document.getElementById('carnet-heure-arrivee');
     const decAt = document.getElementById('carnet-decol-atterr');
-    if (titre) titre.textContent = recordId ? 'Modifier un vol' : (machineImmat ? 'Nouvelle observation' : 'Saisir un vol');
-    if (btnDelete) btnDelete.style.display = recordId ? 'inline-block' : 'none';
+    if (titre) titre.textContent = recordId
+        ? (lectureSeule ? 'Détail du vol (lecture seule)' : 'Modifier un vol')
+        : (machineImmat ? 'Nouvelle observation' : 'Saisir un vol');
+    if (btnDelete) btnDelete.style.display = (recordId && !lectureSeule) ? 'inline-block' : 'none';
     if (dateInput) dateInput.value = new Date().toLocaleDateString('en-CA');
     if (departInput) departInput.value = 'LFOY';
     if (arriveeInput) arriveeInput.value = 'LFOY';
 
-    const record = recordId ? listeVolsCarnetCache.find(r => r.id === recordId) : null;
+    const record = recordEdit;
     const extraMachine = machineImmat || (record && record.fields ? record.fields['Machine'] : null);
     const filtreMachine = document.getElementById('carnet-machine-filtre');
     const machineCible = extraMachine || (filtreMachine ? filtreMachine.value : 'F-GASB');
@@ -233,6 +275,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         mettreAJourPrixDuVol();
         syncNatureChips();
     }
+    if (lectureSeule) definirLectureSeuleCarnet(true);
     const sidebar = document.querySelector('.sidebar');
     const sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 170;
     modal.style.setProperty('--carnet-modal-left', `${sidebarWidth}px`);
@@ -1331,6 +1374,13 @@ async function synchroniserVolMaintenance(machine, date, pilote, horametreArrive
 
 async function soumettreCarnetRoute(event) {
     event.preventDefault();
+    if (idCarnetEnEdition) {
+        const recordEdit = listeVolsCarnetCache.find(r => r.id === idCarnetEnEdition);
+        if (recordEdit && !peutModifierVolCarnet(recordEdit)) {
+            alert("Tu n'as pas le droit de modifier ce vol.");
+            return;
+        }
+    }
     const date = document.getElementById('carnet-date').value;
     const pilote = document.getElementById('carnet-pilote').value.trim();
     const instructeur = document.getElementById('carnet-instructeur').value.trim();
@@ -1446,8 +1496,12 @@ async function soumettreCarnetRoute(event) {
 
 async function supprimerCarnetRoute() {
     if (!idCarnetEnEdition) return;
-    if (!confirm('Supprimer ce vol du carnet de route ?')) return;
     const record = listeVolsCarnetCache.find(r => r.id === idCarnetEnEdition);
+    if (record && !peutModifierVolCarnet(record)) {
+        alert("Tu n'as pas le droit de supprimer ce vol.");
+        return;
+    }
+    if (!confirm('Supprimer ce vol du carnet de route ?')) return;
     const f = record && record.fields ? record.fields : {};
     const machine = f['Machine'] || '';
     const date = f['Date'] || '';
