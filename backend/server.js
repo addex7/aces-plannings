@@ -465,7 +465,7 @@ app.get('/v0/:base/:table', async (req, res) => {
             if (sql) where = `WHERE ${sql}`;
         }
 
-        let orderBy = 'ORDER BY created_at ASC';
+        let orderBy = 'ORDER BY created_at ASC, f.id ASC';
         const sorts = [];
         const sortQ = Array.isArray(req.query.sort) ? req.query.sort : (req.query.sort ? [req.query.sort] : []);
         for (let i = 0; i < 16; i++) {
@@ -476,7 +476,7 @@ app.get('/v0/:base/:table', async (req, res) => {
             const dir = (dirRaw || 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
             sorts.push(`(f.fields->>$${params.length}) ${dir} NULLS LAST`);
         }
-        if (sorts.length) orderBy = `ORDER BY ${sorts.join(', ')}`;
+        if (sorts.length) orderBy = `ORDER BY ${sorts.join(', ')}, f.id ASC`;
 
         const pageSize = Math.min(parseInt(req.query.pageSize || '100', 10) || 100, 100);
         const offset = Math.max(parseInt(req.query.offset || '0', 10) || 0, 0);
