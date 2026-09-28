@@ -292,6 +292,27 @@ function saisieEnCours(vue) {
     return false;
 }
 
+// Instantane fige de la vue posee en overlay pendant le refresh auto :
+// le contenu se recharge en dessous puis le masque est retire (pas de
+// flash « Chargement... »). Le clone est en fin de <body>, donc les
+// getElementById continuent de cibler la vraie vue (document order).
+function creerSnapshotVue(vue) {
+    const r = vue.getBoundingClientRect();
+    const clone = vue.cloneNode(true);
+    clone.setAttribute('aria-hidden', 'true');
+    const bg = getComputedStyle(document.body).backgroundColor || '#f4f6f9';
+    clone.style.cssText = `position:fixed;z-index:500;top:${r.top}px;left:${r.left}px;width:${r.width}px;height:${r.height}px;margin:0;overflow:hidden;background:${bg};pointer-events:none;`;
+    document.body.appendChild(clone);
+    // Reproduit la position de scroll des sous-elements scrollables
+    const orig = vue.querySelectorAll('*');
+    const copie = clone.querySelectorAll('*');
+    for (let i = 0; i < orig.length; i++) {
+        if (orig[i].scrollTop) copie[i].scrollTop = orig[i].scrollTop;
+        if (orig[i].scrollLeft) copie[i].scrollLeft = orig[i].scrollLeft;
+    }
+    return clone;
+}
+
 function rafraichirVueCourante() {
     if (!currentUser || document.hidden) return;
     const vue = [...document.querySelectorAll('.view-section')].find(v => v.style.display !== 'none');
@@ -300,7 +321,16 @@ function rafraichirVueCourante() {
     if (!fn || saisieEnCours(vue)) return;
     dernierRefreshAuto = Date.now();
     if (typeof viderApiCache === 'function') viderApiCache();
-    Promise.resolve().then(fn).catch(e => console.warn('Actualisation auto:', e));
+    const snapshot = creerSnapshotVue(vue);
+    let retire = false;
+    const retirer = () => {
+        if (retire) return;
+        retire = true;
+        setTimeout(() => snapshot.remove(), 400);
+    };
+    Promise.resolve().then(fn).then(retirer).catch(e => { console.warn('Actualisation auto:', e); retirer(); });
+    // Filet de securite : ne jamais laisser le masque plus de 10 s
+    setTimeout(retirer, 10000);
 }
 
 setInterval(rafraichirVueCourante, REFRESH_AUTO_INTERVAL_MS);
