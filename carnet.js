@@ -254,6 +254,7 @@ async function envoyerVolVersGvv() {
         if (!res.ok) throw new Error((data && data.error && data.error.message) || 'Erreur envoi GVV');
         f['GVV ID'] = data.gvvId || '';
         f['Envoyé GVV le'] = new Date().toISOString();
+        if (typeof viderApiCache === 'function') viderApiCache();
         majBoutonGvvCarnet(record);
         chargerCarnetRoute();
         alert(`Vol envoyé à GVV${data.gvvId ? ` (vol #${data.gvvId})` : ''}.`);

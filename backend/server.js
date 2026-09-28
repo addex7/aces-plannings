@@ -489,7 +489,7 @@ app.post('/v0/:base/gvv-vol', async (req, res) => {
             });
             alias = ((membre && (membre.fields || {})['Compte GVV']) || '').toString().trim() || null;
         }
-        const resultat = await envoyerVolAvion(fields, alias);
+        const resultat = await envoyerVolAvion(fields, alias, pool);
         if (!resultat.ok) return erreur(res, 502, resultat.message);
         const nouveaux = { ...fields, 'GVV ID': resultat.gvvId || '', 'Envoyé GVV le': new Date().toISOString() };
         await pool.query(

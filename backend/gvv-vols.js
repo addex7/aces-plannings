@@ -8,6 +8,13 @@
 
 const cheerio = require('cheerio');
 const { GvvClient } = require('./gvv-client');
+const {
+    recupererSoldesCsv,
+    recupererComptes411,
+    recupererEcrituresCompte,
+    sauvegarderSoldes,
+    sauvegarderEcrituresCompte
+} = require('./gvv-sync');
 
 // Matching tolerant "NOM Prenom" (GVV) <-> "Prenom Nom" (site) : memes
 // regles que normaliserNomGvv/cleNomGvvLettres dans comptes.js.
@@ -125,9 +132,26 @@ async function trouverVolCree(client, attendu) {
     return id;
 }
 
+// Reimporte solde + ecritures d'un seul compte GVV dans PostgreSQL, sans
+// attendre la synchro nocturne (apres l'envoi d'un vol).
+async function rafraichirCompteGvv(client, pool, nomCompte) {
+    if (!nomCompte) return false;
+    const soldes = await recupererSoldesCsv(client);
+    const solde = soldes.find(s => memeNomGvv(s.compte, nomCompte));
+    if (solde) await sauvegarderSoldes(pool, [solde]);
+    const comptes = await recupererComptes411(client);
+    const cible = comptes.find(c => memeNomGvv(c.compte, nomCompte));
+    if (cible) {
+        const ecritures = await recupererEcrituresCompte(client, cible);
+        await sauvegarderEcrituresCompte(pool, cible.compte, ecritures);
+    }
+    return !!(solde || cible);
+}
+
 // fields = champs du record "Carnet de route Pilotes" ; aliasCompteGvv =
 // champ "Compte GVV" de la fiche membre (quand le nom GVV differe du site).
-async function envoyerVolAvion(fields, aliasCompteGvv) {
+// pool = connexion PostgreSQL (facultatif : rafraichit le compte du pilote).
+async function envoyerVolAvion(fields, aliasCompteGvv, pool) {
     const f = fields || {};
     const machine = (f['Machine'] || '').toString().trim();
     const piloteNom = (aliasCompteGvv || f['Pilote'] || '').toString().trim();
@@ -264,9 +288,19 @@ async function envoyerVolAvion(fields, aliasCompteGvv) {
         const gvvId = await trouverVolCree(client, {
             dateFr, immat: machine, deb: vacdeb, fin: vacfin, piloteNomGvv: pilote.nomGvv
         });
+        // Rafraichit le compte du pilote tout de suite (solde + ecritures)
+        let compteRafraichi = false;
+        if (pool) {
+            try {
+                compteRafraichi = await rafraichirCompteGvv(client, pool, pilote.nomGvv);
+            } catch (e) {
+                console.error('Rafraichissement compte GVV:', e.message);
+            }
+        }
         return {
             ok: true,
             gvvId,
+            compteRafraichi,
             resume: {
                 pilote: pilote.nomGvv, payeur: payeurNomGvv, machine, date: dateFr,
                 compteurs: `${vacdeb.toFixed(2)} → ${vacfin.toFixed(2)}`,
@@ -286,4 +320,4 @@ async function envoyerVolAvion(fields, aliasCompteGvv) {
     return { ok: false, message: msgs.join(' | ') || `GVV a refusé le vol (HTTP ${res.status})` };
 }
 
-module.exports = { envoyerVolAvion, normaliserNomGvv, cleNomGvvLettres, memeNomGvv };
+module.exports = { envoyerVolAvion, rafraichirCompteGvv, normaliserNomGvv, cleNomGvvLettres, memeNomGvv };

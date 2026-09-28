@@ -187,6 +187,43 @@ async function sauvegarderSoldes(pool, soldes) {
     ).catch(() => {});
 }
 
+// Remplace les ecritures d'un seul compte (rafraichissement cible apres envoi de vol)
+async function sauvegarderEcrituresCompte(pool, compte, ecritures) {
+    await ensureTable(pool);
+    const maintenant = new Date().toISOString();
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query(`DELETE FROM ${TABLE_ECRITURES} WHERE fields->>'Compte' = $1`, [compte]);
+        for (let idx = 0; idx < ecritures.length; idx++) {
+            const e = ecritures[idx];
+            const id = 'gvve_' + crypto.createHash('sha1')
+                .update(`${e.compte}|${e.date}|${e.description}|${e.reference}|${e.debit}|${e.credit}|${idx}`)
+                .digest('hex').slice(0, 16);
+            await client.query(
+                `INSERT INTO ${TABLE_ECRITURES} (id, fields) VALUES ($1, $2)`,
+                [id, JSON.stringify({
+                    'Compte': e.compte,
+                    'Date': e.date,
+                    'Description': e.description,
+                    'Référence': e.reference,
+                    'Prix unitaire': e.prix,
+                    'Quantité': e.quantite,
+                    'Débit': e.debit,
+                    'Crédit': e.credit,
+                    'Synchronisé le': maintenant
+                })]
+            );
+        }
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    } finally {
+        client.release();
+    }
+}
+
 // Remplace toutes les ecritures : snapshot frais a chaque synchro
 async function sauvegarderEcritures(pool, ecritures) {
     const maintenant = new Date().toISOString();
@@ -291,6 +328,7 @@ async function main() {
     }
 
     const pool = new Pool({ connectionString: DATABASE_URL });
+    await ensureTable(pool);
     await sauvegarderSoldes(pool, soldes);
     console.log('Soldes enregistres.');
 
@@ -318,4 +356,16 @@ async function main() {
     await pool.end();
 }
 
-main().catch(e => { console.error('Echec synchro GVV:', e.message); process.exit(1); });
+if (require.main === module) {
+    main().catch(e => { console.error('Echec synchro GVV:', e.message); process.exit(1); });
+}
+
+module.exports = {
+    recupererSoldesCsv,
+    recupererComptes411,
+    recupererEcrituresCompte,
+    sauvegarderSoldes,
+    sauvegarderEcritures,
+    sauvegarderEcrituresCompte,
+    ensureTable
+};
