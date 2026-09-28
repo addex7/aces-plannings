@@ -624,7 +624,7 @@ async function lierVolsCarnetANouveauMembre(prenom, nom) {
     const table = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
     const prenomEsc = (prenom || '').replace(/"/g, '\\"');
     const nomEsc = (nom || '').replace(/"/g, '\\"');
-    const formula = `AND({Pilote} != '', OR(FIND(UPPER("${prenomEsc}"), UPPER({Pilote})) > 0, FIND(UPPER("${nomEsc}"), UPPER({Pilote})) > 0))`;
+    const formula = `AND({Pilote} != '', FIND(UPPER("${prenomEsc}"), UPPER({Pilote})) > 0, FIND(UPPER("${nomEsc}"), UPPER({Pilote})) > 0)`;
     const baseUrl = `${API_BASE}/${encodeURIComponent(table)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
     const records = [];
     let offset = '';

@@ -568,7 +568,7 @@ async function chargerExperiencesAccueil(cpl = false) {
     const nom = (currentUser.nom || '').replace(/"/g, '\\"');
     const mois24 = dateIlYAMoisAccueil(24);
     const dateMin = `${mois24.getFullYear()}-${String(mois24.getMonth() + 1).padStart(2, '0')}-${String(mois24.getDate()).padStart(2, '0')}`;
-    const formula = `AND(OR(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0), IS_AFTER({Date}, "${dateMin}"))`;
+    const formula = `AND(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0, IS_AFTER({Date}, "${dateMin}"))`;
     const baseUrl = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
 
     let records = [];
