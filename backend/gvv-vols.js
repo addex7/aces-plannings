@@ -168,13 +168,9 @@ async function envoyerVolAvion(fields, aliasCompteGvv) {
     const nbAtt = parseInt(f['Atterrissages'] ?? f['Décollages'] ?? 1, 10) || 1;
     const observations = (f['Observations'] || '').toString().trim();
 
-    // Payeur : le pilote, sauf vol d'initiation -> compte dedie "VI Avion"
-    let payeurLogin = pilote.login;
-    let payeurNomGvv = pilote.nomGvv;
-    if (vacategorie === '1') {
-        const vi = resoudreLogin(form.selects.payeur, 'VI Avion');
-        if (vi.login) { payeurLogin = vi.login; payeurNomGvv = vi.nomGvv; }
-    }
+    // Payeur : laisse vide (a renseigner dans GVV si besoin)
+    const payeurLogin = '';
+    const payeurNomGvv = '';
 
     // Compteurs horaires : les valeurs saisies dans le carnet sont envoyees
     // telles quelles — GVV gere le format "H.MM" de F-JVIO (horametres_en_min)
