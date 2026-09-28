@@ -381,6 +381,12 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
 
     instructeurs.forEach(nom => {
         const disposPerso = dispos.filter(r => correspondanceNom(r.fields['Instructeur'], nom));
+        const disciplinesToutes = (typeof disciplinesInstructeur === 'function') ? disciplinesInstructeur(nom) : ['avion'];
+        const disciplines = disciplinesToutes.filter(d => d.toLowerCase() !== 'planeur');
+        // Un instructeur uniquement planeur n'a pas de ligne sur le planning général :
+        // ses dispos s'affichent dans Présences Planeur > Instructeurs.
+        if (!disciplines.length) return;
+        const lignes = disciplines;
         const rowDiv = document.createElement('div');
         rowDiv.className = 'timeline-row instructeur-dispo-row';
         const machineCell = document.createElement('div');
@@ -416,9 +422,6 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
         ajouterZoneNuit(gridBg, `${coucherPercent}%`, `${crepusculeAeroPercent - coucherPercent}%`, 'night-civil');
         ajouterZoneNuit(gridBg, `${crepusculeAeroPercent}%`, `${100 - crepusculeAeroPercent}%`, 'night-aero');
 
-        const disciplinesToutes = (typeof disciplinesInstructeur === 'function') ? disciplinesInstructeur(nom) : ['avion'];
-        const disciplines = disciplinesToutes.filter(d => d.toLowerCase() !== 'planeur');
-        const lignes = disciplines.length ? disciplines : [''];
         const nbLignes = lignes.length;
 
         const stack = document.createElement('div');

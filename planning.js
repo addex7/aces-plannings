@@ -454,7 +454,7 @@ async function supprimerReservation() {
     const piloteNom = resa ? nomUtilisateurDepuisId(resa.fields['Pilote'], listeMembresCache) : '';
     const instructeurNom = resa ? nomUtilisateurDepuisId(resa.fields['Instructeur'], listeMembresCache) : '';
     const estProprietaire = typeof estUtilisateurCourant === 'function' && (estUtilisateurCourant(piloteNom) || estUtilisateurCourant(instructeurNom));
-    const rolesAutorises = ['Super admin', 'Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'];
+    const rolesAutorises = ['Super admin', 'Instructeur avion', 'Instructeur ULM'];
     const aRoleAutorise = (currentUser && Array.isArray(currentUser.roles) && currentUser.roles.some(r => rolesAutorises.includes(r))) || false;
     if (!estProprietaire && !aRoleAutorise) {
         alert("Tu n'as pas le droit de supprimer cette réservation.");
@@ -1340,11 +1340,18 @@ function populerSelectAvions(avions) {
     }
 }
 
-function peutBougerReservations() {
+function peutBougerReservations(record = null, tableName = 'Réservations') {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     const roles = currentUser.roles || [];
-    const allowed = ['super admin', 'instructeur avion', 'instructeur planeur', 'instructeur ulm'];
-    return roles.some(r => allowed.includes((r || '').toString().toLowerCase().trim()));
+    const norm = r => (r || '').toString().toLowerCase().trim();
+    if (roles.some(r => ['super admin', 'instructeur avion', 'instructeur ulm'].includes(norm(r)))) return true;
+    // Un instructeur planeur ne gère que les vols planeur : pas de modification
+    // des réservations avion/ULM des autres (ses propres vols passent par
+    // estProprietaireReservation).
+    if (roles.some(r => norm(r) === 'instructeur planeur')) {
+        return tableName === 'VI Planeur';
+    }
+    return false;
 }
 
 function estProprietaireReservation(record) {
@@ -1483,7 +1490,7 @@ function actualiserLigneHeureCourante() {
 function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebutInitiale, dureeVol, callbackMiseAJour, tableName = 'Réservations', record = null) {
     e.preventDefault();
     const resa = record || (listeReservationsCache || []).find(r => r.id === volId);
-    if (tableName !== 'Maintenance' && !peutBougerReservations() && !estProprietaireReservation(resa)) return;
+    if (tableName !== 'Maintenance' && !peutBougerReservations(resa, tableName) && !estProprietaireReservation(resa)) return;
     let aBouge = false;
     let ghost = null;
     let avionIdCible = avionId;
@@ -1606,7 +1613,7 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
 function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutInitiale, hFinInitiale, dateCibleVol, tableName = 'Réservations', record = null) {
     e.preventDefault();
     const resa = record || (listeReservationsCache || []).find(r => r.id === reservationId);
-    if (tableName !== 'Maintenance' && !peutBougerReservations() && !estProprietaireReservation(resa)) return;
+    if (tableName !== 'Maintenance' && !peutBougerReservations(resa, tableName) && !estProprietaireReservation(resa)) return;
     isResizing = true;
     barElement.style.opacity = '0.3';
     document.body.style.userSelect = 'none';

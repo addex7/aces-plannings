@@ -38,11 +38,13 @@ function appliquerAccesComptes() {
     const connecte = typeof currentUser !== 'undefined' && currentUser;
     if (tab) tab.style.display = connecte ? 'block' : 'none';
     if (header) {
-        header.style.display = (connecte && isTresorier()) ? 'flex' : 'none';
+        header.style.display = (connecte && peutVoirBilansPilotes()) ? 'flex' : 'none';
         header.style.gap = '10px';
         header.style.alignItems = 'center';
         header.style.flexWrap = 'wrap';
     }
+    const btnSync = document.getElementById('comptes-gvv-sync');
+    if (btnSync) btnSync.style.display = isTresorier() ? '' : 'none';
 }
 
 function afficherVueComptes() {
@@ -68,6 +70,11 @@ function isTresorier() {
     return typeof currentUser !== 'undefined' && currentUser && (currentUser.roles || []).some(r => r === 'Trésorier' || r === 'Super admin');
 }
 
+function peutVoirBilansPilotes() {
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
+    return isTresorier() || (currentUser.roles || []).some(r => /instructeur/i.test(r || ''));
+}
+
 async function chargerUtilisateursComptes() {
     if (utilisateursComptesCache.length) return;
     const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&pageSize%3D100`;
@@ -91,7 +98,7 @@ async function chargerComptesPilotes() {
     }
 
     try {
-        if (isTresorier()) {
+        if (peutVoirBilansPilotes()) {
             await chargerUtilisateursComptes();
             peuplerSelectPilotes(select);
         }
@@ -199,6 +206,10 @@ function ecritureVersTransaction(l) {
 // La synchro dure ~2-3 min : l'API la demarre en tache de fond et on
 // polle son statut jusqu'a la fin, puis on recharge la vue.
 async function lancerSyncGvv(btn) {
+    if (!isTresorier()) {
+        alert('La synchronisation GVV est réservée au trésorier et au super admin.');
+        return;
+    }
     const labelInitial = btn.textContent;
     btn.disabled = true;
     btn.textContent = '⏳ Synchro en cours…';
@@ -328,6 +339,10 @@ function afficherTransactions(records, container, piloteNom, showAll = comptesSh
 
     const displayRecords = showAll ? records : records.slice(0, 5);
     const hasMore = records.length > 5;
+    const estPropreCompte = typeof correspondanceNom === 'function'
+        ? correspondanceNom(piloteNom || '', nomPiloteComptes(currentUser))
+        : (piloteNom || '').trim().toLowerCase() === nomPiloteComptes(currentUser).trim().toLowerCase();
+    const peutSupprimerVersement = isTresorier() || estPropreCompte;
 
     const rows = displayRecords.map(r => {
         const f = r.fields || {};
@@ -351,7 +366,7 @@ function afficherTransactions(records, container, piloteNom, showAll = comptesSh
         }
 
         const isManuel = source === 'Saisie pilote' && statut === 'En attente';
-        const deleteBtn = isManuel ? `<button type="button" class="comptes-delete" data-id="${escHtml(r.id)}" title="Supprimer">&times;</button>` : '';
+        const deleteBtn = (isManuel && peutSupprimerVersement) ? `<button type="button" class="comptes-delete" data-id="${escHtml(r.id)}" title="Supprimer">&times;</button>` : '';
         return `<tr class="comptes-row ${cls}">
             <td class="comptes-date">${escHtml(date)}</td>
             <td class="comptes-desc">${escHtml(stripOrdre(desc))}</td>
@@ -445,6 +460,10 @@ async function enregistrerRecetteManuelle(e) {
 
     const select = document.getElementById('comptes-pilote-select');
     const piloteNom = (select && select.value) ? select.value : nomPiloteComptes(currentUser);
+    if (!isTresorier() && piloteNom !== nomPiloteComptes(currentUser)) {
+        alert('Tu ne peux saisir un versement que sur ton propre compte.');
+        return;
+    }
     const body = {
         records: [{
             fields: {
@@ -486,11 +505,17 @@ async function enregistrerRecetteManuelle(e) {
 async function supprimerRecetteManuelle(recordId, audit = true) {
     const url = `${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}/${recordId}`;
     let record = null;
-    if (audit) {
-        try {
-            const recRes = await apiFetch(url, { headers });
-            if (recRes.ok) record = await recRes.json();
-        } catch (_) {}
+    try {
+        const recRes = await apiFetch(url, { headers });
+        if (recRes.ok) record = await recRes.json();
+    } catch (_) {}
+    const piloteRec = ((record && record.fields && record.fields['Pilote']) || '');
+    const estPropre = typeof correspondanceNom === 'function'
+        ? correspondanceNom(piloteRec, nomPiloteComptes(currentUser))
+        : piloteRec.trim().toLowerCase() === nomPiloteComptes(currentUser).trim().toLowerCase();
+    if (!isTresorier() && !estPropre) {
+        alert('Tu ne peux supprimer que tes propres versements en attente.');
+        return;
     }
     const res = await apiFetch(url, { method: 'DELETE', headers });
     if (!res.ok) {
