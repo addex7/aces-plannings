@@ -2251,6 +2251,20 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #f1f5f9;
     border-radius: 6px;
 }
+.bandeau-informatif {
+    font-size: 15px;
+    line-height: 1.5;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-left: 5px solid #f59e0b;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+}
+.bandeau-informatif strong {
+    color: #78350f;
+}
 .validite-label {
     font-size: 13px;
     font-weight: 600;

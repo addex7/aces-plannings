@@ -308,7 +308,6 @@ function renderAccueilMembre(fields) {
                 </div>` : ''}
             </div>
         </div>
-        <p class="accueil-disclaimer">Le pilote reste responsable de la validité de ses qualifications et de ses licences. Ce système est informatif.</p>
         ${docForm}
     `;
     renderPhoto(fields);
