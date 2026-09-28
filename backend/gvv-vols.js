@@ -34,12 +34,17 @@ function dureeTexteEnMinutes(str) {
     return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
 }
 
-// Horametre F-JVIO stocke "H.MM" cote site -> minutes entieres pour GVV
-function horametreJVIOversMinutes(val) {
-    const total = parseFloat(String(val).replace(',', '.'));
-    if (isNaN(total)) return null;
-    const h = Math.floor(total);
-    return h * 60 + Math.round((total - h) * 100);
+// Horametre au format "H.MM" (F-JVIO : 1181.51 = 1181 h 51 min) -> minutes
+function hhmmVersMinutes(val) {
+    const n = parseFloat(String(val).replace(',', '.'));
+    if (isNaN(n)) return null;
+    const h = Math.floor(n);
+    return h * 60 + Math.round((n - h) * 100);
+}
+
+// minutes -> format "H.MM"
+function minutesVersHHMM(min) {
+    return Math.floor(min / 60) + (Math.round(min % 60) / 100);
 }
 
 // Lit le formulaire de saisie GVV : champs caches, listes de comptes, machines
@@ -171,8 +176,9 @@ async function envoyerVolAvion(fields, aliasCompteGvv) {
         if (vi.login) { payeurLogin = vi.login; payeurNomGvv = vi.nomGvv; }
     }
 
-    // Compteurs horaires : ceux du carnet si renseignes, sinon on prolonge le
-    // dernier compteur connu dans GVV avec la duree du vol.
+    // Compteurs horaires : les valeurs saisies dans le carnet sont envoyees
+    // telles quelles — GVV gere le format "H.MM" de F-JVIO (horametres_en_min)
+    // et calcule la duree en heures decimales.
     const enMinutes = !!form.horametresEnMin[machine];
     const num = (v) => {
         const n = parseFloat(String(v ?? '').replace(',', '.'));
@@ -183,15 +189,19 @@ async function envoyerVolAvion(fields, aliasCompteGvv) {
     const hDep = f['Horamètre départ'];
     const hArr = f['Horamètre arrivée'];
     if (hDep !== undefined && hDep !== null && hDep !== '' && hArr !== undefined && hArr !== null && hArr !== '') {
-        if (enMinutes) {
-            vacdeb = horametreJVIOversMinutes(hDep);
-            vacfin = horametreJVIOversMinutes(hArr);
-        } else {
-            vacdeb = num(hDep);
-            vacfin = num(hArr);
-        }
+        vacdeb = num(hDep);
+        vacfin = num(hArr);
     }
-    if (vacdeb === null || vacfin === null || vacfin <= vacdeb) {
+    const dureeDepuisCompteurs = () => {
+        if (vacdeb === null || vacfin === null) return null;
+        if (enMinutes) {
+            const d = hhmmVersMinutes(vacdeb), a = hhmmVersMinutes(vacfin);
+            return (d === null || a === null || a <= d) ? null : Math.round((a - d) / 60 * 100) / 100;
+        }
+        return vacfin > vacdeb ? Math.round((vacfin - vacdeb) * 100) / 100 : null;
+    };
+    let vaduree = dureeDepuisCompteurs();
+    if (vaduree === null) {
         // Repli : dernier compteur GVV + duree du vol
         let minutes = dureeTexteEnMinutes(f['Temps de vol']);
         if (!minutes) {
@@ -206,10 +216,12 @@ async function envoyerVolAvion(fields, aliasCompteGvv) {
         if (dernier === null || !minutes || minutes <= 0) {
             return { ok: false, message: 'Compteurs horaires non renseignés et impossibles à déduire (durée du vol manquante)' };
         }
+        vaduree = Math.round(minutes / 60 * 100) / 100;
         vacdeb = Math.round(dernier * 100) / 100;
-        vacfin = enMinutes ? vacdeb + minutes : Math.round((vacdeb + minutes / 60) * 100) / 100;
+        vacfin = enMinutes
+            ? minutesVersHHMM(hhmmVersMinutes(vacdeb) + minutes)
+            : Math.round((vacdeb + minutes / 60) * 100) / 100;
     }
-    const vaduree = Math.round((vacfin - vacdeb) * 100) / 100;
 
     const corps = {
         ...form.hidden,
