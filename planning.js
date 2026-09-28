@@ -73,6 +73,46 @@ function afficherModaleAlerte(titre, messageHtml, icone = '⚠️') {
     document.body.appendChild(overlay);
 }
 
+// Avertit (sans bloquer) lorsqu'un document de l'aeronef sera perime a la
+// date du vol, ou expire dans les 30 jours qui suivent. La comparaison se
+// fait sur la date du vol, pas sur aujourd'hui — une reservation lointaine
+// signale donc les echeances qui tomberont d'ici la.
+async function verifierDocumentsAeronefAvantReservation(immat, dateVol) {
+    if (!immat || !(dateVol instanceof Date) || isNaN(dateVol) || typeof chargerDocumentsAeronef !== 'function') return;
+    try {
+        const docs = await chargerDocumentsAeronef(immat);
+        if (!Array.isArray(docs) || !docs.length) return;
+        const jourVol = new Date(dateVol.getFullYear(), dateVol.getMonth(), dateVol.getDate());
+        const dans30j = new Date(jourVol);
+        dans30j.setDate(dans30j.getDate() + 30);
+        const perimes = [];
+        const bientot = [];
+        docs.forEach(r => {
+            const f = r.fields || {};
+            if (f['Activé'] === false) return;
+            const dv = f['Date de validité'];
+            if (!dv) return;
+            const d = new Date(dv + 'T00:00:00');
+            if (isNaN(d)) return;
+            const type = (typeof TYPES_DOCUMENTS_AERONEFS !== 'undefined'
+                ? ((TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) || {}).nom)
+                : null) || f['Type de document'] || 'Document';
+            const dateStr = d.toLocaleDateString('fr-FR');
+            if (d < jourVol) perimes.push(`${type} — expiré le ${dateStr}`);
+            else if (d <= dans30j) bientot.push(`${type} — expire le ${dateStr}`);
+        });
+        if (!perimes.length && !bientot.length) return;
+        const lis = arr => arr.map(x => `<li>${escapeHtml(x)}</li>`).join('');
+        let html = `<p>Pour le vol prévu le <strong>${jourVol.toLocaleDateString('fr-FR')}</strong> sur <strong>${escapeHtml(immat)}</strong> :</p>`;
+        if (perimes.length) html += `<p style="margin-top:10px; color:#dc2626; font-weight:600;">Documents périmés à cette date :</p><ul style="margin:6px 0; padding-left:20px;">${lis(perimes)}</ul>`;
+        if (bientot.length) html += `<p style="margin-top:10px; color:#d97706; font-weight:600;">Expire dans les 30 jours suivant le vol :</p><ul style="margin:6px 0; padding-left:20px;">${lis(bientot)}</ul>`;
+        html += `<p style="margin-top:12px; font-size:13px; color:#64748b;">Ceci n'empêche pas la réservation — pensez à le signaler au club.</p>`;
+        afficherModaleAlerte(`Documents ${immat}`, html, '📄');
+    } catch (e) {
+        console.warn('Vérification documents aéronef avant réservation:', e);
+    }
+}
+
 function afficherModaleConfirmation(titre, messageHtml, onConfirm) {
     const existing = document.getElementById('planning-confirm-modal');
     if (existing) existing.remove();
@@ -2643,6 +2683,10 @@ function initGestionnaireModale() {
                 typeMachineSel = (avion && avion.fields && avion.fields['Type'] || '').toString().trim().toLowerCase();
             } else if (isVIPlaneur) {
                 typeMachineSel = 'planeur';
+            }
+            // Avertissement non bloquant : documents de la machine perimes a la date du vol
+            if (!isVIPlaneur && machineNom && machineNom !== 'Tous') {
+                await verifierDocumentsAeronefAvantReservation(machineNom, localDebut);
             }
             if (instructeur && typeof verifierConflitDisponibiliteInstructeur === 'function') {
                 const conflit = await verifierConflitDisponibiliteInstructeur(instructeur, localDebut, localFin, machineNom, typeMachineSel);
