@@ -157,12 +157,21 @@ function normaliserNomGvv(s) {
         .toUpperCase().replace(/[^A-Z\s-]/g, ' ').trim().split(/\s+/).filter(Boolean).sort().join(' ');
 }
 
+// Secours quand l'espacement diffère entre GVV et le site
+// ("LEBAILLIF Gilbert" <-> "Gilbert Le Baillif") : mêmes lettres triées.
+function cleNomGvvLettres(s) {
+    return normaliserNomGvv(s).replace(/[\s-]/g, '').split('').sort().join('');
+}
+
 async function fetchSoldeGvv(piloteNom) {
     try {
         const url = `${API_BASE}/${encodeURIComponent('Soldes GVV')}?pageSize=100`;
         const records = await fetchTousRecords(url, { headers });
         const cible = normaliserNomGvv(piloteNom);
-        const rec = (records || []).find(r => normaliserNomGvv(r.fields?.['Compte']) === cible);
+        const cibleLettres = cleNomGvvLettres(piloteNom);
+        const rec = (records || []).find(r =>
+            normaliserNomGvv(r.fields?.['Compte']) === cible ||
+            cleNomGvvLettres(r.fields?.['Compte']) === cibleLettres);
         return rec ? rec.fields : null;
     } catch (e) {
         console.warn('Solde GVV indisponible:', e);
@@ -536,18 +545,25 @@ async function getSoldePilote(piloteNom, inclureEnAttente = true) {
     if (!piloteNom) return 0;
     try {
         const records = await fetchComptes(piloteNom);
-        return records.reduce((s, r) => {
+        const gvv = await fetchSoldeGvv(piloteNom);
+        let soldeInterne = 0;
+        let enAttente = 0;
+        records.forEach(r => {
             const f = r.fields || {};
             const statut = f['Statut'] || 'Validé';
             const source = f['Source'] || '';
             const debit = parseMontantCompte(f['Débit']);
             const credit = parseMontantCompte(f['Crédit']);
-            if (inclureEnAttente && statut === 'En attente' && source === 'Saisie pilote' && credit > 0) {
-                return s + credit;
-            }
-            if (statut !== 'Validé') return s;
-            return s + credit - debit;
-        }, 0);
+            if (statut === 'En attente' && source === 'Saisie pilote' && credit > 0) { enAttente += credit; return; }
+            if (statut !== 'Validé') return;
+            soldeInterne += credit - debit;
+        });
+        // La synchro GVV est la source de vérité ; la table interne sert de repli.
+        let solde = soldeInterne;
+        if (gvv && gvv['Solde'] !== undefined && gvv['Solde'] !== null && gvv['Solde'] !== '') {
+            solde = Number(gvv['Solde']) || 0;
+        }
+        return solde + (inclureEnAttente ? enAttente : 0);
     } catch (err) {
         console.error(err);
         return 0;
