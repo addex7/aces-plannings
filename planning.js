@@ -547,7 +547,7 @@ async function ouvrirModaleEditionVIPlaneur(vol) {
     const groupTelephone = document.getElementById('group-vi-telephone');
     const groupStatut = document.getElementById('group-vi-statut');
     if (modalTitle) modalTitle.textContent = "Modifier VI Planeur";
-    if (btnDeleteVI) btnDeleteVI.style.display = 'block';
+    if (btnDeleteVI) btnDeleteVI.style.display = hasRoleGestionVI() ? 'block' : 'none';
     if (groupTelephone) groupTelephone.style.display = 'none';
     if (groupStatut) groupStatut.style.display = 'none';
     if (!modal) return;
@@ -3343,6 +3343,8 @@ function afficherVolsInitiation() {
             ? `<button class="btn-decaler-initiation" title="Déplacer cette réservation sur un autre créneau">Décaler le vol</button>` : '';
         const boutonPilote = (!estArchive && isPris && vol.pilote && (gestionVI || hasRolePiloteVI()))
             ? `<button class="btn-pilote-initiation" title="Changer le pilote attribué à ce vol">Changer de pilote</button>` : '';
+        const boutonSupprimer = gestionVI
+            ? `<button class="btn-supprimer-initiation" title="Supprimer">✕</button>` : '';
         const card = document.createElement('div');
         const classeType = `type-${(vol.type || 'vi').toLowerCase()}`;
         card.className = `initiation-card ${vol.classe} ${classeType}`;
@@ -3356,7 +3358,7 @@ function afficherVolsInitiation() {
                 <div class="initiation-meta">
                     <strong>${piloteText}</strong>
                     ${caseSelection}
-                    <button class="btn-supprimer-initiation" title="Supprimer ce créneau">✕</button>
+                    ${boutonSupprimer}
                 </div>
             `;
         } else {
@@ -3374,7 +3376,7 @@ function afficherVolsInitiation() {
                     ${boutonPilote}
                     ${boutonDecaler}
                     ${boutonLiberer}
-                    <button class="btn-supprimer-initiation" title="Supprimer ce VI">✕</button>
+                    ${boutonSupprimer}
                 </div>
             `;
         }
@@ -3401,7 +3403,8 @@ function afficherVolsInitiation() {
             e.stopPropagation();
             ouvrirChoixPiloteVI(vol);
         });
-        card.querySelector('.btn-supprimer-initiation').addEventListener('click', (e) => {
+        const btnSupprCard = card.querySelector('.btn-supprimer-initiation');
+        if (btnSupprCard) btnSupprCard.addEventListener('click', (e) => {
             e.stopPropagation();
             supprimerVolInitiation(vol);
         });
@@ -3483,11 +3486,13 @@ function ouvrirActionsVI(vol) {
     const elInscrireAutre = document.getElementById('vi-act-inscrire-autre');
     const elDecaler = document.getElementById('vi-act-decaler');
     const elLiberer = document.getElementById('vi-act-liberer');
+    const elSupprimer = document.getElementById('vi-act-supprimer');
     if (elInscrire) elInscrire.style.display = (aPourvoir && hasRolePiloteVI()) ? '' : 'none';
     const rolesInscrireAutre = ['Super admin', 'Gestion VI', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
     if (elInscrireAutre) elInscrireAutre.style.display = (aPourvoir && (currentUser?.roles || []).some(r => rolesInscrireAutre.includes(r))) ? '' : 'none';
     if (elDecaler) elDecaler.style.display = (gestionVI && volActionsVI.passager) ? '' : 'none';
     if (elLiberer) elLiberer.style.display = gestionVI ? '' : 'none';
+    if (elSupprimer) elSupprimer.style.display = gestionVI ? '' : 'none';
     modal.style.display = 'flex';
 }
 
@@ -3623,6 +3628,7 @@ async function nettoyerArchivesVI(vols) {
 }
 
 async function supprimerCreneauxSelection(ids) {
+    if (!hasRoleGestionVI()) return;
     if (!ids || !ids.length) return;
     if (!confirm(`Supprimer ${ids.length} créneau(x) sélectionné(s) ?`)) return;
     try {
@@ -4038,6 +4044,7 @@ function editerVolInitiation(vol) {
 }
 
 async function supprimerVolInitiation(vol) {
+    if (!hasRoleGestionVI()) return;
     if (!vol || !vol.id) return;
     const table = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'creneau' ? 'VI Créneaux' : 'VI Planeur');
     const detail = [vol.passager, vol.dateStr, `${vol.heureDebut || ''} - ${vol.heureFin || ''}`].filter(Boolean).join(' • ');
@@ -4065,6 +4072,7 @@ async function supprimerVolInitiation(vol) {
 }
 
 async function supprimerCreneauVI(vol) {
+    if (!hasRoleGestionVI()) return;
     if (!vol || !vol.id) return;
     const table = vol._table || 'VI Créneaux';
     if (!confirm('Es-tu sûr de vouloir supprimer ce créneau ?')) return;
@@ -4092,8 +4100,10 @@ function ouvrirModaleChoixModifierCreneau(vol) {
     volChoixCreneau = vol;
     const info = document.getElementById('vi-choix-info');
     const btnPassager = document.getElementById('btn-modifier-comme-passager');
+    const btnSupprimer = document.getElementById('btn-supprimer-creneau');
     const aUnPassager = !!(vol.passager && vol.token);
     if (btnPassager) btnPassager.style.display = aUnPassager ? '' : 'none';
+    if (btnSupprimer) btnSupprimer.style.display = hasRoleGestionVI() ? '' : 'none';
     if (info) {
         info.innerHTML = aUnPassager
             ? `Modifier le créneau de <strong>${escapeHtml(vol.passager)}</strong> ?`
