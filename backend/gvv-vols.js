@@ -166,7 +166,15 @@ async function envoyerVolAvion(fields, aliasCompteGvv) {
     const arrivee = (f['Arrivée'] || '').toString().trim().toUpperCase();
     const navigation = !!(depart && arrivee && depart !== arrivee);
     const nbAtt = parseInt(f['Atterrissages'] ?? f['Décollages'] ?? 1, 10) || 1;
-    const observations = (f['Observations'] || '').toString().trim();
+    let observations = (f['Observations'] || '').toString().trim();
+    // Remorquage (F-BLIO, ou F-JVIO remorqueur) : observations "N REM" comme
+    // dans le carnet de route du F-BLIO
+    if (vacategorie === '3') {
+        const mRem = String(f['Nature'] || '').match(/(\d+)\s*Rem/i);
+        const nbRem = mRem ? parseInt(mRem[1], 10)
+            : (parseInt(f['Décollages'] ?? f['Atterrissages'], 10) || 1);
+        observations = `${nbRem} REM` + (observations ? ` — ${observations}` : '');
+    }
 
     // Payeur : laisse vide (a renseigner dans GVV si besoin)
     const payeurLogin = '';
