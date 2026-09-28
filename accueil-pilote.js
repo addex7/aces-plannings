@@ -270,7 +270,7 @@ function ouvrirModaleSignalements(immat, items) {
             </div>
             <div class="ap-modal-signalements-list">
                 ${items.map(i => {
-                    const actions = (typeof peutGererMaintenance === 'function' && peutGererMaintenance()) ? `
+                    const actions = (typeof peutTraiterSignalements === 'function' && peutTraiterSignalements()) ? `
                         <div class="ap-sig-actions">
                             ${[['Pris en compte', 'Pris en compte'], ['En cours de traitement', 'En cours'], ['Observation traitée', 'Traité']].map(([val, label]) => `
                                 <button type="button" class="ap-sig-statut-btn${i.etat === val ? ' actif' : ''}" data-id="${escHtml(i.id)}" data-statut="${escHtml(val)}">${label}</button>

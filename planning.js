@@ -503,7 +503,7 @@ function setAfficherVIPPlaneur(val) {
     mettreAJourBoutonVIPPlaneur();
 }
 
-async function peuplerSelectPilotesVI(valeurSelectionnee = '', selectId = 'form-vi-pilote') {
+async function peuplerSelectPilotesVI(valeurSelectionnee = '', selectId = 'form-vi-pilote', typeVI = null) {
     const sel = document.getElementById(selectId);
     if (!sel) return;
     await chargerListeMembresCache();
@@ -513,7 +513,7 @@ async function peuplerSelectPilotesVI(valeurSelectionnee = '', selectId = 'form-
     }
     const pilotes = (listeMembresCache || []).filter(r => {
         const roles = Array.isArray(r.fields?.['Rôles']) ? r.fields['Rôles'] : [r.fields?.['Rôles']].filter(Boolean);
-        return roles.includes('Pilote VI');
+        return roles.includes('Pilote VI') && piloteAutoriseSurTypeVI(roles, typeVI);
     });
     sel.innerHTML = '<option value="">-- Aucun --</option>';
     let trouve = false;
@@ -559,7 +559,7 @@ async function ouvrirModaleEditionVIPlaneur(vol) {
     document.getElementById('form-vi-statut').value = 'Réservé';
     document.getElementById('form-vi-debut').value = formaterPourInput(new Date(vol.fields['Date de début']));
     document.getElementById('form-vi-fin').value = formaterPourInput(new Date(vol.fields['Date de fin']));
-    await peuplerSelectPilotesVI((vol.fields['Pilote'] || '').toString().trim());
+    await peuplerSelectPilotesVI((vol.fields['Pilote'] || '').toString().trim(), 'form-vi-pilote', 'VIP');
     document.getElementById('form-vi-commentaire').value = (vol.fields['Commentaire'] || '').toString().trim();
     modal.style.display = 'flex';
 }
@@ -583,7 +583,7 @@ async function ouvrirModaleEditionVICreneau(vol) {
     document.getElementById('form-vi-statut').value = (vol.statut || 'Disponible');
     document.getElementById('form-vi-debut').value = formaterPourInput(new Date(vol.debut));
     document.getElementById('form-vi-fin').value = formaterPourInput(new Date(vol.fin));
-    await peuplerSelectPilotesVI((vol.pilote || '').toString().trim());
+    await peuplerSelectPilotesVI((vol.pilote || '').toString().trim(), 'form-vi-pilote', vol.type);
     document.getElementById('form-vi-commentaire').value = (vol.commentaire || '').toString().trim();
     modal.style.display = 'flex';
 }
@@ -1397,6 +1397,16 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
             if (piloteLimiteVI) {
                 const rolesMembre = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
                 if (!rolesMembre.includes('Pilote VI')) return;
+                let typeVI = null;
+                if (typesVolSel.includes('VI Planeur')) {
+                    typeVI = 'VIP';
+                } else if (typesVolSel.includes('VI Moteur')) {
+                    const cbMachine = document.querySelector('input[name="form-machine"]:checked');
+                    const avionSel = (listeAvionsCache || []).find(a => a.id === (cbMachine && cbMachine.value));
+                    const immatSel = ((avionSel && avionSel.fields && (avionSel.fields['Immatriculation'] || avionSel.fields['Nom'])) || '').toString().trim();
+                    typeVI = immatSel === 'F-JVIO' ? 'VIULM' : (immatSel === 'F-GASB' ? 'VIA' : null);
+                }
+                if (!piloteAutoriseSurTypeVI(rolesMembre, typeVI)) return;
             }
             const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Membre';
             const opt = document.createElement('option');
@@ -3334,11 +3344,11 @@ function afficherVolsInitiation() {
             nomClient = vol.passager || 'Passager non renseigné';
         }
         const machineText = vol.source === 'moteur' && vol.machineName ? `🛩️ ${vol.machineName}<br>` : '';
-        const peutSInscrire = !estArchive && isAPourvoir && hasRolePiloteVI();
+        const peutSInscrire = !estArchive && isAPourvoir && hasRolePiloteVI() && piloteAutoriseSurTypeVI((currentUser || {}).roles || [], vol.type);
         const boutonSInscrire = peutSInscrire ? `<button class="btn-reserver-initiation" data-id="${vol.id}" data-source="${vol.source}">S'inscrire</button>` : '';
         const rolesInscrireAutre = ['Super admin', 'Gestion VI', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
         const peutInscrireAutre = !estArchive && isAPourvoir && (currentUser?.roles || []).some(r => rolesInscrireAutre.includes(r));
-        const volData = encodeURIComponent(JSON.stringify({ id: vol.id, source: vol.source }));
+        const volData = encodeURIComponent(JSON.stringify({ id: vol.id, source: vol.source, type: vol.type }));
         const boutonInscrireAutre = peutInscrireAutre ? `<button class="btn-reserver-initiation" data-inscrire-autre="1" data-id="${vol.id}" data-source="${vol.source}" data-vol="${volData}">Inscrire autre</button>` : '';
         const caseSelection = regrouperParJour && vol.categorie === 'creneaux'
             ? `<input type="checkbox" class="creneau-check" data-id="${vol.id}" title="Sélectionner pour suppression groupée">` : '';
@@ -3495,7 +3505,7 @@ function ouvrirActionsVI(vol) {
     const elDecaler = document.getElementById('vi-act-decaler');
     const elLiberer = document.getElementById('vi-act-liberer');
     const elSupprimer = document.getElementById('vi-act-supprimer');
-    if (elInscrire) elInscrire.style.display = (aPourvoir && hasRolePiloteVI()) ? '' : 'none';
+    if (elInscrire) elInscrire.style.display = (aPourvoir && hasRolePiloteVI() && piloteAutoriseSurTypeVI((currentUser || {}).roles || [], volActionsVI.type)) ? '' : 'none';
     const rolesInscrireAutre = ['Super admin', 'Gestion VI', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
     if (elInscrireAutre) elInscrireAutre.style.display = (aPourvoir && (currentUser?.roles || []).some(r => rolesInscrireAutre.includes(r))) ? '' : 'none';
     const peutGererCeVol = peutGererVolVI(volActionsVI);
@@ -3708,7 +3718,7 @@ async function ouvrirChoixPiloteVI(vol) {
     volPiloteModale = vol;
     const info = document.getElementById('vi-pilote-info');
     if (info) info.textContent = `${vol.passager || 'Créneau'} — ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}`;
-    await peuplerSelectPilotesVI((vol.pilote || '').toString().trim(), 'vi-pilote-select');
+    await peuplerSelectPilotesVI((vol.pilote || '').toString().trim(), 'vi-pilote-select', vol.type);
     modal.style.display = 'flex';
 }
 
@@ -3717,6 +3727,17 @@ async function validerChoixPiloteVI() {
     const sel = document.getElementById('vi-pilote-select');
     if (!vol || !sel) return;
     const nom = sel.value || null;
+    if (nom) {
+        const membreChoisi = (listeMembresCache || []).find(m => {
+            const f = m.fields || {};
+            const nc = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+            return nc === nom || (typeof correspondanceNom === 'function' && correspondanceNom(nc, nom));
+        });
+        if (membreChoisi && !piloteAutoriseSurTypeVI((membreChoisi.fields || {})['Rôles'] || [], vol.type)) {
+            alert('Ce pilote n\'est pas instructeur de la discipline de ce vol.');
+            return;
+        }
+    }
     const table = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'creneau' ? 'VI Créneaux' : 'VI Planeur');
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}`, {
@@ -3993,7 +4014,7 @@ function initGestionnaireVolsInitiation() {
             const v = volActionsVI;
             fermerActions();
             if (v && typeof ouvrirInscrireAutre === 'function') {
-                ouvrirInscrireAutre('Initiation', JSON.stringify({ id: v.id, source: v.source }));
+                ouvrirInscrireAutre('Initiation', JSON.stringify({ id: v.id, source: v.source, type: v.type }));
             }
         });
         const btnDecalerAct = document.getElementById('vi-act-decaler');
@@ -4160,6 +4181,11 @@ async function reserverVolInitiation(id, source) {
         alert('Seuls les pilotes VI peuvent s\'inscrire sur un créneau réservé.');
         return;
     }
+    const volInit = (listeVolsInitiationCache || []).find(v => v.id === id);
+    if (!piloteAutoriseSurTypeVI((currentUser || {}).roles || [], volInit ? volInit.type : null)) {
+        alert('Ce type de vol d\'initiation est réservé aux instructeurs de la discipline concernée.');
+        return;
+    }
     const tableName = source === 'planeur' ? 'VI Planeur' : (source === 'creneau' ? 'VI Créneaux' : 'Réservations');
     try {
         const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(tableName)}`, {
@@ -4210,6 +4236,19 @@ function hasRolePiloteVI() {
     if (!currentUser) return false;
     const roles = currentUser.roles || [];
     return roles.includes('Pilote VI');
+}
+
+const ROLE_INSTRUCTEUR_PAR_TYPE_VI = { VIP: 'Instructeur planeur', VIA: 'Instructeur avion', VIULM: 'Instructeur ULM' };
+
+// Un membre instructeur ne peut être pilote d'un VI que sur sa discipline :
+// Instructeur avion -> VIA, Instructeur ULM -> VIULM, Instructeur planeur -> VIP.
+// Un Pilote VI sans rôle instructeur n'est pas restreint.
+function piloteAutoriseSurTypeVI(rolesMembre, typeVI) {
+    const roles = Array.isArray(rolesMembre) ? rolesMembre : [rolesMembre].filter(Boolean);
+    if (!roles.some(r => /instructeur/i.test((r || '').toString()))) return true;
+    const requis = ROLE_INSTRUCTEUR_PAR_TYPE_VI[(typeVI || '').toString().toUpperCase().trim()];
+    if (!requis) return true;
+    return roles.includes(requis);
 }
 
 function updateGestionVI() {

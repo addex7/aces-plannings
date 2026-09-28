@@ -1207,11 +1207,12 @@ function afficherAlarmeObservation(records) {
         gap: 8px;
         font-size: 13px;
     `;
-    const btnsHtml = `
+    const peutTraiter = typeof peutTraiterSignalements === 'function' && peutTraiterSignalements();
+    const btnsHtml = peutTraiter ? `
         <button class="btn-statut-obs" data-statut="Pris en compte" style="padding: 4px 8px; border: 1px solid #854d0e; background: transparent; color: #854d0e; border-radius: 4px; cursor: pointer; font-size: 12px;">Pris en compte</button>
         <button class="btn-statut-obs" data-statut="En cours de traitement" style="padding: 4px 8px; border: 1px solid #854d0e; background: transparent; color: #854d0e; border-radius: 4px; cursor: pointer; font-size: 12px;">En cours</button>
         <button class="btn-statut-obs" data-statut="Observation traitée" style="padding: 4px 8px; border: 1px solid #854d0e; background: transparent; color: #854d0e; border-radius: 4px; cursor: pointer; font-size: 12px;">Traité</button>
-    `;
+    ` : '';
     const COULEURS_STATUT_OBS = {
         'Non pris en compte': '#dc2626',
         'Pris en compte': '#d97706',
@@ -1231,7 +1232,7 @@ function afficherAlarmeObservation(records) {
                     <strong>🛠️ ${f['Machine'] || ''} — ${dateStr}</strong> — ${(f['Observations'] || '').trim()}
                     <span class="obs-statut" style="font-style: italic; margin-left: 8px; font-weight: 700; color: ${couleur};">(${statut})</span>
                 </div>
-                <div class="obs-btns" style="display: flex; gap: 6px; flex-shrink: 0;">${btnsHtml}</div>
+                ${btnsHtml ? `<div class="obs-btns" style="display: flex; gap: 6px; flex-shrink: 0;">${btnsHtml}</div>` : ''}
             </div>
         `;
     });
@@ -1243,6 +1244,10 @@ function afficherAlarmeObservation(records) {
 }
 
 async function mettreAJourStatutObservation(recordId, statut) {
+    if (typeof peutTraiterSignalements === 'function' && !peutTraiterSignalements()) {
+        alert('Action réservée aux mécaniciens, instructeurs et super admin.');
+        return;
+    }
     try {
         const fields = { 'Statut observation': statut };
         if (statut === 'Observation traitée') {

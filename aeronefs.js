@@ -1228,7 +1228,15 @@ function peutGererDocumentsAeronef() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     if (peutGererMaintenance()) return true;
     const roles = currentUser.roles || [];
-    return roles.some(r => /instructeur/i.test(r || ''));
+    return roles.includes('Documentaliste') || roles.some(r => /instructeur/i.test(r || ''));
+}
+
+// Mécanicien, super admin et instructeurs peuvent faire avancer le statut
+// d'un signalement (Pris en compte / En cours / Traité).
+function peutTraiterSignalements() {
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
+    if (peutGererMaintenance()) return true;
+    return (currentUser.roles || []).some(r => /instructeur/i.test(r || ''));
 }
 
 function appliquerAccesMaintenanceEtDocuments() {

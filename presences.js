@@ -596,9 +596,12 @@ function ouvrirInscrireAutre(table, valeur) {
     let membres = (typeof listeMembresCache !== 'undefined' ? listeMembresCache : []);
     const pilotesVI = table === 'Initiation';
     if (pilotesVI) {
+        let typeVI = null;
+        try { typeVI = JSON.parse(valeur || '{}').type || null; } catch (_) {}
         membres = membres.filter(m => {
             const roles = (m.fields || {})['Rôles'] || [];
-            return roles.includes('Pilote VI');
+            return roles.includes('Pilote VI')
+                && (typeof piloteAutoriseSurTypeVI !== 'function' || piloteAutoriseSurTypeVI(roles, typeVI));
         });
     }
     membres.sort((a, b) => {
@@ -645,6 +648,11 @@ async function inscrireAutreMembre() {
         try {
             const vol = JSON.parse(valeur || '{}');
             if (!vol.id || !vol.source) return;
+            if (membre && typeof piloteAutoriseSurTypeVI === 'function'
+                && !piloteAutoriseSurTypeVI((membre.fields || {})['Rôles'] || [], vol.type)) {
+                alert('Ce pilote n\'est pas instructeur de la discipline de ce vol.');
+                return;
+            }
             const tableName = vol.source === 'moteur' ? 'Réservations' : (vol.source === 'planeur' ? 'VI Planeur' : 'VI Créneaux');
             const fields = (vol.source === 'moteur' && membre) ? { 'Pilote': [membre.id] } : { 'Pilote': nomPilote };
             if (vol.source === 'creneau') fields['Statut'] = 'Réservé';
