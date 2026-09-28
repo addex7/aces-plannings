@@ -207,6 +207,64 @@ function definirLectureSeuleCarnet(actif) {
     if (btnSave) btnSave.style.display = actif ? 'none' : '';
 }
 
+function estSuperAdminCarnet() {
+    const roles = (typeof currentUser !== 'undefined' && currentUser && currentUser.roles) || [];
+    return roles.includes('Super admin') || roles.includes('Super Admin');
+}
+
+// Bouton "⇒ GVV" (super admin, machines moteur) ou badge si deja envoye
+function majBoutonGvvCarnet(record) {
+    const btn = document.getElementById('btn-gvv-carnet');
+    const statut = document.getElementById('carnet-gvv-statut');
+    const f = record && record.fields ? record.fields : null;
+    const gvvId = f && f['GVV ID'];
+    const machine = f ? (f['Machine'] || '') : '';
+    const eligible = !!(f && record && record.id && estSuperAdminCarnet() && MACHINES_MOTEURS.includes(machine));
+    if (btn) btn.style.display = (eligible && !gvvId) ? 'inline-block' : 'none';
+    if (statut) {
+        statut.style.display = gvvId ? 'inline-block' : 'none';
+        statut.textContent = gvvId ? `✓ Envoyé à GVV (#${gvvId})` : '';
+    }
+}
+
+async function envoyerVolVersGvv() {
+    if (!idCarnetEnEdition) return;
+    const record = listeVolsCarnetCache.find(r => r.id === idCarnetEnEdition);
+    const f = record && record.fields ? record.fields : {};
+    if (!estSuperAdminCarnet()) {
+        alert('Envoi vers GVV réservé aux super admin.');
+        return;
+    }
+    if (f['GVV ID']) {
+        alert(`Ce vol a déjà été envoyé à GVV (#${f['GVV ID']}).`);
+        return;
+    }
+    const d = f['Date'] ? new Date(f['Date']).toLocaleDateString('fr-FR') : '?';
+    const recap = `${f['Pilote'] || '?'} — ${f['Machine'] || '?'} — ${d} — ${f['Temps de vol'] || 'durée inconnue'}`;
+    if (!confirm(`Envoyer ce vol vers GVV ?\n\n${recap}\n\nGVV créera l'écriture comptable correspondante sur le compte du payeur.`)) return;
+    const btn = document.getElementById('btn-gvv-carnet');
+    try {
+        if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+        const res = await apiFetch(`${API_BASE}/gvv-vol`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ recordId: idCarnetEnEdition })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error((data && data.error && data.error.message) || 'Erreur envoi GVV');
+        f['GVV ID'] = data.gvvId || '';
+        f['Envoyé GVV le'] = new Date().toISOString();
+        majBoutonGvvCarnet(record);
+        chargerCarnetRoute();
+        alert(`Vol envoyé à GVV${data.gvvId ? ` (vol #${data.gvvId})` : ''}.`);
+    } catch (e) {
+        console.error(e);
+        alert('Envoi GVV impossible : ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '⇒ GVV'; }
+    }
+}
+
 async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
     const modal = document.getElementById('carnet-modal');
     const form = document.getElementById('carnet-form');
@@ -230,6 +288,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         ? (lectureSeule ? 'Détail du vol (lecture seule)' : 'Modifier un vol')
         : (machineImmat ? 'Nouvelle observation' : 'Saisir un vol');
     if (btnDelete) btnDelete.style.display = (recordId && !lectureSeule) ? 'inline-block' : 'none';
+    majBoutonGvvCarnet(recordEdit);
     if (dateInput) dateInput.value = new Date().toLocaleDateString('en-CA');
     if (departInput) departInput.value = 'LFOY';
     if (arriveeInput) arriveeInput.value = 'LFOY';
@@ -293,6 +352,7 @@ function fermerModaleCarnet() {
     idCarnetEnEdition = null;
     const btnDelete = document.getElementById('btn-delete-carnet');
     if (btnDelete) btnDelete.style.display = 'none';
+    majBoutonGvvCarnet(null);
 }
 
 function remplirFormulaireCarnet(f) {
@@ -1080,7 +1140,7 @@ function afficherCarnet(records) {
             `;
         } else if (isJVIO) {
             tr.innerHTML = `
-                <td>${dateStr}</td>
+                <td>${dateStr}${f['GVV ID'] ? ' <span class="badge-gvv" title="Envoyé à GVV (#' + f['GVV ID'] + ')">GVV</span>' : ''}</td>
                 <td>${formatEquipageCourt(f['Pilote']) || '-'}</td>
                 <td>${formatEquipageCourt(f['Instructeur']) || '-'}</td>
                 <td>${f['Fonction'] || '-'}</td>
@@ -1101,7 +1161,7 @@ function afficherCarnet(records) {
             const huile = [formaterNombre(f['Huile départ']), formaterNombre(f['Huile arrivée'])].filter(v => v !== '').join(' / ') || '-';
             const horametre = [formaterNombre(f['Horamètre départ']), formaterNombre(f['Horamètre arrivée'])].filter(v => v !== '').join(' / ') || '-';
             tr.innerHTML = `
-                <td>${dateStr}</td>
+                <td>${dateStr}${f['GVV ID'] ? ' <span class="badge-gvv" title="Envoyé à GVV (#' + f['GVV ID'] + ')">GVV</span>' : ''}</td>
                 <td>${equipage}</td>
                 <td>${f['Fonction'] || '-'}</td>
                 <td>${f['Départ'] || '-'}</td>
@@ -1720,6 +1780,8 @@ function initCarnetRoute() {
     if (btnFermer) btnFermer.addEventListener('click', fermerModaleCarnet);
     if (btnCancel) btnCancel.addEventListener('click', fermerModaleCarnet);
     if (btnDelete) btnDelete.addEventListener('click', supprimerCarnetRoute);
+    const btnGvv = document.getElementById('btn-gvv-carnet');
+    if (btnGvv) btnGvv.addEventListener('click', envoyerVolVersGvv);
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) fermerModaleCarnet();

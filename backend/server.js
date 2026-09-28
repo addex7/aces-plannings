@@ -461,6 +461,50 @@ app.get('/v0/:base/sync-gvv/statut', (req, res) => {
     res.json({ enCours: gvvSyncEnCours, dernier: gvvSyncDernier });
 });
 
+// --- ENVOI MANUEL D'UN VOL DU CARNET VERS GVV ---
+// Bouton reserve aux super admin cote front. Cree le vol dans GVV (vols_avion),
+// ce qui declenche la facturation GVV, puis note l'id GVV sur le record.
+app.post('/v0/:base/gvv-vol', async (req, res) => {
+    const recordId = String((req.body || {}).recordId || '');
+    if (!recordId) return erreur(res, 400, 'recordId requis');
+    try {
+        const { envoyerVolAvion, cleNomGvvLettres } = require('./gvv-vols');
+        const { rows } = await pool.query(
+            'SELECT id, fields FROM carnet_route_pilotes WHERE id = $1', [recordId]);
+        if (!rows.length) return erreur(res, 404, 'Vol introuvable dans le carnet');
+        const fields = rows[0].fields || {};
+        if (fields['GVV ID']) {
+            return erreur(res, 409, `Vol déjà envoyé à GVV (#${fields['GVV ID']})`);
+        }
+        const pilote = (fields['Pilote'] || '').toString().trim();
+        // Alias « Compte GVV » de la fiche membre quand le nom GVV differe
+        let alias = null;
+        if (pilote) {
+            const cible = cleNomGvvLettres(pilote);
+            const { rows: membres } = await pool.query('SELECT fields FROM utilisateurs');
+            const membre = membres.find(r => {
+                const f = r.fields || {};
+                const nc = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+                return nc && cleNomGvvLettres(nc) === cible;
+            });
+            alias = ((membre && (membre.fields || {})['Compte GVV']) || '').toString().trim() || null;
+        }
+        const resultat = await envoyerVolAvion(fields, alias);
+        if (!resultat.ok) return erreur(res, 502, resultat.message);
+        const nouveaux = { ...fields, 'GVV ID': resultat.gvvId || '', 'Envoyé GVV le': new Date().toISOString() };
+        await pool.query(
+            'UPDATE carnet_route_pilotes SET fields = $1 WHERE id = $2',
+            [JSON.stringify(nouveaux), recordId]);
+        journaliserEcriture(req, 'Carnet de route Pilotes', 'Envoi GVV',
+            `${pilote} — ${fields['Machine'] || ''} du ${fields['Date'] || ''} → vol GVV #${resultat.gvvId || '?'} (compteurs ${resultat.resume ? resultat.resume.compteurs : ''}, payeur ${resultat.resume ? resultat.resume.payeur : ''})`,
+            `${pilote} ${fields['Date'] || ''}`.trim() || recordId);
+        res.json({ ok: true, gvvId: resultat.gvvId, resume: resultat.resume });
+    } catch (e) {
+        console.error('Envoi GVV:', e);
+        erreur(res, 502, `Envoi GVV impossible : ${e.message}`);
+    }
+});
+
 app.get('/v0/:base/:table', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;

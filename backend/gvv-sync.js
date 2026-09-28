@@ -14,10 +14,8 @@
 const { Pool } = require('pg');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
+const { GvvClient, GVV_BASE, GVV_USER, GVV_PASS } = require('./gvv-client');
 
-const GVV_BASE = (process.env.GVV_BASE || 'https://gvvaces.qfu.fr').replace(/\/+$/, '');
-const GVV_USER = process.env.GVV_USER;
-const GVV_PASS = process.env.GVV_PASS;
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://glide2000:glide2000@localhost:5432/glide2000';
 
 const TABLE_SOLDES = 'gvv_soldes';
@@ -25,92 +23,6 @@ const TABLE_ECRITURES = 'gvv_ecritures';
 const DELAI_REQUETES_MS = 150; // menage le serveur GVV
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-// --------------------------------------------------------------------------
-// Client HTTP minimal avec jar a cookies (GVV = session PHP classique)
-// --------------------------------------------------------------------------
-class GvvClient {
-    constructor() {
-        this.cookies = new Map(); // nom -> valeur
-    }
-
-    cookieHeader() {
-        return [...this.cookies.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
-    }
-
-    storeCookies(res) {
-        const raw = res.headers.getSetCookie ? res.headers.getSetCookie() : [];
-        for (const c of raw) {
-            const [pair] = c.split(';');
-            const idx = pair.indexOf('=');
-            if (idx > 0) this.cookies.set(pair.slice(0, idx).trim(), pair.slice(idx + 1).trim());
-        }
-    }
-
-    async get(path) {
-        const res = await fetch(`${GVV_BASE}${path}`, {
-            headers: { Cookie: this.cookieHeader() },
-            redirect: 'manual'
-        });
-        this.storeCookies(res);
-        // GVV repond souvent par un 302 apres login : suivre a la main
-        if ([301, 302, 303].includes(res.status)) {
-            const loc = res.headers.get('location') || '';
-            const rel = loc.startsWith('http') ? new URL(loc).pathname + new URL(loc).search : loc;
-            return this.get(rel);
-        }
-        return res;
-    }
-
-    async postForm(path, fields) {
-        const res = await fetch(`${GVV_BASE}${path}`, {
-            method: 'POST',
-            headers: {
-                Cookie: this.cookieHeader(),
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams(fields).toString(),
-            redirect: 'manual'
-        });
-        this.storeCookies(res);
-        if ([301, 302, 303].includes(res.status)) {
-            const loc = res.headers.get('location') || '';
-            const rel = loc.startsWith('http') ? new URL(loc).pathname + new URL(loc).search : loc;
-            return this.get(rel);
-        }
-        return res;
-    }
-
-    // Login : on lit le formulaire pour trouver les vrais noms de champs
-    async login() {
-        const page = await this.get('/index.php/auth/login');
-        const html = await page.text();
-        const $ = cheerio.load(html);
-        const form = $('form:has(input[type="password"])').first();
-        const action = form.attr('action') || '/index.php/auth/login';
-        const actionPath = action.startsWith('http') ? new URL(action).pathname + new URL(action).search : action;
-
-        const fields = {};
-        form.find('input').each((_, el) => {
-            const name = $(el).attr('name');
-            if (!name) return;
-            const type = ($(el).attr('type') || 'text').toLowerCase();
-            if (type === 'password') fields[name] = GVV_PASS;
-            else if (type === 'text' || type === 'email') fields[name] = GVV_USER;
-            else if (type === 'checkbox' || type === 'radio') {
-                if ($(el).attr('checked')) fields[name] = $(el).attr('value') || '1';
-            } else if (type !== 'button') fields[name] = $(el).attr('value') || '';
-        });
-
-        const res = await this.postForm(actionPath, fields);
-        const resHtml = await res.text();
-        const $res = cheerio.load(resHtml);
-        if ($res('input[name="username"], input[type="password"]').length > 0) {
-            throw new Error('Login GVV refuse (identifiants invalides ?)');
-        }
-        return resHtml;
-    }
-}
 
 // --------------------------------------------------------------------------
 // Export CSV de la balance GVV : "Code; Compte; Solde debiteur; Solde crediteur"
