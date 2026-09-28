@@ -31,6 +31,17 @@ function estValideJusquaAccueil(str) {
     return debutJourAccueil(d) >= debutJourAccueil(new Date());
 }
 
+// Échéance à moins de 3 mois (mais encore valide) — même seuil que les
+// cartes de l'espace membre.
+function bientotExpireAccueil(str) {
+    if (!str) return false;
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return false;
+    const seuil = new Date();
+    seuil.setMonth(seuil.getMonth() + 3);
+    return debutJourAccueil(d) >= debutJourAccueil(new Date()) && debutJourAccueil(d) < debutJourAccueil(seuil);
+}
+
 function dateIlYAMoisAccueil(mois) {
     const auj = new Date();
     return new Date(auj.getFullYear(), auj.getMonth() - mois, auj.getDate());
@@ -518,6 +529,7 @@ async function chargerValiditesAccueil() {
         const assuranceFields = ['Licence FFVP', 'Licence FFA', 'Licence FFPLUM'];
         const assuranceDates = assuranceFields.map(k => f[k]).filter(Boolean);
         const assuranceOk = assuranceDates.some(d => estValideJusquaAccueil(d));
+        const assurancePlusProche = assuranceDates.slice().sort()[0];
 
         const medicalOk = estValideJusquaAccueil(f['Médical']);
 
@@ -533,12 +545,12 @@ async function chargerValiditesAccueil() {
 
         return {
             items: [
-                { label: 'Cotisation', ok: cotisationOk, date: f['Cotisation'] },
-                { label: 'Licence assurance', ok: assuranceOk, date: assuranceDates[0] },
-                { label: 'Médical', ok: medicalOk, date: f['Médical'] },
-                { label: 'Licence SEP', ok: licenceOk, date: f['Licence SEP'], actif: licenceActive },
-                { label: 'Expérience récente (1 vol / 3 mois)', ok: recentActive ? experiences.recent : null, detail: experiences.recentDetail, actif: recentActive },
-                { label: 'Emport de passager avion (3 décollages / 3 atterrissages)', ok: passagerActive ? experiences.passager : null, detail: experiences.passagerDetail, actif: passagerActive },
+                { label: 'Cotisation', ok: cotisationOk, bientot: cotisationOk && bientotExpireAccueil(f['Cotisation']), date: f['Cotisation'] },
+                { label: 'Licence assurance', ok: assuranceOk, bientot: assuranceOk && assuranceDates.some(d => bientotExpireAccueil(d)), date: assurancePlusProche },
+                { label: 'Médical', ok: medicalOk, bientot: medicalOk && bientotExpireAccueil(f['Médical']), date: f['Médical'] },
+                { label: 'Licence SEP', ok: licenceOk, bientot: licenceOk && bientotExpireAccueil(f['Licence SEP']), date: f['Licence SEP'], actif: licenceActive },
+                { label: 'Expérience récente (1 vol / 3 mois)', ok: recentActive ? experiences.recent : null, bientot: !!experiences.recentBientot, detail: experiences.recentDetail, actif: recentActive },
+                { label: 'Emport de passager avion (3 décollages / 3 atterrissages)', ok: passagerActive ? experiences.passager : null, bientot: !!experiences.passagerBientot, detail: experiences.passagerDetail, actif: passagerActive },
                 { label: 'LAPL', ok: laplActive ? experiences.lapl : null, detail: experiences.laplDetail, actif: laplActive },
                 { label: 'Vol d\'initiation', ok: initiationActive ? experiences.initiation : null, detail: experiences.initiationDetail, actif: initiationActive },
             ],
@@ -617,13 +629,22 @@ async function chargerExperiencesAccueil(cpl = false) {
     const m12 = minutes12m % 60;
 
     let recentOk = false;
+    let recentBientot = false;
     let recentDetail = 'Aucun vol dans les 3 derniers mois';
     if (dernierVol && dernierVol >= limite3m) {
         recentOk = true;
-        recentDetail = `Dernier vol : ${formaterDateAccueil(dernierVol.toISOString())}`;
+        // Échéance du recency = dernier vol + 3 mois ; alerte orange < 30 jours
+        // (comme sur l'espace membre : une fenêtre glissante de 3 mois est
+        // par construction toujours à moins de 3 mois).
+        const validiteRecent = new Date(dernierVol);
+        validiteRecent.setMonth(validiteRecent.getMonth() + 3);
+        const joursRestants = Math.floor((debutJourAccueil(validiteRecent) - debutJourAccueil(auj)) / (1000 * 60 * 60 * 24));
+        recentBientot = joursRestants < 30;
+        recentDetail = `Dernier vol : ${formaterDateAccueil(dernierVol.toISOString())} — Valide jusqu'au : ${formaterDateAccueil(validiteRecent.toISOString())}`;
     }
 
     const passagerOk = decollages3m >= 3 && atterrissages3m >= 3;
+    const passagerBientot = !passagerOk && (decollages3m > 0 || atterrissages3m > 0);
     const passagerDetail = `${decollages3m} décollages, ${atterrissages3m} atterrissages / 3`;
 
     const laplOk = minutes24m >= 12 * 60 && decollages24m >= 12 && atterrissages24m >= 12 && instruction1h;
@@ -634,7 +655,7 @@ async function chargerExperiencesAccueil(cpl = false) {
         ? `Pilote CPL — ${h12}h${String(m12).padStart(2, '0')} sur 12 mois`
         : `${h12}h${String(m12).padStart(2, '0')} / 25h00 sur 12 mois — emport passager : ${passagerOk ? 'oui' : 'non'}`;
 
-    return { recent: recentOk, recentDetail, passager: passagerOk, passagerDetail, lapl: laplOk, laplDetail, initiation: initiationOk, initiationDetail };
+    return { recent: recentOk, recentBientot, recentDetail, passager: passagerOk, passagerBientot, passagerDetail, lapl: laplOk, laplDetail, initiation: initiationOk, initiationDetail };
 }
 
 function renderValidites(data) {
@@ -651,9 +672,15 @@ function renderValidites(data) {
         } else if (item.ok === null) {
             dot = 'pastille-grise';
             label = `${item.label} — Non renseigné`;
+        } else if (item.ok && item.bientot) {
+            dot = 'pastille-orange';
+            label = `⚠ ${item.label} — Bientôt à renouveler`;
         } else if (item.ok) {
             dot = 'pastille-verte';
             label = `✓ ${item.label} — À jour`;
+        } else if (item.bientot) {
+            dot = 'pastille-orange';
+            label = `⚠ ${item.label} — Partiel`;
         } else {
             dot = 'pastille-rouge';
             label = `✕ ${item.label} — Non à jour`;
