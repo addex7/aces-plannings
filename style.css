@@ -2956,7 +2956,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     position: fixed;
     top: 70px;
     left: 10px;
-    width: 300px;
+    width: 600px;
+    max-width: calc(100vw - 20px);
     max-height: 400px;
     background: #fff;
     border-radius: 12px;
