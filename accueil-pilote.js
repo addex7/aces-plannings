@@ -332,6 +332,8 @@ async function chargerProchaineJournee() {
     };
     const sources = [
         { table: 'Réservations', dateField: 'Date de début', presence: (f) => appartient(f['Pilote']) || appartient(f['Pilote (texte)']) },
+        { table: 'VI Planeur', dateField: 'Date de début', presence: (f) => appartient(f['Pilote']) },
+        { table: 'VI Créneaux', dateField: 'Date', presence: (f) => (f['Statut'] || '') !== 'Annulé' && appartient(f['Pilote']), dateSeule: true },
         { table: 'Présences Planeur', dateField: 'Date', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
         { table: 'Présences Club', dateField: 'Date', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
         { table: 'Événements', dateField: 'Date début', presence: (f) => inscritEv(f['Inscrits']) }
@@ -339,7 +341,7 @@ async function chargerProchaineJournee() {
     const matches = [];
     for (const s of sources) {
         try {
-            const nowFormula = s.table === 'Réservations'
+            const nowFormula = (s.table === 'Réservations' || s.table === 'VI Planeur')
                 ? `IS_AFTER({${s.dateField}}, NOW())`
                 : `IS_AFTER({${s.dateField}}, DATEADD(NOW(), -1, 'days'))`;
             const pageSize = 100;
@@ -377,6 +379,16 @@ function detailProchaineJournee(table, f) {
         return [mach, horaire].filter(Boolean).join(' — ') || 'Réservation';
     }
     if (table === 'Événements') return f['Nom'] || f['Titre'] || 'Événement';
+    if (table === 'VI Créneaux') {
+        const horaire = [f['Heure début'], f['Heure fin']].filter(Boolean).join(' → ');
+        return [(f['Type'] || 'VI') + ' (pilote)', horaire].filter(Boolean).join(' — ') || 'Vol d\'initiation';
+    }
+    if (table === 'VI Planeur') {
+        const hDeb = fmtH(f['Date de début']);
+        const hFin = fmtH(f['Date de fin']);
+        const horaire = hDeb && hFin ? `${hDeb} → ${hFin}` : (hDeb || '');
+        return ['VI planeur (pilote)', horaire].filter(Boolean).join(' — ') || 'VI planeur';
+    }
     if (table === 'Présences Planeur') return 'Présence planeur';
     if (table === 'Présences Club') return 'Présence club';
     return '';

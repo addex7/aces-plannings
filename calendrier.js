@@ -211,6 +211,54 @@ async function chargerDonneesCalendrier(annee, mois) {
         });
     } catch (err) { console.error('Erreur calendrier Présences Club:', err); }
 
+    // Vols d'initiation — créneaux (comptés s'il y a un pilote ou un passager)
+    try {
+        const formulaCren = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${debutStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${finStr}')`;
+        const url = `${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formulaCren)}&pageSize=100`;
+        const res = await cachedFetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        (data.records || []).forEach(r => {
+            const f = r.fields || {};
+            if ((f['Statut'] || 'Disponible') === 'Annulé') return;
+            const pilote = (f['Pilote'] || '').toString().trim();
+            if (!pilote && (f['Statut'] || 'Disponible') !== 'Réservé') return;
+            const d = f['Date'] ? new Date(f['Date'] + 'T00:00:00') : null;
+            if (!d) return;
+            if (d < debutMois || d > finMois) return;
+            const iso = d.toISOString().split('T')[0];
+            const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
+            info.has = true;
+            if (pilote && (correspondanceNom(pilote, userName) || correspondanceNom(pilote, userFullName))) info.hasUser = true;
+        });
+    } catch (err) { console.error('Erreur calendrier VI Créneaux:', err); }
+
+    // Vols d'initiation — planeurs (VI Planeur)
+    try {
+        const formulaVIP = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${finStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${debutStr}')`;
+        const url = `${API_BASE}/${encodeURIComponent('VI Planeur')}?filterByFormula=${encodeURIComponent(formulaVIP)}&pageSize=100`;
+        const res = await cachedFetch(url, { headers });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        (data.records || []).forEach(r => {
+            const f = r.fields || {};
+            const rStart = new Date(f['Date de début']);
+            const rEnd = new Date(f['Date de fin']);
+            if (isNaN(rStart.getTime()) || isNaN(rEnd.getTime())) return;
+            const pilote = (f['Pilote'] || '').toString().trim();
+            rStart.setHours(0, 0, 0, 0);
+            rEnd.setHours(0, 0, 0, 0);
+            for (let t = rStart.getTime(); t <= rEnd.getTime(); t += 86400000) {
+                const d = new Date(t);
+                if (d < debutMois || d > finMois) continue;
+                const iso = d.toISOString().split('T')[0];
+                const info = miniCalendrierData[iso] || (miniCalendrierData[iso] = { has: false, hasUser: false });
+                info.has = true;
+                if (pilote && (pilote === userId || correspondanceNom(pilote, userName) || correspondanceNom(pilote, userFullName))) info.hasUser = true;
+            }
+        });
+    } catch (err) { console.error('Erreur calendrier VI Planeur:', err); }
+
     // Événements club
     try {
         const formulaEvt = `AND(DATETIME_FORMAT({Date début},'YYYY-MM-DD')<='${finStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${debutStr}')`;
