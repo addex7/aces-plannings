@@ -1492,8 +1492,8 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20260928165803"></script>
-    <script src="app.js?v=90"></script>
+    <script src="version.js?v=20260928170827"></script>
+    <script src="app.js?v=91"></script>
     <script src="utils.js?v=108"></script>
     <script src="presences.js?v=103"></script>
     <script src="planning.js?v=203"></script>
@@ -1546,6 +1546,20 @@
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Avertissement mobile / tablette -->
+    <div id="mobile-warning-modal" class="modal" style="display:none; z-index:10000;">
+        <div class="modal-content" style="max-width:440px; text-align:center; padding:30px 24px;">
+            <div style="font-size:42px; margin-bottom:10px;">📱</div>
+            <h3 style="margin:0 0 10px;">Version mobile en préparation</h3>
+            <p style="color:#475569; font-size:14px; line-height:1.6; margin:0 0 18px;">
+                Le site n'est pas encore optimisé pour les téléphones et les tablettes.
+                Une version adaptée arrivera prochainement.<br>
+                En attendant, utilisez de préférence un ordinateur.
+            </p>
+            <button type="button" id="btn-mobile-warning-ok" class="btn-submit" style="padding:10px 24px;">J'ai compris</button>
         </div>
     </div>
 </body>

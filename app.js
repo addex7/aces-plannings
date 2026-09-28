@@ -43,11 +43,35 @@ document.addEventListener('DOMContentLoaded', () => {
     initEvenements();
     initComptesPilotes();
     initNotifications();
+    afficherAvertissementMobile();
     Promise.all([
         chargerDonneesPlanning(),
         chargerPresencesClub()
     ]).catch(err => console.error('Erreur chargement initial:', err));
 });
+
+// Détection téléphone / tablette : le site n'est pas encore optimisé
+// pour ces plateformes — on affiche un message informatif au chargement.
+function estAppareilMobileOuTablette() {
+    const ua = navigator.userAgent || '';
+    if (/iPhone|iPod|iPad|Android|webOS|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet|PlayBook|Silk|Kindle/i.test(ua)) return true;
+    // iPadOS 13+ se présente comme un Mac : on le reconnaît au tactile multipoint
+    if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) return true;
+    // Repli : appareil dont le pointeur principal est tactile avec un petit écran
+    const tactilePrincipal = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    return !!tactilePrincipal && Math.min(screen.width, screen.height) < 1024;
+}
+
+function afficherAvertissementMobile() {
+    if (!estAppareilMobileOuTablette()) return;
+    const modal = document.getElementById('mobile-warning-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    const fermer = () => { modal.style.display = 'none'; };
+    const btnOk = document.getElementById('btn-mobile-warning-ok');
+    if (btnOk) btnOk.addEventListener('click', fermer);
+    modal.addEventListener('click', (e) => { if (e.target === modal) fermer(); });
+}
 
 function initSidebarToggle() {
     const toggle = document.getElementById('sidebar-toggle');
