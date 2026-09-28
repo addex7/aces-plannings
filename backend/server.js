@@ -188,6 +188,7 @@ app.post('/v0/send-email', async (req, res) => {
             to, subject: sujet, text: texte, html
         });
         res.json({ ok: true });
+        journaliserEcriture(req, 'Emails', 'Envoi email', `À : ${to} | Sujet : ${sujet}`, 'Emails');
     } catch (e) {
         console.error('Erreur envoi email:', e);
         erreur(res, 502, 'Echec envoi email : ' + e.message);
@@ -426,6 +427,7 @@ app.post('/v0/upload', (req, res) => {
         }
         if (!req.file) return erreur(res, 400, 'Aucun fichier recu');
         res.json({ url: `/uploads/${req.file.filename}` });
+        journaliserEcriture(req, 'Fichiers', 'Upload fichier', `${req.file.originalname || ''} → ${req.file.filename}`, 'Fichiers');
     });
 });
 
@@ -452,6 +454,7 @@ app.post('/v0/:base/sync-gvv', (req, res) => {
     p.on('close', fin);
     p.on('error', err => { gvvSyncEnCours = false; gvvSyncDernier = { fin: new Date().toISOString(), code: -1, log: String(err) }; });
     res.json({ status: 'demarre' });
+    journaliserEcriture(req, 'GVV', 'Synchro GVV', 'Synchronisation manuelle lancée', 'GVV');
 });
 
 app.get('/v0/:base/sync-gvv/statut', (req, res) => {
@@ -533,6 +536,35 @@ app.get('/v0/:base/:table/:id', async (req, res) => {
 });
 
 // --- CREATION ---
+// --- AUDIT AUTOMATIQUE DES ECRITURES ---
+// Chaque POST/PATCH/PUT/DELETE laisse une trace dans la table audit, avec
+// l'utilisateur transmis par le header X-User-Name. La table audit elle-meme
+// est exclue (les entrees du journal ne doivent pas s'auto-journaliser).
+function utilisateurDepuis(req) {
+    return (req.headers['x-user-name'] || '').toString().trim() || 'Visiteur';
+}
+
+function resumeChamps(fields, max = 400) {
+    let s;
+    try { s = JSON.stringify(fields || {}); } catch (e) { s = String(fields); }
+    return s.length > max ? s.slice(0, max) + '…' : s;
+}
+
+function journaliserEcriture(req, tableNom, action, details, cible = '') {
+    if (!tableNom || String(tableNom).toLowerCase() === 'audit') return;
+    pool.query(
+        `INSERT INTO audit (id, fields) VALUES ($1, $2)`,
+        [nouvelId(), {
+            'Date': new Date().toISOString(),
+            'Utilisateur': utilisateurDepuis(req),
+            'Action': action,
+            'Cible': cible || tableNom,
+            'Détails': String(details || '').slice(0, 3000),
+            'Module': 'Auto'
+        }]
+    ).catch(e => console.error('Audit auto:', e.message));
+}
+
 app.post('/v0/:base/:table', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;
@@ -566,6 +598,10 @@ app.post('/v0/:base/:table', async (req, res) => {
             decalages.push(decalage);
         }
         res.json({ records: crees });
+        journaliserEcriture(req, tableNom, 'Création',
+            crees.length === 1
+                ? `${crees[0].id} | ${resumeChamps(crees[0].fields)}`
+                : `${crees.length} enregistrements : ${crees.map(c => c.id).join(', ')}`);
         if (tableNom === 'VI Créneaux') {
             crees.forEach((rec, i) => {
                 if (!rec.fields || rec.fields['Statut'] !== 'Réservé') return;
@@ -654,6 +690,10 @@ async function majRecords(req, res, remplacer) {
             decalages.push(decalage);
         }
         res.json({ records: maj });
+        journaliserEcriture(req, tableNom, 'Modification',
+            maj.length === 1
+                ? `${maj[0].id} | ${resumeChamps((records[0] || {}).fields)}`
+                : `${maj.length} enregistrements : ${maj.map(m => m.id).join(', ')}`);
         declencherConfirmationVI(req, maj, anciens, decalages);
     } catch (e) {
         console.error('PATCH/PUT:', e);
@@ -678,6 +718,8 @@ async function majRecordUnitaire(req, res, remplacer) {
         );
         if (!rows.length) return erreur(res, 404, `Record introuvable: ${req.params.id}`);
         res.json(formatRecord(rows[0]));
+        journaliserEcriture(req, decodeURIComponent(req.params.table || ''), 'Modification',
+            `${req.params.id} | ${resumeChamps(fields)}`);
     } catch (e) {
         console.error('PATCH/PUT one:', e);
         erreur(res, 500, e.message);
@@ -687,7 +729,7 @@ app.patch('/v0/:base/:table/:id', (req, res) => majRecordUnitaire(req, res, fals
 app.put('/v0/:base/:table/:id', (req, res) => majRecordUnitaire(req, res, true));
 
 // --- SUPPRESSION ---
-async function supprimerIds(res, table, ids) {
+async function supprimerIds(req, res, table, ids) {
     let viReserves = [];
     let viRemplaces = [];
     if (table === 'vi_creneaux') {
@@ -703,6 +745,8 @@ async function supprimerIds(res, table, ids) {
         await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
     }
     res.json({ records: ids.map(id => ({ id, deleted: true })) });
+    journaliserEcriture(req, decodeURIComponent(req.params.table || ''), 'Suppression',
+        `${ids.length} enregistrement(s) : ${ids.join(', ')}`);
     viReserves.forEach(f => {
         envoyerMailLiberationVI(f, true).catch(e => console.error('Mail suppression VI:', e));
     });
@@ -714,7 +758,7 @@ app.delete('/v0/:base/:table/:id', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;
     try {
-        await supprimerIds(res, table, [req.params.id]);
+        await supprimerIds(req, res, table, [req.params.id]);
     } catch (e) {
         console.error('DELETE:', e);
         erreur(res, 500, e.message);
@@ -727,7 +771,7 @@ app.delete('/v0/:base/:table', async (req, res) => {
         let ids = req.query['records[]'] || req.query.records;
         if (!ids) return erreur(res, 422, 'records manquant');
         if (!Array.isArray(ids)) ids = [ids];
-        await supprimerIds(res, table, ids);
+        await supprimerIds(req, res, table, ids);
     } catch (e) {
         console.error('DELETE:', e);
         erreur(res, 500, e.message);

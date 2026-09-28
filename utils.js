@@ -275,9 +275,14 @@ async function _apiExecuterAvecRetry(url, options, maxEssais) {
 function apiFetch(url, options = {}, maxEssais = 3) {
     const method = (options.method || 'GET').toUpperCase();
     const cle = `${method} ${url}`;
+    // Ajoute le nom de l'utilisateur courant pour le journal d'audit cote serveur
+    const opts = { ...options, headers: { ...(options.headers || {}) } };
+    if (typeof nomPiloteCourant === 'function' && !opts.headers['X-User-Name']) {
+        opts.headers['X-User-Name'] = nomPiloteCourant();
+    }
     // Dedoublonne les GET identiques deja en vol (clone pour ne pas consommer le body partage).
     if (method === 'GET' && _apiEnVol.has(cle)) return _apiEnVol.get(cle).then(r => r.clone());
-    const promesse = _apiExecuterAvecRetry(url, options, maxEssais);
+    const promesse = _apiExecuterAvecRetry(url, opts, maxEssais);
     if (method === 'GET') {
         _apiEnVol.set(cle, promesse);
         promesse.finally(() => _apiEnVol.delete(cle)).catch(() => {});
