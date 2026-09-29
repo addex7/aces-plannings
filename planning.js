@@ -1380,7 +1380,17 @@ function populerSelectAvions(avions) {
             option.textContent = avion.fields['Immatriculation'] || avion.fields['Nom'] || 'Sans nom';
             selectSuivi.appendChild(option);
         });
-        selectSuivi.addEventListener('change', () => chargerSuiviAeronef());
+        // Restaure la derniere machine consultee sur la page Aeronefs
+        try {
+            const derniereMachine = localStorage.getItem('aeronef-derniere-machine');
+            if (derniereMachine && Array.from(selectSuivi.options).some(o => o.value === derniereMachine)) {
+                selectSuivi.value = derniereMachine;
+            }
+        } catch (e) {}
+        selectSuivi.addEventListener('change', () => {
+            try { localStorage.setItem('aeronef-derniere-machine', selectSuivi.value); } catch (e) {}
+            chargerSuiviAeronef();
+        });
     }
 }
 
