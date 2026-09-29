@@ -379,18 +379,19 @@ async function envoyerReset() {
 
 const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier'];
 
-// Ce que chaque role donne reellement comme acces (verifie contre le code)
+// Ce que chaque role donne reellement comme acces (verifie contre le code).
+// Une entree par ligne : les \n s'affichent dans l'infobulle native (title).
 const DESCRIPTIONS_ROLES = {
-    'Mécanicien': "Carnet de route en lecture seule, saisie des maintenances (carnet, planning, aéronefs), accès aux prix et options des machines, alertes sur les documents expirants.",
-    'Gestion VI': "Gestion des vols d'initiation : édition des créneaux VI, attribution des pilotes, inscription d'autres membres sur les créneaux.",
-    'Pilote VI': "Peut être inscrit comme pilote sur les créneaux de vols d'initiation (VI).",
-    'Instructeur planeur': "Se déclare instructeur de présence planeur (horaires, briefing), gère les inscriptions planeur, saisit des vols pour d'autres pilotes, bilan des validités, documents aéronefs, présences du club.",
-    'Instructeur avion': "Déclare ses dispos avion, supprime les réservations d'autres pilotes, saisit des vols pour n'importe quel membre au carnet, pilote VI avion (VIA), bilan des validités, présences du club.",
-    'Instructeur ULM': "Même périmètre que l'instructeur avion mais pour l'activité ULM : dispos, réservations, saisie de vols, pilotes VI ULM.",
-    'Pilote planeur': "Peut s'inscrire comme pilote aux journées planeur (apparaît dans les listes d'inscription).",
-    'Documentaliste': "Gère la bibliothèque de documents (ajout, modification, suppression) et le suivi documentaire des aéronefs.",
-    'Super admin': "Accès total : gestion des membres et rôles, options et prix des aéronefs, envoi des vols vers GVV, comptes pilotes, journal d'audit, bilans de validités, suppression de toute réservation ou événement.",
-    'Trésorier': "Accès à la vue Comptes pilotes (soldes et écritures GVV) et aux prix/options des aéronefs."
+    'Mécanicien': "• Carnet de route en lecture seule\n• Saisie des maintenances (carnet, planning, aéronefs)\n• Prix et options des machines\n• Alertes documents expirants",
+    'Gestion VI': "• Gestion des vols d'initiation\n• Édition des créneaux VI\n• Attribution des pilotes\n• Inscription d'autres membres aux créneaux",
+    'Pilote VI': "• Peut être inscrit pilote sur les créneaux de vols d'initiation (VI)",
+    'Instructeur planeur': "• Dispos « instructeur de présence planeur » (horaires, briefing)\n• Gestion des inscriptions aux journées planeur\n• Saisie de vols pour d'autres pilotes\n• Bilan des validités des membres\n• Documents aéronefs\n• Présences du club",
+    'Instructeur avion': "• Déclare ses disponibilités avion\n• Supprime les réservations d'autres pilotes\n• Saisit des vols pour n'importe quel membre au carnet\n• Pilote VI avion (VIA)\n• Bilan des validités des membres\n• Présences du club",
+    'Instructeur ULM': "• Déclare ses disponibilités ULM\n• Supprime les réservations d'autres pilotes\n• Saisit des vols pour n'importe quel membre au carnet\n• Pilote VI ULM\n• Bilan des validités des membres\n• Présences du club",
+    'Pilote planeur': "• Peut s'inscrire pilote aux journées planeur",
+    'Documentaliste': "• Gère la bibliothèque de documents (ajout, modification, suppression)\n• Suivi documentaire des aéronefs",
+    'Super admin': "• Accès total à toutes les fonctions\n• Gestion des membres et des rôles\n• Options et prix des aéronefs\n• Envoi des vols vers GVV\n• Comptes pilotes\n• Journal d'audit\n• Bilans de validités\n• Suppression de toute réservation ou événement",
+    'Trésorier': "• Vue Comptes pilotes (soldes et écritures GVV)\n• Prix et options des aéronefs"
 };
 
 function initialiserCheckboxesRoles() {
