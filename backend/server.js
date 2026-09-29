@@ -588,9 +588,18 @@ function utilisateurDepuis(req) {
     return (req.headers['x-user-name'] || '').toString().trim() || 'Visiteur';
 }
 
+// Champs sensibles dont la valeur ne doit jamais apparaitre dans le journal
+const CHAMPS_SECRETS = /mot de passe|password|token|jeton|secret|apikey|api_key|clé/i;
+
+// Liste lisible « champ : valeur » pour les creations/suppressions
 function resumeChamps(fields, max = 400) {
-    let s;
-    try { s = JSON.stringify(fields || {}); } catch (e) { s = String(fields); }
+    const lignes = [];
+    for (const k of Object.keys(fields || {})) {
+        if (CHAMPS_SECRETS.test(k)) { lignes.push(`${k} : •••`); continue; }
+        const v = fmtValAudit(fields[k]);
+        if (v !== '') lignes.push(`${k} : ${v}`);
+    }
+    const s = lignes.join(' | ');
     return s.length > max ? s.slice(0, max) + '…' : s;
 }
 
@@ -613,20 +622,27 @@ function fmtValAudit(v) {
 }
 
 // Diff lisible entre l'ancien etat et les champs envoyes : « champ : avant → apres »
+// Retourne '' quand rien n'a reellement change : l'appelant n'ecrit alors pas de ligne.
 function diffChamps(ancien, nouveau) {
     const lignes = [];
     for (const k of Object.keys(nouveau || {})) {
         const a = fmtValAudit(ancien ? ancien[k] : undefined);
         const b = fmtValAudit(nouveau[k]);
         if (a === b) continue;
-        lignes.push(`${k} : ${a || '∅'} → ${b || '∅'}`);
+        if (/mot de passe|password/i.test(k)) {
+            lignes.push(`Mot de passe ${a ? 'réinitialisé' : 'initialisé'}`);
+        } else if (CHAMPS_SECRETS.test(k)) {
+            lignes.push(`${k} : (modifié)`);
+        } else {
+            lignes.push(`${k} : ${a || '∅'} → ${b || '∅'}`);
+        }
     }
-    const s = lignes.join(' | ') || '(aucun changement de valeur)';
+    const s = lignes.join(' | ');
     return s.length > 600 ? s.slice(0, 600) + '…' : s;
 }
 
 function journaliserEcriture(req, tableNom, action, details, cible = '') {
-    if (!tableNom || String(tableNom).toLowerCase() === 'audit') return;
+    if (!tableNom || ['audit', 'notifications'].includes(String(tableNom).toLowerCase())) return;
     pool.query(
         `INSERT INTO audit (id, fields) VALUES ($1, $2)`,
         [nouvelId(), {
@@ -675,7 +691,7 @@ app.post('/v0/:base/:table', async (req, res) => {
         res.json({ records: crees });
         journaliserEcriture(req, tableNom, 'Création',
             crees.length === 1
-                ? `${crees[0].id} | ${resumeChamps(crees[0].fields)}`
+                ? `${resumeChamps(crees[0].fields)} (id ${crees[0].id})`
                 : `${crees.length} enregistrements : ${crees.map(c => c.id).join(', ')}`,
             crees.length === 1 ? (libelleRecord(crees[0].fields) || tableNom) : tableNom);
         if (tableNom === 'VI Créneaux') {
@@ -779,10 +795,12 @@ async function majRecords(req, res, remplacer) {
                 if (m.deleted) return `enregistrement ${m.id} supprimé`;
                 const envoye = (records[i] && records[i].fields) || {};
                 return diffChamps(anciensMap[m.id], envoye);
-            });
-            journaliserEcriture(req, tableNom, 'Modification',
-                maj.length === 1 ? parties[0] : `${maj.length} enregistrements | ${parties.slice(0, 4).join(' || ')}${maj.length > 4 ? ' || …' : ''}`,
-                maj.length === 1 ? (libelleRecord(maj[0].fields) || tableNom) : tableNom);
+            }).filter(Boolean);
+            if (parties.length) {
+                journaliserEcriture(req, tableNom, 'Modification',
+                    maj.length === 1 ? parties[0] : `${maj.length} enregistrements | ${parties.slice(0, 4).join(' || ')}${maj.length > 4 ? ' || …' : ''}`,
+                    maj.length === 1 ? (libelleRecord(maj[0].fields) || tableNom) : tableNom);
+            }
         }
         declencherConfirmationVI(req, maj, anciens, decalages);
     } catch (e) {
@@ -813,9 +831,12 @@ async function majRecordUnitaire(req, res, remplacer) {
         );
         if (!rows.length) return erreur(res, 404, `Record introuvable: ${req.params.id}`);
         res.json(formatRecord(rows[0]));
-        journaliserEcriture(req, decodeURIComponent(req.params.table || ''), 'Modification',
-            diffChamps(ancien, fields),
-            libelleRecord(rows[0].fields) || decodeURIComponent(req.params.table || ''));
+        const diff = diffChamps(ancien, fields);
+        if (diff) {
+            journaliserEcriture(req, decodeURIComponent(req.params.table || ''), 'Modification',
+                diff,
+                libelleRecord(rows[0].fields) || decodeURIComponent(req.params.table || ''));
+        }
     } catch (e) {
         console.error('PATCH/PUT one:', e);
         erreur(res, 500, e.message);
@@ -845,7 +866,7 @@ async function supprimerIds(req, res, table, ids) {
     res.json({ records: ids.map(id => ({ id, deleted: true })) });
     journaliserEcriture(req, decodeURIComponent(req.params.table || ''), 'Suppression',
         ids.length === 1
-            ? `id ${ids[0]} | ${resumeChamps(anciensMap[ids[0]], 300)}`
+            ? `${resumeChamps(anciensMap[ids[0]], 300)} (id ${ids[0]})`
             : `${ids.length} enregistrements : ${ids.join(', ')}`,
         libelleRecord(anciensMap[ids[0]]) || decodeURIComponent(req.params.table || ''));
     viReserves.forEach(f => {
