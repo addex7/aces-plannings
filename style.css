@@ -2952,6 +2952,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     box-shadow: 0 0 0 2px #1e3d59;
     display: none;
 }
+.role-info {
+    border-bottom: 1px dotted #94a3b8;
+    cursor: help;
+}
 .notifications-panel {
     position: fixed;
     top: 70px;

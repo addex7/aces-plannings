@@ -379,12 +379,26 @@ async function envoyerReset() {
 
 const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier'];
 
+// Ce que chaque role donne reellement comme acces (verifie contre le code)
+const DESCRIPTIONS_ROLES = {
+    'Mécanicien': "Carnet de route en lecture seule, saisie des maintenances (carnet, planning, aéronefs), accès aux prix et options des machines, alertes sur les documents expirants.",
+    'Gestion VI': "Gestion des vols d'initiation : édition des créneaux VI, attribution des pilotes, inscription d'autres membres sur les créneaux.",
+    'Pilote VI': "Peut être inscrit comme pilote sur les créneaux de vols d'initiation (VI).",
+    'Instructeur planeur': "Se déclare instructeur de présence planeur (horaires, briefing), gère les inscriptions planeur, saisit des vols pour d'autres pilotes, bilan des validités, documents aéronefs, présences du club.",
+    'Instructeur avion': "Déclare ses dispos avion, supprime les réservations d'autres pilotes, saisit des vols pour n'importe quel membre au carnet, pilote VI avion (VIA), bilan des validités, présences du club.",
+    'Instructeur ULM': "Même périmètre que l'instructeur avion mais pour l'activité ULM : dispos, réservations, saisie de vols, pilotes VI ULM.",
+    'Pilote planeur': "Peut s'inscrire comme pilote aux journées planeur (apparaît dans les listes d'inscription).",
+    'Documentaliste': "Gère la bibliothèque de documents (ajout, modification, suppression) et le suivi documentaire des aéronefs.",
+    'Super admin': "Accès total : gestion des membres et rôles, options et prix des aéronefs, envoi des vols vers GVV, comptes pilotes, journal d'audit, bilans de validités, suppression de toute réservation ou événement.",
+    'Trésorier': "Accès à la vue Comptes pilotes (soldes et écritures GVV) et aux prix/options des aéronefs."
+};
+
 function initialiserCheckboxesRoles() {
     const rendre = (containerId, name) => {
         const container = document.getElementById(containerId);
         if (!container) return;
         container.innerHTML = ROLES_MEMBRES.map(role =>
-            `<label style="margin-right:10px;"><input type="checkbox" name="${name}" value="${role}"> ${role}</label>`
+            `<label class="role-info" style="margin-right:10px;" title="${(DESCRIPTIONS_ROLES[role] || '').replace(/"/g, '&quot;')}"><input type="checkbox" name="${name}" value="${role}"> ${role}</label>`
         ).join('');
     };
     rendre('membre-roles-container', 'membre-roles');
@@ -408,7 +422,9 @@ async function chargerUtilisateurs() {
             const nom = f['Nom'] || '';
             const nomComplet = `${prenom} ${nom}`.trim();
             const rolesActuels = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
-            const rolesText = rolesActuels.join(', ') || '-';
+            const rolesText = rolesActuels.map(role =>
+                `<span class="role-info" title="${(DESCRIPTIONS_ROLES[role] || '').replace(/"/g, '&quot;')}">${role}</span>`
+            ).join(', ') || '-';
             const canDelete = isSuperAdmin();
             const tr = document.createElement('tr');
             tr.className = 'ligne-membre';
