@@ -876,7 +876,11 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         const formulaJour = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${debutJour}'`;
         const urlCarnetPilotes = `${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
         const urlCarnetPilotesTous = `${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}?pageSize=100`;
-        const urlMaintenance = `${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(formulaJour)}`;
+        // Maintenances chevauchant le jour affiche : Date < fin du jour ET Date + durée > debut du jour
+        const debutJourDt = new Date(`${debutJour}T00:00:00`);
+        const finJourDt = new Date(debutJourDt.getTime() + 24 * 60 * 60 * 1000);
+        const formulaMaint = `AND(IS_BEFORE({Date},DATETIME_PARSE('${finJourDt.toISOString()}')),IS_AFTER(DATEADD({Date},{durée},'hours'),DATETIME_PARSE('${debutJourDt.toISOString()}')))`;
+        const urlMaintenance = `${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(formulaMaint)}`;
         const [resCarnetPilotes, resCarnetPilotesTous, resMaintenance] = await Promise.all([
             cachedFetch(urlCarnetPilotes, { headers }, API_CACHE_TTL, forceRefresh),
             cachedFetch(urlCarnetPilotesTous, { headers }, API_CACHE_TTL, forceRefresh),

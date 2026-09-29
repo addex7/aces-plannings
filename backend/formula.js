@@ -254,7 +254,7 @@ function fnSql(node) {
         case 'DATEADD': {
             const unite = args[2] && args[2].kind === 'str' ? args[2].value.toLowerCase().replace(/s$/, '') : 'day';
             const u = ['day','hour','minute','second','week','month','year'].includes(unite) ? unite : 'day';
-            return `(${sqlTs(valeurSql(args[0]))} + (${valeurSql(args[1])})::numeric * INTERVAL '1 ${u}')`;
+            return `(${sqlTs(valeurSql(args[0]))} + COALESCE(${sqlNum(valeurSql(args[1]))}, 0) * INTERVAL '1 ${u}')`;
         }
         case 'IS_BEFORE': return `(${sqlTs(valeurSql(args[0]))} < ${sqlTs(valeurSql(args[1]))})`;
         case 'IS_AFTER': return `(${sqlTs(valeurSql(args[0]))} > ${sqlTs(valeurSql(args[1]))})`;
