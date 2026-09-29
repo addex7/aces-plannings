@@ -1571,6 +1571,18 @@ async function soumettreCarnetRoute(event) {
             : ''
     };
 
+    // Remarques mécaniques nouvelles/modifiées sur une machine moteur :
+    // on rappelle au pilote qu'un probleme doit d'abord etre signale au
+    // mecanicien ou a un instructeur, avec possibilite de revenir au vol
+    // s'il s'est trompe de case. F-JVIO exclue : son champ sert de
+    // commentaires generiques, pas uniquement de remarques mecaniques.
+    const anciennesObs = ((ancienRecord && ancienRecord.fields && ancienRecord.fields['Observations']) || '').toString().trim();
+    const champEstRemarqueMeca = MACHINES_MOTEURS.includes(machine) && machine !== 'F-JVIO';
+    if (observations && champEstRemarqueMeca && observations !== anciennesObs) {
+        const confirme = await demanderConfirmationRemarqueMeca(machine);
+        if (!confirme) return;
+    }
+
     try {
         const url = `${API_BASE}/${encodeURIComponent(TABLE_CARNET_ROUTE)}${idCarnetEnEdition ? '/' + idCarnetEnEdition : ''}`;
         const response = await cachedFetch(url, {
@@ -1598,6 +1610,42 @@ async function soumettreCarnetRoute(event) {
         console.error(error);
         alert('Erreur lors de l\'enregistrement du vol.');
     }
+}
+
+// Modale d'avertissement quand une remarque mecanique est saisie au carnet.
+// Resout true si le pilote confirme l'enregistrement, false s'il revient au
+// formulaire (ex. case erronee). Le formulaire reste ouvert dans les 2 cas.
+function demanderConfirmationRemarqueMeca(immat) {
+    return new Promise(resolve => {
+        const existing = document.getElementById('carnet-remarque-meca-modal');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'carnet-remarque-meca-modal';
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.style.zIndex = '20000';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width: 460px; text-align: left;">
+                <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                    <span style="font-size:28px;">🔧</span>
+                    <span>Remarque mécanique — ${escapeHtml(immat)}</span>
+                </h3>
+                <div style="margin-top:15px; line-height:1.6; font-size:15px; color:#334155;">
+                    <p style="margin:0 0 10px 0;">Tu as noté un problème sur l'avion dans le carnet de route. Il sera transmis et <strong>traité dans les plus brefs délais par le mécanicien</strong>.</p>
+                    <p style="margin:0; padding:10px 12px; background:#fef3c7; border-left:3px solid #d97706; border-radius:6px;">⚠️ <strong>Rappel :</strong> avant de noter quoi que ce soit dans le carnet de route, il faut <strong>appeler le mécanicien ou un instructeur</strong> — une panne peut rendre l'avion inapte au vol pour les prochaines réservations.</p>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:space-between; margin-top:20px;">
+                    <button type="button" class="nr-btn-cancel" id="remarque-meca-retour">← Revenir au vol</button>
+                    <button type="button" class="btn-primary" id="remarque-meca-ok">Enregistrer quand même</button>
+                </div>
+            </div>
+        `;
+        const retour = () => { overlay.remove(); resolve(false); };
+        overlay.querySelector('#remarque-meca-retour').addEventListener('click', retour);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) retour(); });
+        overlay.querySelector('#remarque-meca-ok').addEventListener('click', () => { overlay.remove(); resolve(true); });
+        document.body.appendChild(overlay);
+    });
 }
 
 async function supprimerCarnetRoute() {
