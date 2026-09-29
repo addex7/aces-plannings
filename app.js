@@ -44,22 +44,25 @@ document.addEventListener('DOMContentLoaded', () => {
     initComptesPilotes();
     initNotifications();
     afficherAvertissementMobile();
+    adapterTableauxPetitEcran();
     Promise.all([
         chargerDonneesPlanning(),
         chargerPresencesClub()
     ]).catch(err => console.error('Erreur chargement initial:', err));
 });
 
-// Détection téléphone / tablette : le site n'est pas encore optimisé
-// pour ces plateformes — on affiche un message informatif au chargement.
+// Détection téléphone : les tablettes (iPad, Android) affichent le site
+// complet adapte via media queries ; seuls les petits ecrans tactiles
+// gardent le message informatif au chargement.
 function estAppareilMobileOuTablette() {
     const ua = navigator.userAgent || '';
-    if (/iPhone|iPod|iPad|Android|webOS|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet|PlayBook|Silk|Kindle/i.test(ua)) return true;
-    // iPadOS 13+ se présente comme un Mac : on le reconnaît au tactile multipoint
-    if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) return true;
-    // Repli : appareil dont le pointeur principal est tactile avec un petit écran
+    if (/iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
+    // Les telephones Android ont "Mobile" dans l'UA — les tablettes non
+    if (/Android/i.test(ua) && /Mobile/i.test(ua)) return true;
+    // Repli : pointeur tactile principal sur un petit ecran
     const tactilePrincipal = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    return !!tactilePrincipal && Math.min(screen.width, screen.height) < 1024;
+    // < 700 px : telephones ; l'iPad mini (744 px) et au-dessus passent
+    return !!tactilePrincipal && Math.min(screen.width, screen.height) < 700;
 }
 
 function afficherAvertissementMobile() {
@@ -77,10 +80,37 @@ function initSidebarToggle() {
     const toggle = document.getElementById('sidebar-toggle');
     const layout = document.querySelector('.app-layout');
     if (!toggle || !layout) return;
+    const estPetitEcran = () => window.matchMedia && window.matchMedia('(max-width: 1024px)').matches;
+    const fermerSidebar = () => {
+        layout.classList.add('sidebar-collapsed');
+        toggle.textContent = '❯';
+        toggle.title = 'Afficher le menu';
+    };
+    // Sur tablette la sidebar passe en superposition : repliee par defaut,
+    // elle se referme au choix d'un menu ou a un tap sur le contenu.
+    if (estPetitEcran()) fermerSidebar();
     toggle.addEventListener('click', () => {
         const collapsed = layout.classList.toggle('sidebar-collapsed');
         toggle.textContent = collapsed ? '❯' : '❮';
         toggle.title = collapsed ? 'Afficher le menu' : 'Masquer le menu';
+    });
+    const sidebar = layout.querySelector('.sidebar');
+    const main = layout.querySelector('.main-content');
+    if (main) main.addEventListener('click', () => { if (estPetitEcran()) fermerSidebar(); });
+    if (sidebar) sidebar.addEventListener('click', (e) => {
+        if (estPetitEcran() && e.target.closest('.nav-sub li, .nav-btn')) fermerSidebar();
+    });
+}
+
+// Enveloppe les tableaux des vues dans un conteneur defilant horizontalement
+// (inerte sur desktop ; .table-scroll n'agit que sous 1024px).
+function adapterTableauxPetitEcran() {
+    document.querySelectorAll('.view-section table').forEach(t => {
+        if (t.parentElement && t.parentElement.classList.contains('table-scroll')) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'table-scroll';
+        t.parentNode.insertBefore(wrap, t);
+        wrap.appendChild(t);
     });
 }
 

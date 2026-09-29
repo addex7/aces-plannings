@@ -123,7 +123,19 @@ function initPlanningInstructeur() {
     }
 
     if (!window.__dragDispoInit) {
-        window.addEventListener('mouseup', finaliserDragDisponibilite);
+        window.addEventListener('pointerup', finaliserDragDisponibilite);
+        window.addEventListener('pointercancel', finaliserDragDisponibilite);
+        // Tactile : pas de mouseenter pendant un drag (capture implicite du
+        // pointeur) — on suit le doigt via elementFromPoint sur les cellules.
+        window.addEventListener('pointermove', (e) => {
+            if (!dragDispo || !dragDispo.actif || e.pointerType === 'mouse') return;
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            const cell = el && el.closest ? el.closest('.grid-hour-block[data-slot]') : null;
+            if (cell && cell !== dragDispo.end) {
+                dragDispo.end = cell;
+                mettreAJourSurlignementDrag();
+            }
+        });
         window.__dragDispoInit = true;
     }
 
@@ -420,7 +432,8 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
             d.dataset.discipline = disc;
             d.dataset.ligne = idx;
             if (peutModifier) {
-                d.addEventListener('mousedown', (e) => {
+                d.classList.add('dispo-slot');
+                d.addEventListener('pointerdown', (e) => {
                     e.preventDefault();
                     dragDispo = { start: d, end: d, actif: true, dispo: d.dataset.dispo !== 'green', discipline: disc };
                     mettreAJourSurlignementDrag();
@@ -592,7 +605,8 @@ function rendreLigneActivite(tr, dateJour, disposJour, reservationsJour, discipl
             d.dataset.nom = nom;
             d.dataset.ligne = idx;
             if (peutModifier) {
-                d.addEventListener('mousedown', (e) => {
+                d.classList.add('dispo-slot');
+                d.addEventListener('pointerdown', (e) => {
                     e.preventDefault();
                     dragDispo = { start: d, end: d, actif: true, dispo: d.dataset.dispo !== 'green', discipline, nom };
                     mettreAJourSurlignementDrag();

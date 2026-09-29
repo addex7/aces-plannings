@@ -4698,3 +4698,68 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     color: #166534;
     align-self: center;
 }
+
+/* ==========================================================================
+   ADAPTATION TABLETTE (<= 1024 px) — desktop inchange au-dela
+   ========================================================================== */
+@media (max-width: 1024px) {
+    /* Sidebar en superposition : elle ne pousse plus le contenu */
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 950;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.35);
+    }
+    .app-layout.sidebar-collapsed .sidebar {
+        box-shadow: none;
+    }
+    /* La languette reste visible et plus facile a toucher */
+    #sidebar-toggle {
+        z-index: 960;
+        width: 28px;
+        height: 52px;
+        opacity: 0.9;
+    }
+    .app-layout.sidebar-collapsed #sidebar-toggle {
+        left: 0;
+        transform: translate(0, -50%);
+    }
+    /* Le redimensionnement a la souris n'a pas de sens au tactile */
+    #sidebar-resizer { display: none; }
+    /* Reserve la place de la languette quand la sidebar est repliee */
+    .main-content { padding-left: 40px; }
+    /* La modale carnet ne se decale plus de la largeur de la sidebar */
+    #carnet-modal { left: 0 !important; width: 100% !important; }
+
+    /* Planning : largeur minimale + defilement horizontal,
+       etiquette machine figee a gauche pendant le scroll */
+    .timeline-container { overflow-x: auto; }
+    .timeline-header, .timeline-row { min-width: 900px; }
+    .machine-cell, .machine-col-header {
+        position: sticky;
+        left: 0;
+        background: #fff;
+        z-index: 20;
+    }
+
+    /* Tableaux : defilement horizontal plutot que colonnes ecrasees */
+    .table-scroll { overflow-x: auto; }
+    .table-scroll > table { min-width: 560px; }
+
+    /* Cibles tactiles + empeche le zoom automatique iOS sur les champs */
+    input, select, textarea { font-size: 16px; }
+    .nav-sub li, .nav-group-title { padding-top: 10px; padding-bottom: 10px; }
+
+    /* Glisser-deposer au doigt : le navigateur ne doit pas convertir
+       le geste en defilement de la page */
+    .reservation-bar, .maintenance-bar, .resize-handle { touch-action: none; }
+    /* Cellules de dispos instructeurs : peinture horizontale au doigt,
+       defilement vertical de la page conserve */
+    .dispo-slot { touch-action: pan-y; }
+    /* Poignees de resize elargies pour le tactile */
+    .resize-handle { width: 16px; }
+    .resize-handle-left { left: -4px; }
+    .resize-handle-right { right: -4px; }
+}

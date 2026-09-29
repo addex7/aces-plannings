@@ -724,15 +724,15 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                     handleRight.className = 'resize-handle resize-handle-right';
                     barresDiv.appendChild(handleLeft);
                     barresDiv.appendChild(handleRight);
-                    handleLeft.addEventListener('mousedown', (e) => {
+                    handleLeft.addEventListener('pointerdown', (e) => {
                         e.stopPropagation();
                         initierResize(e, vol.id, gridBg, barresDiv, 'gauche', heureDebut, heureFin, null, 'VI Planeur');
                     });
-                    handleRight.addEventListener('mousedown', (e) => {
+                    handleRight.addEventListener('pointerdown', (e) => {
                         e.stopPropagation();
                         initierResize(e, vol.id, gridBg, barresDiv, 'droite', heureDebut, heureFin, null, 'VI Planeur');
                     });
-                    barresDiv.addEventListener('mousedown', (e) => {
+                    barresDiv.addEventListener('pointerdown', (e) => {
                         if (e.target.classList.contains('resize-handle')) return;
                         e.stopPropagation();
                         initierDeplacementBarre(e, vol.id, null, gridBg, barresDiv, heureDebut, duree, null, 'VI Planeur');
@@ -1138,15 +1138,15 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             handleRight.className = 'resize-handle resize-handle-right';
                             barresDiv.appendChild(handleLeft);
                             barresDiv.appendChild(handleRight);
-                            handleLeft.addEventListener('mousedown', (e) => {
+                            handleLeft.addEventListener('pointerdown', (e) => {
                                 e.stopPropagation();
                                 initierResize(e, vol.id, gridBg, barresDiv, 'gauche', heureDebut, heureFin, null);
                             });
-                            handleRight.addEventListener('mousedown', (e) => {
+                            handleRight.addEventListener('pointerdown', (e) => {
                                 e.stopPropagation();
                                 initierResize(e, vol.id, gridBg, barresDiv, 'droite', heureDebut, heureFin, null);
                             });
-                            barresDiv.addEventListener('mousedown', (e) => {
+                            barresDiv.addEventListener('pointerdown', (e) => {
                                 if (e.target.classList.contains('resize-handle')) return;
                                 e.stopPropagation();
                                 initierDeplacementBarre(e, vol.id, avionId, gridBg, barresDiv, heureDebut, duree, null);
@@ -1228,15 +1228,15 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                     handleRightM.className = 'resize-handle resize-handle-right';
                     maintDiv.appendChild(handleLeftM);
                     maintDiv.appendChild(handleRightM);
-                    handleLeftM.addEventListener('mousedown', (e) => {
+                    handleLeftM.addEventListener('pointerdown', (e) => {
                         e.stopPropagation();
                         initierResize(e, m.id, gridBg, maintDiv, 'gauche', hDebut, hFin, dateAffichee, 'Maintenance', m);
                     });
-                    handleRightM.addEventListener('mousedown', (e) => {
+                    handleRightM.addEventListener('pointerdown', (e) => {
                         e.stopPropagation();
                         initierResize(e, m.id, gridBg, maintDiv, 'droite', hDebut, hFin, dateAffichee, 'Maintenance', m);
                     });
-                    maintDiv.addEventListener('mousedown', (e) => {
+                    maintDiv.addEventListener('pointerdown', (e) => {
                         if (e.target.classList.contains('resize-handle')) return;
                         e.stopPropagation();
                         initierDeplacementBarre(e, m.id, avionId, gridBg, maintDiv, hDebut, dureeM, dateAffichee, 'Maintenance', m);
@@ -1619,8 +1619,9 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
         ghost.innerHTML = `<span>${hDebutStr} - ${hFinStr}</span>`;
     }
     function onMouseUp(evt) {
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
+        window.removeEventListener('pointermove', onMouseMove);
+        window.removeEventListener('pointerup', onMouseUp);
+        window.removeEventListener('pointercancel', onPointerCancel);
         barresDiv.style.opacity = '1';
         if (aBouge) {
             if (tableName === 'Maintenance') {
@@ -1670,8 +1671,22 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             document.body.style.mozUserSelect = '';
         }, 100);
     }
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    // Geste tactile annule par le navigateur (appel entrant, scroll…) :
+    // on nettoie sans sauvegarder le deplacement.
+    function onPointerCancel() {
+        window.removeEventListener('pointermove', onMouseMove);
+        window.removeEventListener('pointerup', onMouseUp);
+        window.removeEventListener('pointercancel', onPointerCancel);
+        if (ghost) ghost.remove();
+        barresDiv.style.opacity = '1';
+        isDraggingBar = false;
+        document.body.style.userSelect = '';
+        document.body.style.webkitUserSelect = '';
+        document.body.style.mozUserSelect = '';
+    }
+    window.addEventListener('pointermove', onMouseMove);
+    window.addEventListener('pointerup', onMouseUp);
+    window.addEventListener('pointercancel', onPointerCancel);
 }
 
 function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutInitiale, hFinInitiale, dateCibleVol, tableName = 'Réservations', record = null) {
@@ -1779,8 +1794,9 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
         ghostBar.querySelector('span').textContent = `${txtStart} - ${txtEnd}`;
     }
     async function onMouseUp() {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('pointermove', onMouseMove);
+        document.removeEventListener('pointerup', onMouseUp);
+        document.removeEventListener('pointercancel', onPointerCancel);
         barElement.style.opacity = '1';
         if (ghostBar.parentNode) ghostBar.parentNode.removeChild(ghostBar);
         while (ghostsMulti.length) { const g = ghostsMulti.pop(); if (g.parentNode) g.parentNode.removeChild(g); }
@@ -1803,8 +1819,21 @@ function initierResize(e, reservationId, parentGrid, barElement, bord, hDebutIni
             document.body.style.mozUserSelect = '';
         }, 100);
     }
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    function onPointerCancel() {
+        document.removeEventListener('pointermove', onMouseMove);
+        document.removeEventListener('pointerup', onMouseUp);
+        document.removeEventListener('pointercancel', onPointerCancel);
+        barElement.style.opacity = '1';
+        if (ghostBar.parentNode) ghostBar.parentNode.removeChild(ghostBar);
+        while (ghostsMulti.length) { const g = ghostsMulti.pop(); if (g.parentNode) g.parentNode.removeChild(g); }
+        isResizing = false;
+        document.body.style.userSelect = '';
+        document.body.style.webkitUserSelect = '';
+        document.body.style.mozUserSelect = '';
+    }
+    document.addEventListener('pointermove', onMouseMove);
+    document.addEventListener('pointerup', onMouseUp);
+    document.addEventListener('pointercancel', onPointerCancel);
 }
 
 async function appliquerChangementDuree(reservationId, hDeb, hFin, dateCible, tableName = 'Réservations', record = null, bord = null, dateJourCible = null) {

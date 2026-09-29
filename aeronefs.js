@@ -706,16 +706,16 @@ async function chargerSuiviAeronef() {
                     barresDiv.appendChild(handleLeft);
                     barresDiv.appendChild(handleRight);
 
-                    handleLeft.addEventListener('mousedown', (e) => {
+                    handleLeft.addEventListener('pointerdown', (e) => {
                         e.stopPropagation();
                         initierResize(e, vol.id, gridBg, barresDiv, 'gauche', heureDebut, heureFin, dateJour);
                     });
-                    handleRight.addEventListener('mousedown', (e) => {
+                    handleRight.addEventListener('pointerdown', (e) => {
                         e.stopPropagation();
                         initierResize(e, vol.id, gridBg, barresDiv, 'droite', heureDebut, heureFin, dateJour);
                     });
 
-                    barresDiv.addEventListener('mousedown', (e) => {
+                    barresDiv.addEventListener('pointerdown', (e) => {
                         if (e.target.classList.contains('resize-handle')) return;
                         e.stopPropagation();
                         initierDeplacementBarre(e, vol.id, machineActuelle.id, gridBg, barresDiv, heureDebut, duree, dateJour);
@@ -757,6 +757,7 @@ async function chargerSuiviAeronef() {
                     z-index: 10;
                     cursor: pointer;
                     pointer-events: auto;
+                    touch-action: none;
                     overflow: hidden;
                     color: white;
                     font-size: 10px;
@@ -779,20 +780,20 @@ async function chargerSuiviAeronef() {
                 maintenanceBubble.appendChild(handleLeft);
                 maintenanceBubble.appendChild(handleRight);
 
-                handleLeft.addEventListener('mousedown', (e) => {
+                handleLeft.addEventListener('pointerdown', (e) => {
                     e.stopPropagation();
                     if (typeof initierResize === 'function') {
                         initierResize(e, m.id, gridBg, maintenanceBubble, 'gauche', heureDebut, heureFin, dateJour, 'Maintenance', m);
                     }
                 });
-                handleRight.addEventListener('mousedown', (e) => {
+                handleRight.addEventListener('pointerdown', (e) => {
                     e.stopPropagation();
                     if (typeof initierResize === 'function') {
                         initierResize(e, m.id, gridBg, maintenanceBubble, 'droite', heureDebut, heureFin, dateJour, 'Maintenance', m);
                     }
                 });
 
-                maintenanceBubble.addEventListener('mousedown', (e) => {
+                maintenanceBubble.addEventListener('pointerdown', (e) => {
                     if (e.target.classList.contains('resize-handle')) return;
                     e.stopPropagation();
                     if (typeof initierDeplacementBarre === 'function') {
