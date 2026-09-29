@@ -1025,7 +1025,7 @@ function adapterFormulaireCarnet(machine) {
     const maintenanceRow = document.getElementById('carnet-maintenance-row');
     if (maintenanceRow) maintenanceRow.style.display = isJVIO ? '' : 'none';
     const obsLabel = document.querySelector('label[for="carnet-observations"]');
-    if (obsLabel) obsLabel.textContent = isJVIO ? 'Commentaires / Observations :' : 'Remarques mécaniques :';
+    if (obsLabel) obsLabel.textContent = 'Remarques mécaniques :';
 
     if (isJVIO) {
         ['carnet-huile-depart', 'carnet-huile-arrivee'].forEach(id => {
