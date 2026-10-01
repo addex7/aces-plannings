@@ -897,6 +897,7 @@ function initNavigationTabs() {
     const tabInitiation = document.getElementById('tab-initiation');
     const tabInstructeur = document.getElementById('tab-instructeur');
     const tabCarnet = document.getElementById('tab-carnet');
+    const tabCarnetVol = document.getElementById('tab-carnet-vol');
     const tabMembres = document.getElementById('tab-membres');
     const tabDocuments = document.getElementById('tab-documents');
     const tabComptes = document.getElementById('tab-comptes');
@@ -908,6 +909,7 @@ function initNavigationTabs() {
     const viewInitiation = document.getElementById('view-initiation');
     const viewInstructeur = document.getElementById('view-instructeur');
     const viewCarnet = document.getElementById('view-carnet');
+    const viewCarnetVol = document.getElementById('view-carnet-vol');
     const viewMembres = document.getElementById('view-membres');
     const viewDocuments = document.getElementById('view-documents');
     const viewComptes = document.getElementById('view-comptes');
@@ -917,8 +919,8 @@ function initNavigationTabs() {
     const viewAccueilPilote = document.getElementById('view-accueil-pilote');
 
     function activerTab(tab, vue) {
-        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabMembres, tabDocuments, tabComptes, tabAudit, tabMessagerie, tabAccueil].forEach(t => { if (t) t.classList.remove('active'); });
-        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewMembres, viewDocuments, viewComptes, viewAudit, viewAccueilMembre, viewMessagerie, viewAccueilPilote].forEach(v => { if (v) v.style.display = 'none'; });
+        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabCarnetVol, tabMembres, tabDocuments, tabComptes, tabAudit, tabMessagerie, tabAccueil].forEach(t => { if (t) t.classList.remove('active'); });
+        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewCarnetVol, viewMembres, viewDocuments, viewComptes, viewAudit, viewAccueilMembre, viewMessagerie, viewAccueilPilote].forEach(v => { if (v) v.style.display = 'none'; });
         if (tab) tab.classList.add('active');
         if (vue) vue.style.display = 'block';
         // Ouvrir le groupe contenant l'onglet actif, fermer les autres groupes déroulants
@@ -967,6 +969,13 @@ function initNavigationTabs() {
         tabCarnet.addEventListener('click', () => {
             activerTab(tabCarnet, viewCarnet);
             chargerCarnetRoute();
+        });
+    }
+
+    if (tabCarnetVol) {
+        tabCarnetVol.addEventListener('click', () => {
+            activerTab(tabCarnetVol, viewCarnetVol);
+            if (typeof chargerCarnetVol === 'function') chargerCarnetVol();
         });
     }
 
@@ -1864,6 +1873,8 @@ function initGestionTarifAeronefs() {
         if (titreImmat) titreImmat.textContent = f['Immatriculation'] || 'aéronef';
         const prix = f['Prix heure'];
         input.value = (prix !== undefined && prix !== null) ? String(prix).replace('.', ',') : '';
+        const inputModele = document.getElementById('opt-modele');
+        if (inputModele) inputModele.value = f['Modèle'] || '';
         prixSection.style.display = immat === 'F-BLIO' ? 'none' : '';
         const type = (f['Type'] || '').toString().toLowerCase();
         form.querySelectorAll('input[name="aeronef-type"]').forEach(r => {
@@ -1895,6 +1906,8 @@ function initGestionTarifAeronefs() {
         const prix = parseFloat(String(input.value).replace(',', '.')) || 0;
         const typeSel = form.querySelector('input[name="aeronef-type"]:checked');
         const fields = { 'Prix heure': prix };
+        const inputModele = document.getElementById('opt-modele');
+        if (inputModele) fields['Modèle'] = inputModele.value.trim();
         if (typeSel) fields['Type'] = typeSel.value;
         try {
             const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}/${machineId}`, {

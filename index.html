@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=218">
+    <link rel="stylesheet" href="style.css?v=219">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -145,6 +145,7 @@
                     <div class="nav-group nav-group-standalone">
                         <ul class="nav-sub">
                             <li id="tab-carnet">📖 Carnet de route</li>
+                            <li id="tab-carnet-vol">🛫 Carnet de vol</li>
                             <li id="tab-documents">📄 Bibliothèque</li>
                             <li id="tab-comptes" style="display:none;">💳 Compte pilote</li>
                             <li id="tab-audit" style="display:none;">📋 Journal d'audit</li>
@@ -528,6 +529,60 @@
                 </div>
 
                 <div id="carnet-planeur-container" class="carnet-planeur-container" style="display: none;"></div>
+            </section>
+
+            <!-- ================= VUE CARNET DE VOL PILOTE ================= -->
+            <section id="view-carnet-vol" class="view-section" style="display: none;">
+                <header class="header">
+                    <div>
+                        <h2>Carnet de vol — <span id="carnet-vol-pilote-nom"></span></h2>
+                        <p class="header-sub">Vols du club synchronisés automatiquement depuis les carnets de route + vols extérieurs saisis par le pilote.</p>
+                    </div>
+                    <div class="carnet-header-controls">
+                        <label for="carnet-vol-pilote-select" id="carnet-vol-pilote-label" style="display:none;">Pilote :</label>
+                        <select id="carnet-vol-pilote-select" class="machine-selector" style="display:none;"></select>
+                        <button id="btn-ajouter-vol-manuel" class="btn-primary" style="display:none;">+ Ajouter un vol</button>
+                    </div>
+                </header>
+
+                <div class="carnet-vol-legende">
+                    <span class="cv-legende-item"><span class="cv-badge cv-badge-club">Club</span> saisi automatiquement depuis un carnet de route machine</span>
+                    <span class="cv-legende-item"><span class="cv-badge cv-badge-manuel">Manuel</span> saisi à la main par le pilote</span>
+                </div>
+
+                <div class="carnet-table-container">
+                    <table class="carnet-table carnet-vol-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">Date</th>
+                                <th colspan="2" class="sub-header">Départ</th>
+                                <th colspan="2" class="sub-header">Arrivée</th>
+                                <th rowspan="2">Modèle</th>
+                                <th rowspan="2">Immat.</th>
+                                <th rowspan="2">Mono-<br>moteur</th>
+                                <th rowspan="2">Commandant<br>de bord</th>
+                                <th colspan="2" class="sub-header">Atterrissages</th>
+                                <th rowspan="2">Temps<br>de nuit</th>
+                                <th colspan="3" class="sub-header">Temps pilote en fonction</th>
+                                <th rowspan="2">Origine</th>
+                            </tr>
+                            <tr>
+                                <th>lieu</th>
+                                <th>heure</th>
+                                <th>lieu</th>
+                                <th>heure</th>
+                                <th>jour</th>
+                                <th>nuit</th>
+                                <th>CdB</th>
+                                <th>DC</th>
+                                <th>Instr.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="carnet-vol-body">
+                            <tr><td colspan="15" class="carnet-empty">Chargement du carnet de vol...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
 
             <!-- ================= VUE MEMBRES ================= -->
@@ -1313,6 +1368,10 @@
                     </div>
                 </div>
                 <div class="nr-section">
+                    <div class="nr-section-title">MODÈLE (ex. DR400-180, FK9…)</div>
+                    <input type="text" id="opt-modele" class="nr-input" placeholder="Modèle de la machine" style="max-width:260px;">
+                </div>
+                <div class="nr-section">
                     <div class="nr-section-title">TYPE DE MACHINE</div>
                     <div class="nr-options-grid">
                         <label class="nr-option">
@@ -1329,6 +1388,96 @@
                 </div>
                 <div class="nr-footer">
                     <button type="button" class="nr-btn-cancel" onclick="document.getElementById('aeronef-options-modal').style.display='none'">Annuler</button>
+                    <button type="submit" class="nr-btn-save"><span class="nr-icon-save">💾</span> Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODALE SAISIE VOL MANUEL (CARNET DE VOL) ================= -->
+    <div id="carnet-vol-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 640px;">
+            <span class="close-modal" id="close-carnet-vol">&times;</span>
+            <h3 class="nr-title" id="carnet-vol-modal-title">Ajouter un vol extérieur</h3>
+            <p class="header-sub" style="margin:0 0 12px;">Vol effectué hors du club — il comptera dans votre expérience récente.</p>
+            <form id="carnet-vol-form" class="nr-form">
+                <input type="hidden" id="cv-vol-id">
+                <div class="nr-section">
+                    <div class="nr-section-title">VOL</div>
+                    <div class="cv-grid-3">
+                        <div class="form-group">
+                            <label for="cv-date">Date</label>
+                            <input type="date" id="cv-date" class="nr-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-modele">Modèle</label>
+                            <input type="text" id="cv-modele" class="nr-input" placeholder="DR400, C172…">
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-immat">Immatriculation</label>
+                            <input type="text" id="cv-immat" class="nr-input" placeholder="F-XXXX" required>
+                        </div>
+                        <div class="form-group cv-check-group">
+                            <label class="cv-check-label"><input type="checkbox" id="cv-monomoteur" checked> Monomoteur</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="nr-section">
+                    <div class="nr-section-title">ITINÉRAIRE</div>
+                    <div class="cv-grid-4">
+                        <div class="form-group">
+                            <label for="cv-lieu-depart">Lieu départ</label>
+                            <input type="text" id="cv-lieu-depart" class="nr-input" placeholder="LFOY">
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-heure-depart">Heure départ</label>
+                            <input type="time" id="cv-heure-depart" class="nr-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-lieu-arrivee">Lieu arrivée</label>
+                            <input type="text" id="cv-lieu-arrivee" class="nr-input" placeholder="LFOM">
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-heure-arrivee">Heure arrivée</label>
+                            <input type="time" id="cv-heure-arrivee" class="nr-input" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="nr-section">
+                    <div class="nr-section-title">PILOTAGE</div>
+                    <div class="cv-grid-3">
+                        <div class="form-group">
+                            <label for="cv-fonction">Ma fonction</label>
+                            <select id="cv-fonction" class="nr-input">
+                                <option value="CdB">Commandant de bord</option>
+                                <option value="DC">Double commande</option>
+                                <option value="Instr">Instructeur</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-cdb">Commandant de bord</label>
+                            <input type="text" id="cv-cdb" class="nr-input" placeholder="Nom du CdB">
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-decollages">Décollages</label>
+                            <input type="number" id="cv-decollages" class="nr-input" min="0" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-att-jour">Atterrissages jour</label>
+                            <input type="number" id="cv-att-jour" class="nr-input" min="0" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-att-nuit">Atterrissages nuit</label>
+                            <input type="number" id="cv-att-nuit" class="nr-input" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="cv-temps-nuit">Temps de vol de nuit</label>
+                            <input type="text" id="cv-temps-nuit" class="nr-input" placeholder="0h30 (facultatif)">
+                        </div>
+                    </div>
+                </div>
+                <div class="nr-footer">
+                    <button type="button" class="nr-btn-cancel" onclick="document.getElementById('carnet-vol-modal').style.display='none'">Annuler</button>
                     <button type="submit" class="nr-btn-save"><span class="nr-icon-save">💾</span> Enregistrer</button>
                 </div>
             </form>
@@ -1504,15 +1653,16 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20260929130512"></script>
-    <script src="app.js?v=92"></script>
+    <script src="version.js?v=20261001113554"></script>
+    <script src="app.js?v=93"></script>
     <script src="utils.js?v=108"></script>
     <script src="presences.js?v=103"></script>
     <script src="planning.js?v=206"></script>
     <script src="calendrier.js?v=91"></script>
     <script src="comptes.js?v=117"></script>
-    <script src="aeronefs.js?v=129"></script>
+    <script src="aeronefs.js?v=130"></script>
     <script src="carnet.js?v=193"></script>
+    <script src="carnet-vol.js?v=1"></script>
     <script src="documents.js?v=89"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=8"></script>
@@ -1520,8 +1670,8 @@
     <script src="instructeurs.js?v=108"></script>
     <script src="instructeur-planning.js?v=193"></script>
     <script src="messagerie.js?v=27"></script>
-    <script src="membre-home.js?v=97"></script>
-    <script src="accueil-pilote.js?v=31"></script>
+    <script src="membre-home.js?v=98"></script>
+    <script src="accueil-pilote.js?v=32"></script>
     <!-- Modal Inscrire quelqu'un d'autre -->
     <div id="modal-inscrire-autre" class="modal" style="display:none;">
         <div class="modal-content" style="max-width:400px;">

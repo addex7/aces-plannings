@@ -292,6 +292,7 @@ const RAFRAICHSSEURS_VUES = {
     'view-aeronefs': () => typeof chargerSuiviAeronef === 'function' && chargerSuiviAeronef(),
     'view-instructeur': () => typeof chargerSuiviInstructeur === 'function' && chargerSuiviInstructeur(),
     'view-carnet': () => typeof chargerCarnetRoute === 'function' && chargerCarnetRoute(),
+    'view-carnet-vol': () => typeof chargerCarnetVol === 'function' && chargerCarnetVol(),
     'view-membres': () => typeof chargerUtilisateurs === 'function' && chargerUtilisateurs(),
     'view-documents': () => typeof chargerDocuments === 'function' && chargerDocuments(),
     'view-accueil-membre': () => typeof chargerAccueilMembre === 'function' && chargerAccueilMembre(

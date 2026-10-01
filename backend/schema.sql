@@ -118,6 +118,12 @@ CREATE TABLE IF NOT EXISTS audit (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS carnet_vol (
+    id          TEXT PRIMARY KEY,
+    fields      JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS signalements (
     id          TEXT PRIMARY KEY,
     fields      JSONB NOT NULL DEFAULT '{}',
@@ -129,6 +135,8 @@ CREATE INDEX IF NOT EXISTS idx_reservations_debut ON reservations ((fields->>'Da
 CREATE INDEX IF NOT EXISTS idx_reservations_fin   ON reservations ((fields->>'Date de fin'));
 CREATE INDEX IF NOT EXISTS idx_maintenance_date   ON maintenance ((fields->>'Date'));
 CREATE INDEX IF NOT EXISTS idx_carnet_pilotes_date ON carnet_route_pilotes ((fields->>'Date'));
+CREATE INDEX IF NOT EXISTS idx_carnet_vol_pilote ON carnet_vol ((fields->>'Pilote'));
+CREATE INDEX IF NOT EXISTS idx_carnet_vol_date   ON carnet_vol ((fields->>'Date'));
 CREATE INDEX IF NOT EXISTS idx_messagerie_date    ON messagerie ((fields->>'Date'));
 CREATE INDEX IF NOT EXISTS idx_evenements_debut   ON evenements ((fields->>'Date de début'));
 

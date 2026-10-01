@@ -582,6 +582,11 @@ async function chargerExperiencesAccueil(cpl = false) {
             records = records.concat(data.records || []);
             offset = data.offset || '';
         } while (offset);
+        // Vols extérieurs saisis à la main dans le carnet de vol du pilote
+        try {
+            const urlManu = `${API_BASE}/${encodeURIComponent('Carnet de vol')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+            records = records.concat(await fetchTousRecords(urlManu, { headers }));
+        } catch (e) { console.error('Erreur lecture carnet de vol manuel:', e); }
     } catch (err) {
         console.error('Erreur chargement expériences accueil:', err);
         return { recent: false, passager: false, lapl: false, initiation: false };

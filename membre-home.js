@@ -347,6 +347,12 @@ async function chargerExperiences() {
             offset = data.offset || '';
         } while (offset);
 
+        // Vols extérieurs saisis à la main dans le carnet de vol du pilote
+        try {
+            const urlManu = `${API_BASE}/${encodeURIComponent('Carnet de vol')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+            records = records.concat(await fetchTousRecords(urlManu, { headers }));
+        } catch (e) { console.error('Erreur lecture carnet de vol manuel:', e); }
+
         const auj = new Date();
         const limite3m = dateIlYAMois(3);
         const limite12m = dateIlYAMois(12);

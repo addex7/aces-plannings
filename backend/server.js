@@ -51,6 +51,7 @@ const TABLES = {
     'Dossiers': 'dossiers',
     'Audit': 'audit',
     'Signalements': 'signalements',
+    'Carnet de vol': 'carnet_vol',
     'Soldes GVV': 'gvv_soldes',
     'Écritures GVV': 'gvv_ecritures'
 };
