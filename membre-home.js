@@ -588,6 +588,7 @@ async function chargerDocumentsMembre() {
             const lien = f['Lien'] || '#';
             let actions = `<a href="${lien}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir ↗</a>`;
             if (isSuperAdmin()) {
+                actions += `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="renommerDocumentMembre('${r.id}', '${titre.replace(/'/g, "\\'")}')">Renommer</button>`;
                 actions += archive
                     ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="restaurerDocumentMembre('${r.id}')">Restaurer</button>
                        <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentMembre('${r.id}')">Supprimer définitivement</button>`
@@ -677,6 +678,26 @@ async function basculerArchiveDocumentMembre(id, archive) {
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'archivage : ' + (err.message || ''));
+    }
+}
+
+async function renommerDocumentMembre(id, titreActuel) {
+    if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
+    const nouveau = prompt('Nouveau nom du document :', titreActuel || '');
+    if (nouveau === null) return;
+    const titre = nouveau.trim();
+    if (!titre) { alert('Le nom ne peut pas être vide.'); return; }
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ fields: { 'Titre': titre } })
+        });
+        if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur Airtable');
+        await chargerDocumentsMembre();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors du renommage : ' + (err.message || ''));
     }
 }
 
