@@ -113,6 +113,7 @@ function cvDeriveVolClub(r, piloteNomComplet) {
     return {
         origine: 'club',
         dureeMin: duree,
+        obs: f['Observations'] || '',
         recId: r.id,
         date: f['Date'] || '',
         lieuDep: f['Départ'] || '', hDep: f['Heure départ'] || '',
@@ -144,6 +145,7 @@ function cvDeriveVolManuel(r) {
         origine: 'manuel',
         recId: r.id,
         dureeMin,
+        obs: f['Observations'] || '',
         date: f['Date'] || '',
         lieuDep: f['Départ'] || f['Lieu départ'] || '',
         hDep: f['Heure départ'] || '',
@@ -304,6 +306,7 @@ async function chargerCarnetVol() {
             const badge = l.origine === 'manuel'
                 ? '<span class="cv-badge cv-badge-manuel">Manuel</span>'
                 : '<span class="cv-badge cv-badge-club">Club</span>';
+            const obsIcon = l.obs ? ` <span class="cv-obs" title="${cvEscape(l.obs)}">📝</span>` : '';
             const actions = (l.origine === 'manuel' && editable)
                 ? ` <button type="button" class="cv-btn-edit" data-id="${l.recId}" title="Modifier">✏️</button>
                     <button type="button" class="cv-btn-del" data-id="${l.recId}" title="Supprimer">🗑️</button>`
@@ -324,7 +327,7 @@ async function chargerCarnetVol() {
                 <td>${cvFormaterMinutes(l.cdbMin)}</td>
                 <td>${cvFormaterMinutes(l.dcMin)}</td>
                 <td>${cvFormaterMinutes(l.instrMin)}</td>
-                <td class="cv-origine">${badge}${actions}</td>
+                <td class="cv-origine">${badge}${obsIcon}${actions}</td>
             </tr>`;
         }).join('');
 
@@ -373,6 +376,7 @@ function cvViderModal() {
     document.getElementById('cv-att-jour').value = 1;
     document.getElementById('cv-att-nuit').value = 0;
     document.getElementById('cv-temps-nuit').value = '';
+    document.getElementById('cv-observations').value = '';
     document.getElementById('carnet-vol-modal-title').textContent = 'Ajouter un vol extérieur';
 }
 
@@ -397,6 +401,7 @@ function cvOuvrirModalEdition(recId) {
     document.getElementById('cv-att-nuit').value = parseInt(f['Atterrissages nuit'], 10) || 0;
     const nuitMin = parseInt(f['Temps nuit'], 10) || 0;
     document.getElementById('cv-temps-nuit').value = nuitMin ? cvFormaterMinutes(nuitMin) : '';
+    document.getElementById('cv-observations').value = f['Observations'] || '';
     document.getElementById('carnet-vol-modal-title').textContent = 'Modifier un vol extérieur';
     document.getElementById('carnet-vol-modal').style.display = 'flex';
 }
@@ -485,6 +490,7 @@ function initCarnetVol() {
             'Temps DC': fonction === 'DC' ? duree : 0,
             'Temps instructeur': fonction === 'Instr' ? duree : 0,
             'Instructeur': fonction === 'DC' ? cdbNom : '',
+            'Observations': document.getElementById('cv-observations').value.trim(),
             'Origine': 'Manuel'
         };
 
