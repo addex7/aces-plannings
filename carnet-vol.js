@@ -112,6 +112,7 @@ function cvDeriveVolClub(r, piloteNomComplet) {
 
     return {
         origine: 'club',
+        dureeMin: duree,
         recId: r.id,
         date: f['Date'] || '',
         lieuDep: f['Départ'] || '', hDep: f['Heure départ'] || '',
@@ -129,9 +130,20 @@ function cvDeriveVolClub(r, piloteNomComplet) {
 
 function cvDeriveVolManuel(r) {
     const f = r.fields || {};
+    let dureeMin = 0;
+    if (f['Heure départ'] && f['Heure arrivée']) {
+        const [hd, md] = String(f['Heure départ']).split(':').map(Number);
+        const [ha, ma] = String(f['Heure arrivée']).split(':').map(Number);
+        if (![hd, md, ha, ma].some(isNaN)) {
+            dureeMin = (ha * 60 + ma) - (hd * 60 + md);
+            if (dureeMin < 0) dureeMin += 24 * 60;
+        }
+    }
+    if (!dureeMin) dureeMin = cvParseDureeTexte(f['Temps de vol']);
     return {
         origine: 'manuel',
         recId: r.id,
+        dureeMin,
         date: f['Date'] || '',
         lieuDep: f['Départ'] || f['Lieu départ'] || '',
         hDep: f['Heure départ'] || '',
@@ -288,7 +300,7 @@ async function chargerCarnetVol() {
 
         const editable = cvPeutEditer(cvPiloteCible);
         body.innerHTML = lignes.map(l => {
-            const mono = l.mono === null ? '—' : (l.mono ? 'Oui' : 'Non');
+            const hdvMono = l.mono ? cvFormaterMinutes(l.dureeMin) : '—';
             const badge = l.origine === 'manuel'
                 ? '<span class="cv-badge cv-badge-manuel">Manuel</span>'
                 : '<span class="cv-badge cv-badge-club">Club</span>';
@@ -304,7 +316,7 @@ async function chargerCarnetVol() {
                 <td>${cvEscape(l.hArr)}</td>
                 <td>${cvEscape(l.modele)}</td>
                 <td>${cvEscape(l.immat)}</td>
-                <td>${mono}</td>
+                <td>${hdvMono}</td>
                 <td>${cvEscape(l.cdb)}</td>
                 <td>${l.attJour || '—'}</td>
                 <td>${l.attNuit || '—'}</td>
@@ -320,10 +332,13 @@ async function chargerCarnetVol() {
         const t = lignes.reduce((acc, l) => {
             acc.attJ += l.attJour; acc.attN += l.attNuit; acc.nuit += l.nuitMin;
             acc.cdb += l.cdbMin; acc.dc += l.dcMin; acc.instr += l.instrMin;
+            if (l.mono) acc.mono += l.dureeMin;
             return acc;
-        }, { attJ: 0, attN: 0, nuit: 0, cdb: 0, dc: 0, instr: 0 });
+        }, { attJ: 0, attN: 0, nuit: 0, cdb: 0, dc: 0, instr: 0, mono: 0 });
         body.innerHTML += `<tr class="cv-totaux">
-            <td colspan="9"><strong>Total — ${lignes.length} vol(s)</strong></td>
+            <td colspan="7"><strong>Total — ${lignes.length} vol(s)</strong></td>
+            <td><strong>${cvFormaterMinutes(t.mono)}</strong></td>
+            <td></td>
             <td><strong>${t.attJ}</strong></td><td><strong>${t.attN}</strong></td>
             <td><strong>${cvFormaterMinutes(t.nuit)}</strong></td>
             <td><strong>${cvFormaterMinutes(t.cdb)}</strong></td>
