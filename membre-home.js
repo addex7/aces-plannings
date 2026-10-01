@@ -590,8 +590,7 @@ async function chargerDocumentsMembre() {
             if (isSuperAdmin()) {
                 actions += `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="renommerDocumentMembre('${r.id}', '${titre.replace(/'/g, "\\'")}')">Renommer</button>`;
                 actions += archive
-                    ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="restaurerDocumentMembre('${r.id}')">Restaurer</button>
-                       <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentMembre('${r.id}')">Supprimer définitivement</button>`
+                    ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="restaurerDocumentMembre('${r.id}')">Restaurer</button>`
                     : `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="archiverDocumentMembre('${r.id}')">Archiver</button>`;
             }
             return `
