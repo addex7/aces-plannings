@@ -579,22 +579,39 @@ async function chargerDocumentsMembre() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const records = data.records || [];
-        if (!records.length) { list.innerHTML = '<p>Aucun document pour ce membre.</p>'; return; }
-        list.innerHTML = records.map(r => {
+        const actifs = records.filter(r => !(r.fields || {})['Archivé']);
+        const archives = records.filter(r => (r.fields || {})['Archivé']);
+
+        const ligneDoc = (r, archive) => {
             const f = r.fields || {};
             const titre = f['Titre'] || 'Document';
             const lien = f['Lien'] || '#';
-            const btnDelete = isSuperAdmin() ? `<button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentMembre('${r.id}')">Supprimer</button>` : '';
+            let actions = `<a href="${lien}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir ↗</a>`;
+            if (isSuperAdmin()) {
+                actions += archive
+                    ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="restaurerDocumentMembre('${r.id}')">Restaurer</button>
+                       <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentMembre('${r.id}')">Supprimer définitivement</button>`
+                    : `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="archiverDocumentMembre('${r.id}')">Archiver</button>`;
+            }
             return `
-                <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:8px;">
+                <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:8px;${archive ? ' opacity:0.75;' : ''}">
                     <span>${titre}</span>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <a href="${lien}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir ↗</a>
-                        ${btnDelete}
-                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">${actions}</div>
                 </div>
             `;
-        }).join('');
+        };
+
+        let html = actifs.length
+            ? actifs.map(r => ligneDoc(r, false)).join('')
+            : '<p>Aucun document actif pour ce membre.</p>';
+        if (archives.length) {
+            html += `
+                <details style="margin-top:12px;">
+                    <summary style="cursor:pointer; color:#64748b; font-size:13px; font-weight:600;">📦 Documents archivés (${archives.length})</summary>
+                    <div style="margin-top:8px;">${archives.map(r => ligneDoc(r, true)).join('')}</div>
+                </details>`;
+        }
+        list.innerHTML = html;
     } catch (err) {
         console.error('Erreur chargement documents membre:', err);
         list.innerHTML = '<p>Erreur de chargement.</p>';
@@ -639,8 +656,32 @@ async function uploaderDocumentMembre(e) {
     }
 }
 
+async function archiverDocumentMembre(id) {
+    await basculerArchiveDocumentMembre(id, true);
+}
+
+async function restaurerDocumentMembre(id) {
+    await basculerArchiveDocumentMembre(id, false);
+}
+
+async function basculerArchiveDocumentMembre(id, archive) {
+    if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ fields: { 'Archivé': archive } })
+        });
+        if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur Airtable');
+        await chargerDocumentsMembre();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l\'archivage : ' + (err.message || ''));
+    }
+}
+
 async function supprimerDocumentMembre(id) {
-    if (!confirm('Supprimer ce document ?')) return;
+    if (!confirm('Supprimer définitivement ce document ? Cette action est irréversible.')) return;
     if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, {
