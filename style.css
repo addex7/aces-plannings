@@ -4817,15 +4817,20 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 .cv-check-group { display: flex; align-items: flex-end; padding-bottom: 6px; }
 .cv-check-label { display: flex; align-items: center; gap: 6px; font-weight: 500; color: #1e3d59; font-size: 14px; height: 42px; }
-/* Header : les controles restent groupes sur une ligne ; c'est le
-   header entier qui passe a la ligne sous le titre si besoin */
+/* Header : tout reste sur une ligne — le titre/sous-titre se replie
+   (le bloc texte peut retrecir), les controles gardent leur taille */
 #view-carnet-vol .header {
-    flex-wrap: wrap;
-    gap: 8px 16px;
+    flex-wrap: nowrap;
+}
+#view-carnet-vol .header > div:first-child {
+    min-width: 0;
+    flex-shrink: 1;
 }
 #view-carnet-vol .carnet-header-controls {
     align-items: center;
     flex-wrap: nowrap;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 #carnet-vol-pilote-select,
 #carnet-vol-machine-select {
