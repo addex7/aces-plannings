@@ -264,7 +264,15 @@ async function chargerCarnetVol() {
         ]);
         cvLignesManuelles = volsManuels;
 
-        const lignes = volsClub.map(r => cvDeriveVolClub(r, nomComplet))
+        const lignes = volsClub
+            // Seuls les vols sur une machine referencee dans "Aeronefs"
+            // comptent : le carnet de route contient aussi des lignes
+            // planeurs / remorques / engins au sol (tracteur tondeuse...)
+            .filter(r => {
+                const immat = ((r.fields || {})['Machine'] || '').toString().trim().toUpperCase();
+                return !!(cvAeronefsMap || {})[immat];
+            })
+            .map(r => cvDeriveVolClub(r, nomComplet))
             .concat(volsManuels.map(cvDeriveVolManuel))
             .filter(l => l.date)
             .sort((a, b) => {
