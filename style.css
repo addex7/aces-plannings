@@ -4821,7 +4821,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 #view-carnet-vol .carnet-header-controls {
     align-items: stretch;
 }
-#carnet-vol-pilote-select {
+#carnet-vol-pilote-select,
+#carnet-vol-machine-select {
     height: 42px;
     padding: 0 12px;
     border: 1px solid #cbd5e1;
@@ -4831,7 +4832,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #fff;
     color: #1e3d59;
 }
-#carnet-vol-pilote-label {
+#carnet-vol-pilote-label,
+#carnet-vol-machine-label {
     display: flex;
     align-items: center;
 }

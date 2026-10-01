@@ -16,6 +16,7 @@ let cvPiloteCible = null;          // {id, prenom, nom}
 let cvMembresCache = null;
 let cvAeronefsMap = null;          // immat -> {modele, type}
 let cvLignesManuelles = [];        // records bruts "Carnet de vol" du pilote affiche
+let cvLignesCourantes = [];        // lignes normalisees (club + manuelles)
 let cvSelectPilotePret = false;
 
 function cvPeutVoirAutres() {
@@ -295,10 +296,36 @@ async function chargerCarnetVol() {
                 return (b.hDep || '').localeCompare(a.hDep || '');
             });
 
-        if (!lignes.length) {
-            body.innerHTML = `<tr><td colspan="15" class="carnet-empty">Aucun vol dans le carnet de ${cvEscape(nomComplet)}.</td></tr>`;
-            return;
-        }
+        cvLignesCourantes = lignes;
+        cvPeuplerFiltreMachine(lignes);
+        cvRendreLignes();
+    } catch (err) {
+        console.error('Erreur chargement carnet de vol:', err);
+        body.innerHTML = '<tr><td colspan="15" class="carnet-empty">Erreur de chargement du carnet de vol.</td></tr>';
+    }
+}
+
+function cvPeuplerFiltreMachine(lignes) {
+    const select = document.getElementById('carnet-vol-machine-select');
+    if (!select) return;
+    const immats = [...new Set(lignes.map(l => (l.immat || '').toUpperCase()).filter(Boolean))].sort();
+    const courante = select.value;
+    select.innerHTML = '<option value="">Toutes les machines</option>' +
+        immats.map(i => `<option value="${i}">${i}</option>`).join('');
+    if (immats.includes(courante)) select.value = courante;
+}
+
+function cvRendreLignes() {
+    const body = document.getElementById('carnet-vol-body');
+    if (!body) return;
+    const filtre = (document.getElementById('carnet-vol-machine-select')?.value || '').toUpperCase();
+    const lignes = cvLignesCourantes.filter(l => !filtre || (l.immat || '').toUpperCase() === filtre);
+    const nomComplet = `${cvPiloteCible.prenom || ''} ${cvPiloteCible.nom || ''}`.trim();
+
+    if (!lignes.length) {
+        body.innerHTML = `<tr><td colspan="15" class="carnet-empty">Aucun vol ${filtre ? `sur ${cvEscape(filtre)} ` : ''}dans le carnet de ${cvEscape(nomComplet)}.</td></tr>`;
+        return;
+    }
 
         const editable = cvPeutEditer(cvPiloteCible);
         body.innerHTML = lignes.map(l => {
@@ -352,10 +379,6 @@ async function chargerCarnetVol() {
 
         body.querySelectorAll('.cv-btn-edit').forEach(b => b.addEventListener('click', () => cvOuvrirModalEdition(b.dataset.id)));
         body.querySelectorAll('.cv-btn-del').forEach(b => b.addEventListener('click', () => cvSupprimerVol(b.dataset.id)));
-    } catch (err) {
-        console.error('Erreur chargement carnet de vol:', err);
-        body.innerHTML = '<tr><td colspan="15" class="carnet-empty">Erreur de chargement du carnet de vol.</td></tr>';
-    }
 }
 
 // --- SAISIE MANUELLE ---------------------------------------------------------
@@ -434,6 +457,9 @@ function initCarnetVol() {
         cvViderModal();
         modal.style.display = 'flex';
     });
+
+    const filtreMachine = document.getElementById('carnet-vol-machine-select');
+    if (filtreMachine) filtreMachine.addEventListener('change', cvRendreLignes);
 
     // Fonction DC : le CdB est l'instructeur -> placeholder explicite
     const selFonction = document.getElementById('cv-fonction');
