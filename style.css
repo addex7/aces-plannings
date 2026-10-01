@@ -4816,7 +4816,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     gap: 10px;
 }
 .cv-check-group { display: flex; align-items: flex-end; padding-bottom: 6px; }
-.cv-check-label { display: flex; align-items: center; gap: 6px; font-weight: 500; color: #1e3d59; font-size: 14px; }
+.cv-check-label { display: flex; align-items: center; gap: 6px; font-weight: 500; color: #1e3d59; font-size: 14px; height: 42px; }
 /* Header : selecteur de pilote cale sur la hauteur du bouton */
 #view-carnet-vol .carnet-header-controls {
     align-items: stretch;
@@ -4843,6 +4843,13 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     flex-direction: column;
     justify-content: flex-end;
     margin: 0;
+}
+/* Tous les champs a la meme hauteur */
+#carnet-vol-modal .nr-input {
+    height: 42px;
+    box-sizing: border-box;
+    font-size: 14px;
+    font-family: inherit;
 }
 /* Modale de saisie : repartition en largeur + secours scroll */
 #carnet-vol-modal .modal-content {
