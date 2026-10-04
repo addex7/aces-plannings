@@ -54,7 +54,7 @@ function afficherVueComptes() {
 
     const view = document.getElementById('view-comptes');
     const tab = document.getElementById('tab-comptes');
-    if (view) view.style.display = 'block';
+    if (view) view.style.display = 'flex';
     if (tab) {
         tab.classList.add('active');
         const groupe = tab.closest('.nav-group');
