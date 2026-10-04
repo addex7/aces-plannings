@@ -93,7 +93,9 @@ function injecterControlesDateSuivi() {
         containerControles.style.cssText = `
             background-color: #f5f0e1;
             border-radius: 6px;
-            padding: 10px 16px;
+            padding: 0 16px;
+            height: 40px;
+            box-sizing: border-box;
             display: inline-flex;
             align-items: center;
             gap: 12px;

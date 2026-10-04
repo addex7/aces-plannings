@@ -307,7 +307,9 @@ img, table, video, iframe, svg {
     align-items: center;
     gap: 12px;
     background: #f5f0e1;
-    padding: 10px 16px;
+    padding: 0 16px;
+    height: 40px;
+    box-sizing: border-box;
     border-radius: 6px;
     font-weight: bold;
     font-size: 13.5px;
