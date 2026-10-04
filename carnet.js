@@ -1888,6 +1888,28 @@ function initCarnetRoute() {
             chargerCarnetRoute();
         });
     }
+    const btnRecherche = document.getElementById('btn-recherche-carnet');
+    if (btnRecherche && rechercheInput) {
+        const fermerRecherche = () => {
+            rechercheInput.classList.add('carnet-recherche-masquee');
+            if (rechercheInput.value) {
+                rechercheInput.value = '';
+                rechercheInput.dispatchEvent(new Event('input'));
+            }
+        };
+        btnRecherche.addEventListener('click', () => {
+            const masquee = rechercheInput.classList.contains('carnet-recherche-masquee');
+            if (masquee) {
+                rechercheInput.classList.remove('carnet-recherche-masquee');
+                rechercheInput.focus();
+            } else {
+                fermerRecherche();
+            }
+        });
+        rechercheInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') fermerRecherche();
+        });
+    }
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) fermerModaleCarnet();

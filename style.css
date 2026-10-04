@@ -1043,27 +1043,11 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     border-color: #1e3d59;
     background: #fff;
 }
-#carnet-machine-filtre {
-    background-color: #1e3d59;
-    color: white;
-    border: none;
-    height: 38px;
-    padding: 0 30px 0 12px;
-    width: auto;
-    min-width: 0;
-    border-radius: 6px;
-    font-weight: bold;
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
+#view-carnet .select-recherche > button:hover {
+    background-color: #17b978 !important;
 }
-#carnet-machine-filtre:hover {
-    background-color: #17b978;
+#carnet-recherche.carnet-recherche-masquee {
+    display: none;
 }
 .carnet-table {
     width: 100%;

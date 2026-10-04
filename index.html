@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=236">
+    <link rel="stylesheet" href="style.css?v=237">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -449,6 +449,8 @@
                     <div class="planning-titre-groupe">
                         <h2>Carnet de route</h2>
                         <button id="btn-legende-carnet" class="btn-legende-couleurs" type="button" title="Légende des couleurs">i</button>
+                        <button id="btn-recherche-carnet" class="btn-legende-couleurs" type="button" title="Rechercher un vol">🔍</button>
+                        <input type="search" id="carnet-recherche" class="carnet-recherche-masquee" placeholder="Rechercher un vol…" title="Recherche par pilote, instructeur, date (JJ/MM/AAAA), terrain ou horamètre">
                     </div>
                     <div class="carnet-header-controls">
                         <label for="carnet-machine-filtre">Carnet de :</label>
@@ -460,7 +462,6 @@
                             <option value="REMORQUES">Remorques</option>
                             <option value="AUTRES">Autres</option>
                         </select>
-                        <input type="search" id="carnet-recherche" placeholder="🔍 Rechercher un vol…" title="Recherche par pilote, instructeur, date (JJ/MM/AAAA), terrain ou horamètre">
                         <button id="btn-ouvrir-carnet" class="btn-primary">+ Saisir un vol</button>
                         <button id="btn-documents-carnet" class="btn-primary">Suivi documentation machine</button>
                         <button id="btn-bilan-docs-carnet" class="btn-primary" title="Bilan documentation de toutes les machines">📋 Bilan</button>
@@ -1612,15 +1613,15 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004203558"></script>
+    <script src="version.js?v=20261004205204"></script>
     <script src="app.js?v=93"></script>
-    <script src="utils.js?v=115"></script>
+    <script src="utils.js?v=116"></script>
     <script src="presences.js?v=104"></script>
     <script src="planning.js?v=217"></script>
     <script src="calendrier.js?v=91"></script>
     <script src="comptes.js?v=120"></script>
     <script src="aeronefs.js?v=142"></script>
-    <script src="carnet.js?v=194"></script>
+    <script src="carnet.js?v=195"></script>
     <script src="carnet-vol.js?v=1"></script>
     <script src="documents.js?v=91"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>

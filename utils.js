@@ -407,10 +407,12 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     wrap.className = 'select-recherche';
     wrap.style.cssText = 'position:relative; display:inline-block; min-width:200px; max-width:100%;';
 
+    const sansRecherche = select.id === 'select-instructeur-suivi' || select.id === 'carnet-machine-filtre';
+
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.style.cssText = 'width:100%; padding:8px 28px 8px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#1e3d59; font-size:14px; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
-    if (select.id === 'select-instructeur-suivi') {
+    if (sansRecherche) {
         wrap.style.cssText = 'position:relative; display:inline-block; width:auto; min-width:0; max-width:none;';
         btn.style.cssText = 'width:auto; padding:0 38px 0 14px; height:38px; border:none; border-radius:6px; background:#1e3d59; color:#fff; font-size:13px; font-weight:600; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 2px 4px rgba(0,0,0,0.1);';
     }
@@ -432,8 +434,9 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     const list = document.createElement('div');
     list.style.cssText = 'max-height:240px; overflow-y:auto;';
 
-    if (select.id === 'select-instructeur-suivi') {
-        panel.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); right:0; min-width:100%; width:auto; max-width:340px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden;';
+    if (sansRecherche) {
+        const cote = select.id === 'select-instructeur-suivi' ? 'right:0;' : 'left:0;';
+        panel.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); ' + cote + ' min-width:100%; width:auto; max-width:340px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden;';
     } else {
         panel.appendChild(search);
     }
@@ -452,7 +455,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
         const text = document.createTextNode(label() + ' ');
         const span = document.createElement('span');
         span.textContent = '▾';
-        span.style.cssText = select.id === 'select-instructeur-suivi'
+        span.style.cssText = sansRecherche
             ? 'position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.6;'
             : 'float:right; opacity:.5;';
         btn.innerHTML = '';
@@ -512,7 +515,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
         if (!count) list.innerHTML = '<div data-empty="1" style="padding:10px 12px; color:#94a3b8; font-size:13px;">Aucun résultat</div>';
     };
 
-    const ouvrir = () => { panel.style.display = 'block'; search.value = ''; renderList(); setTimeout(() => search.focus(), 0); };
+    const ouvrir = () => { panel.style.display = 'block'; search.value = ''; renderList(); if (!sansRecherche) setTimeout(() => search.focus(), 0); };
     const fermer = () => { panel.style.display = 'none'; };
 
     btn.addEventListener('click', (e) => { e.stopPropagation(); panel.style.display === 'none' ? ouvrir() : fermer(); });
@@ -545,7 +548,8 @@ function rendreSelectRecherchable(select, allowCustom = false) {
         'form-instructeur',
         'carnet-pilote',
         'carnet-instructeur',
-        'select-instructeur-suivi'
+        'select-instructeur-suivi',
+        'carnet-machine-filtre'
     ];
 
     function essayer() {
