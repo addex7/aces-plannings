@@ -652,6 +652,7 @@ img, table, video, iframe, svg {
 #view-carnet-vol > * + * { margin-top: 8px; }
 #view-documents > * + * { margin-top: 8px; }
 #view-audit > * + * { margin-top: 8px; }
+#view-messagerie > * + * { margin-top: 8px; }
 #documents-toolbar { display: flex; align-items: center; }
 #view-carnet-vol .btn-primary,
 #view-carnet-vol .select-recherche > button {
@@ -4074,7 +4075,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .messages-tabs {
     display: flex;
     gap: 8px;
-    margin: 14px 0 0;
+    margin: 0;
 }
 .messages-tab {
     padding: 8px 16px;
@@ -4096,7 +4097,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     color: #ffffff;
 }
 .messages-archive-notice {
-    margin: 10px 0 0;
+    margin: 0;
     padding: 10px 14px;
     background: #fef3c7;
     border: 1px solid #fde68a;
@@ -4111,7 +4112,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     justify-content: flex-start;
     align-items: center;
     gap: 14px;
-    margin: 10px 0 6px;
+    margin: 0;
     padding: 0 4px;
 }
 .messages-filter-select {
