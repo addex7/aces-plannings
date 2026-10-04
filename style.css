@@ -651,6 +651,7 @@ img, table, video, iframe, svg {
 #view-carnet > * + * { margin-top: 8px; }
 #view-carnet-vol > * + * { margin-top: 8px; }
 #view-documents > * + * { margin-top: 8px; }
+#view-audit > * + * { margin-top: 8px; }
 #documents-toolbar { display: flex; align-items: center; }
 #view-carnet-vol .btn-primary,
 #view-carnet-vol .select-recherche > button {
@@ -980,7 +981,11 @@ img, table, video, iframe, svg {
 }
 #view-audit .header-actions .form-control,
 #view-audit .header-actions .btn-primary {
-    height: 36px;
+    height: 40px;
+    box-sizing: border-box;
+}
+#view-audit .header-actions .select-recherche > button {
+    height: 40px !important;
     box-sizing: border-box;
 }
 .docs-grid {
@@ -3230,7 +3235,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #fff;
     border-radius: 8px;
     overflow: hidden;
-    font-size: 14px;
+    font-size: 13px;
 }
 .audit-table thead {
     background: #1e3d59;
@@ -3251,7 +3256,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .audit-date {
     white-space: nowrap;
     color: #475569;
-    font-size: 13px;
+    font-size: 12px;
 }
 .audit-user {
     font-weight: 600;
@@ -3265,7 +3270,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 .audit-detail {
     color: #64748b;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 /* --- DASHBOARD ACCUEIL PILOTE --- */
