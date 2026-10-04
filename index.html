@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=247">
+    <link rel="stylesheet" href="style.css?v=248">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -619,7 +619,12 @@
 
             <section id="view-documents" class="view-section" style="display: none;">
                 <header class="header">
-                    <h2>Bibliothèque</h2>
+                    <div class="planning-titre-groupe">
+                        <h2>Bibliothèque</h2>
+                        <button id="btn-legende-documents" class="btn-legende-couleurs" type="button" title="Légende">i</button>
+                        <button id="btn-recherche-documents" class="btn-legende-couleurs" type="button" title="Rechercher un document">🔍</button>
+                        <input type="search" id="docs-recherche" class="docs-recherche-masquee" placeholder="Rechercher un document…" title="Recherche par titre, dossier, machine ou type — ex. « CEN F-CEQZ »">
+                    </div>
                     <div id="documents-toolbar" style="display:none; gap:10px; flex-wrap:wrap;">
                         <button id="btn-new-dossier" class="btn-primary" type="button">Nouveau dossier</button>
                         <button id="btn-new-pdf" class="btn-primary" type="button">Ajouter un document</button>
@@ -1601,7 +1606,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004222722"></script>
+    <script src="version.js?v=20261004223140"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=117"></script>
     <script src="presences.js?v=104"></script>
@@ -1611,7 +1616,7 @@
     <script src="aeronefs.js?v=143"></script>
     <script src="carnet.js?v=198"></script>
     <script src="carnet-vol.js?v=3"></script>
-    <script src="documents.js?v=102"></script>
+    <script src="documents.js?v=103"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=8"></script>
     <script src="membres.js?v=112"></script>

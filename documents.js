@@ -37,6 +37,55 @@ function initDocuments() {
     const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
 
     appliquerAccesDocumentaire();
+    const btnLegende = document.getElementById('btn-legende-documents');
+    if (btnLegende && typeof afficherModaleAlerte === 'function') {
+        btnLegende.addEventListener('click', () => {
+            afficherModaleAlerte('Légende', `
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:6px;">📁 Dossiers</div>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px; font-size:13px;">
+                    <div>Cliquer sur une tuile pour ouvrir le dossier, sur le fil d'Ariane pour remonter.</div>
+                    <div>Au survol d'une tuile : <strong>✏️</strong> renommer, <strong>✕</strong> supprimer (les documents sont déplacés, jamais supprimés).</div>
+                    <div>Glisser-déposer une tuile sur un dossier (ou sur le fil d'Ariane) pour la déplacer.</div>
+                </div>
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:6px;">📄 Documents machine</div>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:14px; font-size:13px;">
+                    <div style="display:flex; align-items:center; gap:8px;"><span style="width:14px; height:14px; border-radius:50%; background:#10b981; display:inline-block; flex-shrink:0;"></span><span>Document en cours de validité (&gt; 3 mois)</span></div>
+                    <div style="display:flex; align-items:center; gap:8px;"><span style="width:14px; height:14px; border-radius:50%; background:#f97316; display:inline-block; flex-shrink:0;"></span><span>Document en fin de validité (&lt; 3 mois)</span></div>
+                    <div style="display:flex; align-items:center; gap:8px;"><span style="width:14px; height:14px; border-radius:50%; background:#dc2626; display:inline-block; flex-shrink:0;"></span><span>Document expiré</span></div>
+                </div>
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:6px;">🔍 Recherche</div>
+                <div style="font-size:13px;">Recherche multi-mots sur les titres, dossiers, machines et types de documents — ex. <strong>« CEN F-CEQZ »</strong> retrouve le Certificat d'Examen de Navigabilité du F-CEQZ.</div>
+            `, 'ℹ️');
+        });
+    }
+    const btnRecherche = document.getElementById('btn-recherche-documents');
+    const rechercheInput = document.getElementById('docs-recherche');
+    if (btnRecherche && rechercheInput) {
+        const fermerRecherche = () => {
+            rechercheInput.classList.add('docs-recherche-masquee');
+            if (rechercheInput.value) {
+                rechercheInput.value = '';
+                docsRecherche = '';
+                afficherDocuments(documentsCache);
+            }
+        };
+        btnRecherche.addEventListener('click', () => {
+            const masquee = rechercheInput.classList.contains('docs-recherche-masquee');
+            if (masquee) {
+                rechercheInput.classList.remove('docs-recherche-masquee');
+                rechercheInput.focus();
+            } else {
+                fermerRecherche();
+            }
+        });
+        rechercheInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') fermerRecherche();
+        });
+        rechercheInput.addEventListener('input', () => {
+            docsRecherche = rechercheInput.value;
+            afficherDocuments(documentsCache);
+        });
+    }
     if (btnNewPdf) btnNewPdf.addEventListener('click', () => {
         const c = document.getElementById('documents-form');
         if (c && c.style.display === 'block') cacherFormDocument();
@@ -440,6 +489,19 @@ async function chargerDocuments() {
 // [categorie, sousDossier, sousSousDossier, ...]
 let docsNavChemin = [];
 let docsDragEnCours = false;
+let docsRecherche = '';
+
+// Normalisation insensible aux accents/casse pour la recherche multi-termes
+function docsNormaliser(s) {
+    return (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Recherche multi-termes : chaque mot doit etre present dans le texte du document
+function docsRechercheTexte(q, champs) {
+    const mots = docsNormaliser(q).split(/\s+/).filter(Boolean);
+    const paille = docsNormaliser(champs.filter(Boolean).join(' '));
+    return mots.every(m => paille.includes(m));
+}
 
 // Modale de confirmation au style du site — remplace confirm() natif.
 // Renvoie une Promise<boolean>.
@@ -540,6 +602,40 @@ function afficherDocuments(records) {
     const machines = Object.keys(documentsAeronefsBibliothequeCache || {}).sort();
     if (!recordsVisibles.length && !machines.length && !(dossiersCache || []).length) {
         list.innerHTML = '<p>Aucun document pour le moment.</p>';
+        return;
+    }
+
+    // Recherche globale multi-termes : resultats plats documents + machines
+    const q = (docsRecherche || '').trim();
+    if (q) {
+        const resultatsDocs = recordsVisibles.filter(r => {
+            const f = r.fields || {};
+            return docsRechercheTexte(q, [f['Titre'], f['Description'], f['Catégorie'], f['Sous-dossier']]);
+        });
+        const resultatsMachines = [];
+        machines.forEach(machine => {
+            (documentsAeronefsBibliothequeCache[machine] || [])
+                .filter(r => r.fields && r.fields['Activé'] !== false)
+                .forEach(r => {
+                    const f = r.fields || {};
+                    const type = (typeof TYPES_DOCUMENTS_AERONEFS !== 'undefined' ? TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) : null) || { nom: f['Type de document'] };
+                    if (docsRechercheTexte(q, [machine, f['Type de document'], type.nom])) {
+                        resultatsMachines.push({ rec: r, machine });
+                    }
+                });
+        });
+        const canEdit = typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef();
+        const aujourdhui = new Date();
+        aujourdhui.setHours(0, 0, 0, 0);
+        const dans3mois = new Date(aujourdhui);
+        dans3mois.setMonth(dans3mois.getMonth() + 3);
+        const cartes = resultatsDocs.map(r => creerCarteDocument(r, docsContexteDocument(r))).join('') +
+            resultatsMachines.map(x => docsCarteMachineHtml(x.rec, x.machine, canEdit, aujourdhui, dans3mois, true)).join('');
+        const n = resultatsDocs.length + resultatsMachines.length;
+        list.innerHTML = `<div class="docs-breadcrumb">🔍 ${n} résultat${n > 1 ? 's' : ''} pour « ${docsEscAttr(q)} »</div>` +
+            (n
+                ? `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${cartes}</div>`
+                : '<p style="color:#94a3b8; font-size:13px;">Aucun document ne correspond à cette recherche.</p>');
         return;
     }
 
@@ -707,6 +803,40 @@ function docsHtmlCartes(recs) {
     return `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${recs.map(creerCarteDocument).join('')}</div>`;
 }
 
+function docsCarteMachineHtml(r, machine, canEdit, aujourdhui, dans3mois, contexte = false) {
+    const f = r.fields || {};
+    const type = (typeof TYPES_DOCUMENTS_AERONEFS !== 'undefined' ? TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) : null) || { nom: f['Type de document'] };
+    let couleur = '#10b981';
+    let dateTxt = 'Sans date de validité';
+    if (f['Date de validité']) {
+        const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
+        const dateStr = dateValid.toLocaleDateString('fr-FR');
+        if (dateValid < aujourdhui) { couleur = '#dc2626'; dateTxt = `Expiré le ${dateStr}`; }
+        else if (dateValid < dans3mois) { couleur = '#f97316'; dateTxt = `Expire le ${dateStr}`; }
+        else dateTxt = `Valide jusqu'au ${dateStr}`;
+    }
+    const lien = f['Lien']
+        ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir le document ↗</a>`
+        : `<span style="font-size:13px; color:#94a3b8;">Aucun fichier lié</span>`;
+    return `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; display:flex; flex-direction:column;">
+            <h4 style="margin:0 0 6px; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block; flex-shrink:0;"></span>
+                ${type.nom}
+            </h4>
+            ${contexte ? `<div style="font-size:12px; color:#64748b; margin:-2px 0 6px;">🛩️ ${docsEscAttr(machine)}</div>` : ''}
+            <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${dateTxt}</p>
+            <div style="margin-top:auto;">
+                ${lien}
+                ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
+                    <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="modifierDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Modifier</button>
+                    <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Supprimer</button>
+                </div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
 function docsHtmlMachine(machine) {
     const docs = (documentsAeronefsBibliothequeCache[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
     if (!docs.length) return '<p style="color:#94a3b8; font-size:13px;">Aucun document actif.</p>';
@@ -715,38 +845,7 @@ function docsHtmlMachine(machine) {
     aujourdhui.setHours(0, 0, 0, 0);
     const dans3mois = new Date(aujourdhui);
     dans3mois.setMonth(dans3mois.getMonth() + 3);
-    const cartes = docs.map(r => {
-        const f = r.fields || {};
-        const type = (typeof TYPES_DOCUMENTS_AERONEFS !== 'undefined' ? TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) : null) || { nom: f['Type de document'] };
-        let couleur = '#10b981';
-        let dateTxt = 'Sans date de validité';
-        if (f['Date de validité']) {
-            const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
-            const dateStr = dateValid.toLocaleDateString('fr-FR');
-            if (dateValid < aujourdhui) { couleur = '#dc2626'; dateTxt = `Expiré le ${dateStr}`; }
-            else if (dateValid < dans3mois) { couleur = '#f97316'; dateTxt = `Expire le ${dateStr}`; }
-            else dateTxt = `Valide jusqu'au ${dateStr}`;
-        }
-        const lien = f['Lien']
-            ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir le document ↗</a>`
-            : `<span style="font-size:13px; color:#94a3b8;">Aucun fichier lié</span>`;
-        return `
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; display:flex; flex-direction:column;">
-                <h4 style="margin:0 0 6px; color:#0f172a; display:flex; align-items:center; gap:8px;">
-                    <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block; flex-shrink:0;"></span>
-                    ${type.nom}
-                </h4>
-                <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${dateTxt}</p>
-                <div style="margin-top:auto;">
-                    ${lien}
-                    ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
-                        <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="modifierDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Modifier</button>
-                        <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Supprimer</button>
-                    </div>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
+    const cartes = docs.map(r => docsCarteMachineHtml(r, machine, canEdit, aujourdhui, dans3mois)).join('');
     return `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${cartes}</div>`;
 }
 
@@ -774,12 +873,20 @@ async function supprimerDocumentAeronefBiblio(id, machine) {
     await supprimerDocumentAeronef(record);
 }
 
-function creerCarteDocument(rec) {
+function docsContexteDocument(rec) {
+    const f = rec.fields || {};
+    const cat = f['Catégorie'] || 'Autre';
+    const sous = (f['Sous-dossier'] || '').split('/').filter(Boolean).join(' › ');
+    return `📁 ${cat}${sous ? ' › ' + sous : ''}`;
+}
+
+function creerCarteDocument(rec, contexte = '') {
     const f = rec.fields || {};
     const canEdit = isDocumentaliste();
     return `
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; display:flex; flex-direction:column;">
             <h4 style="margin:0 0 6px; color:#0f172a;">${f['Titre'] || 'Sans titre'}</h4>
+            ${contexte ? `<div style="font-size:12px; color:#64748b; margin:-2px 0 6px;">${contexte}</div>` : ''}
             <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${f['Description'] || ''}</p>
             <div style="margin-top:auto;">
                 <a href="${f['Lien'] || '#'}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">Ouvrir le document ↗</a>
