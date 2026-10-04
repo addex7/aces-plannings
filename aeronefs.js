@@ -92,13 +92,13 @@ function injecterControlesDateSuivi() {
         
         containerControles.style.cssText = `
             background-color: #f5f0e1;
-            border-radius: 20px;
-            padding: 5px 12px;
+            border-radius: 6px;
+            padding: 10px 16px;
             display: inline-flex;
             align-items: center;
             gap: 12px;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13.5px;
         `;
 
         containerControles.innerHTML = `

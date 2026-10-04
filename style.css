@@ -307,10 +307,10 @@ img, table, video, iframe, svg {
     align-items: center;
     gap: 12px;
     background: #f5f0e1;
-    padding: 5px 12px;
-    border-radius: 20px;
+    padding: 10px 16px;
+    border-radius: 6px;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 13.5px;
 }
 .btn-nav {
     background: none;
