@@ -4006,6 +4006,19 @@ async function chargerVolsInitiation() {
 }
 
 function initGestionnaireVolsInitiation() {
+    const btnLegendeVI = document.getElementById('btn-legende-vi');
+    if (btnLegendeVI) {
+        btnLegendeVI.addEventListener('click', () => {
+            const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
+            afficherModaleAlerte('Légende des couleurs', `
+                ${item('#00adb5', 'VIP / créneau disponible')}
+                ${item('#f59e0b', 'VIULM (F-JVIO)')}
+                ${item('#3f51b5', 'VIA (F-GASB) / vol attribué')}
+                ${item('#f97316', 'Vol à pourvoir')}
+                <div class="legende-ligne"><span class="legende-pastille" style="background:repeating-linear-gradient(45deg, #e2e8f0, #e2e8f0 4px, #f1f5f9 4px, #f1f5f9 8px); border-left-color:#cbd5e1;"></span><span>Créneau bloqué / conflit machine</span></div>
+            `, 'ℹ️');
+        });
+    }
     const btnDispos = document.getElementById('btn-initiation-dispos');
     const btnPris = document.getElementById('btn-initiation-pris');
     const btnCreneaux = document.getElementById('btn-initiation-creneaux');
