@@ -76,30 +76,75 @@ async function chargerDossiers() {
 function populerDossiers() {
     const select = document.getElementById('document-dossier');
     if (!select) return;
-    const current = select.dataset.selected || '';
+    const selCat = select.dataset.catSelectionnee || '';
+    const selSous = select.dataset.sousSelectionne || '';
     select.innerHTML = '<option value="">-- Choisir un dossier --</option>';
-    dossiersCache.forEach(rec => {
-        const nom = rec.fields['Nom'] || '';
-        if (!nom) return;
+
+    // Sous-dossiers par dossier : table Dossiers (Parent) + valeurs historiques des documents
+    const sousParCat = {};
+    const ajouterSous = (cat, sous) => {
+        if (!cat || !sous) return;
+        if (!sousParCat[cat]) sousParCat[cat] = [];
+        if (!sousParCat[cat].includes(sous)) sousParCat[cat].push(sous);
+    };
+    (dossiersCache || []).forEach(rec => {
+        const f = rec.fields || {};
+        ajouterSous(f['Parent'] || '', f['Nom'] || '');
+    });
+    (documentsCache || []).forEach(rec => {
+        const f = rec.fields || {};
+        ajouterSous(f['Catégorie'] || '', f['Sous-dossier'] || '');
+    });
+
+    // Dossiers racine : table Dossiers (sans Parent) + catégories des documents
+    const cats = new Set();
+    (dossiersCache || []).forEach(rec => {
+        const f = rec.fields || {};
+        if (f['Nom'] && !f['Parent']) cats.add(f['Nom']);
+    });
+    (documentsCache || []).forEach(rec => {
+        const c = (rec.fields || {})['Catégorie'];
+        if (c) cats.add(c);
+    });
+
+    [...cats].sort((a, b) => a.localeCompare(b, 'fr')).forEach(cat => {
         const opt = document.createElement('option');
-        opt.value = nom;
-        opt.textContent = nom;
-        if (nom === current) opt.selected = true;
+        opt.textContent = cat;
+        opt.dataset.cat = cat;
+        opt.dataset.sous = '';
+        if (cat === selCat && !selSous) opt.selected = true;
         select.appendChild(opt);
+        (sousParCat[cat] || []).sort((a, b) => a.localeCompare(b, 'fr')).forEach(sous => {
+            const o = document.createElement('option');
+            o.textContent = `   ↳ ${sous}`;
+            o.dataset.cat = cat;
+            o.dataset.sous = sous;
+            if (cat === selCat && sous === selSous) o.selected = true;
+            select.appendChild(o);
+        });
     });
     const autre = document.createElement('option');
-    autre.value = 'Autre';
     autre.textContent = 'Autre';
-    if ('Autre' === current) autre.selected = true;
+    autre.dataset.cat = 'Autre';
+    autre.dataset.sous = '';
+    if ('Autre' === selCat && !selSous) autre.selected = true;
     select.appendChild(autre);
+}
+
+function dossierCourantBibliotheque() {
+    const cat = docsNavChemin[0] || '';
+    return cat.startsWith('⚙️ ') ? '' : cat;
 }
 
 function ouvrirFormDossier() {
     const formContainer = document.getElementById('dossier-form');
     const form = document.getElementById('form-dossier');
     const input = document.getElementById('dossier-nom');
+    const title = document.getElementById('dossier-form-title');
     if (!formContainer) return;
     if (form) form.reset();
+    const cat = dossierCourantBibliotheque();
+    if (title) title.textContent = cat ? `Nouveau sous-dossier dans « ${cat} »` : 'Nouveau dossier';
     cacherFormDocument();
     formContainer.style.display = 'block';
     if (input) input.focus();
@@ -116,17 +161,21 @@ async function enregistrerDossier(e) {
     const input = document.getElementById('dossier-nom');
     const nom = input ? input.value.trim() : '';
     if (!nom) { alert('Nom du dossier requis.'); return; }
+    const parent = dossierCourantBibliotheque();
+    const fields = { 'Nom': nom };
+    if (parent) fields['Parent'] = parent;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOSSIERS)}`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ records: [{ fields: { 'Nom': nom } }] })
+            body: JSON.stringify({ records: [{ fields }] })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         if (input) input.value = '';
         cacherFormDossier();
         await chargerDossiers();
+        if (typeof documentsCache !== 'undefined') afficherDocuments(documentsCache);
     } catch (err) {
         console.error(err);
         alert(`Erreur lors de la création du dossier : ${err.message}`);
@@ -161,7 +210,7 @@ async function chargerDocuments() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         documentsCache = data.records || [];
-        await chargerDocumentsAeronefsBibliotheque();
+        await Promise.all([chargerDossiers(), chargerDocumentsAeronefsBibliotheque()]);
         afficherDocuments(documentsCache);
     } catch (err) {
         console.error(err);
@@ -190,13 +239,26 @@ function afficherDocuments(records) {
     if (!list) return;
     const recordsVisibles = records.filter(rec => !estDocumentMembre(rec));
     const machines = Object.keys(documentsAeronefsBibliothequeCache || {}).sort();
-    if (!recordsVisibles.length && !machines.length) {
+    if (!recordsVisibles.length && !machines.length && !(dossiersCache || []).length) {
         list.innerHTML = '<p>Aucun document pour le moment.</p>';
         return;
     }
 
     // Arborescence : categorie -> { sous-dossiers -> docs, docs racine }
+    // Les dossiers et sous-dossiers de la table Dossiers apparaissent meme vides
     const arbre = {};
+    (dossiersCache || []).forEach(rec => {
+        const f = rec.fields || {};
+        const nom = f['Nom'] || '';
+        if (!nom) return;
+        const parent = f['Parent'] || '';
+        if (!parent) {
+            if (!arbre[nom]) arbre[nom] = { sous: {}, docs: [] };
+        } else {
+            if (!arbre[parent]) arbre[parent] = { sous: {}, docs: [] };
+            if (!arbre[parent].sous[nom]) arbre[parent].sous[nom] = [];
+        }
+    });
     recordsVisibles.forEach(rec => {
         const cat = (rec.fields || {})['Catégorie'] || 'Autre';
         const sous = (rec.fields || {})['Sous-dossier'] || '';
@@ -257,6 +319,14 @@ function afficherDocuments(records) {
             docsAllerA(parseInt(b.dataset.idx, 10));
         });
     });
+
+    // Bouton contextualise : dossier a la racine, sous-dossier a l'interieur
+    const btnDossier = document.getElementById('btn-new-dossier');
+    if (btnDossier) {
+        const dansMachine = (docsNavChemin[0] || '').startsWith('⚙️ ');
+        btnDossier.style.display = dansMachine ? 'none' : '';
+        btnDossier.textContent = docsNavChemin.length ? 'Nouveau sous-dossier' : 'Nouveau dossier';
+    }
 }
 
 function docsAllerA(index) {
@@ -384,14 +454,20 @@ function ouvrirFormDocument(id = null) {
             if (rec) {
                 const f = rec.fields;
                 document.getElementById('document-titre').value = f['Titre'] || '';
-                if (select) select.dataset.selected = f['Catégorie'] || '';
+                if (select) {
+                    select.dataset.catSelectionnee = f['Catégorie'] || '';
+                    select.dataset.sousSelectionne = f['Sous-dossier'] || '';
+                }
                 populerDossiers();
-                document.getElementById('document-sous-dossier').value = f['Sous-dossier'] || '';
                 document.getElementById('document-lien').value = f['Lien'] || '';
                 document.getElementById('document-description').value = f['Description'] || '';
             }
         } else {
-            if (select) select.dataset.selected = '';
+            if (select) {
+                const cat = dossierCourantBibliotheque();
+                select.dataset.catSelectionnee = cat;
+                select.dataset.sousSelectionne = cat ? (docsNavChemin[1] || '') : '';
+            }
             populerDossiers();
             const input = document.getElementById('document-titre');
             if (input) input.focus();
@@ -412,21 +488,23 @@ async function enregistrerDocument(e) {
 
     const id = document.getElementById('document-id').value;
     const titre = document.getElementById('document-titre').value.trim();
-    const dossier = document.getElementById('document-dossier').value.trim();
-    const sousDossier = document.getElementById('document-sous-dossier').value.trim();
+    const selectDossier = document.getElementById('document-dossier');
+    const optSel = selectDossier ? selectDossier.options[selectDossier.selectedIndex] : null;
+    const dossier = (optSel && optSel.dataset.cat) || '';
+    const sousDossier = (optSel && optSel.dataset.sous) || '';
     const lien = document.getElementById('document-lien').value.trim();
     const description = document.getElementById('document-description').value.trim();
 
-    if (!titre || !lien) { alert('Le titre et le lien sont obligatoires.'); return; }
+    if (!titre || !lien) { alert('Le titre et le fichier sont obligatoires.'); return; }
     if (!dossier) { alert('Veuillez choisir un dossier.'); return; }
 
     const fields = {
         'Titre': titre,
         'Catégorie': dossier,
+        'Sous-dossier': sousDossier,
         'Lien': lien,
         'Description': description
     };
-    if (sousDossier) fields['Sous-dossier'] = sousDossier;
     if (!id) {
         fields['Auteur'] = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
     }

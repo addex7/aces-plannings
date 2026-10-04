@@ -621,8 +621,8 @@
                 <header class="header">
                     <h2>Bibliothèque</h2>
                     <div id="documents-toolbar" style="display:none; gap:10px; flex-wrap:wrap;">
-                        <button id="btn-new-dossier" class="btn-primary" type="button">+ Nouveau dossier</button>
-                        <button id="btn-new-pdf" class="btn-primary" type="button">+ Ajouter un document</button>
+                        <button id="btn-new-dossier" class="btn-primary" type="button">Nouveau dossier</button>
+                        <button id="btn-new-pdf" class="btn-primary" type="button">Ajouter un document</button>
                     </div>
                 </header>
                 <div id="dossier-form" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:15px; margin-bottom:20px;">
@@ -649,23 +649,12 @@
                         <div class="form-group">
                             <label for="document-dossier">Dossier</label>
                             <select id="document-dossier" required></select>
-                            <small style="color:#64748b; display:block; margin-top:4px;">Utilisez « Nouveau dossier » pour en créer un.</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="document-sous-dossier">Sous-dossier</label>
-                            <input type="text" id="document-sous-dossier" placeholder="Nom du sous-dossier (optionnel)">
-                            <small style="color:#64748b; display:block; margin-top:4px;">Laissez vide pour le dossier principal.</small>
                         </div>
                         <div class="form-group">
                             <label for="document-fichier">Fichier</label>
                             <input type="file" id="document-fichier" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
-                            <small style="color:#64748b; display:block; margin-top:4px;">Laissez vide si vous utilisez un lien.</small>
                         </div>
-                        <div class="form-group">
-                            <label for="document-lien" id="document-lien-label">Lien du document</label>
-                            <input type="text" id="document-lien" required placeholder="https://...">
-                            <small id="document-lien-help" style="color:#64748b; display:block; margin-top:4px;">Collez le lien public, ou uploadez un fichier ci-dessus.</small>
-                        </div>
+                        <input type="hidden" id="document-lien">
                         <div class="form-group">
                             <label for="document-description">Description</label>
                             <textarea id="document-description" rows="3"></textarea>
@@ -1612,7 +1601,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004215437"></script>
+    <script src="version.js?v=20261004220131"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=117"></script>
     <script src="presences.js?v=104"></script>
@@ -1622,7 +1611,7 @@
     <script src="aeronefs.js?v=143"></script>
     <script src="carnet.js?v=198"></script>
     <script src="carnet-vol.js?v=3"></script>
-    <script src="documents.js?v=94"></script>
+    <script src="documents.js?v=95"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=8"></script>
     <script src="membres.js?v=112"></script>
