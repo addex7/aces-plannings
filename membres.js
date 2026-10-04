@@ -434,12 +434,14 @@ async function chargerUtilisateurs() {
                 <td>${f['Mail'] || ''}</td>
                 <td>${f['Téléphone'] || ''}</td>
                 <td class="roles-cell">${rolesText}</td>
-                <td>${f['Identifiant'] || ''}</td>
+                <td>${f['Identifiant'] || (canDelete ? `<button type="button" class="btn-invit" data-id="${r.id}" title="Renvoyer le mail d'invitation">✉️ Invitation</button>` : '')}</td>
                 <td class="membre-actions">${canDelete ? `<button type="button" class="membre-delete" data-id="${r.id}" title="Supprimer">&times;</button>` : ''}</td>
             `;
             tr.addEventListener('click', () => ouvrirSuiviMembre(r.id));
             const delBtn = tr.querySelector('.membre-delete');
             if (delBtn) delBtn.addEventListener('click', (e) => { e.stopPropagation(); supprimerMembreDepuisListe(r.id, nomComplet); });
+            const invBtn = tr.querySelector('.btn-invit');
+            if (invBtn) invBtn.addEventListener('click', (e) => { e.stopPropagation(); renvoyerInvitation(r); });
             tbody.appendChild(tr);
         });
     } catch (err) {
@@ -716,6 +718,16 @@ function afficherInvitation(record, email) {
             setStatus('Service email non disponible.');
         }
     });
+}
+
+function renvoyerInvitation(record) {
+    const f = record.fields || {};
+    const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+    if (!confirm(`Renvoyer le mail d'invitation à ${nomComplet} (${f['Mail'] || 'aucun email'}) ?`)) return;
+    afficherInvitation(record);
+    const zone = document.getElementById('membre-invitation');
+    if (zone) zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (typeof enregistrerAudit === 'function') enregistrerAudit('Renvoi invitation', nomComplet, `Mail : ${f['Mail'] || ''}`, 'Membres');
 }
 
 function ouvrirModaleMembre(record) {

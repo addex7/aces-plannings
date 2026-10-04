@@ -2144,6 +2144,21 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     min-width: 100px;
     padding: 10px;
 }
+.club-evenements-row .glider-presence-section > div:first-child h3 {
+    flex: 1;
+    margin-right: 12px;
+}
+.btn-invit {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    color: #3730a3;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-invit:hover { background: #e0e7ff; }
 
 /* --- ACCUEIL MEMBRE --- */
 #view-accueil-membre .accueil-profil {
@@ -2278,7 +2293,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 .header .bandeau-informatif {
     flex: 1;
-    margin: 0 0 0 24px;
+    margin: 0 24px;
     padding: 10px 14px;
     font-size: 13px;
 }
@@ -2777,6 +2792,9 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     border-radius: 16px;
     padding: 22px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    min-height: calc(100vh - 240px);
+    display: flex;
+    flex-direction: column;
 }
 .comptes-list-header {
     display: flex;
@@ -2854,7 +2872,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .membre-actions .membre-delete:hover { color: #dc2626; }
 .comptes-list-footer {
     text-align: center;
-    margin-top: 14px;
+    margin-top: auto;
+    padding-top: 14px;
 }
 .comptes-voir-toutes {
     background: transparent;
@@ -3182,7 +3201,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 
 /* --- DASHBOARD ACCUEIL PILOTE --- */
 .accueil-pilote-container {
-    padding: 24px;
+    padding: 24px 0 0;
 }
 .accueil-pilote-header {
     margin-bottom: 24px;
