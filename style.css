@@ -649,6 +649,12 @@ img, table, video, iframe, svg {
 #view-aeronefs > * + * { margin-top: 8px; }
 #view-instructeur > * + * { margin-top: 8px; }
 #view-carnet > * + * { margin-top: 8px; }
+#view-carnet-vol > * + * { margin-top: 8px; }
+#view-carnet-vol .btn-primary,
+#view-carnet-vol .select-recherche > button {
+    height: 40px !important;
+    box-sizing: border-box;
+}
 .glider-presence-section h3 {
     margin-top: 0;
     color: #1e3d59;
