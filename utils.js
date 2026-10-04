@@ -411,7 +411,8 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     btn.type = 'button';
     btn.style.cssText = 'width:100%; padding:8px 28px 8px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#1e3d59; font-size:14px; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
     if (select.id === 'select-instructeur-suivi') {
-        btn.style.cssText = 'width:100%; padding:0 28px 0 14px; height:38px; border:none; border-radius:6px; background:#1e3d59; color:#fff; font-size:13px; font-weight:600; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 2px 4px rgba(0,0,0,0.1);';
+        wrap.style.cssText = 'position:relative; display:inline-block; width:auto; min-width:0;';
+        btn.style.cssText = 'width:auto; padding:0 28px 0 14px; height:38px; border:none; border-radius:6px; background:#1e3d59; color:#fff; font-size:13px; font-weight:600; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 2px 4px rgba(0,0,0,0.1);';
     }
 
     const caret = document.createElement('span');
