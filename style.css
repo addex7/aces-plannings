@@ -2802,7 +2802,6 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     gap: 6px;
 }
 .comptes-btn-ajouter:hover { background: #15803d; }
-.comptes-btn-ajouter::after { content: '+'; font-size: 18px; }
 
 .comptes-list-card {
     background: #fff;
