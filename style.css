@@ -2755,6 +2755,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     width: auto;
     flex-shrink: 0;
     padding: 10px 20px;
+    height: 40px;
 }
 .comptes-form-title {
     margin: 0 0 18px;
@@ -2782,6 +2783,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     color: #fff;
     font-size: 14px;
     box-sizing: border-box;
+    height: 40px;
 }
 .comptes-form-card input::placeholder { color: rgba(255,255,255,0.45); }
 .comptes-btn-ajouter {
