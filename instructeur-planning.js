@@ -382,7 +382,7 @@ function rendreLigneInstructeur(tr, dateJour, disposJour, reservationsJour, nom)
     tdCell.style.cssText = 'padding: 4px; height: 46px; vertical-align: middle;';
 
     const inner = document.createElement('div');
-    inner.style.cssText = 'display: block; position: relative; height: 100%; width: 100%;';
+    inner.style.cssText = 'display: block; position: relative; height: 100%; width: 100%; border-radius: 6px; overflow: hidden;';
 
     ajouterFondNuit(inner, dateJour);
 
