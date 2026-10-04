@@ -4028,9 +4028,6 @@ function initGestionnaireVolsInitiation() {
                 ${bouton('#3f51b5', 'Décaler le vol', 'Déplacer la réservation sur un autre créneau')}
                 ${bouton('#f97316', 'Libérer', 'Retirer le passager et remettre le créneau à disposition')}
                 ${bouton('#dc2626', '✕', 'Supprimer le vol ou le créneau (Gestion VI)')}
-                <div class="legende-ligne" style="gap:12px;">
-                    <span style="flex-shrink:0; min-width:116px; display:flex; justify-content:center;"><span style="width:14px; height:14px; border:1.5px solid #94a3b8; border-radius:3px; display:inline-block; background:#fff;"></span></span>
-                    <span style="font-size:12.5px;">Sélectionner le créneau pour une suppression groupée</span></div>
             `, 'ℹ️');
         });
     }
