@@ -4337,9 +4337,23 @@ function piloteAutoriseSurTypeVI(rolesMembre, typeVI) {
 
 function updateGestionVI() {
     const toolbar = document.getElementById('gestion-vi-toolbar');
-    if (toolbar) toolbar.style.display = hasRoleGestionVI() ? 'block' : 'none';
+    const btnToggle = document.getElementById('btn-creneaux-vi-toggle');
+    const autorise = hasRoleGestionVI();
+    if (btnToggle) {
+        btnToggle.style.display = autorise ? '' : 'none';
+        if (!btnToggle.dataset.ready) {
+            btnToggle.dataset.ready = '1';
+            btnToggle.addEventListener('click', () => {
+                if (!toolbar) return;
+                const ouvert = toolbar.style.display === 'block';
+                toolbar.style.display = ouvert ? 'none' : 'block';
+                btnToggle.textContent = ouvert ? '+ Créer des créneaux' : '− Masquer le formulaire';
+            });
+        }
+    }
+    if (toolbar && !autorise) toolbar.style.display = 'none';
     const tabCreneaux = document.getElementById('btn-initiation-creneaux');
-    if (tabCreneaux) tabCreneaux.style.display = hasRoleGestionVI() ? 'inline-block' : 'none';
+    if (tabCreneaux) tabCreneaux.style.display = autorise ? 'inline-block' : 'none';
 }
 
 const listeDatesGV = [];

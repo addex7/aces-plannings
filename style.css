@@ -645,6 +645,7 @@ img, table, video, iframe, svg {
    celui entre les sections de presence (la vue s'affiche en
    block, le gap flex ne s'applique pas -> marges) */
 #view-planning > * + * { margin-top: 8px; }
+#view-initiation > * + * { margin-top: 8px; }
 .glider-presence-section h3 {
     margin-top: 0;
     color: #1e3d59;
