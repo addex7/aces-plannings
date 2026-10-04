@@ -642,8 +642,9 @@ img, table, video, iframe, svg {
     gap: 12px;
 }
 /* Meme espacement entre les blocs de la vue planning que
-   celui entre les sections de presence */
-#view-planning.view-section { gap: 12px; }
+   celui entre les sections de presence (la vue s'affiche en
+   block, le gap flex ne s'applique pas -> marges) */
+#view-planning > * + * { margin-top: 12px; }
 .glider-presence-section h3 {
     margin-top: 0;
     color: #1e3d59;
