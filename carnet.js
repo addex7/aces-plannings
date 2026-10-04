@@ -112,6 +112,43 @@ function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heur
 
 // Cle de tri carnet : date + heure de decollage (les lignes de
 // maintenance n'ont pas de "Heure départ" : leur Date est un datetime ISO).
+function ouvrirLegendeCodeJVIO(type) {
+    const ligne = (code, label) => `<div class="legende-ligne"><strong style="min-width:110px; color:#1e3d59;">${code}</strong><span>${label}</span></div>`;
+    if (type === 'fonction') {
+        afficherModaleAlerte('Fonction — codes utilisés', `
+            ${ligne('P', 'Pilote')}
+            ${ligne('PCdB', 'Pilote + Commandant de bord')}
+            ${ligne('PAX', 'Passager')}
+            ${ligne('EP', 'Élève pilote')}
+            ${ligne('I', 'Instructeur')}
+            ${ligne('ICdB', 'Instructeur + Commandant de bord')}
+            ${ligne('EX', 'Examinateur')}
+            <div style="margin-top:8px; font-size:12px; color:#64748b;">Combinaisons possibles, ex. P/EP</div>
+        `, '👤');
+    } else {
+        afficherModaleAlerte('Nature du vol — codes utilisés', `
+            ${ligne('local', 'Vol local')}
+            ${ligne('voyage', 'Voyage')}
+            ${ligne('REV', 'Révision')}
+            ${ligne('Instruction', 'Instruction')}
+            ${ligne('VLO', 'VLO')}
+            ${ligne('VLD', 'VLD')}
+            ${ligne('Act. Part.', 'Activité Particulière — à préciser')}
+            ${ligne('autre', 'Autre')}
+        `, '📋');
+    }
+}
+
+function brancherLegendesThJVIO(thead) {
+    if (!thead) return;
+    thead.querySelectorAll('.th-info-jvio').forEach(b => {
+        b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ouvrirLegendeCodeJVIO(b.dataset.legende);
+        });
+    });
+}
+
 function cleDateHeureCarnet(r) {
     const f = r.fields || {};
     if (r._estMaintenance) {
@@ -130,8 +167,8 @@ function genererHeaderCarnet(isJVIO) {
             <tr>
                 <th rowspan="2">Date</th>
                 <th colspan="2" class="sub-header">Équipage</th>
-                <th rowspan="2" style="white-space: normal;">Fonction<br><small>P = Pilote<br>PCdB = PIL.+CdB<br>PAX = Passager<br>EP = Élève Pilote<br>I = Instructeur<br>ICdB = Instr.+CdB<br>EX = Examinateur...</small></th>
-                <th rowspan="2" style="white-space: normal;">Nature du vol<br><small>local<br>voyage<br>REV<br>Instruction<br>VLO<br>VLD<br>Activité Particulière : (préciser laquelle)<br>autre,...</small></th>
+                <th rowspan="2" style="white-space: normal;">Fonction <button type="button" class="th-info-jvio" data-legende="fonction" title="Signification des codes">i</button></th>
+                <th rowspan="2" style="white-space: normal;">Nature du vol <button type="button" class="th-info-jvio" data-legende="nature" title="Signification des codes">i</button></th>
                 <th colspan="2" class="sub-header">Lieu<br><small>(LFxxxx ou OACI)</small></th>
                 <th colspan="2" class="sub-header">Heures<br><small>(HH:mm en H.Loc)</small></th>
                 <th class="sub-header">Cumul heures</th>
@@ -1099,6 +1136,7 @@ function afficherCarnet(records) {
     const tableContainer = table ? table.closest('.carnet-table-container') : null;
     if (table) table.style.minWidth = isJVIO ? '1400px' : '1100px';
     if (thead) thead.innerHTML = genererHeaderCarnet(isJVIO);
+    brancherLegendesThJVIO(thead);
     if (tfoot) tfoot.remove();
     if (tableContainer) {
         const existingPagination = tableContainer.querySelector('.carnet-pagination');
@@ -1413,6 +1451,7 @@ async function chargerCarnetRoute() {
     const thead = table ? table.querySelector('thead') : null;
     if (table) table.style.minWidth = isJVIO ? '1400px' : '1100px';
     if (thead) thead.innerHTML = genererHeaderCarnet(isJVIO);
+    brancherLegendesThJVIO(thead);
     if (tbody) tbody.innerHTML = `<tr><td colspan="${colspan}" class="carnet-empty">Chargement du carnet de route...</td></tr>`;
     try {
         const url = `${API_BASE}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc&pageSize=100`;

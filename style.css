@@ -1660,6 +1660,30 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-weight: 400;
     opacity: 0.9;
 }
+.th-info-jvio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.85);
+    background: transparent;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    font-style: italic;
+    font-family: Georgia, 'Times New Roman', serif;
+    cursor: pointer;
+    vertical-align: middle;
+    margin-left: 5px;
+    padding: 0;
+    line-height: 1;
+    transition: background 0.2s;
+}
+.th-info-jvio:hover {
+    background: rgba(255,255,255,0.25);
+}
 .carnet-table tbody td {
     border-bottom: 1px solid #e2e8f0;
 }
