@@ -53,6 +53,9 @@ function initBoutonDisponibiliteInstructeur() {
                 ${titre('🎨 Couleurs des vols')}
                 ${item('#ff6e40', 'Vol privé')}
                 ${item('#3b82f6', "Vol d'instruction")}
+                ${titre('👨‍✈️ Disponibilités instructeurs')}
+                ${item('rgba(34,197,94,0.45)', 'Instructeur disponible')}
+                ${item('rgba(239,68,68,0.45)', 'Instructeur indisponible')}
             `, 'ℹ️');
         });
     }
