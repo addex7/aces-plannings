@@ -2148,6 +2148,9 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     flex: 1;
     margin-right: 12px;
 }
+.club-evenements-row #btn-creer-evenement {
+    margin-top: -15px;
+}
 .btn-invit {
     background: #eef2ff;
     border: 1px solid #c7d2fe;
