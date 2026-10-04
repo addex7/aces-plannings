@@ -1163,7 +1163,7 @@ function initSuiviDocumentsAeronefs() {
     if (!document.getElementById('btn-bilan-docs-aeronefs')) {
         const btnBilan = document.createElement('button');
         btnBilan.id = 'btn-bilan-docs-aeronefs';
-        btnBilan.className = 'btn-secondary aeronef-ctl';
+        btnBilan.className = 'btn-primary aeronef-ctl';
         btnBilan.textContent = '📋 Bilan';
         btnBilan.title = 'Bilan documentation de toutes les machines';
         btnBilan.addEventListener('click', () => { creerModaleBilanDocuments(); ouvrirBilanDocumentsAeronefs(); });
