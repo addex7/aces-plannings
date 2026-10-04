@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=238">
+    <link rel="stylesheet" href="style.css?v=239">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -515,22 +515,18 @@
             <section id="view-carnet-vol" class="view-section" style="display: none;">
                 <header class="header">
                     <div>
-                        <h2>Carnet de vol — <span id="carnet-vol-pilote-nom"></span></h2>
+                        <div class="planning-titre-groupe">
+                            <h2>Carnet de vol — <span id="carnet-vol-pilote-nom"></span></h2>
+                            <button id="btn-legende-carnet-vol" class="btn-legende-couleurs" type="button" title="Légende">i</button>
+                        </div>
                         <p class="header-sub">Vols du club synchronisés automatiquement depuis les carnets de route + vols extérieurs saisis par le pilote.</p>
                     </div>
                     <div class="carnet-header-controls">
-                        <label for="carnet-vol-pilote-select" id="carnet-vol-pilote-label" style="display:none;">Pilote :</label>
-                        <select id="carnet-vol-pilote-select" class="machine-selector" style="display:none;"></select>
-                        <label for="carnet-vol-machine-select" id="carnet-vol-machine-label">Machine :</label>
-                        <select id="carnet-vol-machine-select" class="machine-selector"><option value="">Toutes</option></select>
+                        <select id="carnet-vol-pilote-select" style="display:none;"></select>
+                        <select id="carnet-vol-machine-select"><option value="">Toutes les machines</option></select>
                         <button id="btn-ajouter-vol-manuel" class="btn-primary" style="display:none;">+ Ajouter un vol</button>
                     </div>
                 </header>
-
-                <div class="carnet-vol-legende">
-                    <span class="cv-legende-item"><span class="cv-badge cv-badge-club">Club</span> saisi automatiquement depuis un carnet de route machine</span>
-                    <span class="cv-legende-item"><span class="cv-badge cv-badge-manuel">Manuel</span> saisi à la main par le pilote</span>
-                </div>
 
                 <div class="carnet-table-container">
                     <table class="carnet-table carnet-vol-table">
@@ -1463,6 +1459,7 @@
                     </div>
                 </div>
                 <div class="nr-footer">
+                    <button type="button" id="cv-btn-supprimer" style="display:none; background:#dc2626; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600; margin-right:auto;">🗑️ Supprimer</button>
                     <button type="button" class="nr-btn-cancel" onclick="document.getElementById('carnet-vol-modal').style.display='none'">Annuler</button>
                     <button type="submit" class="nr-btn-save"><span class="nr-icon-save">💾</span> Enregistrer</button>
                 </div>
@@ -1613,16 +1610,16 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004210308"></script>
+    <script src="version.js?v=20261004211130"></script>
     <script src="app.js?v=93"></script>
-    <script src="utils.js?v=116"></script>
+    <script src="utils.js?v=117"></script>
     <script src="presences.js?v=104"></script>
     <script src="planning.js?v=217"></script>
     <script src="calendrier.js?v=91"></script>
     <script src="comptes.js?v=120"></script>
     <script src="aeronefs.js?v=142"></script>
     <script src="carnet.js?v=196"></script>
-    <script src="carnet-vol.js?v=1"></script>
+    <script src="carnet-vol.js?v=2"></script>
     <script src="documents.js?v=91"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=8"></script>

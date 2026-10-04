@@ -194,7 +194,6 @@ async function cvChargerMembres() {
 
 async function cvPeuplerSelectPilotes() {
     const select = document.getElementById('carnet-vol-pilote-select');
-    const label = document.getElementById('carnet-vol-pilote-label');
     if (!select) return;
     const membres = await cvChargerMembres();
     select.innerHTML = membres.map(m =>
@@ -206,14 +205,16 @@ async function cvPeuplerSelectPilotes() {
         });
         cvSelectPilotePret = true;
     }
-    select.style.display = '';
-    if (label) label.style.display = '';
+    const wrap = select.closest('.select-recherche');
+    if (wrap) wrap.style.display = 'inline-block';
+    else select.style.display = '';
     // Selection courante : pilote cible sinon soi-meme
     const cible = cvPiloteCible || { id: currentUser.id, prenom: currentUser.prenom, nom: currentUser.nom };
     cvPiloteCible = membres.find(m => m.id === cible.id) ||
         membres.find(m => normaliserNom(`${m.prenom} ${m.nom}`) === normaliserNom(`${currentUser.prenom || ''} ${currentUser.nom || ''}`)) ||
         cible;
     select.value = cvPiloteCible.id || '';
+    select.dispatchEvent(new Event('maj-affichage'));
 }
 
 async function cvChargerVolsClub(pilote) {
@@ -313,6 +314,7 @@ function cvPeuplerFiltreMachine(lignes) {
     select.innerHTML = '<option value="">Toutes les machines</option>' +
         immats.map(i => `<option value="${i}">${i}</option>`).join('');
     if (immats.includes(courante)) select.value = courante;
+    select.dispatchEvent(new Event('maj-affichage'));
 }
 
 function cvRendreLignes() {
@@ -333,12 +335,9 @@ function cvRendreLignes() {
             const badge = l.origine === 'manuel'
                 ? '<span class="cv-badge cv-badge-manuel">Manuel</span>'
                 : '<span class="cv-badge cv-badge-club">Club</span>';
-            const obsIcon = l.obs ? ` <span class="cv-obs" title="${cvEscape(l.obs)}">📝</span>` : '';
-            const actions = (l.origine === 'manuel' && editable)
-                ? ` <button type="button" class="cv-btn-edit" data-id="${l.recId}" title="Modifier">✏️</button>
-                    <button type="button" class="cv-btn-del" data-id="${l.recId}" title="Supprimer">🗑️</button>`
-                : '';
-            return `<tr class="${l.origine === 'manuel' ? 'cv-ligne-manuelle' : ''}">
+            const obsIcon = l.obs ? ` <span class="cv-obs" data-obs="${cvEscape(l.obs)}" title="Lire l'observation" style="cursor:pointer;">📝</span>` : '';
+            const cliquable = l.origine === 'club' || (l.origine === 'manuel' && editable);
+            return `<tr class="${l.origine === 'manuel' ? 'cv-ligne-manuelle' : ''}" data-id="${l.recId}" data-origine="${l.origine}"${cliquable ? ' style="cursor:pointer;"' : ''}>
                 <td>${cvFormaterDate(l.date)}</td>
                 <td>${cvEscape(l.lieuDep)}</td>
                 <td>${cvEscape(l.hDep)}</td>
@@ -354,7 +353,7 @@ function cvRendreLignes() {
                 <td>${cvFormaterMinutes(l.cdbMin)}</td>
                 <td>${cvFormaterMinutes(l.dcMin)}</td>
                 <td>${cvFormaterMinutes(l.instrMin)}</td>
-                <td class="cv-origine">${badge}${obsIcon}${actions}</td>
+                <td class="cv-origine">${badge}${obsIcon}</td>
             </tr>`;
         }).join('');
 
@@ -377,8 +376,57 @@ function cvRendreLignes() {
             <td></td>
         </tr>`;
 
-        body.querySelectorAll('.cv-btn-edit').forEach(b => b.addEventListener('click', () => cvOuvrirModalEdition(b.dataset.id)));
-        body.querySelectorAll('.cv-btn-del').forEach(b => b.addEventListener('click', () => cvSupprimerVol(b.dataset.id)));
+        body.querySelectorAll('.cv-obs').forEach(s => s.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof afficherModaleAlerte === 'function') {
+                afficherModaleAlerte('Observation', `<p style="margin:0;">${cvEscape(s.dataset.obs)}</p>`, '📝');
+            }
+        }));
+        body.querySelectorAll('tr[data-origine]').forEach(tr => {
+            tr.addEventListener('click', () => {
+                if (tr.dataset.origine === 'manuel') {
+                    if (editable) cvOuvrirModalEdition(tr.dataset.id);
+                } else {
+                    cvProposerAllerCarnetRoute();
+                }
+            });
+        });
+}
+
+function cvProposerAllerCarnetRoute() {
+    const existing = document.getElementById('cv-redirect-modal');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'cv-redirect-modal';
+    overlay.className = 'modal';
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '20000';
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-width: 440px; text-align: left;">
+            <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
+            <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                <span style="font-size:28px;">📖</span>
+                <span>Vol saisi par le club</span>
+            </h3>
+            <div style="margin-top:15px; line-height:1.6; font-size:15px; color:#334155;">
+                <p style="margin:0;">Cette ligne provient d'un carnet de route machine : pour la modifier ou la supprimer, il faut passer par le <strong>carnet de route</strong>. Voulez-vous y être redirigé ?</p>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                <button type="button" class="nr-btn-cancel" id="cv-redirect-cancel">Rester ici</button>
+                <button type="button" class="btn-primary" id="cv-redirect-ok">Aller au carnet de route</button>
+            </div>
+        </div>
+    `;
+    const fermer = () => overlay.remove();
+    overlay.querySelector('.close-modal').addEventListener('click', fermer);
+    overlay.querySelector('#cv-redirect-cancel').addEventListener('click', fermer);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) fermer(); });
+    overlay.querySelector('#cv-redirect-ok').addEventListener('click', () => {
+        fermer();
+        const tab = document.getElementById('tab-carnet');
+        if (tab) tab.click();
+    });
+    document.body.appendChild(overlay);
 }
 
 // --- SAISIE MANUELLE ---------------------------------------------------------
@@ -401,6 +449,8 @@ function cvViderModal() {
     document.getElementById('cv-temps-nuit').value = '';
     document.getElementById('cv-observations').value = '';
     document.getElementById('carnet-vol-modal-title').textContent = 'Ajouter un vol extérieur';
+    const btnSuppr = document.getElementById('cv-btn-supprimer');
+    if (btnSuppr) btnSuppr.style.display = 'none';
 }
 
 function cvOuvrirModalEdition(recId) {
@@ -426,20 +476,32 @@ function cvOuvrirModalEdition(recId) {
     document.getElementById('cv-temps-nuit').value = nuitMin ? cvFormaterMinutes(nuitMin) : '';
     document.getElementById('cv-observations').value = f['Observations'] || '';
     document.getElementById('carnet-vol-modal-title').textContent = 'Modifier un vol extérieur';
+    const btnSuppr = document.getElementById('cv-btn-supprimer');
+    if (btnSuppr) {
+        btnSuppr.style.display = '';
+        btnSuppr.dataset.id = recId;
+    }
     document.getElementById('carnet-vol-modal').style.display = 'flex';
 }
 
-async function cvSupprimerVol(recId) {
-    if (!confirm('Supprimer ce vol de votre carnet ?')) return;
-    try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_CARNET_VOL)}/${recId}`, {
-            method: 'DELETE', headers
-        });
-        if (!res.ok) throw new Error(await res.text());
-        chargerCarnetVol();
-    } catch (err) {
-        console.error(err);
-        alert('Erreur lors de la suppression du vol.');
+function cvSupprimerVol(recId) {
+    const executer = async () => {
+        try {
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_CARNET_VOL)}/${recId}`, {
+                method: 'DELETE', headers
+            });
+            if (!res.ok) throw new Error(await res.text());
+            document.getElementById('carnet-vol-modal').style.display = 'none';
+            chargerCarnetVol();
+        } catch (err) {
+            console.error(err);
+            alert('Erreur lors de la suppression du vol.');
+        }
+    };
+    if (typeof afficherModaleConfirmation === 'function') {
+        afficherModaleConfirmation('Supprimer ce vol du carnet ?', '<p>Cette action est définitive.</p>', executer);
+    } else if (confirm('Supprimer ce vol de votre carnet ?')) {
+        executer();
     }
 }
 
@@ -460,6 +522,25 @@ function initCarnetVol() {
 
     const filtreMachine = document.getElementById('carnet-vol-machine-select');
     if (filtreMachine) filtreMachine.addEventListener('change', cvRendreLignes);
+
+    const btnSuppr = document.getElementById('cv-btn-supprimer');
+    if (btnSuppr) btnSuppr.addEventListener('click', () => { if (btnSuppr.dataset.id) cvSupprimerVol(btnSuppr.dataset.id); });
+
+    const btnLegendeCv = document.getElementById('btn-legende-carnet-vol');
+    if (btnLegendeCv) {
+        btnLegendeCv.addEventListener('click', () => {
+            const titre = t => `<div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 2px;">${t}</div>`;
+            if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Légende', `
+                ${titre('🏷️ Origine des lignes')}
+                <div class="legende-ligne"><span class="cv-badge cv-badge-club">Club</span><span>vol saisi automatiquement depuis un carnet de route machine</span></div>
+                <div class="legende-ligne"><span class="cv-badge cv-badge-manuel">Manuel</span><span>vol extérieur saisi à la main par le pilote</span></div>
+                ${titre('🖱️ Actions')}
+                <div class="legende-ligne"><span class="cv-badge cv-badge-manuel">Manuel</span><span>cliquer sur la ligne pour modifier ou supprimer le vol</span></div>
+                <div class="legende-ligne"><span class="cv-badge cv-badge-club">Club</span><span>cliquer pour être redirigé vers le carnet de route</span></div>
+                <div class="legende-ligne"><span style="font-size:15px;">📝</span><span>cliquer pour lire l'observation du vol</span></div>
+            `, 'ℹ️');
+        });
+    }
 
     // Fonction DC : le CdB est l'instructeur -> placeholder explicite
     const selFonction = document.getElementById('cv-fonction');

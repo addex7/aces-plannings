@@ -401,20 +401,24 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     select.dataset.searchReady = '1';
     select.dataset.allowCustom = allowCustom ? '1' : '0';
     select.removeAttribute('required');
+    const etaitCache = select.style.display === 'none';
     select.style.display = 'none';
 
     const wrap = document.createElement('div');
     wrap.className = 'select-recherche';
     wrap.style.cssText = 'position:relative; display:inline-block; min-width:200px; max-width:100%;';
 
-    const sansRecherche = select.id === 'select-instructeur-suivi' || select.id === 'carnet-machine-filtre';
+    const boutonBleu = ['select-instructeur-suivi', 'carnet-machine-filtre', 'carnet-vol-pilote-select', 'carnet-vol-machine-select'].includes(select.id);
+    const sansRecherche = ['select-instructeur-suivi', 'carnet-machine-filtre', 'carnet-vol-machine-select'].includes(select.id);
 
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.style.cssText = 'width:100%; padding:8px 28px 8px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#1e3d59; font-size:14px; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
-    if (sansRecherche) {
-        wrap.style.cssText = 'position:relative; display:inline-block; width:auto; min-width:0; max-width:none;';
+    if (boutonBleu) {
+        wrap.style.cssText = 'position:relative; display:inline-block; width:auto; min-width:0; max-width:none;' + (etaitCache ? 'display:none;' : '');
         btn.style.cssText = 'width:auto; padding:0 38px 0 14px; height:38px; border:none; border-radius:6px; background:#1e3d59; color:#fff; font-size:13px; font-weight:600; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 2px 4px rgba(0,0,0,0.1);';
+    } else if (etaitCache) {
+        wrap.style.cssText += 'display:none;';
     }
 
     const caret = document.createElement('span');
@@ -435,10 +439,13 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     list.style.cssText = 'max-height:240px; overflow-y:auto;';
 
     if (sansRecherche) {
-        const cote = select.id === 'select-instructeur-suivi' ? 'right:0;' : 'left:0;';
+        const cote = ['select-instructeur-suivi', 'carnet-vol-machine-select'].includes(select.id) ? 'right:0;' : 'left:0;';
         panel.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); ' + cote + ' min-width:100%; width:auto; max-width:340px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden;';
     } else {
         panel.appendChild(search);
+        if (select.id === 'carnet-vol-pilote-select') {
+            panel.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); right:0; min-width:100%; width:max-content; max-width:320px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden;';
+        }
     }
     panel.appendChild(list);
     select.parentElement.insertBefore(wrap, select);
@@ -455,7 +462,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
         const text = document.createTextNode(label() + ' ');
         const span = document.createElement('span');
         span.textContent = '▾';
-        span.style.cssText = sansRecherche
+        span.style.cssText = boutonBleu
             ? 'position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.6;'
             : 'float:right; opacity:.5;';
         btn.innerHTML = '';
@@ -549,7 +556,9 @@ function rendreSelectRecherchable(select, allowCustom = false) {
         'carnet-pilote',
         'carnet-instructeur',
         'select-instructeur-suivi',
-        'carnet-machine-filtre'
+        'carnet-machine-filtre',
+        'carnet-vol-pilote-select',
+        'carnet-vol-machine-select'
     ];
 
     function essayer() {
