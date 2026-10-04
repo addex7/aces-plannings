@@ -133,9 +133,9 @@ async function enregistrerDossier(e) {
     }
 }
 
-async function chargerDocumentsAeronefsBibliotheque() {
+async function chargerDocumentsAeronefsBibliotheque(forceRefresh = false) {
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?pageSize=100`, { headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
         const records = data.records || [];
@@ -272,6 +272,7 @@ function docsHtmlCartes(recs) {
 function docsHtmlMachine(machine) {
     const docs = (documentsAeronefsBibliothequeCache[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
     if (!docs.length) return '<p style="color:#94a3b8; font-size:13px;">Aucun document actif.</p>';
+    const canEdit = typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef();
     const aujourdhui = new Date();
     aujourdhui.setHours(0, 0, 0, 0);
     const dans3mois = new Date(aujourdhui);
@@ -299,10 +300,38 @@ function docsHtmlMachine(machine) {
                 </h4>
                 <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${dateTxt}</p>
                 ${lien}
+                ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
+                    <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="modifierDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Modifier</button>
+                    <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Supprimer</button>
+                </div>` : ''}
             </div>
         `;
     }).join('');
     return `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${cartes}</div>`;
+}
+
+async function rafraichirBibliothequeDocsAeronefs() {
+    const vue = document.getElementById('view-documents');
+    if (!vue || vue.style.display === 'none') return;
+    await chargerDocumentsAeronefsBibliotheque(true);
+    afficherDocuments(documentsCache);
+}
+
+async function modifierDocumentAeronefBiblio(id, machine) {
+    if (typeof peutGererDocumentsAeronef !== 'function' || !peutGererDocumentsAeronef()) return;
+    const record = (documentsAeronefsBibliothequeCache[machine] || []).find(r => r.id === id);
+    if (!record) return;
+    if (typeof creerModaleDocumentsAeronef === 'function') creerModaleDocumentsAeronef();
+    await ouvrirModaleDocumentsAeronef(machine);
+    ouvrirFormulaireDocumentAeronef(record);
+}
+
+async function supprimerDocumentAeronefBiblio(id, machine) {
+    if (typeof peutGererDocumentsAeronef !== 'function' || !peutGererDocumentsAeronef()) return;
+    const record = (documentsAeronefsBibliothequeCache[machine] || []).find(r => r.id === id);
+    if (!record) return;
+    machineDocumentsCourante = machine;
+    await supprimerDocumentAeronef(record);
 }
 
 function creerCarteDocument(rec) {

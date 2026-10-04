@@ -1676,6 +1676,7 @@ async function enregistrerDocumentAeronef(e) {
         afficherRecapDocumentsAeronef(immat);
         fermerModaleDocumentsAeronef();
         if (typeof chargerSuiviAeronef === 'function') chargerSuiviAeronef();
+        if (typeof rafraichirBibliothequeDocsAeronefs === 'function') rafraichirBibliothequeDocsAeronefs();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'enregistrement : ' + err.message);
@@ -1695,6 +1696,7 @@ async function supprimerDocumentAeronef(record) {
         await chargerDocumentsAeronef(immat, true);
         afficherListeDocumentsAeronef(immat);
         afficherRecapDocumentsAeronef(immat);
+        if (typeof rafraichirBibliothequeDocsAeronefs === 'function') rafraichirBibliothequeDocsAeronefs();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la suppression : ' + err.message);
@@ -1712,6 +1714,7 @@ async function toggleActifDocumentAeronef(record, actif) {
         await chargerDocumentsAeronef(immat, true);
         afficherListeDocumentsAeronef(immat);
         afficherRecapDocumentsAeronef(immat);
+        if (typeof rafraichirBibliothequeDocsAeronefs === 'function') rafraichirBibliothequeDocsAeronefs();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la mise à jour : ' + err.message);
