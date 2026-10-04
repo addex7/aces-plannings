@@ -37,8 +37,16 @@ function initDocuments() {
     const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
 
     appliquerAccesDocumentaire();
-    if (btnNewPdf) btnNewPdf.addEventListener('click', () => ouvrirFormDocument(null));
-    if (btnNewDossier) btnNewDossier.addEventListener('click', ouvrirFormDossier);
+    if (btnNewPdf) btnNewPdf.addEventListener('click', () => {
+        const c = document.getElementById('documents-form');
+        if (c && c.style.display === 'block') cacherFormDocument();
+        else ouvrirFormDocument(null);
+    });
+    if (btnNewDossier) btnNewDossier.addEventListener('click', () => {
+        const c = document.getElementById('dossier-form');
+        if (c && c.style.display === 'block') cacherFormDossier();
+        else ouvrirFormDossier();
+    });
     if (inputFichier) inputFichier.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -182,6 +190,50 @@ async function enregistrerDossier(e) {
     }
 }
 
+// Supprime un dossier (parent='') ou un sous-dossier (parent=categorie).
+// Les documents ne sont jamais supprimes : ils remontent dans le dossier
+// parent (sous-dossier) ou basculent dans « Autre » (dossier racine).
+async function supprimerDossierBiblio(nom, parent) {
+    if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
+    const docsConcernes = (documentsCache || []).filter(r => {
+        const f = r.fields || {};
+        return parent
+            ? (f['Catégorie'] === parent && f['Sous-dossier'] === nom)
+            : (f['Catégorie'] === nom);
+    });
+    const quoi = parent ? `le sous-dossier « ${nom} »` : `le dossier « ${nom} »`;
+    const destination = parent ? `ils seront remontés dans « ${parent} »` : 'ils seront déplacés dans « Autre »';
+    const msg = docsConcernes.length
+        ? `Supprimer ${quoi} ?\n\nIl contient ${docsConcernes.length} document(s) : ${destination}.`
+        : `Supprimer ${quoi} ?`;
+    if (!confirm(msg)) return;
+    try {
+        for (const rec of docsConcernes) {
+            const fields = parent ? { 'Sous-dossier': '' } : { 'Catégorie': 'Autre' };
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${rec.id}`, {
+                method: 'PATCH', headers, body: JSON.stringify({ fields })
+            });
+            if (!res.ok) throw new Error('Erreur lors du déplacement d\'un document');
+        }
+        const aSupprimer = (dossiersCache || []).filter(r => {
+            const f = r.fields || {};
+            return parent
+                ? (f['Parent'] === parent && f['Nom'] === nom)
+                : (f['Parent'] === nom || (!f['Parent'] && f['Nom'] === nom));
+        });
+        for (const rec of aSupprimer) {
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOSSIERS)}/${rec.id}`, { method: 'DELETE', headers });
+            if (!res.ok) throw new Error('Erreur lors de la suppression du dossier');
+        }
+        if (!parent && docsNavChemin[0] === nom) docsNavChemin = [];
+        if (parent && docsNavChemin[0] === parent && docsNavChemin[1] === nom) docsNavChemin = docsNavChemin.slice(0, 1);
+        await Promise.all([chargerDossiers(), chargerDocuments()]);
+    } catch (err) {
+        console.error(err);
+        alert(`Erreur lors de la suppression : ${err.message}`);
+    }
+}
+
 async function chargerDocumentsAeronefsBibliotheque(forceRefresh = false) {
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
@@ -225,9 +277,12 @@ function docsEscAttr(s) {
     return (s || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
-function docsTileDossier(nom, cle) {
+function docsTileDossier(nom, cle, parent = '') {
+    const supprimable = isDocumentaliste() && !cle.startsWith('⚙️ ');
+    const infobulle = parent ? `Supprimer le sous-dossier « ${nom} »` : `Supprimer le dossier « ${nom} »`;
     return `
         <div class="doc-tile" data-cle="${docsEscAttr(cle)}">
+            ${supprimable ? `<button type="button" class="doc-tile-del" data-del-nom="${docsEscAttr(cle)}" data-del-parent="${docsEscAttr(parent)}" title="${docsEscAttr(infobulle)}">✕</button>` : ''}
             <div class="doc-tile-icone"><img src="dossier.png?v=2" alt="" class="doc-tile-img" onerror="this.outerHTML='&#128193;'"></div>
             <div class="doc-tile-nom">${nom}</div>
         </div>
@@ -285,7 +340,7 @@ function afficherDocuments(records) {
 
     if (!cat) {
         // Racine : tuiles des categories + des machines
-        const tuiles = cats.map(c => docsTileDossier(c, c)).join('') +
+        const tuiles = cats.map(c => docsTileDossier(c, c, '')).join('') +
             machines.map(m => docsTileDossier(m, '⚙️ ' + m)).join('');
         contenu = `<div class="docs-tiles">${tuiles}</div>`;
     } else if (cat.startsWith('⚙️ ')) {
@@ -295,7 +350,7 @@ function afficherDocuments(records) {
         // Interieur d'une categorie : sous-dossiers en tuiles + documents
         const node = arbre[cat] || { sous: {}, docs: [] };
         const tuiles = Object.keys(node.sous).sort()
-            .map(s => docsTileDossier(s, s)).join('');
+            .map(s => docsTileDossier(s, s, cat)).join('');
         contenu = (tuiles ? `<div class="docs-tiles">${tuiles}</div>` : '') +
             docsHtmlCartes(node.docs);
     } else {
@@ -308,9 +363,17 @@ function afficherDocuments(records) {
 
     // Tuiles : entrer dans le dossier
     list.querySelectorAll('.doc-tile').forEach(t => {
-        t.addEventListener('click', () => {
+        t.addEventListener('click', (e) => {
+            if (e.target.closest('.doc-tile-del')) return;
             docsNavChemin = docsNavChemin.concat(t.dataset.cle);
             afficherDocuments(documentsCache);
+        });
+    });
+    // Tuiles : suppression d'un dossier / sous-dossier
+    list.querySelectorAll('.doc-tile-del').forEach(b => {
+        b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            supprimerDossierBiblio(b.dataset.delNom, b.dataset.delParent || '');
         });
     });
     // Fil d'Ariane : remonter
