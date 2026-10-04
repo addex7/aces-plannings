@@ -29,6 +29,34 @@ function initComptesPilotes() {
     if (formRecette) formRecette.addEventListener('submit', enregistrerRecetteManuelle);
     if (select) select.addEventListener('change', chargerComptesPilotes);
 
+    const btnLegende = document.getElementById('btn-legende-comptes');
+    if (btnLegende && typeof afficherModaleAlerte === 'function') {
+        btnLegende.addEventListener('click', () => {
+            afficherModaleAlerte('Légende', `
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:6px;">💳 Carte de synthèse</div>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:14px; font-size:13px;">
+                    <div><strong>Solde final</strong> : solde GVV + versements en attente.</div>
+                    <div><strong>Dépenses</strong> : total des débits validés (vols, remorques…).</div>
+                    <div><strong>Recettes validées</strong> : total des crédits validés par le trésorier.</div>
+                    <div><strong>Solde GVV</strong> : solde officiel de la comptabilité club, avec date de dernière synchro.</div>
+                </div>
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:6px;">📋 Transactions</div>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:14px; font-size:13px;">
+                    <div><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fef2f2; border:1px solid #dc2626; vertical-align:middle; margin-right:6px;"></span><strong>Rouge ↓</strong> : débit (dépense).</div>
+                    <div><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#f0fdf4; border:1px solid #16a34a; vertical-align:middle; margin-right:6px;"></span><strong>Vert ↑</strong> : crédit validé.</div>
+                    <div><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fffbeb; border:1px solid #f59e0b; vertical-align:middle; margin-right:6px;"></span><strong>Orange ↑</strong> : versement déclaré, en attente de validation du trésorier.</div>
+                    <div>« Exporter en CSV » télécharge la liste des transactions.</div>
+                </div>
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:6px;">🛠️ Actions</div>
+                <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
+                    <div><strong>Renseigner un versement</strong> : déclarer un virement effectué — il apparaît en orange jusqu'à validation.</div>
+                    <div><strong>🔄 Synchro GVV</strong> : met à jour soldes et écritures depuis la compta club (trésorier).</div>
+                    <div><strong>Sélecteur pilote</strong> : consulter le compte d'un autre pilote (trésorier / instructeur).</div>
+                </div>
+            `, 'ℹ️');
+        });
+    }
+
     if (typeof appliquerAccesComptes === 'function') appliquerAccesComptes();
 }
 
