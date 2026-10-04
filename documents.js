@@ -144,6 +144,9 @@ function dossierCourantBibliotheque() {
     return cat.startsWith('⚙️ ') ? '' : cat;
 }
 
+// Renommage en cours : { nom, parent } ou null (mode creation)
+let dossierEnRenommage = null;
+
 function ouvrirFormDossier() {
     const formContainer = document.getElementById('dossier-form');
     const form = document.getElementById('form-dossier');
@@ -151,11 +154,32 @@ function ouvrirFormDossier() {
     const title = document.getElementById('dossier-form-title');
     if (!formContainer) return;
     if (form) form.reset();
+    dossierEnRenommage = null;
     const cat = dossierCourantBibliotheque();
     if (title) title.textContent = cat ? `Nouveau sous-dossier dans « ${cat} »` : 'Nouveau dossier';
+    const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
+    if (btnSubmit) btnSubmit.textContent = 'Créer';
     cacherFormDocument();
     formContainer.style.display = 'block';
     if (input) input.focus();
+}
+
+function ouvrirFormRenommerDossier(nom, parent) {
+    if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
+    const formContainer = document.getElementById('dossier-form');
+    const input = document.getElementById('dossier-nom');
+    const title = document.getElementById('dossier-form-title');
+    if (!formContainer || !input) return;
+    dossierEnRenommage = { nom, parent };
+    input.value = nom;
+    if (title) title.textContent = parent ? `Renommer le sous-dossier « ${nom} »` : `Renommer le dossier « ${nom} »`;
+    const form = document.getElementById('form-dossier');
+    const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
+    if (btnSubmit) btnSubmit.textContent = 'Enregistrer';
+    cacherFormDocument();
+    formContainer.style.display = 'block';
+    input.focus();
+    input.select();
 }
 
 function cacherFormDossier() {
@@ -169,6 +193,12 @@ async function enregistrerDossier(e) {
     const input = document.getElementById('dossier-nom');
     const nom = input ? input.value.trim() : '';
     if (!nom) { alert('Nom du dossier requis.'); return; }
+    if (dossierEnRenommage) {
+        const { nom: ancien, parent } = dossierEnRenommage;
+        dossierEnRenommage = null;
+        await renommerDossierBiblio(ancien, nom, parent);
+        return;
+    }
     const parent = dossierCourantBibliotheque();
     const fields = { 'Nom': nom };
     if (parent) fields['Parent'] = parent;
@@ -187,6 +217,66 @@ async function enregistrerDossier(e) {
     } catch (err) {
         console.error(err);
         alert(`Erreur lors de la création du dossier : ${err.message}`);
+    }
+}
+
+// Renomme un dossier (parent='') ou un sous-dossier (parent=categorie) et
+// propage le nouveau nom aux documents et sous-dossiers rattaches.
+async function renommerDossierBiblio(ancien, nouveau, parent) {
+    if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
+    if (nouveau === ancien) { cacherFormDossier(); return; }
+    const doublon = (documentsCache || []).some(r => {
+        const f = r.fields || {};
+        return parent
+            ? (f['Catégorie'] === parent && f['Sous-dossier'] === nouveau)
+            : (f['Catégorie'] === nouveau);
+    }) || (dossiersCache || []).some(r => {
+        const f = r.fields || {};
+        return parent
+            ? (f['Parent'] === parent && f['Nom'] === nouveau)
+            : (!f['Parent'] && f['Nom'] === nouveau);
+    });
+    if (doublon) {
+        alert(`« ${nouveau} » existe déjà à cet emplacement.`);
+        dossierEnRenommage = { nom: ancien, parent };
+        return;
+    }
+    try {
+        const docsConcernes = (documentsCache || []).filter(r => {
+            const f = r.fields || {};
+            return parent
+                ? (f['Catégorie'] === parent && f['Sous-dossier'] === ancien)
+                : (f['Catégorie'] === ancien);
+        });
+        for (const rec of docsConcernes) {
+            const fields = parent ? { 'Sous-dossier': nouveau } : { 'Catégorie': nouveau };
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${rec.id}`, {
+                method: 'PATCH', headers, body: JSON.stringify({ fields })
+            });
+            if (!res.ok) throw new Error('Erreur lors de la mise à jour d\'un document');
+        }
+        const dossiersAMaj = (dossiersCache || []).filter(r => {
+            const f = r.fields || {};
+            return parent
+                ? (f['Parent'] === parent && f['Nom'] === ancien)
+                : (f['Parent'] === ancien || (!f['Parent'] && f['Nom'] === ancien));
+        });
+        for (const rec of dossiersAMaj) {
+            const f = rec.fields || {};
+            const fields = (parent || (!f['Parent'] && f['Nom'] === ancien)) ? { 'Nom': nouveau } : { 'Parent': nouveau };
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOSSIERS)}/${rec.id}`, {
+                method: 'PATCH', headers, body: JSON.stringify({ fields })
+            });
+            if (!res.ok) throw new Error('Erreur lors du renommage du dossier');
+        }
+        if (!parent && docsNavChemin[0] === ancien) docsNavChemin[0] = nouveau;
+        if (parent && docsNavChemin[0] === parent && docsNavChemin[1] === ancien) docsNavChemin[1] = nouveau;
+        cacherFormDossier();
+        await Promise.all([chargerDossiers(), chargerDocuments()]);
+    } catch (err) {
+        console.error(err);
+        dossierEnRenommage = { nom: ancien, parent };
+        alert(`Erreur lors du renommage : ${err.message}`);
     }
 }
 
@@ -278,11 +368,13 @@ function docsEscAttr(s) {
 }
 
 function docsTileDossier(nom, cle, parent = '') {
-    const supprimable = isDocumentaliste() && !cle.startsWith('⚙️ ');
-    const infobulle = parent ? `Supprimer le sous-dossier « ${nom} »` : `Supprimer le dossier « ${nom} »`;
+    const modifiable = isDocumentaliste() && !cle.startsWith('⚙️ ');
+    const titreSuppr = parent ? `Supprimer le sous-dossier « ${nom} »` : `Supprimer le dossier « ${nom} »`;
+    const titreRen = parent ? `Renommer le sous-dossier « ${nom} »` : `Renommer le dossier « ${nom} »`;
     return `
         <div class="doc-tile" data-cle="${docsEscAttr(cle)}">
-            ${supprimable ? `<button type="button" class="doc-tile-del" data-del-nom="${docsEscAttr(cle)}" data-del-parent="${docsEscAttr(parent)}" title="${docsEscAttr(infobulle)}">✕</button>` : ''}
+            ${modifiable ? `<button type="button" class="doc-tile-ren" data-ren-nom="${docsEscAttr(cle)}" data-ren-parent="${docsEscAttr(parent)}" title="${docsEscAttr(titreRen)}">✏️</button>` : ''}
+            ${modifiable ? `<button type="button" class="doc-tile-del" data-del-nom="${docsEscAttr(cle)}" data-del-parent="${docsEscAttr(parent)}" title="${docsEscAttr(titreSuppr)}">✕</button>` : ''}
             <div class="doc-tile-icone"><img src="dossier.png?v=2" alt="" class="doc-tile-img" onerror="this.outerHTML='&#128193;'"></div>
             <div class="doc-tile-nom">${nom}</div>
         </div>
@@ -364,7 +456,7 @@ function afficherDocuments(records) {
     // Tuiles : entrer dans le dossier
     list.querySelectorAll('.doc-tile').forEach(t => {
         t.addEventListener('click', (e) => {
-            if (e.target.closest('.doc-tile-del')) return;
+            if (e.target.closest('.doc-tile-del, .doc-tile-ren')) return;
             docsNavChemin = docsNavChemin.concat(t.dataset.cle);
             afficherDocuments(documentsCache);
         });
@@ -374,6 +466,13 @@ function afficherDocuments(records) {
         b.addEventListener('click', (e) => {
             e.stopPropagation();
             supprimerDossierBiblio(b.dataset.delNom, b.dataset.delParent || '');
+        });
+    });
+    // Tuiles : renommage d'un dossier / sous-dossier
+    list.querySelectorAll('.doc-tile-ren').forEach(b => {
+        b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ouvrirFormRenommerDossier(b.dataset.renNom, b.dataset.renParent || '');
         });
     });
     // Fil d'Ariane : remonter

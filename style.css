@@ -4967,10 +4967,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     position: relative;
 }
 .doc-tile:hover { background: #eef2f7; }
-.doc-tile-del {
+.doc-tile-del,
+.doc-tile-ren {
     position: absolute;
     top: 4px;
-    right: 4px;
     width: 20px;
     height: 20px;
     border: none;
@@ -4983,8 +4983,12 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     opacity: 0;
     transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
-.doc-tile:hover .doc-tile-del { opacity: 1; }
+.doc-tile-del { right: 4px; }
+.doc-tile-ren { right: 26px; font-size: 12px; }
+.doc-tile:hover .doc-tile-del,
+.doc-tile:hover .doc-tile-ren { opacity: 1; }
 .doc-tile-del:hover { background: #fee2e2; color: #dc2626; }
+.doc-tile-ren:hover { background: #e0e7ff; color: #1e3d59; }
 .doc-tile-icone { font-size: 46px; line-height: 1.1; }
 .doc-tile-img { width: 52px; height: auto; display: block; }
 .doc-tile-nom {
