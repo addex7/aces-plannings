@@ -2717,25 +2717,25 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     flex-wrap: wrap;
 }
 .comptes-import-btn {
-    background: #16a34a;
+    background: #1e3d59;
     color: #fff;
     border: none;
-    padding: 8px 14px;
-    border-radius: 8px;
+    padding: 0 16px;
+    height: 40px;
+    border-radius: 6px;
     font-weight: 600;
+    font-size: 13.5px;
     cursor: pointer;
+    box-sizing: border-box;
 }
-.comptes-import-btn:hover { background: #15803d; }
-#comptes-pilote-select {
-    padding: 7px 10px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    font-size: 13px;
+.comptes-import-btn:hover { background: #17b978; }
+#view-comptes .select-recherche > button {
+    height: 40px !important;
+    box-sizing: border-box;
 }
 
 .comptes-summary {
-    margin-bottom: 20px;
+    margin-bottom: 8px;
 }
 .comptes-summary-card {
     background: #1e3d59;
@@ -2789,7 +2789,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
-    gap: 20px;
+    gap: 8px;
     flex: 1;
 }
 

@@ -408,7 +408,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     wrap.className = 'select-recherche';
     wrap.style.cssText = 'position:relative; display:inline-block; min-width:200px; max-width:100%;';
 
-    const boutonBleu = ['select-instructeur-suivi', 'carnet-machine-filtre', 'carnet-vol-pilote-select', 'carnet-vol-machine-select'].includes(select.id);
+    const boutonBleu = ['select-instructeur-suivi', 'carnet-machine-filtre', 'carnet-vol-pilote-select', 'carnet-vol-machine-select', 'comptes-pilote-select'].includes(select.id);
     const sansRecherche = ['select-instructeur-suivi', 'carnet-machine-filtre', 'carnet-vol-machine-select'].includes(select.id);
 
     const btn = document.createElement('button');
@@ -443,7 +443,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
         panel.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); ' + cote + ' min-width:100%; width:auto; max-width:340px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden;';
     } else {
         panel.appendChild(search);
-        if (select.id === 'carnet-vol-pilote-select') {
+        if (select.id === 'carnet-vol-pilote-select' || select.id === 'comptes-pilote-select') {
             panel.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); right:0; min-width:100%; width:max-content; max-width:320px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden;';
         }
     }
