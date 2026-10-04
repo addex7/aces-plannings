@@ -654,6 +654,8 @@ img, table, video, iframe, svg {
 #view-audit > * + * { margin-top: 8px; }
 #view-messagerie > * + * { margin-top: 8px; }
 #view-membres > * + * { margin-top: 8px; }
+#view-accueil-membre > * + * { margin-top: 8px; }
+#accueil-membre-container > * + * { margin-top: 8px; }
 #documents-toolbar { display: flex; align-items: center; }
 #view-carnet-vol .btn-primary,
 #view-carnet-vol .select-recherche > button {
@@ -2245,7 +2247,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     display: flex;
     align-items: center;
     gap: 15px;
-    margin-bottom: 20px;
+    margin-bottom: 0;
     padding: 15px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -2307,8 +2309,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .validite-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 0;
 }
 .validite-card {
     background: #fff;
@@ -2428,7 +2430,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-    margin-bottom: 15px;
+    margin-bottom: 0;
     padding: 10px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -2478,7 +2480,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 15px;
-    margin-top: 15px;
+    margin-top: 0;
 }
 .accueil-documents h3 {
     margin: 0 0 12px;

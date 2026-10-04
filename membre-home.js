@@ -264,7 +264,7 @@ function renderAccueilMembre(fields) {
         </div>
     `;
     container.innerHTML = `
-        <div class="accueil-documents" style="margin-top:0; margin-bottom:15px;">
+        <div class="accueil-documents" style="margin-top:0; margin-bottom:0;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
                 <h3 style="margin:0;">Annuaire des membres</h3>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
