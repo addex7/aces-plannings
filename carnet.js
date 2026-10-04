@@ -766,23 +766,10 @@ function syncNatureChips() {
             const def = document.querySelector('input[name="carnet-nature-base"][value="Local"]');
             if (def) def.checked = true;
         }
-        majResumeJVIO();
         return;
     }
     const chips = document.querySelectorAll('input[name="carnet-nature-chip"]');
     chips.forEach(cb => { cb.checked = cb.value === val; });
-    majResumeJVIO();
-}
-
-function majResumeJVIO() {
-    const rf = document.getElementById('carnet-fonction-resume');
-    if (rf) {
-        const vals = [...document.querySelectorAll('#carnet-fonction-group input[name="carnet-fonction"]:checked')].map(c => c.value);
-        rf.textContent = vals.join(' / ');
-    }
-    const rn = document.getElementById('carnet-nature-resume');
-    const nat = document.getElementById('carnet-nature');
-    if (rn) rn.textContent = nat && nat.value ? `${EMOJIS_NATURE_JVIO[nat.value] || ''} ${nat.value}` : '';
 }
 
 function majNatureStd() {
@@ -1028,22 +1015,7 @@ function adapterFormulaireCarnet(machine) {
             natureChips.innerHTML = '';
         }
     }
-    // F-JVIO : les listes Fonction / Nature se replient derriere une info-bulle
-    const btnListeFonction = document.getElementById('btn-liste-fonction');
-    const btnListeNature = document.getElementById('btn-liste-nature');
-    const resumeFonction = document.getElementById('carnet-fonction-resume');
-    const resumeNature = document.getElementById('carnet-nature-resume');
-    if (btnListeFonction) btnListeFonction.style.display = isJVIO ? '' : 'none';
-    if (btnListeNature) btnListeNature.style.display = isJVIO ? '' : 'none';
-    if (resumeFonction) resumeFonction.style.display = isJVIO ? '' : 'none';
-    if (resumeNature) resumeNature.style.display = isJVIO ? '' : 'none';
-    [fonctionGroup, natureChips].forEach(g => {
-        if (!g) return;
-        g.classList.toggle('carnet-liste-pop', isJVIO);
-        if (!isJVIO) g.classList.remove('ouvert');
-    });
     syncNatureChips();
-    majResumeJVIO();
     if (machineSelect) machineSelect.style.display = 'none';
     if (machineChips) machineChips.style.display = 'flex';
     syncMachineChips();
@@ -1961,39 +1933,6 @@ function initCarnetRoute() {
             if (derniersRecordsCarnet.length) afficherCarnet(derniersRecordsCarnet);
         }, 250);
     });
-    // Info-bulles Fonction / Nature (F-JVIO) : ouverture, fermeture, resume
-    [['btn-liste-fonction', 'carnet-fonction-group'], ['btn-liste-nature', 'carnet-nature-chips']].forEach(([bid, gid]) => {
-        const b = document.getElementById(bid), g = document.getElementById(gid);
-        if (b && g && !b.dataset.popInit) {
-            b.dataset.popInit = '1';
-            b.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const ouvert = g.classList.contains('ouvert');
-                document.querySelectorAll('.carnet-liste-pop.ouvert').forEach(x => x.classList.remove('ouvert'));
-                if (!ouvert) g.classList.add('ouvert');
-            });
-        }
-    });
-    document.addEventListener('click', (e) => {
-        document.querySelectorAll('.carnet-liste-pop.ouvert').forEach(p => {
-            if (!p.contains(e.target) && !e.target.closest('.btn-liste-pop')) p.classList.remove('ouvert');
-        });
-    });
-    const groupeFonction = document.getElementById('carnet-fonction-group');
-    if (groupeFonction && !groupeFonction.dataset.resumeInit) {
-        groupeFonction.dataset.resumeInit = '1';
-        groupeFonction.addEventListener('change', majResumeJVIO);
-    }
-    const groupeNature = document.getElementById('carnet-nature-chips');
-    if (groupeNature && !groupeNature.dataset.resumeInit) {
-        groupeNature.dataset.resumeInit = '1';
-        groupeNature.addEventListener('change', (e) => {
-            majResumeJVIO();
-            if (e.target && e.target.name === 'carnet-nature-chip' && groupeNature.classList.contains('carnet-liste-pop')) {
-                groupeNature.classList.remove('ouvert');
-            }
-        });
-    }
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) fermerModaleCarnet();

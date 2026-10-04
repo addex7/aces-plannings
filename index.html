@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=241">
+    <link rel="stylesheet" href="style.css?v=240">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -1157,12 +1157,8 @@
                         <option value="">-- Aucun --</option>
                     </select>
                 </div>
-                <div class="form-group carnet-pop-parent">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <label id="carnet-fonction-label" style="margin:0;">Fonction(s) à bord :</label>
-                        <button type="button" id="btn-liste-fonction" class="btn-legende-couleurs btn-liste-pop" style="display:none;" title="Ouvrir la liste des fonctions">i</button>
-                        <span id="carnet-fonction-resume" style="display:none; font-size:12px; font-weight:600; color:#1e3d59;"></span>
-                    </div>
+                <div class="form-group">
+                    <label id="carnet-fonction-label">Fonction(s) à bord :</label>
                     <div class="checkbox-group" id="carnet-fonction-group">
                         <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="P"> P - Pilote</label>
                         <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="EP"> EP - Élève pilote</label>
@@ -1170,12 +1166,8 @@
                         <label class="checkbox-option"><input type="checkbox" name="carnet-fonction" value="FE"> FE - Examinateur</label>
                     </div>
                 </div>
-                <div class="form-group full-width carnet-pop-parent">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <label for="carnet-nature" style="margin:0;">Nature du vol :</label>
-                        <button type="button" id="btn-liste-nature" class="btn-legende-couleurs btn-liste-pop" style="display:none;" title="Ouvrir la liste des natures">i</button>
-                        <span id="carnet-nature-resume" style="display:none; font-size:12px; font-weight:600; color:#1e3d59;"></span>
-                    </div>
+                <div class="form-group full-width">
+                    <label for="carnet-nature">Nature du vol :</label>
                     <select id="carnet-nature" required>
                         <option value="Autre">Autre</option>
                         <option value="Instruction">Instruction</option>
@@ -1618,7 +1610,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004211928"></script>
+    <script src="version.js?v=20261004211346"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=117"></script>
     <script src="presences.js?v=104"></script>
@@ -1626,7 +1618,7 @@
     <script src="calendrier.js?v=91"></script>
     <script src="comptes.js?v=120"></script>
     <script src="aeronefs.js?v=142"></script>
-    <script src="carnet.js?v=197"></script>
+    <script src="carnet.js?v=196"></script>
     <script src="carnet-vol.js?v=2"></script>
     <script src="documents.js?v=91"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>

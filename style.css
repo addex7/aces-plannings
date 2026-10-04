@@ -1055,28 +1055,6 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 #carnet-recherche.carnet-recherche-masquee {
     display: none;
 }
-/* Listes Fonction / Nature repliees derriere une info-bulle (F-JVIO) */
-.carnet-pop-parent {
-    position: relative;
-}
-.carnet-liste-pop {
-    display: none !important;
-}
-.carnet-liste-pop.ouvert {
-    display: flex !important;
-    flex-wrap: wrap;
-    gap: 6px 14px;
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 80;
-    background: #fff;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    padding: 10px 12px;
-    max-width: 320px;
-}
 .carnet-table {
     width: 100%;
     border-collapse: collapse;
