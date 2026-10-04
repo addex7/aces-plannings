@@ -500,6 +500,7 @@ async function enregistrerRecetteManuelle(e) {
         alert('Tu ne peux saisir un versement que sur ton propre compte.');
         return;
     }
+    if (!(await demanderConfirmationVersement(date, montant, desc))) return;
     const body = {
         records: [{
             fields: {
@@ -536,6 +537,48 @@ async function enregistrerRecetteManuelle(e) {
         console.error(err);
         alert('Erreur lors de l\'enregistrement : ' + err.message);
     }
+}
+
+// Confirmation avant enregistrement d'un versement : la date et le montant
+// doivent correspondre exactement au virement pour que la synchro GVV
+// retrouve l'ecriture. Resout true si l'utilisateur valide, false pour
+// revenir au formulaire.
+function demanderConfirmationVersement(date, montant, desc) {
+    return new Promise(resolve => {
+        const existing = document.getElementById('comptes-confirm-modal');
+        if (existing) existing.remove();
+        const dateFr = new Date(date + 'T12:00:00').toLocaleDateString('fr-FR');
+        const overlay = document.createElement('div');
+        overlay.id = 'comptes-confirm-modal';
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.style.zIndex = '20000';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width: 440px; text-align: left;">
+                <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                    <span style="font-size:26px;">💶</span>
+                    <span>Confirmer le versement</span>
+                </h3>
+                <div style="margin-top:12px; line-height:1.6; font-size:15px; color:#334155;">
+                    <p style="margin:0 0 10px 0;">Tu t'apprêtes à enregistrer :</p>
+                    <p style="margin:0 0 10px 0; padding:10px 12px; background:#f1f5f9; border-radius:8px; font-weight:600;">
+                        📅 ${escHtml(dateFr)} &nbsp;·&nbsp; 💰 ${escHtml(montant.toFixed(2).replace('.', ','))} €<br>
+                        <span style="font-weight:400; color:#64748b;">${escHtml(desc)}</span>
+                    </p>
+                    <p style="margin:0; padding:10px 12px; background:#fef3c7; border-left:3px solid #d97706; border-radius:6px;">⚠️ Vérifie que la <strong>date et le montant correspondent exactement au virement</strong> — sinon le système ne pourra pas faire le lien avec GVV.</p>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:space-between; margin-top:20px;">
+                    <button type="button" class="nr-btn-cancel" id="comptes-confirm-retour">← Modifier</button>
+                    <button type="button" class="btn-primary" id="comptes-confirm-ok">Valider le versement</button>
+                </div>
+            </div>
+        `;
+        const retour = () => { overlay.remove(); resolve(false); };
+        overlay.querySelector('#comptes-confirm-retour').addEventListener('click', retour);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) retour(); });
+        overlay.querySelector('#comptes-confirm-ok').addEventListener('click', () => { overlay.remove(); resolve(true); });
+        document.body.appendChild(overlay);
+    });
 }
 
 async function supprimerRecetteManuelle(recordId, audit = true) {

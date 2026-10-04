@@ -179,7 +179,7 @@ function docsEscAttr(s) {
 function docsTileDossier(nom, cle) {
     return `
         <div class="doc-tile" data-cle="${docsEscAttr(cle)}">
-            <div class="doc-tile-icone">📁</div>
+            <div class="doc-tile-icone"><img src="dossier.png" alt="" class="doc-tile-img"></div>
             <div class="doc-tile-nom">${nom}</div>
         </div>
     `;
