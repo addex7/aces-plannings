@@ -412,7 +412,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     btn.style.cssText = 'width:100%; padding:8px 28px 8px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#1e3d59; font-size:14px; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
     if (select.id === 'select-instructeur-suivi') {
         wrap.style.cssText = 'position:relative; display:inline-block; width:auto; min-width:0; max-width:none;';
-        btn.style.cssText = 'width:auto; padding:0 44px 0 14px; height:38px; border:none; border-radius:6px; background:#1e3d59; color:#fff; font-size:13px; font-weight:600; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 2px 4px rgba(0,0,0,0.1);';
+        btn.style.cssText = 'width:auto; padding:0 38px 0 14px; height:38px; border:none; border-radius:6px; background:#1e3d59; color:#fff; font-size:13px; font-weight:600; text-align:left; cursor:pointer; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 2px 4px rgba(0,0,0,0.1);';
     }
 
     const caret = document.createElement('span');
@@ -433,11 +433,10 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     list.style.cssText = 'max-height:240px; overflow-y:auto;';
 
     if (select.id === 'select-instructeur-suivi') {
-        panel.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); right:0; min-width:100%; width:max-content; max-width:none; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden;';
-        search.style.minWidth = '300px';
+        panel.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); right:0; min-width:100%; width:auto; max-width:340px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden;';
+    } else {
+        panel.appendChild(search);
     }
-
-    panel.appendChild(search);
     panel.appendChild(list);
     select.parentElement.insertBefore(wrap, select);
     wrap.appendChild(btn);
@@ -453,7 +452,9 @@ function rendreSelectRecherchable(select, allowCustom = false) {
         const text = document.createTextNode(label() + ' ');
         const span = document.createElement('span');
         span.textContent = '▾';
-        span.style.cssText = 'float:right; opacity:.5;';
+        span.style.cssText = select.id === 'select-instructeur-suivi'
+            ? 'position:absolute; right:14px; top:50%; transform:translateY(-50%); opacity:.6;'
+            : 'float:right; opacity:.5;';
         btn.innerHTML = '';
         btn.appendChild(text);
         btn.appendChild(span);
