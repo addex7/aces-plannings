@@ -120,7 +120,7 @@ async function chargerComptesPilotes() {
 
         const isCurrent = !select || !select.value || select.value === nomPiloteComptes(currentUser);
         const canEdit = isCurrent || isTresorier();
-        if (form) form.style.display = canEdit ? 'block' : 'none';
+        if (form) form.style.display = canEdit ? 'flex' : 'none';
         if (container) container.style.gridColumn = canEdit ? '' : '1 / -1';
     } catch (err) {
         console.error(err);
