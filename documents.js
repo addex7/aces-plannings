@@ -69,12 +69,24 @@ function initDocuments() {
     if (formDossier) formDossier.addEventListener('submit', enregistrerDossier);
 }
 
-async function chargerDossiers() {
-    try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOSSIERS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+// Charge toutes les pages d'une table (pagination Airtable offset)
+async function chargerTousEnregistrements(urlBase, forceRefresh = false) {
+    const tous = [];
+    let offset = '';
+    do {
+        const sep = urlBase.includes('?') ? '&' : '?';
+        const res = await cachedFetch(`${urlBase}${sep}pageSize=100${offset ? `&offset=${offset}` : ''}`, { headers }, API_CACHE_TTL, forceRefresh);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        dossiersCache = data.records || [];
+        tous.push(...(data.records || []));
+        offset = data.offset || '';
+    } while (offset);
+    return tous;
+}
+
+async function chargerDossiers(forceRefresh = false) {
+    try {
+        dossiersCache = await chargerTousEnregistrements(`${API_BASE}/${encodeURIComponent(TABLE_DOSSIERS)}?sort[0][field]=Nom&sort[0][direction]=asc`, forceRefresh);
         populerDossiers();
     } catch (err) {
         console.error(err);
@@ -290,6 +302,65 @@ async function renommerDossierBiblio(ancien, nouveau, parent) {
     }
 }
 
+// Deplace un dossier et toute sa branche sous un nouveau parent
+// (nouveauParent='' = racine). Documents et sous-dossiers suivent.
+async function deplacerDossierBiblio(nom, ancienParent, nouveauParent) {
+    if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
+    if (nouveauParent.startsWith('⚙️ ')) return;
+    const chemins = { ...docsCheminsCible(nom, ancienParent), parent: ancienParent, nom };
+    if (nouveauParent === chemins.cible || nouveauParent.startsWith(chemins.cible + '/') || nouveauParent === ancienParent) return;
+    const nouveauParentSegs = nouveauParent ? nouveauParent.split('/') : [];
+    const sousCibleNouv = nouveauParentSegs.slice(1).concat(nom).join('/');
+    const nouvCat = nouveauParentSegs[0] || '';
+    const doublon = (documentsCache || []).some(r => {
+        const f = r.fields || {};
+        return nouveauParent
+            ? (f['Catégorie'] === nouvCat && (f['Sous-dossier'] || '') === sousCibleNouv)
+            : (f['Catégorie'] === nom);
+    }) || (dossiersCache || []).some(r => {
+        const f = r.fields || {};
+        return (f['Parent'] || '') === nouveauParent && f['Nom'] === nom;
+    });
+    if (doublon) { alert(`Un dossier « ${nom} » existe déjà à cet emplacement.`); return; }
+    const destination = nouveauParent ? `« ${nouveauParent.split('/').pop()} »` : 'la racine de la bibliothèque';
+    if (!confirm(`Déplacer « ${nom} » vers ${destination} ?`)) return;
+    try {
+        const sousAncienSegs = chemins.parentSegs.slice(1).concat(nom);
+        const nouvelleCible = nouveauParent ? `${nouveauParent}/${nom}` : nom;
+        const docsConcernes = (documentsCache || []).filter(r => docsDocDansBranche(r.fields || {}, chemins));
+        for (const rec of docsConcernes) {
+            const docSousSegs = ((rec.fields || {})['Sous-dossier'] || '').split('/').filter(Boolean);
+            const suffix = ancienParent ? docSousSegs.slice(sousAncienSegs.length) : docSousSegs;
+            const newPath = nouveauParentSegs.concat(nom, suffix);
+            const fields = { 'Catégorie': newPath[0], 'Sous-dossier': newPath.slice(1).join('/') };
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${rec.id}`, {
+                method: 'PATCH', headers, body: JSON.stringify({ fields })
+            });
+            if (!res.ok) throw new Error('Erreur lors du déplacement d\'un document');
+        }
+        const dossiersAMaj = (dossiersCache || []).filter(r => docsDossierDansBranche(r.fields || {}, chemins));
+        for (const rec of dossiersAMaj) {
+            const f = rec.fields || {};
+            const p = f['Parent'] || '';
+            const fields = (p === ancienParent && f['Nom'] === nom)
+                ? { 'Parent': nouveauParent }
+                : { 'Parent': nouvelleCible + p.slice(chemins.cible.length) };
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOSSIERS)}/${rec.id}`, {
+                method: 'PATCH', headers, body: JSON.stringify({ fields })
+            });
+            if (!res.ok) throw new Error('Erreur lors du déplacement du dossier');
+        }
+        const cheminStr = docsNavChemin.join('/');
+        if (cheminStr === chemins.cible || cheminStr.startsWith(chemins.cible + '/')) {
+            docsNavChemin = nouveauParentSegs.concat(nom, docsNavChemin.slice(chemins.parentSegs.length + 1));
+        }
+        await Promise.all([chargerDossiers(), chargerDocuments()]);
+    } catch (err) {
+        console.error(err);
+        alert(`Erreur lors du déplacement : ${err.message}`);
+    }
+}
+
 // Supprime un dossier (parent='') ou un sous-dossier (parent=chemin complet).
 // Les documents ne sont jamais supprimes : ils remontent dans le dossier
 // parent (sous-dossier) ou basculent dans « Autre » (dossier racine).
@@ -331,10 +402,7 @@ async function supprimerDossierBiblio(nom, parent) {
 
 async function chargerDocumentsAeronefsBibliotheque(forceRefresh = false) {
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        const records = data.records || [];
+        const records = await chargerTousEnregistrements(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}`, forceRefresh);
         documentsAeronefsBibliothequeCache = records.reduce((acc, rec) => {
             const machine = rec.fields && rec.fields['Machine'];
             if (!machine) return acc;
@@ -353,10 +421,7 @@ async function chargerDocuments() {
     if (!list) return;
     list.innerHTML = '<p>Chargement...</p>';
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}?sort[0][field]=Titre&sort[0][direction]=asc`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        documentsCache = data.records || [];
+        documentsCache = await chargerTousEnregistrements(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}?sort[0][field]=Titre&sort[0][direction]=asc`);
         await Promise.all([chargerDossiers(), chargerDocumentsAeronefsBibliotheque()]);
         afficherDocuments(documentsCache);
     } catch (err) {
@@ -368,6 +433,7 @@ async function chargerDocuments() {
 // Navigation « Finder » : chemin courant, profondeur illimitee
 // [categorie, sousDossier, sousSousDossier, ...]
 let docsNavChemin = [];
+let docsDragEnCours = false;
 
 function docsAssurerNoeud(arbre, chemin) {
     let n = null;
@@ -418,7 +484,7 @@ function docsTileDossier(nom, cle, parent = '') {
     const titreSuppr = parent ? `Supprimer le sous-dossier « ${nom} »` : `Supprimer le dossier « ${nom} »`;
     const titreRen = parent ? `Renommer le sous-dossier « ${nom} »` : `Renommer le dossier « ${nom} »`;
     return `
-        <div class="doc-tile" data-cle="${docsEscAttr(cle)}">
+        <div class="doc-tile" data-cle="${docsEscAttr(cle)}"${modifiable ? ' draggable="true"' : ''}>
             ${modifiable ? `<button type="button" class="doc-tile-ren" data-ren-nom="${docsEscAttr(cle)}" data-ren-parent="${docsEscAttr(parent)}" title="${docsEscAttr(titreRen)}">✏️</button>` : ''}
             ${modifiable ? `<button type="button" class="doc-tile-del" data-del-nom="${docsEscAttr(cle)}" data-del-parent="${docsEscAttr(parent)}" title="${docsEscAttr(titreSuppr)}">✕</button>` : ''}
             <div class="doc-tile-icone"><img src="dossier.png?v=2" alt="" class="doc-tile-img" onerror="this.outerHTML='&#128193;'"></div>
@@ -489,9 +555,67 @@ function afficherDocuments(records) {
     // Tuiles : entrer dans le dossier
     list.querySelectorAll('.doc-tile').forEach(t => {
         t.addEventListener('click', (e) => {
-            if (e.target.closest('.doc-tile-del, .doc-tile-ren')) return;
+            if (docsDragEnCours || e.target.closest('.doc-tile-del, .doc-tile-ren')) return;
             docsNavChemin = docsNavChemin.concat(t.dataset.cle);
             afficherDocuments(documentsCache);
+        });
+    });
+    // Tuiles : glisser-deposer pour deplacer un dossier
+    let tuileSource = null;
+    const nettoyerDrag = () => {
+        list.querySelectorAll('.doc-tile.dragging, .doc-tile.dragover, .docs-breadcrumb-item.dragover')
+            .forEach(x => x.classList.remove('dragging', 'dragover'));
+    };
+    const cibleDepot = (cheminCible) => {
+        if (!tuileSource) return;
+        const nom = tuileSource.dataset.delNom;
+        const ancienParent = tuileSource.dataset.delParent || '';
+        if (!nom || cheminCible.startsWith('⚙️ ')) return;
+        deplacerDossierBiblio(nom, ancienParent, cheminCible);
+    };
+    list.querySelectorAll('.doc-tile[draggable="true"]').forEach(t => {
+        t.addEventListener('dragstart', (e) => {
+            tuileSource = t;
+            docsDragEnCours = true;
+            t.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', t.dataset.delNom || '');
+        });
+        t.addEventListener('dragend', () => {
+            nettoyerDrag();
+            tuileSource = null;
+            setTimeout(() => { docsDragEnCours = false; }, 0);
+        });
+    });
+    list.querySelectorAll('.doc-tile').forEach(t => {
+        t.addEventListener('dragover', (e) => {
+            if (!docsDragEnCours || t === tuileSource || (t.dataset.cle || '').startsWith('⚙️ ')) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            t.classList.add('dragover');
+        });
+        t.addEventListener('dragleave', () => t.classList.remove('dragover'));
+        t.addEventListener('drop', (e) => {
+            e.preventDefault();
+            t.classList.remove('dragover');
+            if (!tuileSource || t === tuileSource) return;
+            cibleDepot(docsNavChemin.concat(t.dataset.cle).join('/'));
+        });
+    });
+    // Fil d'Ariane : cible de depot pour remonter un dossier d'un ou plusieurs niveaux
+    list.querySelectorAll('.docs-breadcrumb-item').forEach(b => {
+        b.addEventListener('dragover', (e) => {
+            if (!docsDragEnCours || (docsNavChemin[0] || '').startsWith('⚙️ ')) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            b.classList.add('dragover');
+        });
+        b.addEventListener('dragleave', () => b.classList.remove('dragover'));
+        b.addEventListener('drop', (e) => {
+            e.preventDefault();
+            b.classList.remove('dragover');
+            const idx = parseInt(b.dataset.idx, 10);
+            cibleDepot(idx === -1 ? '' : docsNavChemin.slice(0, idx + 1).join('/'));
         });
     });
     // Tuiles : suppression d'un dossier / sous-dossier
