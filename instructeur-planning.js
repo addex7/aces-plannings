@@ -92,13 +92,10 @@ function initPlanningInstructeur() {
     }
 
     if (!dateEl.dataset.ready) {
-        dateEl.addEventListener('click', () => {
-            const annee = dateInstructeurSuivi.getFullYear();
-            const mois = (dateInstructeurSuivi.getMonth() + 1).toString().padStart(2, '0');
-            const jour = dateInstructeurSuivi.getDate().toString().padStart(2, '0');
-            const datePrompt = prompt('Aller à la date (JJ/MM/AAAA) :', `${jour}/${mois}/${annee}`);
-            if (datePrompt) {
-                const [d, m, y] = datePrompt.split('/').map(Number);
+        dateEl.addEventListener('click', async () => {
+            const iso = await demanderDateModal(dateInstructeurSuivi);
+            if (iso) {
+                const [y, m, d] = iso.split('-').map(Number);
                 if (d && m && y) {
                     dateInstructeurSuivi = new Date(y, m - 1, d, 12, 0, 0);
                     mettreAJourDateInstructeur();

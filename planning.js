@@ -3228,13 +3228,10 @@ function initBoutonsNavigation() {
     if (currentDateEl) {
         currentDateEl.style.cursor = 'pointer';
         currentDateEl.title = 'Cliquer pour choisir une date';
-        currentDateEl.addEventListener('click', () => {
-            const annee = dateAffichee.getFullYear();
-            const mois = (dateAffichee.getMonth() + 1).toString().padStart(2, '0');
-            const jour = dateAffichee.getDate().toString().padStart(2, '0');
-            const datePrompt = prompt("Aller à la date (JJ/MM/AAAA) :", `${jour}/${mois}/${annee}`);
-            if (datePrompt) {
-                const [d, m, y] = datePrompt.split('/').map(Number);
+        currentDateEl.addEventListener('click', async () => {
+            const iso = await demanderDateModal(dateAffichee);
+            if (iso) {
+                const [y, m, d] = iso.split('-').map(Number);
                 if (d && m && y) {
                     dateAffichee = new Date(y, m - 1, d, 12, 0, 0);
                     listeReservationsCache = [];

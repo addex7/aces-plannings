@@ -551,3 +551,48 @@ function rendreSelectRecherchable(select, allowCustom = false) {
         essayer();
     }
 })();
+
+// ==========================================================================
+// MODALE "ALLER A LA DATE" - remplace le prompt() natif
+// Résout une chaîne 'YYYY-MM-DD' ou null si annulé.
+// ==========================================================================
+function demanderDateModal(dateInitiale) {
+    return new Promise(resolve => {
+        const existing = document.getElementById('date-nav-modal');
+        if (existing) existing.remove();
+        let iso = '';
+        if (dateInitiale instanceof Date && !isNaN(dateInitiale)) {
+            iso = `${dateInitiale.getFullYear()}-${String(dateInitiale.getMonth() + 1).padStart(2, '0')}-${String(dateInitiale.getDate()).padStart(2, '0')}`;
+        }
+        const overlay = document.createElement('div');
+        overlay.id = 'date-nav-modal';
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.style.zIndex = '20000';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width: 320px; text-align: left;">
+                <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                    <span style="font-size:22px;">📅</span>
+                    <span>Aller à la date</span>
+                </h3>
+                <input type="date" id="date-nav-input" value="${iso}"
+                    style="width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; font-family:inherit; color:#1e3d59; margin:6px 0 18px;">
+                <div style="display:flex; gap:10px; justify-content:space-between;">
+                    <button type="button" class="nr-btn-cancel" id="date-nav-cancel">Annuler</button>
+                    <button type="button" class="btn-primary" id="date-nav-ok">Valider</button>
+                </div>
+            </div>
+        `;
+        const input = overlay.querySelector('#date-nav-input');
+        const fermer = (val) => { overlay.remove(); resolve(val); };
+        overlay.querySelector('#date-nav-cancel').addEventListener('click', () => fermer(null));
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) fermer(null); });
+        overlay.querySelector('#date-nav-ok').addEventListener('click', () => fermer(input.value || null));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); fermer(input.value || null); }
+            if (e.key === 'Escape') { e.preventDefault(); fermer(null); }
+        });
+        document.body.appendChild(overlay);
+        input.focus();
+    });
+}
