@@ -1062,135 +1062,6 @@ function initNavigationTabs() {
     }
 }
 
-async function remplirMenuMaintenance(menu) {
-    const selSuivi = document.getElementById('select-machine-suivi');
-    let immat = '';
-    if (selSuivi) {
-        const m = (listeAvionsCache || []).find(a => a.id === selSuivi.value || (a.fields && a.fields['Immatriculation'] === selSuivi.value));
-        if (m) immat = m.fields['Immatriculation'] || '';
-        else if (selSuivi.selectedIndex >= 0) immat = selSuivi.options[selSuivi.selectedIndex].textContent;
-    }
-    if (!maintenancesSuiviCache.length) {
-        try {
-            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Maintenance')}`, { headers });
-            const data = await res.json();
-            maintenancesSuiviCache = data.records || [];
-        } catch (err) { console.error(err); }
-    }
-    const maints = (maintenancesSuiviCache || [])
-        .filter(m => m.fields && (m.fields['Machine'] || '') === immat)
-        .sort((a, b) => new Date(b.fields['Date']) - new Date(a.fields['Date']));
-
-    let html = `
-        <div class="menu-maint-item" data-action="maintenance">🔧 Mettre la machine en maintenance</div>
-        <div class="menu-maint-item" data-action="butee">⏱️ Modifier la butée de l'horamètre</div>`;
-    if (maints.length) {
-        html += `<div style="border-top:1px solid #e2e8f0; padding:8px 14px 4px; font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase;">Modifier une maintenance</div>`;
-        maints.slice(0, 10).forEach(m => {
-            const d = new Date(m.fields['Date']);
-            const label = `${d.toLocaleDateString('fr-FR')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${m.fields['durée'] || 0}h`;
-            html += `<div class="menu-maint-item" data-maint="${m.id}">✏️ ${label}</div>`;
-        });
-    }
-    menu.innerHTML = html;
-    menu.querySelectorAll('.menu-maint-item').forEach(el => {
-        el.style.cssText = 'padding:10px 14px; cursor:pointer; font-size:13px; color:#1e3d59; white-space:nowrap;';
-        el.addEventListener('mouseenter', () => { el.style.background = '#f1f5f9'; });
-        el.addEventListener('mouseleave', () => { el.style.background = ''; });
-        el.addEventListener('click', () => {
-            menu.style.display = 'none';
-            if (el.dataset.action === 'maintenance') ouvrirModaleMaintenance();
-            else if (el.dataset.action === 'butee') ouvrirModaleButee();
-            else if (el.dataset.maint) {
-                const rec = maintenancesSuiviCache.find(m => m.id === el.dataset.maint);
-                if (rec) ouvrirModaleMaintenance(rec);
-            }
-        });
-    });
-}
-
-function initMenuMaintenance() {
-    const btn = document.getElementById('btn-maintenance');
-    if (!btn || document.getElementById('menu-maintenance')) return;
-    const parent = btn.parentElement;
-    if (parent) parent.style.position = 'relative';
-    const menu = document.createElement('div');
-    menu.id = 'menu-maintenance';
-    menu.style.cssText = 'display:none; position:absolute; top:calc(100% + 6px); right:0; min-width:280px; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:10000; overflow:hidden; text-align:left;';
-    parent.appendChild(menu);
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (menu.style.display === 'none') {
-            menu.style.display = 'block';
-            remplirMenuMaintenance(menu);
-        } else {
-            menu.style.display = 'none';
-        }
-    });
-    document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.style.display = 'none'; });
-}
-
-function ouvrirModaleButee() {
-    const modal = document.getElementById('butee-modal');
-    const selMachine = document.getElementById('butee-machine-select');
-    const selSuivi = document.getElementById('select-machine-suivi');
-    if (!modal || !selMachine) return;
-    const machineCourante = (listeAvionsCache || []).find(a => a.id === (selSuivi && selSuivi.value))
-        || (listeAvionsCache || []).find(a => a.fields && a.fields['Immatriculation'] === (selSuivi && selSuivi.value))
-        || (listeAvionsCache || [])[0];
-    selMachine.value = machineCourante ? machineCourante.id : '';
-    const majActuelle = () => {
-        const m = (listeAvionsCache || []).find(x => x.id === selMachine.value);
-        const b = m ? (parseFloat(String(m.fields['Prochaine Butée'] || '').replace(',', '.')) || 0) : 0;
-        document.getElementById('butee-actuelle').value = b;
-        document.getElementById('butee-nouvelle').value = b + 50;
-    };
-    populerMachinesChips('butee-machine-group', 'butee-machine-select', majActuelle);
-    majActuelle();
-    modal.style.display = 'flex';
-}
-
-async function enregistrerButee(e) {
-    e.preventDefault();
-    const selMachine = document.getElementById('butee-machine-select');
-    const nouvelle = parseFloat(String(document.getElementById('butee-nouvelle').value).replace(',', '.'));
-    const machine = (listeAvionsCache || []).find(x => x.id === selMachine.value);
-    if (!machine || !machine.fields || isNaN(nouvelle)) return;
-    const immat = machine.fields['Immatriculation'] || '';
-    const ancienne = parseFloat(String(document.getElementById('butee-actuelle').value).replace(',', '.')) || 0;
-    try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Maintenance')}`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ fields: { 'Machine': immat, 'Date': new Date().toISOString(), 'Ancienne butée': ancienne, 'Nouvelle Butée': nouvelle, 'durée': 0 } })
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const resAvion = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}/${machine.id}`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ fields: { 'Prochaine Butée': nouvelle } })
-        });
-        if (!resAvion.ok) throw new Error(await resAvion.text());
-        if (typeof enregistrerAudit === 'function') {
-            await enregistrerAudit('Modification butée horamètre', immat, `Butée : ${ancienne} h → ${nouvelle} h`, 'Maintenance');
-        }
-        document.getElementById('butee-modal').style.display = 'none';
-        chargerSuiviAeronef();
-        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, true, true);
-    } catch (err) {
-        console.error(err);
-        alert("Erreur lors de l'enregistrement de la butée.");
-    }
-}
-
-const btnMaintenance = document.getElementById('btn-maintenance');
-if (btnMaintenance) initMenuMaintenance();
-
-const formButee = document.getElementById('butee-form');
-if (formButee) formButee.addEventListener('submit', enregistrerButee);
-const closeButee = document.getElementById('close-butee');
-if (closeButee) closeButee.addEventListener('click', () => { document.getElementById('butee-modal').style.display = 'none'; });
-
 const formMaintenance = document.getElementById('maintenance-form');
 if (formMaintenance) formMaintenance.addEventListener('submit', enregistrerMaintenance);
 
@@ -1251,18 +1122,16 @@ function peutTraiterSignalements() {
 }
 
 function appliquerAccesMaintenanceEtDocuments() {
-    const btnMaintenance = document.getElementById('btn-maintenance');
     const btnDocs = document.getElementById('btn-documents-aeronef');
     const btnBilan = document.getElementById('btn-bilan-docs-aeronefs');
-    if (btnMaintenance) btnMaintenance.style.display = peutGererMaintenance() ? '' : 'none';
     if (btnDocs) btnDocs.style.display = peutGererDocumentsAeronef() ? '' : 'none';
     if (btnBilan) btnBilan.style.display = peutGererDocumentsAeronef() ? '' : 'none';
 }
 
 function initSuiviDocumentsAeronefs() {
     const header = document.querySelector('#view-aeronefs .header');
-    const btnMaintenance = document.getElementById('btn-maintenance');
-    if (!header || !btnMaintenance) return;
+    const btnOptions = document.getElementById('btn-aeronef-options');
+    if (!header || !btnOptions || !btnOptions.parentNode) return;
 
     if (!document.getElementById('btn-documents-aeronef')) {
         const btn = document.createElement('button');
@@ -1270,7 +1139,7 @@ function initSuiviDocumentsAeronefs() {
         btn.className = 'btn-primary aeronef-ctl';
         btn.textContent = 'Suivi documentation machine';
         btn.addEventListener('click', () => ouvrirModaleDocumentsAeronef());
-        btnMaintenance.parentNode.insertBefore(btn, btnMaintenance.nextSibling);
+        btnOptions.parentNode.insertBefore(btn, btnOptions.nextSibling);
     }
     if (!document.getElementById('btn-bilan-docs-aeronefs')) {
         const btnBilan = document.createElement('button');
@@ -1287,7 +1156,7 @@ function initSuiviDocumentsAeronefs() {
     if (!document.getElementById('documents-aeronef-recap')) {
         const recap = document.createElement('div');
         recap.id = 'documents-aeronef-recap';
-        recap.style.cssText = 'background: white; border-radius: 12px; padding: 12px 20px; margin: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none;';
+        recap.style.cssText = 'background: white; border-radius: 12px; padding: 12px 20px; margin: 8px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none;';
         recap.innerHTML = '<h4 style="margin: 0 0 8px; color: #1e3d59; font-size: 13px;">Documents machine</h4><div id="documents-aeronef-list" style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px;"></div>';
         const whiteDiv = header.nextElementSibling;
         if (whiteDiv && whiteDiv.parentNode) {

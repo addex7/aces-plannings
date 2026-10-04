@@ -646,6 +646,7 @@ img, table, video, iframe, svg {
    block, le gap flex ne s'applique pas -> marges) */
 #view-planning > * + * { margin-top: 8px; }
 #view-initiation > * + * { margin-top: 8px; }
+#view-aeronefs > * + * { margin-top: 8px; }
 .glider-presence-section h3 {
     margin-top: 0;
     color: #1e3d59;
@@ -2956,15 +2957,13 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     z-index: 50;
 }
 #view-aeronefs .header .aeronef-ctl {
-    height: 38px;
-    padding: 0 14px;
-    font-size: 13px;
-    font-weight: 600;
+    padding: 10px 16px;
+    font-size: 13.5px;
+    font-weight: bold;
     border-radius: 6px;
     display: inline-flex;
     align-items: center;
     box-sizing: border-box;
-    margin-left: 8px;
 }
 .sidebar-icon-btn:active {
     transform: scale(0.95);
