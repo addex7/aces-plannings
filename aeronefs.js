@@ -872,7 +872,7 @@ async function chargerSuiviAeronef() {
             titreDoc.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <span>Prévisionnel sur 14 jours</span>
-                    <div id="aeronef-docs-alerte" style="display:none; flex:1; justify-content:center; flex-wrap:wrap; gap:6px; align-items:center; font-weight:normal;"></div>
+                    <div id="aeronef-docs-alerte" style="display:none; flex:1; justify-content:center; flex-wrap:wrap; gap:8px; align-items:center; font-weight:normal; font-size:11px;"></div>
                     <div style="font-size: 14px; font-weight: normal;">
                         Prochaine butée : <strong>${buteeInitiale.toFixed(1)} h</strong>
                         &nbsp;|&nbsp; Dernier horamètre : <strong>${horametreActuel.toFixed(2)} h</strong>
@@ -1568,7 +1568,7 @@ function afficherListeDocumentsAeronef(machine) {
         const aujourdhui = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const actifs = records.filter(r => r.fields && r.fields['Activé'] !== false);
         list.innerHTML = actifs.length
-            ? `<div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px;">${actifs.map(r => htmlChipDocAeronef(r, aujourdhui, dans3mois)).join('')}</div>`
+            ? `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:8px; font-size:11px;">${actifs.map(r => htmlChipDocAeronef(r, aujourdhui, dans3mois)).join('')}</div>`
             : '<p style="color:#64748b;">Aucun document actif pour cette machine.</p>';
         const btnNouveauRO = document.getElementById('btn-nouveau-doc-aeronef');
         if (btnNouveauRO) btnNouveauRO.style.display = 'none';
