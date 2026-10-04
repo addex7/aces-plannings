@@ -293,17 +293,19 @@ function docsHtmlMachine(machine) {
             ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir le document ↗</a>`
             : `<span style="font-size:13px; color:#94a3b8;">Aucun fichier lié</span>`;
         return `
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px;">
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; display:flex; flex-direction:column;">
                 <h4 style="margin:0 0 6px; color:#0f172a; display:flex; align-items:center; gap:8px;">
                     <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block; flex-shrink:0;"></span>
                     ${type.nom}
                 </h4>
                 <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${dateTxt}</p>
-                ${lien}
-                ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
-                    <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="modifierDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Modifier</button>
-                    <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Supprimer</button>
-                </div>` : ''}
+                <div style="margin-top:auto;">
+                    ${lien}
+                    ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
+                        <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="modifierDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Modifier</button>
+                        <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Supprimer</button>
+                    </div>` : ''}
+                </div>
             </div>
         `;
     }).join('');
@@ -338,14 +340,16 @@ function creerCarteDocument(rec) {
     const f = rec.fields || {};
     const canEdit = isDocumentaliste();
     return `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px;">
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; display:flex; flex-direction:column;">
             <h4 style="margin:0 0 6px; color:#0f172a;">${f['Titre'] || 'Sans titre'}</h4>
             <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${f['Description'] || ''}</p>
-            <a href="${f['Lien'] || '#'}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">Ouvrir le document ↗</a>
-            ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
-                <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="ouvrirFormDocument('${rec.id}')">Modifier</button>
-                <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocument('${rec.id}')">Supprimer</button>
-            </div>` : ''}
+            <div style="margin-top:auto;">
+                <a href="${f['Lien'] || '#'}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">Ouvrir le document ↗</a>
+                ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
+                    <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="ouvrirFormDocument('${rec.id}')">Modifier</button>
+                    <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocument('${rec.id}')">Supprimer</button>
+                </div>` : ''}
+            </div>
         </div>
     `;
 }
