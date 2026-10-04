@@ -872,6 +872,7 @@ async function chargerSuiviAeronef() {
             titreDoc.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <span>Prévisionnel sur 14 jours</span>
+                    <div id="aeronef-docs-alerte" style="display:none; flex:1; justify-content:center; flex-wrap:wrap; gap:6px; align-items:center; font-weight:normal;"></div>
                     <div style="font-size: 14px; font-weight: normal;">
                         Prochaine butée : <strong>${buteeInitiale.toFixed(1)} h</strong>
                         &nbsp;|&nbsp; Dernier horamètre : <strong>${horametreActuel.toFixed(2)} h</strong>
@@ -1123,7 +1124,7 @@ function peutGererDocumentsAeronef() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     if (peutGererMaintenance()) return true;
     const roles = currentUser.roles || [];
-    return roles.includes('Documentaliste') || roles.some(r => /instructeur/i.test(r || ''));
+    return roles.includes('Documentaliste');
 }
 
 // Mécanicien, super admin et instructeurs peuvent faire avancer le statut
@@ -1137,7 +1138,7 @@ function peutTraiterSignalements() {
 function appliquerAccesMaintenanceEtDocuments() {
     const btnDocs = document.getElementById('btn-documents-aeronef');
     const btnBilan = document.getElementById('btn-bilan-docs-aeronefs');
-    if (btnDocs) btnDocs.style.display = peutGererDocumentsAeronef() ? '' : 'none';
+    if (btnDocs) btnDocs.style.display = '';
     if (btnBilan) btnBilan.style.display = peutGererDocumentsAeronef() ? '' : 'none';
 }
 
@@ -1166,16 +1167,6 @@ function initSuiviDocumentsAeronefs() {
     }
     appliquerAccesMaintenanceEtDocuments();
 
-    if (!document.getElementById('documents-aeronef-recap')) {
-        const recap = document.createElement('div');
-        recap.id = 'documents-aeronef-recap';
-        recap.style.cssText = 'background: white; border-radius: 12px; padding: 12px 20px; margin: 8px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none;';
-        recap.innerHTML = '<h4 style="margin: 0 0 8px; color: #1e3d59; font-size: 13px;">Documents machine</h4><div id="documents-aeronef-list" style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px;"></div>';
-        const whiteDiv = header.nextElementSibling;
-        if (whiteDiv && whiteDiv.parentNode) {
-            whiteDiv.parentNode.insertBefore(recap, whiteDiv);
-        }
-    }
     creerModaleDocumentsAeronef();
 }
 
@@ -1366,7 +1357,7 @@ function statutDocBilan(records, typeInfo) {
 }
 
 async function ouvrirBilanDocumentsAeronefs() {
-    if (!peutGererDocumentsAeronef()) { alert("Accès réservé aux instructeurs, mécaniciens et super admin."); return; }
+    if (!peutGererDocumentsAeronef()) { alert("Accès réservé aux mécaniciens, documentalistes et super admin."); return; }
     const modal = document.getElementById('documents-bilan-modal');
     const cont = document.getElementById('documents-bilan-table');
     if (!modal || !cont) return;
@@ -1494,7 +1485,10 @@ async function chargerDocumentsAeronef(machine, forceRefresh = false) {
         documentsAeronefsParMachine[machine] = [];
         return [];
     }
-    if (!forceRefresh && documentsAeronefsParMachine[machine]) return documentsAeronefsParMachine[machine];
+    if (!forceRefresh && documentsAeronefsParMachine[machine]) {
+        afficherRecapDocumentsAeronef(machine);
+        return documentsAeronefsParMachine[machine];
+    }
     try {
         const formula = `{Machine}='${machine}'`;
         const url = `${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
@@ -1512,41 +1506,50 @@ async function chargerDocumentsAeronef(machine, forceRefresh = false) {
     }
 }
 
-function afficherRecapDocumentsAeronef(machine, listId = 'documents-aeronef-list', containerId = 'documents-aeronef-recap') {
-    const recap = document.getElementById(listId);
-    const container = document.getElementById(containerId);
-    if (!recap || !container) return;
+function couleurDocAeronef(f, aujourdhui, dans3mois) {
+    if (!f['Date de validité']) return '#10b981';
+    const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
+    if (dateValid < aujourdhui) return '#dc2626';
+    if (dateValid < dans3mois) return '#f97316';
+    return '#10b981';
+}
+
+function htmlChipDocAeronef(r, aujourdhui, dans3mois) {
+    const f = r.fields || {};
+    const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) || { nom: f['Type de document'] };
+    const couleur = couleurDocAeronef(f, aujourdhui, dans3mois);
+    const dateTxt = f['Date de validité'] ? ` – ${new Date(f['Date de validité'] + 'T00:00:00').toLocaleDateString('fr-FR')}` : '';
+    const label = f['Lien']
+        ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#0f172a; text-decoration:underline;">${type.nom}${dateTxt}</a>`
+        : `<span style="color:#0f172a;">${type.nom}${dateTxt}</span>`;
+    return `
+        <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block;"></span>
+            ${label}
+        </div>
+    `;
+}
+
+function afficherRecapDocumentsAeronef(machine) {
+    const ancienRecap = document.getElementById('documents-aeronef-recap');
+    if (ancienRecap) ancienRecap.style.display = 'none';
+    const cible = document.getElementById('aeronef-docs-alerte');
+    if (!cible) return;
     const records = (documentsAeronefsParMachine[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
-    if (records.length === 0) {
-        container.style.display = 'none';
-        return;
-    }
     const now = new Date();
     const dans3mois = new Date();
     dans3mois.setMonth(dans3mois.getMonth() + 3);
     const aujourdhui = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    recap.innerHTML = records.map(r => {
-        const f = r.fields || {};
-        const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) || { nom: f['Type de document'] };
-        let couleur = '#10b981';
-        let dateTxt = '';
-        if (f['Date de validité']) {
-            const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
-            dateTxt = ` – ${dateValid.toLocaleDateString('fr-FR')}`;
-            if (dateValid < aujourdhui) couleur = '#dc2626';
-            else if (dateValid < dans3mois) couleur = '#f97316';
-        }
-        const label = f['Lien']
-            ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#0f172a; text-decoration:underline;">${type.nom}${dateTxt}</a>`
-            : `<span style="color:#0f172a;">${type.nom}${dateTxt}</span>`;
-        return `
-            <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block;"></span>
-                ${label}
-            </div>
-        `;
-    }).join('');
-    container.style.display = 'block';
+    const enAlerte = records
+        .filter(r => couleurDocAeronef(r.fields || {}, aujourdhui, dans3mois) !== '#10b981')
+        .sort((a, b) => new Date(a.fields['Date de validité'] || '9999') - new Date(b.fields['Date de validité'] || '9999'));
+    if (!enAlerte.length) {
+        cible.style.display = 'none';
+        cible.innerHTML = '';
+        return;
+    }
+    cible.innerHTML = enAlerte.map(r => htmlChipDocAeronef(r, aujourdhui, dans3mois)).join('');
+    cible.style.display = 'flex';
 }
 
 function afficherListeDocumentsAeronef(machine) {
@@ -1556,6 +1559,19 @@ function afficherListeDocumentsAeronef(machine) {
     const records = (documentsAeronefsParMachine[machine] || []).sort((a, b) => (a.fields['Type de document'] || '').localeCompare(b.fields['Type de document'] || ''));
     if (records.length === 0) {
         list.innerHTML = '<p style="color:#64748b;">Aucun document enregistré pour cette machine.</p>';
+        return;
+    }
+    if (!peutModifier) {
+        const now = new Date();
+        const dans3mois = new Date();
+        dans3mois.setMonth(dans3mois.getMonth() + 3);
+        const aujourdhui = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const actifs = records.filter(r => r.fields && r.fields['Activé'] !== false);
+        list.innerHTML = actifs.length
+            ? `<div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px;">${actifs.map(r => htmlChipDocAeronef(r, aujourdhui, dans3mois)).join('')}</div>`
+            : '<p style="color:#64748b;">Aucun document actif pour cette machine.</p>';
+        const btnNouveauRO = document.getElementById('btn-nouveau-doc-aeronef');
+        if (btnNouveauRO) btnNouveauRO.style.display = 'none';
         return;
     }
     list.innerHTML = records.map(r => {
