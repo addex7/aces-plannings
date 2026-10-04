@@ -323,7 +323,12 @@ async function deplacerDossierBiblio(nom, ancienParent, nouveauParent) {
     });
     if (doublon) { alert(`Un dossier « ${nom} » existe déjà à cet emplacement.`); return; }
     const destination = nouveauParent ? `« ${nouveauParent.split('/').pop()} »` : 'la racine de la bibliothèque';
-    if (!confirm(`Déplacer « ${nom} » vers ${destination} ?`)) return;
+    const okDepl = await docsConfirmer(
+        'Déplacer le dossier',
+        `<p style="margin:0;">« <strong>${nom}</strong> » sera déplacé vers <strong>${destination}</strong>, avec tous ses sous-dossiers et documents.</p>`,
+        '📁', 'Déplacer'
+    );
+    if (!okDepl) return;
     try {
         const sousAncienSegs = chemins.parentSegs.slice(1).concat(nom);
         const nouvelleCible = nouveauParent ? `${nouveauParent}/${nom}` : nom;
@@ -369,11 +374,12 @@ async function supprimerDossierBiblio(nom, parent) {
     const chemins = { ...docsCheminsCible(nom, parent), parent, nom };
     const docsConcernes = (documentsCache || []).filter(r => docsDocDansBranche(r.fields || {}, chemins));
     const quoi = parent ? `le sous-dossier « ${nom} »` : `le dossier « ${nom} »`;
-    const destination = parent ? `ils seront remontés dans « ${parent.split('/').pop()} »` : 'ils seront déplacés dans « Autre »';
+    const destination = parent ? `ils seront remontés dans <strong>« ${parent.split('/').pop()} »</strong>` : 'ils seront déplacés dans <strong>« Autre »</strong>';
     const msg = docsConcernes.length
-        ? `Supprimer ${quoi} ?\n\nIl contient ${docsConcernes.length} document(s) : ${destination}.`
-        : `Supprimer ${quoi} ?`;
-    if (!confirm(msg)) return;
+        ? `<p style="margin:0;">Ce dossier contient <strong>${docsConcernes.length} document(s)</strong> : ${destination} — ils ne seront pas supprimés.</p>`
+        : '<p style="margin:0;">Ce dossier est vide.</p>';
+    const okSuppr = await docsConfirmer(`Supprimer ${quoi} ?`, msg, '🗑️', 'Supprimer', true);
+    if (!okSuppr) return;
     try {
         for (const rec of docsConcernes) {
             const fields = parent
@@ -434,6 +440,40 @@ async function chargerDocuments() {
 // [categorie, sousDossier, sousSousDossier, ...]
 let docsNavChemin = [];
 let docsDragEnCours = false;
+
+// Modale de confirmation au style du site — remplace confirm() natif.
+// Renvoie une Promise<boolean>.
+function docsConfirmer(titre, messageHtml, icone = '📁', libelleOk = 'Confirmer', danger = false) {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('docs-confirm-modal');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'docs-confirm-modal';
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.style.zIndex = '20000';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width: 440px; text-align: left;">
+                <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
+                <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                    <span style="font-size:28px;">${icone}</span>
+                    <span>${docsEscAttr(titre)}</span>
+                </h3>
+                <div style="margin-top:15px; line-height:1.6; font-size:15px; color:#334155;">${messageHtml}</div>
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                    <button type="button" class="nr-btn-cancel" id="docs-confirm-cancel">Annuler</button>
+                    <button type="button" class="btn-primary" id="docs-confirm-ok"${danger ? ' style="background:#dc2626;"' : ''}>${libelleOk}</button>
+                </div>
+            </div>
+        `;
+        const fermer = (val) => { overlay.remove(); resolve(val); };
+        overlay.querySelector('.close-modal').addEventListener('click', () => fermer(false));
+        overlay.querySelector('#docs-confirm-cancel').addEventListener('click', () => fermer(false));
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) fermer(false); });
+        overlay.querySelector('#docs-confirm-ok').addEventListener('click', () => fermer(true));
+        document.body.appendChild(overlay);
+    });
+}
 
 function docsAssurerNoeud(arbre, chemin) {
     let n = null;
@@ -854,7 +894,10 @@ async function enregistrerDocument(e) {
 
 async function supprimerDocument(id) {
     if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
-    if (!confirm('Supprimer ce document ?')) return;
+    const rec = (documentsCache || []).find(r => r.id === id);
+    const titre = (rec && rec.fields && rec.fields['Titre']) || 'ce document';
+    const okSuppr = await docsConfirmer('Supprimer le document', `<p style="margin:0;">« <strong>${titre}</strong> » sera définitivement supprimé.</p>`, '🗑️', 'Supprimer', true);
+    if (!okSuppr) return;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}?records[]=${encodeURIComponent(id)}`, { method: 'DELETE', headers });
         const data = await res.json();
