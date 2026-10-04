@@ -641,6 +641,9 @@ img, table, video, iframe, svg {
     flex-direction: column;
     gap: 12px;
 }
+/* Meme espacement entre les blocs de la vue planning que
+   celui entre les sections de presence */
+#view-planning.view-section { gap: 12px; }
 .glider-presence-section h3 {
     margin-top: 0;
     color: #1e3d59;
