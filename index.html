@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=221">
+    <link rel="stylesheet" href="style.css?v=222">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -745,17 +745,17 @@
                 <div class="comptes-grid">
                     <form id="comptes-form-recette" class="comptes-form-card" style="display:none;">
                         <h3 class="comptes-form-title">Renseigner un versement</h3>
-                        <div class="comptes-form-group">
+                        <div class="comptes-form-group comptes-fg-date">
                             <label for="comptes-recette-date">Date</label>
                             <input type="date" id="comptes-recette-date" required>
                         </div>
-                        <div class="comptes-form-group">
-                            <label for="comptes-recette-desc">Description</label>
-                            <input type="text" id="comptes-recette-desc" required placeholder="Description de la recette">
-                        </div>
-                        <div class="comptes-form-group">
+                        <div class="comptes-form-group comptes-fg-montant">
                             <label for="comptes-recette-montant">Montant (€)</label>
                             <input type="number" step="0.01" id="comptes-recette-montant" required placeholder="Montant">
+                        </div>
+                        <div class="comptes-form-group comptes-fg-desc">
+                            <label for="comptes-recette-desc">Description</label>
+                            <input type="text" id="comptes-recette-desc" required placeholder="Description de la recette">
                         </div>
                         <button type="submit" class="comptes-btn-ajouter">Enregistrer le versement</button>
                     </form>
@@ -1659,7 +1659,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004172301"></script>
+    <script src="version.js?v=20261004172509"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=108"></script>
     <script src="presences.js?v=103"></script>
