@@ -3899,8 +3899,6 @@ async function validerResaAdminVI(e) {
 }
 
 async function chargerVolsInitiation() {
-    const dateEl = document.getElementById('current-date-initiation');
-    if (dateEl) dateEl.textContent = 'Vue globale';
     const container = document.getElementById('initiation-list');
     if (container) container.innerHTML = "<div class='loading'>Chargement des vols d'initiation...</div>";
     try {

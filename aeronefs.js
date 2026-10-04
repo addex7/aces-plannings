@@ -1065,6 +1065,19 @@ function initNavigationTabs() {
 const formMaintenance = document.getElementById('maintenance-form');
 if (formMaintenance) formMaintenance.addEventListener('submit', enregistrerMaintenance);
 
+const btnLegendeSuivi = document.getElementById('btn-legende-suivi');
+if (btnLegendeSuivi) {
+    btnLegendeSuivi.addEventListener('click', () => {
+        const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
+        afficherModaleAlerte('Légende des couleurs', `
+            ${item('#10b981', 'Potentiel OK (> 10h)')}
+            ${item('#eab308', 'Alerte révision (≤ 10h)')}
+            ${item('#dc2626', 'Potentiel épuisé / Dépassement (≤ 0h)')}
+            ${item('rgba(124, 58, 237, 0.7)', 'Maintenance')}
+        `, 'ℹ️');
+    });
+}
+
 const ancienneButeeInput = document.getElementById('maintenance-ancienne-butee');
 const changerButee = document.getElementById('maintenance-changer-butee');
 const nouvelleButeeGroup = document.getElementById('maintenance-nouvelle-butee-group');
