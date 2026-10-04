@@ -648,6 +648,7 @@ img, table, video, iframe, svg {
 #view-initiation > * + * { margin-top: 8px; }
 #view-aeronefs > * + * { margin-top: 8px; }
 #view-instructeur > * + * { margin-top: 8px; }
+#view-carnet > * + * { margin-top: 8px; }
 .glider-presence-section h3 {
     margin-top: 0;
     color: #1e3d59;
@@ -1046,13 +1047,14 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background-color: #1e3d59;
     color: white;
     border: none;
-    padding: 10px 32px;
+    height: 38px;
+    padding: 0 30px 0 12px;
+    width: auto;
+    min-width: 0;
     border-radius: 6px;
     font-weight: bold;
-    font-size: 13.5px;
+    font-size: 13px;
     font-family: inherit;
-    text-align: center;
-    text-align-last: center;
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;

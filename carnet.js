@@ -1853,6 +1853,29 @@ function initCarnetRoute() {
             ouvrirBilanDocumentsAeronefs();
         }
     });
+    const btnLegendeCarnet = document.getElementById('btn-legende-carnet');
+    if (btnLegendeCarnet) {
+        btnLegendeCarnet.addEventListener('click', () => {
+            const titre = t => `<div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 2px;">${t}</div>`;
+            const item = (style, label) => `<div class="legende-ligne"><span class="legende-pastille" style="${style}"></span><span>${label}</span></div>`;
+            const rond = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color}; width:14px; height:14px; border-radius:50%; border-left:none; margin:0 6px;"></span><span>${label}</span></div>`;
+            afficherModaleAlerte('Légende', `
+                ${titre('📖 Lignes & marqueurs')}
+                <div class="legende-ligne"><span class="legende-pastille" style="background:#fffbeb; border-left-color:#d97706;"></span><span>Ligne de maintenance</span></div>
+                ${item('background:#dc2626;', 'Écart d\'horamètre (continuité à vérifier)')}
+                <div class="legende-ligne"><span style="display:inline-block; padding:1px 6px; font-size:10px; font-weight:700; color:#166534; background:#dcfce7; border:1px solid #86efac; border-radius:8px;">GVV</span><span>Vol envoyé vers GVV (compta)</span></div>
+                ${titre('📋 Statuts d\'une observation')}
+                ${rond('#dc2626', 'Non prise en compte')}
+                ${rond('#d97706', 'Prise en compte')}
+                ${rond('#2563eb', 'En cours de traitement')}
+                ${rond('#16a34a', 'Observation traitée')}
+                ${titre('📄 Documents machine')}
+                ${rond('#10b981', 'Document en cours de validité (> 3 mois)')}
+                ${rond('#f97316', 'Document en fin de validité (< 3 mois)')}
+                ${rond('#dc2626', 'Document expiré')}
+            `, 'ℹ️');
+        });
+    }
     if (btnFermer) btnFermer.addEventListener('click', fermerModaleCarnet);
     if (btnCancel) btnCancel.addEventListener('click', fermerModaleCarnet);
     if (btnDelete) btnDelete.addEventListener('click', supprimerCarnetRoute);

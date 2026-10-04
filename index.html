@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=235">
+    <link rel="stylesheet" href="style.css?v=236">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -446,7 +446,10 @@
             <!-- ================= VUE CARNET DE ROUTE ================= -->
             <section id="view-carnet" class="view-section" style="display: none;">
                 <header class="header">
-                    <h2>Carnet de route</h2>
+                    <div class="planning-titre-groupe">
+                        <h2>Carnet de route</h2>
+                        <button id="btn-legende-carnet" class="btn-legende-couleurs" type="button" title="Légende des couleurs">i</button>
+                    </div>
                     <div class="carnet-header-controls">
                         <label for="carnet-machine-filtre">Carnet de :</label>
                         <select id="carnet-machine-filtre" class="machine-selector">
@@ -460,13 +463,13 @@
                         <input type="search" id="carnet-recherche" placeholder="🔍 Rechercher un vol…" title="Recherche par pilote, instructeur, date (JJ/MM/AAAA), terrain ou horamètre">
                         <button id="btn-ouvrir-carnet" class="btn-primary">+ Saisir un vol</button>
                         <button id="btn-documents-carnet" class="btn-primary">Suivi documentation machine</button>
-                        <button id="btn-bilan-docs-carnet" class="btn-secondary" title="Bilan documentation de toutes les machines">📋 Bilan</button>
+                        <button id="btn-bilan-docs-carnet" class="btn-primary" title="Bilan documentation de toutes les machines">📋 Bilan</button>
                     </div>
                 </header>
 
                 <div id="carnet-observation-alarme" style="display: none;"></div>
 
-                <div id="documents-carnet-recap" style="background: white; border-radius: 12px; padding: 12px 20px; margin: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none;">
+                <div id="documents-carnet-recap" style="background: white; border-radius: 12px; padding: 12px 20px; margin: 8px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none;">
                     <h4 style="margin: 0 0 8px; color: #1e3d59; font-size: 13px;">Documents machine</h4>
                     <div id="documents-carnet-list" style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px;"></div>
                 </div>
@@ -1609,7 +1612,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004193543"></script>
+    <script src="version.js?v=20261004203558"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=115"></script>
     <script src="presences.js?v=104"></script>
@@ -1617,7 +1620,7 @@
     <script src="calendrier.js?v=91"></script>
     <script src="comptes.js?v=120"></script>
     <script src="aeronefs.js?v=142"></script>
-    <script src="carnet.js?v=193"></script>
+    <script src="carnet.js?v=194"></script>
     <script src="carnet-vol.js?v=1"></script>
     <script src="documents.js?v=91"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
