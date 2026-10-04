@@ -406,7 +406,7 @@ function cvProposerAllerCarnetRoute() {
             <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
             <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
                 <span style="font-size:28px;">📖</span>
-                <span>Vol saisi par le club</span>
+                <span>Vol saisi dans le carnet de route</span>
             </h3>
             <div style="margin-top:15px; line-height:1.6; font-size:15px; color:#334155;">
                 <p style="margin:0;">Cette ligne provient d'un carnet de route machine : pour la modifier ou la supprimer, il faut passer par le <strong>carnet de route</strong>. Voulez-vous y être redirigé ?</p>
