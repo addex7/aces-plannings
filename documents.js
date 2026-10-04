@@ -561,17 +561,23 @@ function afficherDocuments(records) {
         });
     });
     // Tuiles : glisser-deposer pour deplacer un dossier
+    // Le dossier transporte est passe par dataTransfer car « dragend » peut se
+    // declencher AVANT « drop » sur certains navigateurs (tuileSource serait deja null)
     let tuileSource = null;
     const nettoyerDrag = () => {
         list.querySelectorAll('.doc-tile.dragging, .doc-tile.dragover, .docs-breadcrumb-item.dragover')
             .forEach(x => x.classList.remove('dragging', 'dragover'));
     };
-    const cibleDepot = (cheminCible) => {
-        if (!tuileSource) return;
-        const nom = tuileSource.dataset.delNom;
-        const ancienParent = tuileSource.dataset.delParent || '';
-        if (!nom || cheminCible.startsWith('⚙️ ')) return;
-        deplacerDossierBiblio(nom, ancienParent, cheminCible);
+    const chargeUtileDepot = (e) => {
+        let info = null;
+        try { info = JSON.parse(e.dataTransfer.getData('text/plain') || 'null'); } catch {}
+        if (!info && tuileSource) info = { nom: tuileSource.dataset.delNom, parent: tuileSource.dataset.delParent || '' };
+        return info;
+    };
+    const cibleDepot = (e, cheminCible) => {
+        const info = chargeUtileDepot(e);
+        if (!info || !info.nom || cheminCible.startsWith('⚙️ ')) return;
+        deplacerDossierBiblio(info.nom, info.parent || '', cheminCible);
     };
     list.querySelectorAll('.doc-tile[draggable="true"]').forEach(t => {
         t.addEventListener('dragstart', (e) => {
@@ -579,12 +585,14 @@ function afficherDocuments(records) {
             docsDragEnCours = true;
             t.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', t.dataset.delNom || '');
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                nom: t.dataset.delNom || '',
+                parent: t.dataset.delParent || ''
+            }));
         });
         t.addEventListener('dragend', () => {
             nettoyerDrag();
-            tuileSource = null;
-            setTimeout(() => { docsDragEnCours = false; }, 0);
+            setTimeout(() => { docsDragEnCours = false; tuileSource = null; }, 0);
         });
     });
     list.querySelectorAll('.doc-tile').forEach(t => {
@@ -597,9 +605,10 @@ function afficherDocuments(records) {
         t.addEventListener('dragleave', () => t.classList.remove('dragover'));
         t.addEventListener('drop', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             t.classList.remove('dragover');
-            if (!tuileSource || t === tuileSource) return;
-            cibleDepot(docsNavChemin.concat(t.dataset.cle).join('/'));
+            if (t === tuileSource) return;
+            cibleDepot(e, docsNavChemin.concat(t.dataset.cle).join('/'));
         });
     });
     // Fil d'Ariane : cible de depot pour remonter un dossier d'un ou plusieurs niveaux
@@ -615,7 +624,7 @@ function afficherDocuments(records) {
             e.preventDefault();
             b.classList.remove('dragover');
             const idx = parseInt(b.dataset.idx, 10);
-            cibleDepot(idx === -1 ? '' : docsNavChemin.slice(0, idx + 1).join('/'));
+            cibleDepot(e, idx === -1 ? '' : docsNavChemin.slice(0, idx + 1).join('/'));
         });
     });
     // Tuiles : suppression d'un dossier / sous-dossier
