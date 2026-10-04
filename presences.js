@@ -82,22 +82,29 @@ async function modifierCommentaire(recordId, tableName, commentaireActuel, nom =
     }
 }
 
+let presencesClubGen = 0;
+
 async function chargerPresencesClub() {
+    const gen = ++presencesClubGen;
     if (typeof chargerListeMembresCache === 'function') await chargerListeMembresCache();
     const listAtelier = document.getElementById('list-atelier');
     const listSalle = document.getElementById('list-salle');
     if (!listAtelier || !listSalle) return;
-    listAtelier.innerHTML = "";
-    listSalle.innerHTML = "";
     const dateIsoStr = dateAffichee.toISOString().split('T')[0];
     try {
         const url = `${API_BASE}/${encodeURIComponent('Présences Club')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
         const response = await cachedFetch(url, { headers });
         const data = await response.json();
+        if (gen !== presencesClubGen) return;
+        listAtelier.innerHTML = "";
+        listSalle.innerHTML = "";
+        const dejaVus = [];
         if (data.records) {
             data.records.forEach(rec => {
                 const nom = rec.fields['Nom du pilote'] || 'Anonyme';
                 const lieu = rec.fields['Lieu'];
+                if (dejaVus.some(e => e.lieu === lieu && correspondanceNom(e.nom, nom))) return;
+                dejaVus.push({ lieu, nom });
                 const commentaire = rec.fields['Commentaire'] || '';
                 const li = document.createElement('li');
                 li.innerHTML = creerLignePresence(nom, commentaire, rec.id, 'Présences Club');
@@ -108,10 +115,14 @@ async function chargerPresencesClub() {
     } catch (error) {
         console.error(error);
     }
+    if (gen !== presencesClubGen) return;
     afficherBoutonsInscrireAutre();
 }
 
 async function sinscrireClub(lieu) {
+    if (sinscrireClub.enCours) return;
+    sinscrireClub.enCours = true;
+    try {
     const nomPilote = nomPiloteCourant();
     if (!nomPilote) { alert('Connecte-toi pour t\'inscrire.'); return; }
     try {
@@ -136,6 +147,9 @@ async function sinscrireClub(lieu) {
     } catch (error) {
         console.error(error);
         alert(`Erreur lors de l'inscription : ${error.message}`);
+    }
+    } finally {
+        sinscrireClub.enCours = false;
     }
 }
 
@@ -443,13 +457,15 @@ function creerLigneInstructeurPlaneur(nom, commentaire, briefing, recordId, inte
     `;
 }
 
+let presencesPlaneurGen = 0;
+
 async function chargerPresencesPlaneur() {
+    const gen = ++presencesPlaneurGen;
     if (typeof chargerListeMembresCache === 'function') await chargerListeMembresCache();
     const listInst = document.getElementById('list-instructeurs');
     const listElev = document.getElementById('list-eleves');
-    const listPilo = document.getElementById('list-pilotes'); 
+    const listPilo = document.getElementById('list-pilotes');
     if (!listInst || !listElev || !listPilo) return;
-    listInst.innerHTML = ""; listElev.innerHTML = ""; listPilo.innerHTML = "";
     const dateIsoStr = dateAffichee.toISOString().split('T')[0];
     try {
         const url = `${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
@@ -458,6 +474,8 @@ async function chargerPresencesPlaneur() {
         const dispos = (typeof chargerDisponibilitesInstructeurs === 'function')
             ? await chargerDisponibilitesInstructeurs(dateAffichee)
             : [];
+        if (gen !== presencesPlaneurGen) return;
+        listInst.innerHTML = ""; listElev.innerHTML = ""; listPilo.innerHTML = "";
         const nomsInscrits = [];
         const nomsVus = { 'Instructeur': [], 'Élève': [], 'Pilote': [] };
         if (data.records) {
@@ -492,6 +510,7 @@ async function chargerPresencesPlaneur() {
     } catch (error) {
         console.error(error);
     }
+    if (gen !== presencesPlaneurGen) return;
     afficherBoutonsInscrireAutre();
     majAccesInscriptionsPlaneur();
 }
