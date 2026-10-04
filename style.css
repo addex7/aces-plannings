@@ -4982,6 +4982,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.15s, background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
 }
 .doc-tile-del { right: 4px; }
 .doc-tile-ren { right: 26px; font-size: 12px; }
