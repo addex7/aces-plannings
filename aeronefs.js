@@ -1307,17 +1307,26 @@ function creerModaleBilanDocuments() {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 1150px; width: 96%; max-height: 88vh; overflow: auto;">
             <span class="close-documents-bilan">&times;</span>
-            <h3>Bilan documentation — toutes machines</h3>
-            <div class="bilan-docs-legende">
-                <span><i class="doc-dot doc-ok"></i> Valide</span>
-                <span><i class="doc-dot doc-bientot"></i> Expire sous 3 mois</span>
-                <span><i class="doc-dot doc-perime"></i> Périmé</span>
-                <span><i class="doc-dot doc-vide"></i> Cellule vide = non renseigné</span>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <h3 style="margin:0;">Bilan documentation — toutes machines</h3>
+                <button id="btn-legende-bilan" class="btn-legende-couleurs" type="button" title="Légende des couleurs">i</button>
             </div>
-            <div id="documents-bilan-table"></div>
+            <div id="documents-bilan-table" style="margin-top:12px;"></div>
         </div>
     `;
     document.body.appendChild(modal);
+    const btnLegendeBilan = modal.querySelector('#btn-legende-bilan');
+    if (btnLegendeBilan) {
+        btnLegendeBilan.addEventListener('click', () => {
+            const rond = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color}; width:14px; height:14px; border-radius:50%; border-left:none; margin:0 6px;"></span><span>${label}</span></div>`;
+            afficherModaleAlerte('Légende des couleurs', `
+                ${rond('#10b981', 'Valide')}
+                ${rond('#f97316', 'Expire sous 3 mois')}
+                ${rond('#dc2626', 'Périmé')}
+                ${rond('#cbd5e1', 'Cellule vide = non renseigné')}
+            `, 'ℹ️');
+        });
+    }
     const close = modal.querySelector('.close-documents-bilan');
     if (close) close.addEventListener('click', fermerBilanDocumentsAeronefs);
     modal.addEventListener('click', (e) => { if (e.target === modal) fermerBilanDocumentsAeronefs(); });
