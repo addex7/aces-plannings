@@ -4010,12 +4010,21 @@ function initGestionnaireVolsInitiation() {
     if (btnLegendeVI) {
         btnLegendeVI.addEventListener('click', () => {
             const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
-            afficherModaleAlerte('Légende des couleurs', `
+            const bouton = (label, desc) => `<div class="legende-ligne"><span style="font-weight:700; color:#1e3d59; min-width:130px;">${label}</span><span>${desc}</span></div>`;
+            afficherModaleAlerte('Légende', `
                 ${item('#00adb5', 'VIP / créneau disponible')}
                 ${item('#f59e0b', 'VIULM (F-JVIO)')}
                 ${item('#3f51b5', 'VIA (F-GASB) / vol attribué')}
                 ${item('#f97316', 'Vol à pourvoir')}
                 <div class="legende-ligne"><span class="legende-pastille" style="background:repeating-linear-gradient(45deg, #e2e8f0, #e2e8f0 4px, #f1f5f9 4px, #f1f5f9 8px); border-left-color:#cbd5e1;"></span><span>Créneau bloqué / conflit machine</span></div>
+                <hr class="legende-separateur">
+                ${bouton('S\'inscrire', 'Se positionner comme pilote sur un vol à pourvoir')}
+                ${bouton('Inscrire autre', 'Attribuer un autre pilote au vol à pourvoir')}
+                ${bouton('Changer de pilote', 'Remplacer le pilote déjà attribué au vol')}
+                ${bouton('Décaler le vol', 'Déplacer la réservation sur un autre créneau')}
+                ${bouton('Libérer', 'Retirer le passager et remettre le créneau à disposition')}
+                ${bouton('✕', 'Supprimer le vol ou le créneau (Gestion VI)')}
+                ${bouton('☐', 'Sélectionner le créneau pour une suppression groupée')}
             `, 'ℹ️');
         });
     }
