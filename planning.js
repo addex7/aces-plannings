@@ -981,15 +981,15 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                 : (avion.fields['Potentiel restant'] !== undefined ? parseFloat(avion.fields['Potentiel restant']) || 0 : 0);
             let couleurStatus = "status-green";
             let textPotentiel = `Potentiel actuel : ${potentielActuel.toFixed(1)}h`;
-            if (potentielActuel <= 5) {
+            if (potentielActuel <= 0) {
                 couleurStatus = "status-red";
-                textPotentiel = `ARRÊT IMMINENT (${potentielActuel.toFixed(1)}h restantes)`;
-            } else if (potentielActuel <= 15) {
+                textPotentiel = `Potentiel épuisé / dépassement (${potentielActuel.toFixed(1)}h)`;
+            } else if (potentielActuel <= 10) {
                 couleurStatus = "status-orange";
-                textPotentiel = `Révision à prévoir (${potentielActuel.toFixed(1)}h restantes)`;
+                textPotentiel = `Alerte révision (${potentielActuel.toFixed(1)}h restantes)`;
             } else {
                 couleurStatus = "status-green";
-                textPotentiel = `Potentiel bon (${potentielActuel.toFixed(1)}h restantes)`;
+                textPotentiel = `Potentiel OK (${potentielActuel.toFixed(1)}h restantes)`;
             }
             const machineCell = document.createElement('div');
             machineCell.className = 'machine-cell';
@@ -3254,6 +3254,7 @@ function initBoutonsNavigation() {
     if (btnLegende) {
         btnLegende.addEventListener('click', () => {
             const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
+            const rond = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color}; width:14px; height:14px; border-radius:50%; border-left:none; margin:0 6px;"></span><span>${label}</span></div>`;
             afficherModaleAlerte('Légende des couleurs', `
                 ${item('#ff6e40', 'Réservation')}
                 ${item('#3b82f6', 'Instruction / avec instructeur')}
@@ -3270,9 +3271,9 @@ function initBoutonsNavigation() {
                 <div class="legende-ligne"><span class="legende-pastille" style="background:repeating-linear-gradient(45deg, rgba(30,61,89,.4), rgba(30,61,89,.4) 4px, rgba(30,61,89,.15) 4px, rgba(30,61,89,.15) 8px); border-left-color:rgba(30,61,89,.6);"></span><span>Nuit aéronautique</span></div>
                 ${item('rgba(135,175,215,0.45)', 'Aube / crépuscule civil')}
                 <hr class="legende-separateur">
-                ${item('#2ecc71', 'Machine : potentiel bon (> 15h)')}
-                ${item('#f39c12', 'Machine : révision à prévoir (≤ 15h)')}
-                ${item('#e74c3c', 'Machine : arrêt imminent (≤ 5h)')}
+                ${rond('#2ecc71', 'Machine : potentiel OK (> 10h)')}
+                ${rond('#f39c12', 'Machine : alerte révision (≤ 10h)')}
+                ${rond('#e74c3c', 'Machine : potentiel épuisé (≤ 0h)')}
             `, 'ℹ️');
         });
     }
