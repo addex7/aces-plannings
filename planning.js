@@ -3269,6 +3269,10 @@ function initBoutonsNavigation() {
                 <hr class="legende-separateur">
                 <div class="legende-ligne"><span class="legende-pastille" style="background:repeating-linear-gradient(45deg, rgba(30,61,89,.4), rgba(30,61,89,.4) 4px, rgba(30,61,89,.15) 4px, rgba(30,61,89,.15) 8px); border-left-color:rgba(30,61,89,.6);"></span><span>Nuit aéronautique</span></div>
                 ${item('rgba(135,175,215,0.45)', 'Aube / crépuscule civil')}
+                <hr class="legende-separateur">
+                ${item('#2ecc71', 'Machine : potentiel bon (> 15h)')}
+                ${item('#f39c12', 'Machine : révision à prévoir (≤ 15h)')}
+                ${item('#e74c3c', 'Machine : arrêt imminent (≤ 5h)')}
             `, 'ℹ️');
         });
     }
