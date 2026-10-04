@@ -1628,9 +1628,16 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .carnet-table {
     width: 100%;
     min-width: 1100px;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 13px;
     text-align: left;
+}
+.carnet-table thead tr:first-child th:first-child {
+    border-top-left-radius: 6px;
+}
+.carnet-table thead tr:first-child th:last-child {
+    border-top-right-radius: 6px;
 }
 .carnet-table thead th {
     background: #1e3d59;
@@ -1647,7 +1654,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-weight: 400;
     opacity: 0.9;
 }
-.carnet-table tbody tr {
+.carnet-table tbody td {
     border-bottom: 1px solid #e2e8f0;
 }
 .carnet-table tbody tr:nth-child(even) {
