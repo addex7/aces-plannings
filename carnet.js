@@ -10,7 +10,21 @@ let listeVolsCarnetCache = [];
 let idCarnetEnEdition = null;
 let machineCarnetSelectionnee = 'F-GASB';
 let carnetPageJVIO = 1;
-const LIGNES_PAR_PAGE_JVIO = 9;
+let derniersRecordsCarnet = [];
+
+// Nombre de lignes par page du carnet : adapte a la hauteur reelle de l'ecran
+function lignesParPageCarnet() {
+    const container = document.querySelector('.carnet-table-container');
+    if (!container) return 12;
+    const tbody = container.querySelector('tbody');
+    const thead = container.querySelector('thead');
+    const rows = tbody ? tbody.querySelectorAll('tr:not(.carnet-empty)') : [];
+    const rowH = rows.length ? tbody.getBoundingClientRect().height / rows.length : 37;
+    const theadH = thead ? thead.getBoundingClientRect().height : 0;
+    const reserve = 115; // tfoot + pagination + paddings bas
+    const dispo = window.innerHeight - container.getBoundingClientRect().top - theadH - reserve;
+    return Math.max(5, Math.floor(dispo / Math.max(rowH, 20)));
+}
 const IMMATS_PLANEURS = ['F-CEJX', 'F-CDYX', 'F-CITT', 'F-CEGV', 'F-CBNA', 'F-CEQJ', 'F-CDVN', 'F-CFRK', 'F-CHDT', 'F-CEQZ', 'F-CESL', 'F-CGOV'];
 const REMOQUES_PLANEURS = [...IMMATS_PLANEURS.map(i => `Remorque ${i}`), 'Remorque 100LL', 'Remorque SP98'];
 const MATERIEL_AUTRES = ['Tracteur landini', 'Tracteur tondeuse', 'Golfette', 'Peugeot'];
@@ -1077,6 +1091,7 @@ function formatEquipageCourt(nom) {
 function afficherCarnet(records) {
     const tbody = document.getElementById('carnet-body');
     if (!tbody) return;
+    derniersRecordsCarnet = records;
     const isJVIO = machineCarnetSelectionnee === 'F-JVIO';
     const table = tbody.closest('table');
     const thead = table ? table.querySelector('thead') : null;
@@ -1139,13 +1154,14 @@ function afficherCarnet(records) {
     let totalPages = 1;
     let totalCumuleMinutes = 0;
 
+    const lignesParPage = lignesParPageCarnet();
+    totalPages = Math.max(1, Math.ceil(affichage.length / lignesParPage));
+    if (carnetPageJVIO > totalPages) carnetPageJVIO = totalPages;
+    if (carnetPageJVIO < 1) carnetPageJVIO = 1;
+    const start = (carnetPageJVIO - 1) * lignesParPage;
+    const end = start + lignesParPage;
+    pageRecords = affichage.slice(start, end);
     if (isJVIO) {
-        totalPages = Math.max(1, Math.ceil(affichage.length / LIGNES_PAR_PAGE_JVIO));
-        if (carnetPageJVIO > totalPages) carnetPageJVIO = totalPages;
-        if (carnetPageJVIO < 1) carnetPageJVIO = 1;
-        const start = (carnetPageJVIO - 1) * LIGNES_PAR_PAGE_JVIO;
-        const end = start + LIGNES_PAR_PAGE_JVIO;
-        pageRecords = affichage.slice(start, end);
         totalCumuleMinutes = affichage.slice(0, end).reduce((sum, d) => sum + dureeStringEnMinutes(d.temps), 0);
     }
 
@@ -1216,13 +1232,11 @@ function afficherCarnet(records) {
         tbody.appendChild(tr);
     });
 
-    if (isJVIO) {
-        for (let i = pageRecords.length; i < LIGNES_PAR_PAGE_JVIO; i++) {
-            const tr = document.createElement('tr');
-            tr.className = 'carnet-ligne-vide';
-            tr.innerHTML = `<td colspan="14">&nbsp;</td>`;
-            tbody.appendChild(tr);
-        }
+    for (let i = pageRecords.length; i < lignesParPage; i++) {
+        const tr = document.createElement('tr');
+        tr.className = 'carnet-ligne-vide';
+        tr.innerHTML = `<td colspan="${isJVIO ? 14 : 15}">&nbsp;</td>`;
+        tbody.appendChild(tr);
     }
 
     if (isJVIO) {
@@ -1235,27 +1249,27 @@ function afficherCarnet(records) {
             </tr>
         `;
         table.appendChild(newTfoot);
+    }
 
-        if (tableContainer) {
-            const pagination = document.createElement('div');
-            pagination.className = 'carnet-pagination';
-            pagination.innerHTML = `
-                <button type="button" ${carnetPageJVIO === 1 ? 'disabled' : ''} data-page="${carnetPageJVIO - 1}">◀ Précédent</button>
-                <span>Page ${carnetPageJVIO} / ${totalPages}</span>
-                <button type="button" ${carnetPageJVIO === totalPages ? 'disabled' : ''} data-page="${carnetPageJVIO + 1}">Suivant ▶</button>
-            `;
-            pagination.querySelectorAll('button').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const newPage = parseInt(e.currentTarget.dataset.page, 10);
-                    if (!isNaN(newPage)) {
-                        carnetPageJVIO = newPage;
-                        afficherCarnet(records);
-                    }
-                });
+    if (tableContainer && totalPages > 1) {
+        const pagination = document.createElement('div');
+        pagination.className = 'carnet-pagination';
+        pagination.innerHTML = `
+            <button type="button" ${carnetPageJVIO === 1 ? 'disabled' : ''} data-page="${carnetPageJVIO - 1}">◀ Précédent</button>
+            <span>Page ${carnetPageJVIO} / ${totalPages}</span>
+            <button type="button" ${carnetPageJVIO === totalPages ? 'disabled' : ''} data-page="${carnetPageJVIO + 1}">Suivant ▶</button>
+        `;
+        pagination.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const newPage = parseInt(e.currentTarget.dataset.page, 10);
+                if (!isNaN(newPage)) {
+                    carnetPageJVIO = newPage;
+                    afficherCarnet(records);
+                }
             });
-            tableContainer.appendChild(pagination);
-        }
+        });
+        tableContainer.appendChild(pagination);
     }
 }
 
@@ -1427,7 +1441,7 @@ async function chargerCarnetRoute() {
                 });
                 volsMachine.sort((a, b) => cleDateHeureCarnet(a) - cleDateHeureCarnet(b));
             } catch (e) { console.warn('Maintenance JVIO indisponible:', e); }
-            carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / LIGNES_PAR_PAGE_JVIO));
+            carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / lignesParPageCarnet()));
         }
         afficherCarnet(volsMachine);
         afficherAlarmeObservation(volsMachine);
@@ -1910,6 +1924,15 @@ function initCarnetRoute() {
             if (e.key === 'Escape') fermerRecherche();
         });
     }
+    let resizeTimerCarnet = null;
+    window.addEventListener('resize', () => {
+        const vue = document.getElementById('view-carnet');
+        if (!vue || vue.style.display === 'none') return;
+        clearTimeout(resizeTimerCarnet);
+        resizeTimerCarnet = setTimeout(() => {
+            if (derniersRecordsCarnet.length) afficherCarnet(derniersRecordsCarnet);
+        }, 250);
+    });
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) fermerModaleCarnet();
@@ -1924,6 +1947,7 @@ function initCarnetRoute() {
         }
         selectFiltre.addEventListener('change', (e) => {
             machineCarnetSelectionnee = e.target.value;
+            carnetPageJVIO = 1;
             chargerCarnetRoute();
         });
     }
