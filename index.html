@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=250">
+    <link rel="stylesheet" href="style.css?v=251">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -741,9 +741,13 @@
             <!-- ================= VUE JOURNAL D'AUDIT ================= -->
             <section id="view-audit" class="view-section" style="display: none;">
                 <header class="header">
-                    <h2>Journal d'audit</h2>
+                    <div class="planning-titre-groupe">
+                        <h2>Journal d'audit</h2>
+                        <button id="btn-legende-audit" class="btn-legende-couleurs" type="button" title="Légende">i</button>
+                        <button id="btn-recherche-audit" class="btn-legende-couleurs" type="button" title="Rechercher dans le journal">🔍</button>
+                        <input type="search" id="audit-search" class="audit-recherche-masquee" placeholder="Rechercher…" title="Recherche par utilisateur, action, cible ou détails">
+                    </div>
                     <div class="header-actions">
-                        <input type="text" id="audit-search" class="form-control" placeholder="Rechercher..." style="width:220px;">
                         <select id="audit-module-filtre" class="form-control" style="width:160px;">
                             <option value="">Tous les modules</option>
                             <option value="Membres">Membres</option>
@@ -1608,7 +1612,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004223929"></script>
+    <script src="version.js?v=20261004224100"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=119"></script>
     <script src="presences.js?v=104"></script>
@@ -1620,7 +1624,7 @@
     <script src="carnet-vol.js?v=3"></script>
     <script src="documents.js?v=103"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="audit.js?v=8"></script>
+    <script src="audit.js?v=9"></script>
     <script src="membres.js?v=112"></script>
     <script src="instructeurs.js?v=110"></script>
     <script src="instructeur-planning.js?v=195"></script>

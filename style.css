@@ -1073,6 +1073,23 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 #docs-recherche.docs-recherche-masquee {
     display: none;
 }
+#audit-search {
+    padding: 9px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    min-width: 240px;
+    background: #f8fafc;
+}
+#audit-search:focus {
+    outline: none;
+    border-color: #1e3d59;
+    background: #fff;
+}
+#audit-search.audit-recherche-masquee {
+    display: none;
+}
 #view-carnet .select-recherche > button:hover {
     background-color: #17b978 !important;
 }

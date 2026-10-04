@@ -22,6 +22,53 @@ function initAudit() {
     if (reload) reload.addEventListener('click', () => chargerAudit(true));
     if (search) search.addEventListener('input', filtrerAudit);
     if (moduleFiltre) moduleFiltre.addEventListener('change', filtrerAudit);
+
+    const btnRecherche = document.getElementById('btn-recherche-audit');
+    if (btnRecherche && search) {
+        btnRecherche.addEventListener('click', () => {
+            const masquee = search.classList.contains('audit-recherche-masquee');
+            if (masquee) {
+                search.classList.remove('audit-recherche-masquee');
+                search.focus();
+            } else {
+                search.classList.add('audit-recherche-masquee');
+                if (search.value) {
+                    search.value = '';
+                    filtrerAudit();
+                }
+            }
+        });
+        search.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                search.classList.add('audit-recherche-masquee');
+                if (search.value) {
+                    search.value = '';
+                    filtrerAudit();
+                }
+                btnRecherche.focus();
+            }
+        });
+    }
+
+    const btnLegende = document.getElementById('btn-legende-audit');
+    if (btnLegende && typeof afficherModaleAlerte === 'function') {
+        btnLegende.addEventListener('click', () => {
+            afficherModaleAlerte('Légende', `
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:6px;">📋 Journal</div>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:14px; font-size:13px;">
+                    <div>Chaque ligne trace une action effectuée sur le site : <strong>qui</strong> (Utilisateur), <strong>quoi</strong> (Action), <strong>sur quoi</strong> (Cible) et les <strong>Détails</strong>.</div>
+                    <div>Les lignes les plus récentes apparaissent en premier.</div>
+                </div>
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:6px;">🛠️ Outils</div>
+                <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
+                    <div><strong>🔍 Recherche</strong> : filtre sur l'utilisateur, l'action, la cible ou les détails.</div>
+                    <div><strong>Filtre module</strong> : ne montre que les actions d'un module (Membres, Planning, Carnet…) — « Auto » regroupe les écritures automatiques.</div>
+                    <div><strong>⟳ Rafraîchir</strong> : recharge le journal depuis le serveur.</div>
+                </div>
+            `, 'ℹ️');
+        });
+    }
 }
 
 async function enregistrerAudit(action, cible = '', details = '', module = '') {
