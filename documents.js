@@ -88,60 +88,34 @@ function populerDossiers() {
     const selSous = select.dataset.sousSelectionne || '';
     select.innerHTML = '<option value="">-- Choisir un dossier --</option>';
 
-    // Sous-dossiers par dossier : table Dossiers (Parent) + valeurs historiques des documents
-    const sousParCat = {};
-    const ajouterSous = (cat, sous) => {
-        if (!cat || !sous) return;
-        if (!sousParCat[cat]) sousParCat[cat] = [];
-        if (!sousParCat[cat].includes(sous)) sousParCat[cat].push(sous);
-    };
-    (dossiersCache || []).forEach(rec => {
-        const f = rec.fields || {};
-        ajouterSous(f['Parent'] || '', f['Nom'] || '');
-    });
-    (documentsCache || []).forEach(rec => {
-        const f = rec.fields || {};
-        ajouterSous(f['Catégorie'] || '', f['Sous-dossier'] || '');
-    });
-
-    // Dossiers racine : table Dossiers (sans Parent) + catégories des documents
-    const cats = new Set();
-    (dossiersCache || []).forEach(rec => {
-        const f = rec.fields || {};
-        if (f['Nom'] && !f['Parent']) cats.add(f['Nom']);
-    });
-    (documentsCache || []).forEach(rec => {
-        const c = (rec.fields || {})['Catégorie'];
-        if (c) cats.add(c);
-    });
-
-    [...cats].sort((a, b) => a.localeCompare(b, 'fr')).forEach(cat => {
+    const arbre = construireArbreDocs((documentsCache || []).filter(rec => !estDocumentMembre(rec)));
+    const triFr = (a, b) => a.localeCompare(b, 'fr');
+    const ajouterOption = (label, cat, sous) => {
         const opt = document.createElement('option');
-        opt.textContent = cat;
+        opt.textContent = label;
         opt.dataset.cat = cat;
-        opt.dataset.sous = '';
-        if (cat === selCat && !selSous) opt.selected = true;
+        opt.dataset.sous = sous;
+        if (cat === selCat && sous === selSous) opt.selected = true;
         select.appendChild(opt);
-        (sousParCat[cat] || []).sort((a, b) => a.localeCompare(b, 'fr')).forEach(sous => {
-            const o = document.createElement('option');
-            o.textContent = `   ↳ ${sous}`;
-            o.dataset.cat = cat;
-            o.dataset.sous = sous;
-            if (cat === selCat && sous === selSous) o.selected = true;
-            select.appendChild(o);
+    };
+    const descendre = (node, chemin) => {
+        Object.keys(node.sous).sort(triFr).forEach(nom => {
+            const c = chemin.concat(nom);
+            ajouterOption('\u00A0'.repeat(3 * (c.length - 1)) + '\u21B3 ' + nom, c[0], c.slice(1).join('/'));
+            descendre(node.sous[nom], c);
         });
+    };
+    Object.keys(arbre).sort(triFr).forEach(cat => {
+        ajouterOption(cat, cat, '');
+        descendre(arbre[cat], [cat]);
     });
-    const autre = document.createElement('option');
-    autre.textContent = 'Autre';
-    autre.dataset.cat = 'Autre';
-    autre.dataset.sous = '';
-    if ('Autre' === selCat && !selSous) autre.selected = true;
-    select.appendChild(autre);
+    ajouterOption('Autre', 'Autre', '');
 }
 
+// Chemin complet du dossier courant (« Cat » , « Cat/S1/S2 »…), '' a la racine ou dans une machine
 function dossierCourantBibliotheque() {
-    const cat = docsNavChemin[0] || '';
-    return cat.startsWith('⚙️ ') ? '' : cat;
+    if ((docsNavChemin[0] || '').startsWith('⚙️ ')) return '';
+    return docsNavChemin.join('/');
 }
 
 // Renommage en cours : { nom, parent } ou null (mode creation)
@@ -156,7 +130,7 @@ function ouvrirFormDossier() {
     if (form) form.reset();
     dossierEnRenommage = null;
     const cat = dossierCourantBibliotheque();
-    if (title) title.textContent = cat ? `Nouveau sous-dossier dans « ${cat} »` : 'Nouveau dossier';
+    if (title) title.textContent = cat ? `Nouveau sous-dossier dans « ${docsNavChemin.join(' › ')} »` : 'Nouveau dossier';
     const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
     if (btnSubmit) btnSubmit.textContent = 'Créer';
     cacherFormDocument();
@@ -193,6 +167,7 @@ async function enregistrerDossier(e) {
     const input = document.getElementById('dossier-nom');
     const nom = input ? input.value.trim() : '';
     if (!nom) { alert('Nom du dossier requis.'); return; }
+    if (nom.includes('/')) { alert('Le nom ne peut pas contenir le caractère « / ».'); return; }
     if (dossierEnRenommage) {
         const { nom: ancien, parent } = dossierEnRenommage;
         dossierEnRenommage = null;
@@ -220,21 +195,58 @@ async function enregistrerDossier(e) {
     }
 }
 
-// Renomme un dossier (parent='') ou un sous-dossier (parent=categorie) et
+// Chemins utilitaires : parent = chemin complet du dossier parent ('' = racine)
+function docsCheminsCible(nom, parent) {
+    const parentSegs = parent ? parent.split('/') : [];
+    const cible = parentSegs.concat(nom).join('/');
+    return {
+        parentSegs,
+        cible,
+        catRacine: parentSegs[0] || '',
+        sousParent: parentSegs.slice(1).join('/'),
+        sousCible: parentSegs.concat(nom).slice(1).join('/')
+    };
+}
+
+// Renvoie true si le document est dans le dossier cible ou l'un de ses descendants
+function docsDocDansBranche(f, chemins) {
+    if (!chemins.parent) {
+        return f['Catégorie'] === chemins.cible;
+    }
+    const docSous = f['Sous-dossier'] || '';
+    return f['Catégorie'] === chemins.catRacine &&
+        (docSous === chemins.sousCible || docSous.startsWith(chemins.sousCible + '/'));
+}
+
+// Renvoie true si l'enregistrement Dossiers est le dossier cible ou un descendant
+function docsDossierDansBranche(f, chemins) {
+    const p = f['Parent'] || '';
+    return (p === chemins.parent && f['Nom'] === chemins.nom)
+        || p === chemins.cible
+        || p.startsWith(chemins.cible + '/');
+}
+
+// Renomme un dossier (parent='') ou un sous-dossier (parent=chemin complet) et
 // propage le nouveau nom aux documents et sous-dossiers rattaches.
 async function renommerDossierBiblio(ancien, nouveau, parent) {
     if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
     if (nouveau === ancien) { cacherFormDossier(); return; }
+    if (nouveau.includes('/')) {
+        alert('Le nom ne peut pas contenir le caractère « / ».');
+        dossierEnRenommage = { nom: ancien, parent };
+        return;
+    }
+    const chemins = { ...docsCheminsCible(ancien, parent), parent, nom: ancien };
+    const nouvelleCible = parent ? `${parent}/${nouveau}` : nouveau;
+    const sousNouveau = chemins.parentSegs.concat(nouveau).slice(1).join('/');
     const doublon = (documentsCache || []).some(r => {
         const f = r.fields || {};
         return parent
-            ? (f['Catégorie'] === parent && f['Sous-dossier'] === nouveau)
+            ? (f['Catégorie'] === chemins.catRacine && (f['Sous-dossier'] || '') === sousNouveau)
             : (f['Catégorie'] === nouveau);
     }) || (dossiersCache || []).some(r => {
         const f = r.fields || {};
-        return parent
-            ? (f['Parent'] === parent && f['Nom'] === nouveau)
-            : (!f['Parent'] && f['Nom'] === nouveau);
+        return (f['Parent'] || '') === parent && f['Nom'] === nouveau;
     });
     if (doublon) {
         alert(`« ${nouveau} » existe déjà à cet emplacement.`);
@@ -242,35 +254,33 @@ async function renommerDossierBiblio(ancien, nouveau, parent) {
         return;
     }
     try {
-        const docsConcernes = (documentsCache || []).filter(r => {
-            const f = r.fields || {};
-            return parent
-                ? (f['Catégorie'] === parent && f['Sous-dossier'] === ancien)
-                : (f['Catégorie'] === ancien);
-        });
+        const docsConcernes = (documentsCache || []).filter(r => docsDocDansBranche(r.fields || {}, chemins));
         for (const rec of docsConcernes) {
-            const fields = parent ? { 'Sous-dossier': nouveau } : { 'Catégorie': nouveau };
+            const docSous = (rec.fields || {})['Sous-dossier'] || '';
+            const fields = parent
+                ? { 'Sous-dossier': sousNouveau + docSous.slice(chemins.sousCible.length) }
+                : { 'Catégorie': nouveau };
             const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${rec.id}`, {
                 method: 'PATCH', headers, body: JSON.stringify({ fields })
             });
             if (!res.ok) throw new Error('Erreur lors de la mise à jour d\'un document');
         }
-        const dossiersAMaj = (dossiersCache || []).filter(r => {
-            const f = r.fields || {};
-            return parent
-                ? (f['Parent'] === parent && f['Nom'] === ancien)
-                : (f['Parent'] === ancien || (!f['Parent'] && f['Nom'] === ancien));
-        });
+        const dossiersAMaj = (dossiersCache || []).filter(r => docsDossierDansBranche(r.fields || {}, chemins));
         for (const rec of dossiersAMaj) {
             const f = rec.fields || {};
-            const fields = (parent || (!f['Parent'] && f['Nom'] === ancien)) ? { 'Nom': nouveau } : { 'Parent': nouveau };
+            const p = f['Parent'] || '';
+            const fields = (p === parent && f['Nom'] === ancien)
+                ? { 'Nom': nouveau }
+                : { 'Parent': nouvelleCible + p.slice(chemins.cible.length) };
             const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOSSIERS)}/${rec.id}`, {
                 method: 'PATCH', headers, body: JSON.stringify({ fields })
             });
             if (!res.ok) throw new Error('Erreur lors du renommage du dossier');
         }
-        if (!parent && docsNavChemin[0] === ancien) docsNavChemin[0] = nouveau;
-        if (parent && docsNavChemin[0] === parent && docsNavChemin[1] === ancien) docsNavChemin[1] = nouveau;
+        const cheminStr = docsNavChemin.join('/');
+        if (cheminStr === chemins.cible || cheminStr.startsWith(chemins.cible + '/')) {
+            docsNavChemin = chemins.parentSegs.concat(nouveau, docsNavChemin.slice(chemins.parentSegs.length + 1));
+        }
         cacherFormDossier();
         await Promise.all([chargerDossiers(), chargerDocuments()]);
     } catch (err) {
@@ -280,43 +290,38 @@ async function renommerDossierBiblio(ancien, nouveau, parent) {
     }
 }
 
-// Supprime un dossier (parent='') ou un sous-dossier (parent=categorie).
+// Supprime un dossier (parent='') ou un sous-dossier (parent=chemin complet).
 // Les documents ne sont jamais supprimes : ils remontent dans le dossier
 // parent (sous-dossier) ou basculent dans « Autre » (dossier racine).
 async function supprimerDossierBiblio(nom, parent) {
     if (!isDocumentaliste()) { alert('Action réservée aux documentalistes.'); return; }
-    const docsConcernes = (documentsCache || []).filter(r => {
-        const f = r.fields || {};
-        return parent
-            ? (f['Catégorie'] === parent && f['Sous-dossier'] === nom)
-            : (f['Catégorie'] === nom);
-    });
+    const chemins = { ...docsCheminsCible(nom, parent), parent, nom };
+    const docsConcernes = (documentsCache || []).filter(r => docsDocDansBranche(r.fields || {}, chemins));
     const quoi = parent ? `le sous-dossier « ${nom} »` : `le dossier « ${nom} »`;
-    const destination = parent ? `ils seront remontés dans « ${parent} »` : 'ils seront déplacés dans « Autre »';
+    const destination = parent ? `ils seront remontés dans « ${parent.split('/').pop()} »` : 'ils seront déplacés dans « Autre »';
     const msg = docsConcernes.length
         ? `Supprimer ${quoi} ?\n\nIl contient ${docsConcernes.length} document(s) : ${destination}.`
         : `Supprimer ${quoi} ?`;
     if (!confirm(msg)) return;
     try {
         for (const rec of docsConcernes) {
-            const fields = parent ? { 'Sous-dossier': '' } : { 'Catégorie': 'Autre' };
+            const fields = parent
+                ? { 'Sous-dossier': chemins.sousParent }
+                : { 'Catégorie': 'Autre', 'Sous-dossier': '' };
             const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${rec.id}`, {
                 method: 'PATCH', headers, body: JSON.stringify({ fields })
             });
             if (!res.ok) throw new Error('Erreur lors du déplacement d\'un document');
         }
-        const aSupprimer = (dossiersCache || []).filter(r => {
-            const f = r.fields || {};
-            return parent
-                ? (f['Parent'] === parent && f['Nom'] === nom)
-                : (f['Parent'] === nom || (!f['Parent'] && f['Nom'] === nom));
-        });
+        const aSupprimer = (dossiersCache || []).filter(r => docsDossierDansBranche(r.fields || {}, chemins));
         for (const rec of aSupprimer) {
             const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOSSIERS)}/${rec.id}`, { method: 'DELETE', headers });
             if (!res.ok) throw new Error('Erreur lors de la suppression du dossier');
         }
-        if (!parent && docsNavChemin[0] === nom) docsNavChemin = [];
-        if (parent && docsNavChemin[0] === parent && docsNavChemin[1] === nom) docsNavChemin = docsNavChemin.slice(0, 1);
+        const cheminStr = docsNavChemin.join('/');
+        if (cheminStr === chemins.cible || cheminStr.startsWith(chemins.cible + '/')) {
+            docsNavChemin = chemins.parentSegs;
+        }
         await Promise.all([chargerDossiers(), chargerDocuments()]);
     } catch (err) {
         console.error(err);
@@ -360,8 +365,49 @@ async function chargerDocuments() {
     }
 }
 
-// Navigation « Finder » : chemin courant [categorie, sousDossier]
+// Navigation « Finder » : chemin courant, profondeur illimitee
+// [categorie, sousDossier, sousSousDossier, ...]
 let docsNavChemin = [];
+
+function docsAssurerNoeud(arbre, chemin) {
+    let n = null;
+    chemin.filter(Boolean).forEach(seg => {
+        const cont = n ? n.sous : arbre;
+        if (!cont[seg]) cont[seg] = { sous: {}, docs: [] };
+        n = cont[seg];
+    });
+    return n;
+}
+
+function docsNoeudCourant(arbre, chemin) {
+    let n = null;
+    for (const seg of chemin) {
+        const cont = n ? n.sous : arbre;
+        if (!cont[seg]) return null;
+        n = cont[seg];
+    }
+    return n;
+}
+
+// Arbre de la bibliotheque : Dossiers (Nom + Parent = chemin complet du parent)
+// + chemins Catégorie/Sous-dossier des documents (Sous-dossier = chemin « A/B/… »)
+function construireArbreDocs(recordsVisibles) {
+    const arbre = {};
+    (dossiersCache || []).forEach(rec => {
+        const f = rec.fields || {};
+        const nom = (f['Nom'] || '').trim();
+        if (!nom) return;
+        const parent = (f['Parent'] || '').trim();
+        docsAssurerNoeud(arbre, parent ? parent.split('/').concat(nom) : [nom]);
+    });
+    (recordsVisibles || []).forEach(rec => {
+        const f = rec.fields || {};
+        const cat = f['Catégorie'] || 'Autre';
+        const sous = (f['Sous-dossier'] || '').split('/').filter(Boolean);
+        docsAssurerNoeud(arbre, [cat].concat(sous)).docs.push(rec);
+    });
+    return arbre;
+}
 
 function docsEscAttr(s) {
     return (s || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -391,35 +437,25 @@ function afficherDocuments(records) {
         return;
     }
 
-    // Arborescence : categorie -> { sous-dossiers -> docs, docs racine }
-    // Les dossiers et sous-dossiers de la table Dossiers apparaissent meme vides
-    const arbre = {};
-    (dossiersCache || []).forEach(rec => {
-        const f = rec.fields || {};
-        const nom = f['Nom'] || '';
-        if (!nom) return;
-        const parent = f['Parent'] || '';
-        if (!parent) {
-            if (!arbre[nom]) arbre[nom] = { sous: {}, docs: [] };
-        } else {
-            if (!arbre[parent]) arbre[parent] = { sous: {}, docs: [] };
-            if (!arbre[parent].sous[nom]) arbre[parent].sous[nom] = [];
-        }
-    });
-    recordsVisibles.forEach(rec => {
-        const cat = (rec.fields || {})['Catégorie'] || 'Autre';
-        const sous = (rec.fields || {})['Sous-dossier'] || '';
-        if (!arbre[cat]) arbre[cat] = { sous: {}, docs: [] };
-        if (sous) (arbre[cat].sous[sous] = arbre[cat].sous[sous] || []).push(rec);
-        else arbre[cat].docs.push(rec);
-    });
+    // Arborescence a profondeur illimitee ; dossiers vides inclus
+    const arbre = construireArbreDocs(recordsVisibles);
     const cats = Object.keys(arbre).sort();
 
-    // Chemin encore valide ? (au cas ou un dossier aurait ete renomme)
-    const cle0 = docsNavChemin[0];
-    if (cle0 && !cle0.startsWith('⚙️ ') && !arbre[cle0]) docsNavChemin = [];
-    else if (cle0 && cle0.startsWith('⚙️ ') && !machines.includes(cle0.slice(3))) docsNavChemin = [];
-    if (docsNavChemin[1] && !(arbre[docsNavChemin[0]] || {}).sous?.[docsNavChemin[1]]) docsNavChemin = docsNavChemin.slice(0, 1);
+    // Chemin encore valide ? (au cas ou un dossier aurait ete renomme/supprime)
+    const valides = [];
+    let noeud = null;
+    for (const seg of docsNavChemin) {
+        if (!noeud) {
+            if (seg.startsWith('⚙️ ')) { if (machines.includes(seg.slice(3))) valides.push(seg); break; }
+            if (!arbre[seg]) break;
+            noeud = arbre[seg];
+        } else {
+            if (!noeud.sous[seg]) break;
+            noeud = noeud.sous[seg];
+        }
+        valides.push(seg);
+    }
+    docsNavChemin = valides;
 
     // Fil d'Ariane cliquable
     const miettes = [`<span class="docs-breadcrumb-item ${docsNavChemin.length ? 'docs-breadcrumb-lien' : ''}" data-idx="-1">📚 Bibliothèque</span>`]
@@ -428,7 +464,7 @@ function afficherDocuments(records) {
     const filAriane = `<div class="docs-breadcrumb">${miettes.join('')}</div>`;
 
     let contenu = '';
-    const [cat, sous] = docsNavChemin;
+    const cat = docsNavChemin[0];
 
     if (!cat) {
         // Racine : tuiles des categories + des machines
@@ -438,17 +474,14 @@ function afficherDocuments(records) {
     } else if (cat.startsWith('⚙️ ')) {
         // Dossier machine : mini-cartes avec pastille de validite
         contenu = docsHtmlMachine(cat.slice(3));
-    } else if (!sous) {
-        // Interieur d'une categorie : sous-dossiers en tuiles + documents
-        const node = arbre[cat] || { sous: {}, docs: [] };
-        const tuiles = Object.keys(node.sous).sort()
-            .map(s => docsTileDossier(s, s, cat)).join('');
-        contenu = (tuiles ? `<div class="docs-tiles">${tuiles}</div>` : '') +
-            docsHtmlCartes(node.docs);
     } else {
-        // Interieur d'un sous-dossier : documents uniquement
-        const node = arbre[cat] || { sous: {}, docs: [] };
-        contenu = docsHtmlCartes(node.sous[sous] || []);
+        // Interieur d'un dossier : sous-dossiers en tuiles + documents
+        const node = docsNoeudCourant(arbre, docsNavChemin) || { sous: {}, docs: [] };
+        const cheminParent = docsNavChemin.join('/');
+        const tuiles = Object.keys(node.sous).sort()
+            .map(s => docsTileDossier(s, s, cheminParent)).join('');
+        contenu = (tuiles ? `<div class="docs-tiles">${tuiles}</div>` : '') +
+            (node.docs.length || !tuiles ? docsHtmlCartes(node.docs) : '');
     }
 
     list.innerHTML = filAriane + contenu;
@@ -626,9 +659,9 @@ function ouvrirFormDocument(id = null) {
             }
         } else {
             if (select) {
-                const cat = dossierCourantBibliotheque();
+                const cat = dossierCourantBibliotheque() ? docsNavChemin[0] : '';
                 select.dataset.catSelectionnee = cat;
-                select.dataset.sousSelectionne = cat ? (docsNavChemin[1] || '') : '';
+                select.dataset.sousSelectionne = cat ? docsNavChemin.slice(1).join('/') : '';
             }
             populerDossiers();
             const input = document.getElementById('document-titre');
