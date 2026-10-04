@@ -93,20 +93,21 @@ function injecterControlesDateSuivi() {
         containerControles.style.cssText = `
             background-color: #f5f0e1;
             border-radius: 6px;
-            padding: 0 16px;
-            height: 40px;
+            padding: 0 14px;
+            height: 38px;
             box-sizing: border-box;
             display: inline-flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             font-weight: bold;
-            font-size: 13.5px;
+            font-size: 13px;
+            white-space: nowrap;
         `;
 
         containerControles.innerHTML = `
-            <button id="btn-suivi-prev" class="btn-nav" style="background:none; border:none; cursor:pointer; font-size:15px; color:#1e3d59;">◀</button>
-            <span id="current-date-suivi" class="date-display" style="font-weight:600; font-size:14px; color:#1e3d59; cursor:pointer;" title="Cliquer pour choisir une date"></span>
-            <button id="btn-suivi-next" class="btn-nav" style="background:none; border:none; cursor:pointer; font-size:15px; color:#1e3d59;">▶</button>
+            <button id="btn-suivi-prev" class="btn-nav" style="background:none; border:none; cursor:pointer; font-size:12px; color:#1e3d59;">◀</button>
+            <span id="current-date-suivi" class="date-display" style="font-weight:600; font-size:13px; color:#1e3d59; cursor:pointer;" title="Cliquer pour choisir une date"></span>
+            <button id="btn-suivi-next" class="btn-nav" style="background:none; border:none; cursor:pointer; font-size:12px; color:#1e3d59;">▶</button>
         `;
 
         selectMachine.parentNode.insertBefore(containerControles, selectMachine);
