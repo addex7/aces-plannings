@@ -169,6 +169,22 @@ async function chargerDocuments() {
     }
 }
 
+// Navigation « Finder » : chemin courant [categorie, sousDossier]
+let docsNavChemin = [];
+
+function docsEscAttr(s) {
+    return (s || '').toString().replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function docsTileDossier(nom, cle) {
+    return `
+        <div class="doc-tile" data-cle="${docsEscAttr(cle)}">
+            <div class="doc-tile-icone">📁</div>
+            <div class="doc-tile-nom">${nom}</div>
+        </div>
+    `;
+}
+
 function afficherDocuments(records) {
     const list = document.getElementById('documents-list');
     if (!list) return;
@@ -178,81 +194,110 @@ function afficherDocuments(records) {
         list.innerHTML = '<p>Aucun document pour le moment.</p>';
         return;
     }
-    const grouped = recordsVisibles.reduce((acc, rec) => {
-        const dossier = rec.fields['Catégorie'] || 'Autre';
-        if (!acc[dossier]) acc[dossier] = [];
-        acc[dossier].push(rec);
-        return acc;
-    }, {});
-    let html = Object.keys(grouped).sort().map(dossier => {
-        const records = grouped[dossier];
-        const subGrouped = records.reduce((acc, rec) => {
-            const sous = rec.fields['Sous-dossier'] || 'Sans sous-dossier';
-            if (!acc[sous]) acc[sous] = [];
-            acc[sous].push(rec);
-            return acc;
-        }, {});
-        const hasSub = records.some(rec => rec.fields['Sous-dossier']);
-        const content = hasSub
-            ? Object.keys(subGrouped).sort().map(sous => `
-                <details style="margin-bottom:10px;">
-                    <summary style="color:#334155; font-weight:600; cursor:pointer; margin-bottom:8px; font-size:1em;">${sous}</summary>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-bottom:10px;">
-                        ${subGrouped[sous].map(rec => creerCarteDocument(rec)).join('')}
-                    </div>
-                </details>
-            `).join('')
-            : `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
-                ${records.map(rec => creerCarteDocument(rec)).join('')}
-            </div>`;
+
+    // Arborescence : categorie -> { sous-dossiers -> docs, docs racine }
+    const arbre = {};
+    recordsVisibles.forEach(rec => {
+        const cat = (rec.fields || {})['Catégorie'] || 'Autre';
+        const sous = (rec.fields || {})['Sous-dossier'] || '';
+        if (!arbre[cat]) arbre[cat] = { sous: {}, docs: [] };
+        if (sous) (arbre[cat].sous[sous] = arbre[cat].sous[sous] || []).push(rec);
+        else arbre[cat].docs.push(rec);
+    });
+    const cats = Object.keys(arbre).sort();
+
+    // Chemin encore valide ? (au cas ou un dossier aurait ete renomme)
+    const cle0 = docsNavChemin[0];
+    if (cle0 && !cle0.startsWith('⚙️ ') && !arbre[cle0]) docsNavChemin = [];
+    else if (cle0 && cle0.startsWith('⚙️ ') && !machines.includes(cle0.slice(3))) docsNavChemin = [];
+    if (docsNavChemin[1] && !(arbre[docsNavChemin[0]] || {}).sous?.[docsNavChemin[1]]) docsNavChemin = docsNavChemin.slice(0, 1);
+
+    // Fil d'Ariane cliquable
+    const miettes = [`<span class="docs-breadcrumb-item ${docsNavChemin.length ? 'docs-breadcrumb-lien' : ''}" data-idx="-1">📚 Bibliothèque</span>`]
+        .concat(docsNavChemin.map((n, i) =>
+            `<span class="docs-breadcrumb-sep">›</span><span class="docs-breadcrumb-item ${i < docsNavChemin.length - 1 ? 'docs-breadcrumb-lien' : ''}" data-idx="${i}">${docsEscAttr(n.startsWith('⚙️ ') ? n.slice(3) : n)}</span>`));
+    const filAriane = `<div class="docs-breadcrumb">${miettes.join('')}</div>`;
+
+    let contenu = '';
+    const [cat, sous] = docsNavChemin;
+
+    if (!cat) {
+        // Racine : tuiles des categories + des machines
+        const tuiles = cats.map(c => docsTileDossier(c, c)).join('') +
+            machines.map(m => docsTileDossier(m, '⚙️ ' + m)).join('');
+        contenu = `<div class="docs-tiles">${tuiles}</div>`;
+    } else if (cat.startsWith('⚙️ ')) {
+        // Dossier machine : mini-cartes avec pastille de validite
+        contenu = docsHtmlMachine(cat.slice(3));
+    } else if (!sous) {
+        // Interieur d'une categorie : sous-dossiers en tuiles + documents
+        const node = arbre[cat] || { sous: {}, docs: [] };
+        const tuiles = Object.keys(node.sous).sort()
+            .map(s => docsTileDossier(s, s)).join('');
+        contenu = (tuiles ? `<div class="docs-tiles">${tuiles}</div>` : '') +
+            docsHtmlCartes(node.docs);
+    } else {
+        // Interieur d'un sous-dossier : documents uniquement
+        const node = arbre[cat] || { sous: {}, docs: [] };
+        contenu = docsHtmlCartes(node.sous[sous] || []);
+    }
+
+    list.innerHTML = filAriane + contenu;
+
+    // Tuiles : entrer dans le dossier
+    list.querySelectorAll('.doc-tile').forEach(t => {
+        t.addEventListener('click', () => {
+            docsNavChemin = docsNavChemin.concat(t.dataset.cle);
+            afficherDocuments(documentsCache);
+        });
+    });
+    // Fil d'Ariane : remonter
+    list.querySelectorAll('.docs-breadcrumb-lien').forEach(b => {
+        b.addEventListener('click', () => {
+            docsAllerA(parseInt(b.dataset.idx, 10));
+        });
+    });
+}
+
+function docsAllerA(index) {
+    docsNavChemin = index === -1 ? [] : docsNavChemin.slice(0, index + 1);
+    afficherDocuments(documentsCache);
+}
+
+function docsHtmlCartes(recs) {
+    if (!recs.length) return '<p style="color:#94a3b8; font-size:13px;">Dossier vide.</p>';
+    return `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${recs.map(creerCarteDocument).join('')}</div>`;
+}
+
+function docsHtmlMachine(machine) {
+    const docs = (documentsAeronefsBibliothequeCache[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
+    if (!docs.length) return '<p style="color:#94a3b8; font-size:13px;">Aucun document actif.</p>';
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+    const dans3mois = new Date(aujourdhui);
+    dans3mois.setMonth(dans3mois.getMonth() + 3);
+    const cartes = docs.map(r => {
+        const f = r.fields || {};
+        const type = (typeof TYPES_DOCUMENTS_AERONEFS !== 'undefined' ? TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) : null) || { nom: f['Type de document'] };
+        let couleur = '#10b981';
+        let dateTxt = '';
+        if (f['Date de validité']) {
+            const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
+            dateTxt = ` – ${dateValid.toLocaleDateString('fr-FR')}`;
+            if (dateValid < aujourdhui) couleur = '#dc2626';
+            else if (dateValid < dans3mois) couleur = '#f97316';
+        }
+        const label = f['Lien']
+            ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#0f172a; text-decoration:underline;">${type.nom}${dateTxt}</a>`
+            : `<span style="color:#0f172a;">${type.nom}${dateTxt}</span>`;
         return `
-            <details style="margin-bottom:4px;">
-                <summary style="color:#1e3d59; border-bottom:1px solid #e2e8f0; padding:7px 4px; margin-bottom:4px; cursor:pointer; font-size:1em; font-weight:bold;">${dossier}</summary>
-                ${content}
-            </details>
+            <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block;"></span>
+                ${label}
+            </div>
         `;
     }).join('');
-
-    const now = new Date();
-    const dans3mois = new Date();
-    dans3mois.setMonth(dans3mois.getMonth() + 3);
-    const aujourdhui = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    html = `<div class="docs-grid">${html}</div>`;
-    let htmlMachines = '';
-    machines.forEach(machine => {
-        const docs = (documentsAeronefsBibliothequeCache[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
-        if (!docs.length) return;
-        const cartes = docs.map(r => {
-            const f = r.fields || {};
-            const type = (typeof TYPES_DOCUMENTS_AERONEFS !== 'undefined' ? TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) : null) || { nom: f['Type de document'] };
-            let couleur = '#10b981';
-            let dateTxt = '';
-            if (f['Date de validité']) {
-                const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
-                dateTxt = ` – ${dateValid.toLocaleDateString('fr-FR')}`;
-                if (dateValid < aujourdhui) couleur = '#dc2626';
-                else if (dateValid < dans3mois) couleur = '#f97316';
-            }
-            const label = f['Lien']
-                ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#0f172a; text-decoration:underline;">${type.nom}${dateTxt}</a>`
-                : `<span style="color:#0f172a;">${type.nom}${dateTxt}</span>`;
-            return `
-                <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                    <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block;"></span>
-                    ${label}
-                </div>
-            `;
-        }).join('');
-        htmlMachines += `
-            <details style="margin-bottom:4px;">
-                <summary style="color:#1e3d59; border-bottom:1px solid #e2e8f0; padding:7px 4px; margin-bottom:4px; cursor:pointer; font-size:1em; font-weight:bold;">${machine}</summary>
-                <div style="display:flex; flex-wrap:wrap; gap:8px; font-size:11px; margin-top:4px;">
-                    ${cartes}
-                </div>
-            </details>
-        `;
-    });
-    list.innerHTML = html + `<div class="docs-grid">${htmlMachines}</div>`;
+    return `<div style="display:flex; flex-wrap:wrap; gap:8px; font-size:12px;">${cartes}</div>`;
 }
 
 function creerCarteDocument(rec) {

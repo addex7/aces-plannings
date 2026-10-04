@@ -4881,3 +4881,49 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     padding: 20px 26px;
     box-sizing: border-box;
 }
+
+/* ==========================================================================
+   BIBLIOTHEQUE - NAVIGATION FINDER
+   ========================================================================== */
+.docs-breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 14px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+.docs-breadcrumb-item { font-weight: 600; color: #1e3d59; }
+.docs-breadcrumb-lien { cursor: pointer; color: #0369a1; }
+.docs-breadcrumb-lien:hover { text-decoration: underline; }
+.docs-breadcrumb-sep { color: #94a3b8; }
+.docs-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+.doc-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.doc-tile:hover { background: #eef2f7; }
+.doc-tile-icone { font-size: 46px; line-height: 1.1; }
+.doc-tile-nom {
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e3d59;
+    word-break: break-word;
+}
