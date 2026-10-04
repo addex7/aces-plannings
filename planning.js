@@ -4347,11 +4347,11 @@ function updateGestionVI() {
                 if (!toolbar) return;
                 const ouvert = toolbar.style.display === 'block';
                 toolbar.style.display = ouvert ? 'none' : 'block';
-                btnToggle.textContent = ouvert ? '+ Créer des créneaux' : '− Masquer le formulaire';
+                btnToggle.classList.toggle('active', !ouvert);
             });
         }
     }
-    if (toolbar && !autorise) toolbar.style.display = 'none';
+    if (toolbar && !autorise) { toolbar.style.display = 'none'; if (btnToggle) btnToggle.classList.remove('active'); }
     const tabCreneaux = document.getElementById('btn-initiation-creneaux');
     if (tabCreneaux) tabCreneaux.style.display = autorise ? 'inline-block' : 'none';
 }
