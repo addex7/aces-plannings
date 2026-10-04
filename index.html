@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=242">
+    <link rel="stylesheet" href="style.css?v=243">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -618,11 +618,13 @@
             </section>
 
             <section id="view-documents" class="view-section" style="display: none;">
-                <h2 style="margin-top:0;">Bibliothèque</h2>
-                <div id="documents-toolbar" style="display:none; margin-bottom:15px; gap:10px; flex-wrap:wrap;">
-                    <button id="btn-new-dossier" class="btn-primary" type="button">+ Nouveau dossier</button>
-                    <button id="btn-new-pdf" class="btn-primary" type="button">+ Ajouter un document</button>
-                </div>
+                <header class="header">
+                    <h2>Bibliothèque</h2>
+                    <div id="documents-toolbar" style="display:none; gap:10px; flex-wrap:wrap;">
+                        <button id="btn-new-dossier" class="btn-primary" type="button">+ Nouveau dossier</button>
+                        <button id="btn-new-pdf" class="btn-primary" type="button">+ Ajouter un document</button>
+                    </div>
+                </header>
                 <div id="dossier-form" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:15px; margin-bottom:20px;">
                     <h3 id="dossier-form-title" style="margin-top:0;">Nouveau dossier</h3>
                     <form id="form-dossier">
@@ -1610,7 +1612,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004214043"></script>
+    <script src="version.js?v=20261004214620"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=117"></script>
     <script src="presences.js?v=104"></script>
@@ -1620,7 +1622,7 @@
     <script src="aeronefs.js?v=142"></script>
     <script src="carnet.js?v=198"></script>
     <script src="carnet-vol.js?v=3"></script>
-    <script src="documents.js?v=91"></script>
+    <script src="documents.js?v=92"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=8"></script>
     <script src="membres.js?v=112"></script>

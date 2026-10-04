@@ -179,7 +179,7 @@ function docsEscAttr(s) {
 function docsTileDossier(nom, cle) {
     return `
         <div class="doc-tile" data-cle="${docsEscAttr(cle)}">
-            <div class="doc-tile-icone"><img src="dossier.png" alt="" class="doc-tile-img"></div>
+            <div class="doc-tile-icone"><img src="dossier.png?v=2" alt="" class="doc-tile-img" onerror="this.outerHTML='&#128193;'"></div>
             <div class="doc-tile-nom">${nom}</div>
         </div>
     `;
@@ -280,24 +280,29 @@ function docsHtmlMachine(machine) {
         const f = r.fields || {};
         const type = (typeof TYPES_DOCUMENTS_AERONEFS !== 'undefined' ? TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) : null) || { nom: f['Type de document'] };
         let couleur = '#10b981';
-        let dateTxt = '';
+        let dateTxt = 'Sans date de validité';
         if (f['Date de validité']) {
             const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
-            dateTxt = ` – ${dateValid.toLocaleDateString('fr-FR')}`;
-            if (dateValid < aujourdhui) couleur = '#dc2626';
-            else if (dateValid < dans3mois) couleur = '#f97316';
+            const dateStr = dateValid.toLocaleDateString('fr-FR');
+            if (dateValid < aujourdhui) { couleur = '#dc2626'; dateTxt = `Expiré le ${dateStr}`; }
+            else if (dateValid < dans3mois) { couleur = '#f97316'; dateTxt = `Expire le ${dateStr}`; }
+            else dateTxt = `Valide jusqu'au ${dateStr}`;
         }
-        const label = f['Lien']
-            ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#0f172a; text-decoration:underline;">${type.nom}${dateTxt}</a>`
-            : `<span style="color:#0f172a;">${type.nom}${dateTxt}</span>`;
+        const lien = f['Lien']
+            ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir le document ↗</a>`
+            : `<span style="font-size:13px; color:#94a3b8;">Aucun fichier lié</span>`;
         return `
-            <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block;"></span>
-                ${label}
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px;">
+                <h4 style="margin:0 0 6px; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                    <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block; flex-shrink:0;"></span>
+                    ${type.nom}
+                </h4>
+                <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${dateTxt}</p>
+                ${lien}
             </div>
         `;
     }).join('');
-    return `<div style="display:flex; flex-wrap:wrap; gap:8px; font-size:12px;">${cartes}</div>`;
+    return `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${cartes}</div>`;
 }
 
 function creerCarteDocument(rec) {

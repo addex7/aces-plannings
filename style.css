@@ -650,6 +650,8 @@ img, table, video, iframe, svg {
 #view-instructeur > * + * { margin-top: 8px; }
 #view-carnet > * + * { margin-top: 8px; }
 #view-carnet-vol > * + * { margin-top: 8px; }
+#view-documents > * + * { margin-top: 8px; }
+#documents-toolbar { display: flex; align-items: center; }
 #view-carnet-vol .btn-primary,
 #view-carnet-vol .select-recherche > button {
     height: 40px !important;
