@@ -1069,14 +1069,16 @@ if (formMaintenance) formMaintenance.addEventListener('submit', enregistrerMaint
 const btnLegendeSuivi = document.getElementById('btn-legende-suivi');
 if (btnLegendeSuivi) {
     btnLegendeSuivi.addEventListener('click', () => {
+        const titre = t => `<div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 2px;">${t}</div>`;
         const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
         const rond = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color}; width:14px; height:14px; border-radius:50%; border-left:none; margin:0 6px;"></span><span>${label}</span></div>`;
-        afficherModaleAlerte('Légende des couleurs', `
+        afficherModaleAlerte('Légende', `
+            ${titre('🛩️ Potentiel machine')}
             ${item('#10b981', 'Potentiel OK (> 10h)')}
             ${item('#eab308', 'Alerte révision (≤ 10h)')}
             ${item('#dc2626', 'Potentiel épuisé / Dépassement (≤ 0h)')}
             ${item('rgba(124, 58, 237, 0.7)', 'Maintenance')}
-            <hr class="legende-separateur">
+            ${titre('📄 Documents')}
             ${rond('#10b981', 'Document en cours de validité (> 3 mois)')}
             ${rond('#f97316', 'Document en fin de validité (< 3 mois)')}
             ${rond('#dc2626', 'Document expiré')}
@@ -1318,8 +1320,10 @@ function creerModaleBilanDocuments() {
     const btnLegendeBilan = modal.querySelector('#btn-legende-bilan');
     if (btnLegendeBilan) {
         btnLegendeBilan.addEventListener('click', () => {
+            const titre = t => `<div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 2px;">${t}</div>`;
             const rond = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color}; width:14px; height:14px; border-radius:50%; border-left:none; margin:0 6px;"></span><span>${label}</span></div>`;
-            afficherModaleAlerte('Légende des couleurs', `
+            afficherModaleAlerte('Légende', `
+                ${titre('📄 Validité des documents')}
                 ${rond('#10b981', 'Valide')}
                 ${rond('#f97316', 'Expire sous 3 mois')}
                 ${rond('#dc2626', 'Périmé')}

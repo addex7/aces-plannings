@@ -863,12 +863,14 @@ function initMembres() {
     if (btnBilan) btnBilan.addEventListener('click', ouvrirBilanMembres);
     const btnLegendeM = document.getElementById('btn-legende-membres');
     if (btnLegendeM) btnLegendeM.addEventListener('click', () => {
-        const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
-        if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Légende des statuts', `
-            ${item('#10b981', 'À jour — échéance dans plus de 3 mois')}
-            ${item('#f97316', 'Bientôt à renouveler — échéance dans moins de 3 mois')}
-            ${item('#dc2626', 'Périmé — échéance dépassée ou date non renseignée')}
-            ${item('#cbd5e1', 'Suivi désactivé / non concerné')}
+        const titre = t => `<div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 2px;">${t}</div>`;
+        const rond = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color}; width:14px; height:14px; border-radius:50%; border-left:none; margin:0 6px;"></span><span>${label}</span></div>`;
+        if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Légende', `
+            ${titre('👤 Statuts des membres')}
+            ${rond('#10b981', 'À jour — échéance dans plus de 3 mois')}
+            ${rond('#f97316', 'Bientôt à renouveler — échéance dans moins de 3 mois')}
+            ${rond('#dc2626', 'Périmé — échéance dépassée ou date non renseignée')}
+            ${rond('#cbd5e1', 'Suivi désactivé / non concerné')}
         `, 'ℹ️');
     });
 }

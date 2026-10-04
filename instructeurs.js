@@ -44,39 +44,17 @@ function estInstructeurParNom(nom) {
 }
 
 function initBoutonDisponibiliteInstructeur() {
-    const headerRow = document.querySelector('#view-instructeur header > div');
-    if (!headerRow) return;
-    const ref = document.getElementById('select-instructeur-suivi');
-    const refWrap = ref ? (ref.closest('.select-recherche') || ref) : null;
-    const visible = (estInstructeur() || (typeof isSuperAdmin === 'function' && isSuperAdmin())) ? 'inline-block' : 'none';
-
-    if (!document.getElementById('btn-gerer-dispos')) {
-        const btnGerer = document.createElement('button');
-        btnGerer.id = 'btn-gerer-dispos';
-        btnGerer.className = 'btn-toggle';
-        btnGerer.textContent = 'Gérer mes dispos';
-        btnGerer.addEventListener('click', ouvrirModaleGererDispos);
-        if (refWrap) {
-            refWrap.parentNode.insertBefore(btnGerer, refWrap.nextSibling);
-        } else {
-            headerRow.appendChild(btnGerer);
-        }
-        btnGerer.style.display = visible;
-    }
-
-    if (!document.getElementById('btn-declarer-disponibilite')) {
-        const btnDecl = document.createElement('button');
-        btnDecl.id = 'btn-declarer-disponibilite';
-        btnDecl.className = 'btn-primary';
-        btnDecl.textContent = '+ Déclarer mes dispos';
-        btnDecl.addEventListener('click', ouvrirModaleDisponibilite);
-        const gerer = document.getElementById('btn-gerer-dispos');
-        if (refWrap) {
-            refWrap.parentNode.insertBefore(btnDecl, gerer ? gerer.nextSibling : refWrap.nextSibling);
-        } else {
-            headerRow.appendChild(btnDecl);
-        }
-        btnDecl.style.display = visible;
+    const btnLegendeInstr = document.getElementById('btn-legende-instructeur');
+    if (btnLegendeInstr) {
+        btnLegendeInstr.addEventListener('click', () => {
+            const titre = t => `<div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 2px;">${t}</div>`;
+            const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
+            afficherModaleAlerte('Légende', `
+                ${titre('🎨 Couleurs des vols')}
+                ${item('#ff6e40', 'Vol privé')}
+                ${item('#3b82f6', "Vol d'instruction")}
+            `, 'ℹ️');
+        });
     }
     attacherListenersGererDispos();
 }

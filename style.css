@@ -647,6 +647,7 @@ img, table, video, iframe, svg {
 #view-planning > * + * { margin-top: 8px; }
 #view-initiation > * + * { margin-top: 8px; }
 #view-aeronefs > * + * { margin-top: 8px; }
+#view-instructeur > * + * { margin-top: 8px; }
 .glider-presence-section h3 {
     margin-top: 0;
     color: #1e3d59;

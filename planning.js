@@ -3253,9 +3253,11 @@ function initBoutonsNavigation() {
     const btnLegende = document.getElementById('btn-legende-couleurs');
     if (btnLegende) {
         btnLegende.addEventListener('click', () => {
+            const titre = t => `<div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 2px;">${t}</div>`;
             const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
             const rond = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color}; width:14px; height:14px; border-radius:50%; border-left:none; margin:0 6px;"></span><span>${label}</span></div>`;
-            afficherModaleAlerte('Légende des couleurs', `
+            afficherModaleAlerte('Légende', `
+                ${titre('🎨 Vols & réservations')}
                 ${item('#ff6e40', 'Réservation')}
                 ${item('#3b82f6', 'Instruction / avec instructeur')}
                 ${item('#eab308', 'Remorquage')}
@@ -3264,16 +3266,16 @@ function initBoutonsNavigation() {
                 ${item('#8e44ad', 'VI Planeur')}
                 ${item('#10b981', 'Mes réservations')}
                 ${item('#475569', 'Vol effectué (carnet de route)')}
-                <hr class="legende-separateur">
+                ${titre('👨‍✈️ Disponibilités instructeurs')}
                 ${item('rgba(34,197,94,0.45)', 'Instructeur disponible')}
                 ${item('rgba(239,68,68,0.45)', 'Instructeur indisponible')}
-                <hr class="legende-separateur">
+                ${titre('🌗 Repères horaires')}
                 <div class="legende-ligne"><span class="legende-pastille" style="background:repeating-linear-gradient(45deg, rgba(30,61,89,.4), rgba(30,61,89,.4) 4px, rgba(30,61,89,.15) 4px, rgba(30,61,89,.15) 8px); border-left-color:rgba(30,61,89,.6);"></span><span>Nuit aéronautique</span></div>
                 ${item('rgba(135,175,215,0.45)', 'Aube / crépuscule civil')}
-                <hr class="legende-separateur">
-                ${rond('#2ecc71', 'Machine : potentiel OK (> 10h)')}
-                ${rond('#f39c12', 'Machine : alerte révision (≤ 10h)')}
-                ${rond('#e74c3c', 'Machine : potentiel épuisé (≤ 0h)')}
+                ${titre('🛩️ Potentiel machine')}
+                ${rond('#2ecc71', 'Potentiel OK (> 10h)')}
+                ${rond('#f39c12', 'Alerte révision (≤ 10h)')}
+                ${rond('#e74c3c', 'Potentiel épuisé (≤ 0h)')}
             `, 'ℹ️');
         });
     }

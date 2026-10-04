@@ -870,11 +870,13 @@ function initAccueilMembre() {
     if (closeAnnuaire) closeAnnuaire.addEventListener('click', fermerAnnuaireMembres);
     const btnLegendeV = document.getElementById('btn-legende-validites');
     if (btnLegendeV) btnLegendeV.addEventListener('click', () => {
+        const titre = t => `<div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 2px;">${t}</div>`;
         const item = (color, label) => `<div class="legende-ligne"><span class="legende-pastille" style="background:${color};"></span><span>${label}</span></div>`;
-        if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Légende des statuts', `
-            ${item('#dcfce7', '✓ À jour — échéance dans plus de 3 mois')}
-            ${item('#ffedd5', '⚠ Bientôt à renouveler — échéance dans moins de 3 mois')}
-            ${item('#fee2e2', '✕ Non à jour — échéance dépassée ou date non renseignée')}
+        if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Légende', `
+            ${titre('👤 Statuts des validités')}
+            ${item('#dcfce7', 'À jour — échéance dans plus de 3 mois')}
+            ${item('#ffedd5', 'Bientôt à renouveler — échéance dans moins de 3 mois')}
+            ${item('#fee2e2', 'Non à jour — échéance dépassée ou date non renseignée')}
             ${item('#f1f5f9', 'Suivi désactivé (pastille grisée)')}
         `, 'ℹ️');
     });
