@@ -571,7 +571,7 @@ function afficherDocuments(records) {
     const chargeUtileDepot = (e) => {
         let info = null;
         try { info = JSON.parse(e.dataTransfer.getData('text/plain') || 'null'); } catch {}
-        if (!info && tuileSource) info = { nom: tuileSource.dataset.delNom, parent: tuileSource.dataset.delParent || '' };
+        if (!info && tuileSource) info = { nom: tuileSource.dataset.cle, parent: docsNavChemin.join('/') };
         return info;
     };
     const cibleDepot = (e, cheminCible) => {
@@ -586,8 +586,8 @@ function afficherDocuments(records) {
             t.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', JSON.stringify({
-                nom: t.dataset.delNom || '',
-                parent: t.dataset.delParent || ''
+                nom: t.dataset.cle || '',
+                parent: docsNavChemin.join('/')
             }));
         });
         t.addEventListener('dragend', () => {
