@@ -2558,6 +2558,29 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-weight: 600;
     cursor: pointer;
 }
+.accueil-nom-select {
+    min-width: 0 !important;
+}
+.accueil-nom-select > button {
+    background: transparent !important;
+    border: none !important;
+    color: #1e293b !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    padding: 0 22px 0 0 !important;
+    height: auto !important;
+    box-shadow: none !important;
+    white-space: normal !important;
+    text-align: left !important;
+}
+.accueil-nom-select > button:hover {
+    color: #1e3d59 !important;
+    text-decoration: underline;
+}
+.accueil-nom-select > button span {
+    right: 2px !important;
+    opacity: 0.45 !important;
+}
 .activer-suivi {
     display: inline-flex;
     align-items: center;

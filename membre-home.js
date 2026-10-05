@@ -455,8 +455,7 @@ async function mettreAJourPhoto(dataURL) {
 
 async function chargerListeMembres() {
     const select = document.getElementById('accueil-select-membre');
-    const bar = document.getElementById('accueil-admin-bar');
-    if (!select || !bar || !isSuperAdmin()) return;
+    if (!select || !isSuperAdmin()) return;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const data = await res.json();
@@ -473,7 +472,20 @@ async function chargerListeMembres() {
             select.appendChild(opt);
         });
         select.value = previous || (membreSelectionne ? membreSelectionne.id : '') || currentUser.id;
-        bar.style.display = 'flex';
+        select.dispatchEvent(new Event('maj-affichage'));
+
+        const btnModifier = document.getElementById('accueil-btn-modifier');
+        if (btnModifier) btnModifier.style.display = '';
+
+        // Le nom du membre dans le profil devient le select deroulant
+        if (typeof rendreSelectRecherchable === 'function') rendreSelectRecherchable(select);
+        const wrap = select.closest('.select-recherche');
+        const nomEl = document.getElementById('accueil-nom');
+        if (wrap && nomEl && nomEl.parentElement && wrap.parentElement !== nomEl.parentElement) {
+            wrap.classList.add('accueil-nom-select');
+            nomEl.parentElement.insertBefore(wrap, nomEl);
+            nomEl.style.display = 'none';
+        }
     } catch (err) {
         console.error('Erreur chargement liste membres:', err);
     }
