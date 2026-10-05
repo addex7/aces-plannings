@@ -2379,6 +2379,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     margin: 0 24px;
     padding: 10px 14px;
     font-size: 13px;
+    text-align: center;
 }
 .bandeau-informatif strong {
     color: #78350f;

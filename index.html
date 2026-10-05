@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=255">
+    <link rel="stylesheet" href="style.css?v=256">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -676,9 +676,15 @@
             <!-- ================= VUE ACCUEIL MEMBRE ================= -->
             <section id="view-accueil-membre" class="view-section" style="display: none;">
                 <header class="header">
-                    <h2 id="accueil-titre">Mon espace membre</h2>
+                    <div class="planning-titre-groupe">
+                        <h2 id="accueil-titre">Mon espace membre</h2>
+                        <button id="btn-legende-validites" class="btn-legende-couleurs" type="button" title="Légende des statuts">i</button>
+                    </div>
                     <div class="bandeau-informatif">⚠️ Le suivi des licences, des qualifications et de l'expérience récente affiché ici est <strong>informatif</strong> : le pilote reste seul responsable de la validité de ses qualifications.</div>
-                    <button id="btn-legende-validites" class="btn-legende-couleurs" type="button" title="Légende des statuts">i</button>
+                    <div class="header-actions">
+                        <button type="button" id="btn-bilan-validites-accueil" class="btn-primary" style="display:none;" title="Bilan des validités de tous les pilotes">📋 Bilan validités</button>
+                        <button type="button" id="btn-annuaire-membres" class="btn-primary">Voir l'annuaire</button>
+                    </div>
                 </header>
                 <div id="accueil-admin-bar" class="accueil-admin-bar" style="display: none;">
                     <label for="accueil-select-membre">Membre :</label>
@@ -1612,7 +1618,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261004225101"></script>
+    <script src="version.js?v=20261005180128"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=119"></script>
     <script src="presences.js?v=104"></script>
@@ -1629,7 +1635,7 @@
     <script src="instructeurs.js?v=110"></script>
     <script src="instructeur-planning.js?v=195"></script>
     <script src="messagerie.js?v=27"></script>
-    <script src="membre-home.js?v=100"></script>
+    <script src="membre-home.js?v=101"></script>
     <script src="accueil-pilote.js?v=32"></script>
     <!-- Modal Inscrire quelqu'un d'autre -->
     <div id="modal-inscrire-autre" class="modal" style="display:none;">
