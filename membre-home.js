@@ -153,6 +153,49 @@ async function chargerAccueilMembre(id) {
     }
 }
 
+// Ouvre la modale des roles du membre affiche : lecture pour tous,
+// cases a cocher editables pour les super admin.
+function ouvrirModaleRolesMembre() {
+    if (!membreSelectionne || typeof afficherModaleAlerte !== 'function') return;
+    const nom = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim() || 'Membre';
+    const roles = membreSelectionne.roles || [];
+    const liste = (typeof ROLES_MEMBRES !== 'undefined' ? ROLES_MEMBRES : ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier']);
+    const descRole = r => (typeof DESCRIPTIONS_ROLES !== 'undefined' && DESCRIPTIONS_ROLES[r])
+        ? `<div style="font-size:12px; color:#64748b; margin-top:2px; white-space:pre-line;">${DESCRIPTIONS_ROLES[r]}</div>`
+        : '';
+
+    let html;
+    if (isSuperAdmin()) {
+        html = `<div style="display:flex; flex-direction:column; gap:10px; text-align:left;">` + liste.map(role => {
+            const checked = roles.includes(role) ? 'checked' : '';
+            return `<label style="display:flex; gap:8px; align-items:flex-start; cursor:pointer;">
+                <input type="checkbox" data-role="${role}" ${checked} style="margin-top:3px;">
+                <span><strong>${role}</strong>${descRole(role)}</span>
+            </label>`;
+        }).join('') + `</div>`;
+    } else {
+        html = roles.length
+            ? `<div style="display:flex; flex-direction:column; gap:10px; text-align:left;">` + roles.map(role =>
+                `<div><strong>${role}</strong>${descRole(role)}</div>`).join('') + `</div>`
+            : '<em style="color:#64748b;">Aucun rôle attribué.</em>';
+    }
+
+    afficherModaleAlerte(`Rôles — ${nom}`, html, '👤');
+
+    if (isSuperAdmin()) {
+        const modal = document.getElementById('planning-alert-modal');
+        if (modal) {
+            modal.querySelectorAll('input[type="checkbox"][data-role]').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const coches = modal.querySelectorAll('input[type="checkbox"][data-role]:checked');
+                    membreSelectionne.roles = Array.from(coches).map(c => c.dataset.role);
+                    if (typeof mettreAJourRolesMembre === 'function') mettreAJourRolesMembre(membreSelectionne.id, coches);
+                });
+            });
+        }
+    }
+}
+
 function renderPhoto(fields) {
     const img = document.getElementById('accueil-photo');
     if (!img) return;
@@ -181,24 +224,12 @@ function renderAccueilMembre(fields) {
     const titre = document.getElementById('accueil-titre');
     if (nomEl) nomEl.textContent = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
     if (rolesEl) {
-        const roles = membreSelectionne.roles || [];
-        if (isSuperAdmin()) {
-            const liste = (typeof ROLES_MEMBRES !== 'undefined' ? ROLES_MEMBRES : ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier']);
-            const cases = liste.map(role => {
-                const checked = roles.includes(role) ? 'checked' : '';
-                return `<label class="role-tag" title="${role}"><input type="checkbox" data-role="${role}" ${checked}> ${role}</label>`;
-            }).join('');
-            rolesEl.innerHTML = cases;
-            rolesEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                cb.addEventListener('change', () => {
-                    if (typeof mettreAJourRolesMembre === 'function') {
-                        mettreAJourRolesMembre(membreSelectionne.id, rolesEl.querySelectorAll('input[type="checkbox"]:checked'));
-                    }
-                });
-            });
-        } else {
-            rolesEl.textContent = roles.join(' · ') || 'Membre';
-        }
+        rolesEl.innerHTML = `<button type="button" class="btn-legende-couleurs" title="Rôles du membre">i</button>`;
+        const btnRoles = rolesEl.querySelector('button');
+        if (btnRoles) btnRoles.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ouvrirModaleRolesMembre();
+        });
     }
     if (titre) {
         titre.textContent = isSuperAdmin() && membreSelectionne.id !== currentUser.id ?

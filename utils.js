@@ -408,7 +408,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     wrap.className = 'select-recherche';
     wrap.style.cssText = 'position:relative; display:inline-block; min-width:200px; max-width:100%;';
 
-    const boutonBleu = ['select-instructeur-suivi', 'carnet-machine-filtre', 'carnet-vol-pilote-select', 'carnet-vol-machine-select', 'comptes-pilote-select', 'audit-module-filtre'].includes(select.id);
+    const boutonBleu = ['select-instructeur-suivi', 'carnet-machine-filtre', 'carnet-vol-pilote-select', 'carnet-vol-machine-select', 'comptes-pilote-select', 'audit-module-filtre', 'accueil-select-membre'].includes(select.id);
     const sansRecherche = ['select-instructeur-suivi', 'carnet-machine-filtre', 'carnet-vol-machine-select', 'audit-module-filtre'].includes(select.id);
 
     const btn = document.createElement('button');
