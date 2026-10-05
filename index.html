@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=259">
+    <link rel="stylesheet" href="style.css?v=260">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -699,6 +699,7 @@
                     <div class="accueil-profil-texte">
                         <p class="accueil-nom" id="accueil-nom"></p>
                         <div class="accueil-roles" id="accueil-roles"></div>
+                        <div class="accueil-infos" id="accueil-infos"></div>
                     </div>
                 </div>
                 <div id="accueil-membre-container"></div>
@@ -1518,10 +1519,6 @@
                         <input type="text" id="edit-membre-compte-gvv" placeholder="ex : NOM Prénom (si différent)">
                     </div>
                 </div>
-                <div style="margin:15px 0;">
-                    <label style="margin-right:15px; font-weight:500;">Rôles :</label>
-                    <span id="edit-membre-roles-container"></span>
-                </div>
                 <div class="form-actions">
                     <button type="button" id="btn-delete-membre" class="btn-delete">Supprimer</button>
                     <button type="submit" class="btn-submit">Enregistrer</button>
@@ -1617,7 +1614,7 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261005182248"></script>
+    <script src="version.js?v=20261005182913"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=120"></script>
     <script src="presences.js?v=104"></script>
@@ -1630,11 +1627,11 @@
     <script src="documents.js?v=103"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=9"></script>
-    <script src="membres.js?v=112"></script>
+    <script src="membres.js?v=113"></script>
     <script src="instructeurs.js?v=110"></script>
     <script src="instructeur-planning.js?v=195"></script>
     <script src="messagerie.js?v=27"></script>
-    <script src="membre-home.js?v=103"></script>
+    <script src="membre-home.js?v=104"></script>
     <script src="accueil-pilote.js?v=32"></script>
     <!-- Modal Inscrire quelqu'un d'autre -->
     <div id="modal-inscrire-autre" class="modal" style="display:none;">

@@ -403,7 +403,6 @@ function initialiserCheckboxesRoles() {
         ).join('');
     };
     rendre('membre-roles-container', 'membre-roles');
-    rendre('edit-membre-roles-container', 'edit-membre-roles');
 }
 
 async function chargerUtilisateurs() {
@@ -749,8 +748,6 @@ function ouvrirModaleMembre(record) {
     const dateNaissance = f['Date de naissance'];
     const dateInput = document.getElementById('edit-membre-date-naissance');
     if (dateInput) dateInput.value = dateNaissance ? new Date(dateNaissance).toISOString().split('T')[0] : '';
-    const roles = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
-    document.querySelectorAll('input[name="edit-membre-roles"]').forEach(cb => { cb.checked = roles.includes(cb.value); });
     modal.style.display = 'flex';
 }
 
@@ -780,9 +777,8 @@ async function sauvegarderMembre(event) {
         age = auj.getFullYear() - d.getFullYear();
         if (auj.getMonth() < d.getMonth() || (auj.getMonth() === d.getMonth() && auj.getDate() < d.getDate())) age--;
     }
-    const roles = Array.from(document.querySelectorAll('input[name="edit-membre-roles"]:checked')).map(cb => cb.value);
     if (!prenom || !nom || !mail || !identifiant) { alert('Prénom, Nom, Mail et Identifiant sont requis.'); return; }
-    const fields = { 'Prénom': prenom, 'Nom': nom, 'Mail': mail, 'Téléphone': telephone, 'Identifiant': identifiant, 'Rôles': roles };
+    const fields = { 'Prénom': prenom, 'Nom': nom, 'Mail': mail, 'Téléphone': telephone, 'Identifiant': identifiant };
     if (trigramme) fields['Trigramme'] = trigramme;
     const inputCompteGvv = document.getElementById('edit-membre-compte-gvv');
     if (inputCompteGvv) fields['Compte GVV'] = inputCompteGvv.value.trim() || null;
@@ -803,7 +799,7 @@ async function sauvegarderMembre(event) {
         await chargerUtilisateurs();
         if (typeof carnetPilotesCache !== 'undefined') carnetPilotesCache = [];
         if (typeof carnetInstructeursCache !== 'undefined') carnetInstructeursCache = [];
-        if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', `${prenom} ${nom}`, `Rôles : ${(roles || []).join(', ')}`, 'Membres');
+        if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', `${prenom} ${nom}`, 'Informations du membre', 'Membres');
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la sauvegarde.');

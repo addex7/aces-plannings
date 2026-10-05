@@ -166,7 +166,7 @@ function ouvrirModaleRolesMembre() {
 
     let html;
     if (isSuperAdmin()) {
-        html = `<div style="display:flex; flex-direction:column; gap:10px; text-align:left;">` + liste.map(role => {
+        html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px 24px; text-align:left;">` + liste.map(role => {
             const checked = roles.includes(role) ? 'checked' : '';
             return `<label style="display:flex; gap:8px; align-items:flex-start; cursor:pointer;">
                 <input type="checkbox" data-role="${role}" ${checked} style="margin-top:3px;">
@@ -175,24 +175,45 @@ function ouvrirModaleRolesMembre() {
         }).join('') + `</div>`;
     } else {
         html = roles.length
-            ? `<div style="display:flex; flex-direction:column; gap:10px; text-align:left;">` + roles.map(role =>
+            ? `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px 24px; text-align:left;">` + roles.map(role =>
                 `<div><strong>${role}</strong>${descRole(role)}</div>`).join('') + `</div>`
             : '<em style="color:#64748b;">Aucun rôle attribué.</em>';
     }
 
     afficherModaleAlerte(`Rôles — ${nom}`, html, '👤');
 
-    if (isSuperAdmin()) {
-        const modal = document.getElementById('planning-alert-modal');
-        if (modal) {
-            modal.querySelectorAll('input[type="checkbox"][data-role]').forEach(cb => {
-                cb.addEventListener('change', () => {
-                    const coches = modal.querySelectorAll('input[type="checkbox"][data-role]:checked');
-                    membreSelectionne.roles = Array.from(coches).map(c => c.dataset.role);
-                    if (typeof mettreAJourRolesMembre === 'function') mettreAJourRolesMembre(membreSelectionne.id, coches);
-                });
-            });
+    const modal = document.getElementById('planning-alert-modal');
+    if (modal) {
+        const content = modal.querySelector('.modal-content');
+        if (content) {
+            content.style.maxWidth = '760px';
+            content.style.maxHeight = '85vh';
+            content.style.overflowY = 'auto';
         }
+    }
+
+    if (isSuperAdmin() && modal) {
+        modal.querySelectorAll('input[type="checkbox"][data-role]').forEach(cb => {
+            cb.addEventListener('change', async () => {
+                const coches = modal.querySelectorAll('input[type="checkbox"][data-role]:checked');
+                membreSelectionne.roles = Array.from(coches).map(c => c.dataset.role);
+                if (typeof mettreAJourRolesMembre === 'function') mettreAJourRolesMembre(membreSelectionne.id, coches);
+                // Attribution d'un role instructeur : demander le trigramme si absent
+                if (cb.checked && /instructeur/i.test(cb.dataset.role || '') && !(membreSelectionne.fields['Trigramme'] || '').trim()) {
+                    const sugg = ((((membreSelectionne.prenom || '')[0]) || '') + ((membreSelectionne.nom || '').replace(/\s/g, '').slice(0, 2))).toUpperCase();
+                    const saisie = prompt(`Rôle instructeur attribué à ${nom}.\nTrigramme à enregistrer :`, sugg);
+                    if (saisie && saisie.trim()) {
+                        const tri = saisie.trim().toUpperCase().slice(0, 3);
+                        try {
+                            await patchMembre(membreSelectionne.id, { 'Trigramme': tri });
+                            membreSelectionne.fields['Trigramme'] = tri;
+                            const inp = document.querySelector('#accueil-infos input[data-field="Trigramme"]');
+                            if (inp) inp.value = tri;
+                        } catch (e) { console.error('Erreur trigramme:', e); }
+                    }
+                }
+            });
+        });
     }
 }
 
@@ -230,6 +251,42 @@ function renderAccueilMembre(fields) {
             e.stopPropagation();
             ouvrirModaleRolesMembre();
         });
+    }
+    const infosEl = document.getElementById('accueil-infos');
+    if (infosEl) {
+        const editable = isSuperAdmin();
+        const toISO = v => { const d = v ? new Date(v) : null; return (d && !isNaN(d)) ? d.toISOString().split('T')[0] : ''; };
+        const esc = v => String(v ?? '').replace(/"/g, '&quot;');
+        const ligne = (label, cle, val, type) => editable
+            ? `<div class="accueil-info"><span class="accueil-info-label">${label}</span><input type="${type}" class="accueil-info-input" data-field="${cle}" value="${esc(val)}"></div>`
+            : `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val">${val || '—'}</span></div>`;
+        const dn = editable ? toISO(fields['Date de naissance']) : (fields['Date de naissance'] ? new Date(fields['Date de naissance']).toLocaleDateString('fr-FR') : '');
+        infosEl.innerHTML =
+            ligne('Mail', 'Mail', fields['Mail'], 'email') +
+            ligne('Téléphone', 'Téléphone', fields['Téléphone'], 'text') +
+            ligne('Date de naissance', 'Date de naissance', dn, editable ? 'date' : 'text') +
+            ligne('Trigramme', 'Trigramme', fields['Trigramme'], 'text');
+        if (editable) {
+            infosEl.querySelectorAll('input').forEach(inp => {
+                if (inp.dataset.field === 'Trigramme') {
+                    inp.maxLength = 3;
+                    inp.style.textTransform = 'uppercase';
+                }
+                inp.addEventListener('change', async () => {
+                    let v = inp.value.trim();
+                    if (inp.dataset.field === 'Trigramme') v = v.toUpperCase();
+                    if (inp.dataset.field === 'Date de naissance') v = inp.value;
+                    try {
+                        await patchMembre(membreSelectionne.id, { [inp.dataset.field]: v || null });
+                        membreSelectionne.fields[inp.dataset.field] = v;
+                        if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim(), `${inp.dataset.field} : ${v}`, 'Membres');
+                    } catch (e) {
+                        console.error(e);
+                        alert('Erreur lors de la sauvegarde : ' + e.message);
+                    }
+                });
+            });
+        }
     }
     if (titre) {
         titre.textContent = isSuperAdmin() && membreSelectionne.id !== currentUser.id ?
