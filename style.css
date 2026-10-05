@@ -2535,10 +2535,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     word-break: break-all;
 }
 .roles-cell {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
+    line-height: 1.6;
 }
 .role-tag {
     display: inline-flex;
