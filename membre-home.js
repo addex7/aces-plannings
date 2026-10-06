@@ -336,17 +336,24 @@ function renderAccueilMembre(fields) {
                         ? '<li><strong>Mot de passe</strong> : sera modifié</li>'
                         : `<li><strong>${esc(c)}</strong> : « ${esc(originales[c]) || '—'} » → « ${esc(modifs[c]) || '—'} »</li>`
                 ).join('') + (autorisationAuto !== null
-                    ? `<li><strong>Autorisation parentale</strong> : ${autorisationAuto ? 'cochée' : 'décochée'} automatiquement (${autorisationAuto ? 'moins de' : 'plus de'} 18 ans)</li>`
+                    ? `<li><strong>Autorisation parentale</strong> : suivi ${autorisationAuto ? 'activé' : 'désactivé'} automatiquement (${autorisationAuto ? 'moins de' : 'plus de'} 18 ans)</li>`
                     : '') + '</ul>';
                 const ok = await membreConfirmerEnregistrement(nom, listeHtml, modifs['Mot de passe'] || null);
                 if (!ok) return;
                 try {
                     const payload = {};
                     for (const c of champs) payload[c] = c === 'Mot de passe' ? await hacherMotDePasse(modifs[c]) : (modifs[c] || null);
-                    if (autorisationAuto !== null) payload[MEMBRE_FIELDS.AUTORISATION_PARENTALE] = autorisationAuto;
+                    if (autorisationAuto !== null) {
+                        payload[MEMBRE_FIELDS.AUTORISATION_PARENTALE] = autorisationAuto;
+                        const sa = membreSelectionne.fields[SUIVIS_ACTIFS];
+                        const suivis = Array.isArray(sa) ? [...sa] : (sa ? [sa] : []);
+                        const idx = suivis.indexOf('Autorisation parentale');
+                        if (autorisationAuto && idx === -1) suivis.push('Autorisation parentale');
+                        if (!autorisationAuto && idx !== -1) suivis.splice(idx, 1);
+                        payload[SUIVIS_ACTIFS] = suivis;
+                    }
                     await patchMembre(membreSelectionne.id, payload);
-                    champs.forEach(c => { membreSelectionne.fields[c] = payload[c]; });
-                    if (autorisationAuto !== null) membreSelectionne.fields[MEMBRE_FIELDS.AUTORISATION_PARENTALE] = autorisationAuto;
+                    Object.keys(payload).forEach(c => { membreSelectionne.fields[c] = payload[c]; });
                     if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', nom, 'Champs modifiés : ' + champs.join(', '), 'Membres');
                     renderAccueilMembre(membreSelectionne.fields);
                 } catch (e) {
