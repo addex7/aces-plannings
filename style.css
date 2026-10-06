@@ -2292,7 +2292,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    align-content: flex-start;
     gap: 12px;
+    flex: 1;
+    min-width: 0;
 }
 #view-accueil-membre .accueil-nom {
     font-size: 18px;
