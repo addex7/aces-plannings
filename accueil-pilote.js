@@ -450,8 +450,10 @@ async function chargerDernierVol() {
                 if (v === id) return true;
                 if (typeof v === 'string') {
                     const vl = v.toLowerCase();
-                    if (prenom && vl.includes(prenom)) return true;
-                    if (nom && vl.includes(nom)) return true;
+                    if (!prenom && !nom) return false;
+                    const pOk = !prenom || vl.includes(prenom);
+                    const nOk = !nom || vl.includes(nom);
+                    return pOk && nOk;
                 }
                 return false;
             });
