@@ -148,13 +148,13 @@ async function chargerInvitation(recordId) {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
         if (!res.ok) {
             setupError(res.status === 404
-                ? 'Lien d\'invitation invalide — le membre a été supprimé ou recréé depuis. Demandez un nouvel envoi.'
+                ? 'Ce lien d\'invitation n\'est plus valide. Vous avez probablement cliqué sur un <strong>ancien lien</strong> : si plusieurs invitations vous ont été envoyées, ouvrez le mail <strong>le plus récent</strong>. Sinon, demandez un nouvel envoi à l\'administrateur.'
                 : 'Erreur lors du chargement de l\'invitation.');
             return;
         }
         const record = await res.json();
         if (!record || !record.id || record.fields['Actif']) {
-            setupError('Lien d\'invitation invalide ou déjà utilisé.');
+            setupError('Lien d\'invitation invalide ou déjà utilisé — si plusieurs invitations vous ont été envoyées, ouvrez le mail <strong>le plus récent</strong>.');
             return;
         }
         setup.dataset.recordId = record.id;
