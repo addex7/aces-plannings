@@ -615,6 +615,108 @@ async function mettreAJourPhoto(dataURL) {
     }
 }
 
+// Premiere connexion : propose de verifier/completer les infos (dont celles
+// recuperees de GVV a la creation). S'affiche a chaque connexion tant que le
+// membre n'a pas valide sa fiche (champ "Fiche vérifiée").
+let ficheVerifFaite = false;
+async function verifierFicheMembre() {
+    if (ficheVerifFaite || !currentUser || !currentUser.id) return;
+    ficheVerifFaite = true;
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${currentUser.id}`, { headers }, 0, true);
+        const record = await res.json();
+        if (!res.ok) return;
+        const f = record.fields || {};
+        if (f['Fiche vérifiée']) return;
+        afficherModaleVerificationFiche(f);
+    } catch (e) {
+        console.error('Vérification fiche membre:', e);
+    }
+}
+
+function afficherModaleVerificationFiche(f) {
+    const existing = document.getElementById('membre-verif-modal');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'membre-verif-modal';
+    overlay.className = 'modal';
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '20000';
+    const iso = f['Date de naissance'] ? (() => { const d = new Date(f['Date de naissance']); return isNaN(d) ? '' : d.toISOString().split('T')[0]; })() : '';
+    const esc = v => String(v ?? '').replace(/"/g, '&quot;');
+    const champ = (id, label, val, type = 'text', ph = '') => `
+        <div style="display:flex; flex-direction:column; gap:4px;">
+            <label for="${id}" style="font-size:13px; color:#475569; font-weight:500;">${label}</label>
+            <input type="${type}" id="${id}" value="${esc(val)}" placeholder="${ph}"
+                style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+        </div>`;
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-width: 480px; text-align: left;">
+            <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
+            <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                <span style="font-size:28px;">👋</span>
+                <span>Bienvenue ! Vérifiez vos informations</span>
+            </h3>
+            <p style="margin:0; line-height:1.6; font-size:14px; color:#334155;">
+                Certaines données ont été récupérées depuis <strong>GVV</strong>. Merci de les vérifier et de compléter les champs manquants.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
+                ${champ('verif-mail', 'Mail', f['Mail'], 'email')}
+                ${champ('verif-tel', 'Téléphone', f['Téléphone'], 'tel')}
+                ${champ('verif-naissance', 'Date de naissance', iso, 'date')}
+                ${champ('verif-lieu', 'Lieu de naissance', f['Lieu de naissance'])}
+                ${champ('verif-adresse', 'Adresse', f['Adresse'])}
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                <button type="button" class="nr-btn-cancel" id="verif-later">Plus tard</button>
+                <button type="button" class="btn-primary" id="verif-ok">Valider mes informations</button>
+            </div>
+        </div>
+    `;
+    const fermer = () => overlay.remove();
+    overlay.querySelector('.close-modal').addEventListener('click', fermer);
+    overlay.querySelector('#verif-later').addEventListener('click', fermer);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) fermer(); });
+    overlay.querySelector('#verif-ok').addEventListener('click', async () => {
+        const fields = {
+            'Mail': overlay.querySelector('#verif-mail').value.trim() || null,
+            'Téléphone': overlay.querySelector('#verif-tel').value.trim() || null,
+            'Date de naissance': overlay.querySelector('#verif-naissance').value || null,
+            'Lieu de naissance': overlay.querySelector('#verif-lieu').value.trim() || null,
+            'Adresse': overlay.querySelector('#verif-adresse').value.trim() || null,
+            'Fiche vérifiée': true
+        };
+        const btnOk = overlay.querySelector('#verif-ok');
+        btnOk.disabled = true;
+        btnOk.textContent = 'Enregistrement…';
+        try {
+            const resPatch = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${currentUser.id}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ fields })
+            });
+            if (!resPatch.ok) {
+                const d = await resPatch.json();
+                throw new Error(d.error?.message || 'Erreur');
+            }
+            if (currentUser) {
+                currentUser.mail = fields['Mail'];
+                currentUser.telephone = fields['Téléphone'];
+            }
+            if (typeof enregistrerAudit === 'function') enregistrerAudit('Vérification fiche', `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim(), 'Informations personnelles vérifiées', 'Membres');
+            fermer();
+            const vueMembre = document.getElementById('view-accueil-membre');
+            if (vueMembre && vueMembre.style.display !== 'none' && membreSelectionne && membreSelectionne.id === currentUser.id) chargerAccueilMembre(currentUser.id);
+        } catch (e) {
+            console.error(e);
+            alert('Erreur lors de l\'enregistrement : ' + e.message);
+            btnOk.disabled = false;
+            btnOk.textContent = 'Valider mes informations';
+        }
+    });
+    document.body.appendChild(overlay);
+}
+
 function membreConfirmerEnregistrement(nom, listeHtml, mdpSaisi) {
     return new Promise((resolve) => {
         const existing = document.getElementById('membre-mdp-modal');

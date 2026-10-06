@@ -222,6 +222,7 @@ function showApp() {
     updateUIRoles();
     const tabAccueil = document.getElementById('tab-accueil');
     if (tabAccueil) tabAccueil.click();
+    if (typeof verifierFicheMembre === 'function') setTimeout(verifierFicheMembre, 600);
 }
 
 async function seConnecter() {
