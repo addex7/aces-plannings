@@ -146,8 +146,13 @@ async function chargerInvitation(recordId) {
     const nameEl = document.getElementById('setup-name');
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
+        if (!res.ok) {
+            setupError(res.status === 404
+                ? 'Lien d\'invitation invalide — le membre a été supprimé ou recréé depuis. Demandez un nouvel envoi.'
+                : 'Erreur lors du chargement de l\'invitation.');
+            return;
+        }
         const record = await res.json();
-        if (!res.ok) throw new Error(record.error?.message || 'Erreur');
         if (!record || !record.id || record.fields['Actif']) {
             setupError('Lien d\'invitation invalide ou déjà utilisé.');
             return;
