@@ -462,6 +462,27 @@ app.get('/v0/:base/sync-gvv/statut', (req, res) => {
     res.json({ enCours: gvvSyncEnCours, dernier: gvvSyncDernier });
 });
 
+// --- FICHES MEMBRES GVV ---
+// Renvoie les fiches membres GVV (naissance, telephone, adresse...) pour
+// completer les fiches du site. Resultat mis en cache 10 min pour menager GVV.
+let gvvMembresCache = null;
+let gvvMembresCacheAt = 0;
+app.get('/v0/:base/gvv-membres', async (req, res) => {
+    if (gvvMembresCache && Date.now() - gvvMembresCacheAt < 10 * 60 * 1000) {
+        return res.json({ membres: gvvMembresCache, cache: true });
+    }
+    try {
+        const { recupererMembresGvv } = require('./gvv-membres');
+        const membres = await recupererMembresGvv();
+        gvvMembresCache = membres;
+        gvvMembresCacheAt = Date.now();
+        res.json({ membres });
+    } catch (e) {
+        console.error('GVV membres:', e);
+        erreur(res, 502, `Lecture GVV impossible : ${e.message}`);
+    }
+});
+
 // --- ENVOI MANUEL D'UN VOL DU CARNET VERS GVV ---
 // Bouton reserve aux super admin cote front. Cree le vol dans GVV (vols_avion),
 // ce qui declenche la facturation GVV, puis note l'id GVV sur le record.

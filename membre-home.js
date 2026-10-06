@@ -291,15 +291,17 @@ function renderAccueilMembre(fields) {
             ligne('Licence FFA', 'Numéro licence FFA', fields['Numéro licence FFA'], 'text') +
             ligne('Licence FFVP', 'Numéro licence FFVP', fields['Numéro licence FFVP'], 'text') +
             ligne('Licence FFPLUM', 'Numéro licence FFPLUM', fields['Numéro licence FFPLUM'], 'text') +
-            (editable ? `<div id="accueil-infos-actions" style="display:none; grid-column:1/-1; justify-content:flex-end; gap:10px; margin-top:4px;">
-                <button type="button" class="nr-btn-cancel" id="accueil-infos-annuler">Annuler</button>
-                <button type="button" class="btn-primary" id="accueil-infos-sauver">💾 Enregistrer les modifications</button>
+            (editable ? `<div id="accueil-infos-actions" style="display:flex; grid-column:1/-1; justify-content:space-between; gap:10px; margin-top:4px;">
+                <button type="button" class="btn-primary" id="accueil-infos-gvv" style="background:#64748b;" title="Récupérer date de naissance, téléphone et adresse depuis GVV">📥 Importer GVV</button>
+                <span id="accueil-infos-save-btns" style="display:none; gap:10px;">
+                    <button type="button" class="nr-btn-cancel" id="accueil-infos-annuler">Annuler</button>
+                    <button type="button" class="btn-primary" id="accueil-infos-sauver">💾 Enregistrer les modifications</button>
+                </span>
             </div>` : '');
         if (editable) {
             const originales = {};
             const modifs = {};
-            const actionsEl = () => document.getElementById('accueil-infos-actions');
-            const majActions = () => { const a = actionsEl(); if (a) a.style.display = Object.keys(modifs).length ? 'flex' : 'none'; };
+            const majActions = () => { const s = document.getElementById('accueil-infos-save-btns'); if (s) s.style.display = Object.keys(modifs).length ? 'flex' : 'none'; };
             infosEl.querySelectorAll('input').forEach(inp => {
                 const champ = inp.dataset.field;
                 originales[champ] = inp.value;
@@ -359,6 +361,39 @@ function renderAccueilMembre(fields) {
                 } catch (e) {
                     console.error(e);
                     alert('Erreur lors de la sauvegarde : ' + e.message);
+                }
+            });
+            const btnGvv = document.getElementById('accueil-infos-gvv');
+            if (btnGvv) btnGvv.addEventListener('click', async () => {
+                const nom = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
+                btnGvv.disabled = true;
+                btnGvv.textContent = '⏳ GVV…';
+                try {
+                    const res = await apiFetch(`${API_BASE}/gvv-membres`, { headers });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error?.message || 'Erreur GVV');
+                    const cible = normaliserNom(membreSelectionne.nom) + '|' + normaliserNom(membreSelectionne.prenom);
+                    const g = (data.membres || []).find(m => normaliserNom(m.nom) + '|' + normaliserNom(m.prenom) === cible)
+                        || (data.membres || []).find(m => normaliserNom(`${m.prenom} ${m.nom}`) === normaliserNom(nom));
+                    if (!g) { alert(`Aucune fiche GVV trouvée pour « ${nom} ».`); return; }
+                    const remplir = (champ, val) => {
+                        if (!val) return;
+                        const inp = infosEl.querySelector(`input[data-field="${champ}"]`);
+                        if (inp && !inp.value.trim()) { inp.value = val; inp.dispatchEvent(new Event('input')); }
+                    };
+                    remplir('Date de naissance', g.naissance);
+                    remplir('Téléphone', g.mobile || g.telephone);
+                    remplir('Adresse', g.adresse);
+                    remplir('Mail', g.mail);
+                    if (!Object.keys(modifs).length) {
+                        alert(`Fiche GVV de ${nom} trouvée mais aucun champ vide à compléter (ou données absentes de GVV).`);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Erreur GVV : ' + e.message);
+                } finally {
+                    btnGvv.disabled = false;
+                    btnGvv.textContent = '📥 Importer GVV';
                 }
             });
         }

@@ -74,6 +74,8 @@ function updateUIRoles() {
     if (tabMembres) tabMembres.style.display = currentUser ? 'block' : 'none';
     const btnBilanMembres = document.getElementById('btn-bilan-membres');
     if (btnBilanMembres) btnBilanMembres.style.display = peutVoirBilanMembres() ? 'inline-block' : 'none';
+    const btnImportGvv = document.getElementById('btn-import-gvv-membres');
+    if (btnImportGvv) btnImportGvv.style.display = superAdmin ? 'inline-block' : 'none';
     if (tabAudit) tabAudit.style.display = superAdmin ? 'block' : 'none';
     if (tabMessagerie) tabMessagerie.style.display = currentUser ? 'block' : 'none';
     if (typeof compterMessagesNonLus === 'function') compterMessagesNonLus();
@@ -596,6 +598,28 @@ function ouvrirEspaceMembrePerso() {
     if (typeof chargerAccueilMembre === 'function') chargerAccueilMembre(currentUser ? currentUser.id : null);
 }
 
+async function chargerMembresGvv() {
+    const res = await fetch(`${API_BASE}/gvv-membres`, { headers });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Erreur GVV');
+    return data.membres || [];
+}
+
+function trouverMembreGvv(gvvMembres, prenom, nom) {
+    const cle = normaliserNom(nom) + '|' + normaliserNom(prenom);
+    return (gvvMembres || []).find(m => normaliserNom(m.nom) + '|' + normaliserNom(m.prenom) === cle) || null;
+}
+
+// Champs GVV -> fiche membre ; ne remplit que les champs vides.
+function champsGvvManquants(fields, g) {
+    const patch = {};
+    if (!fields['Date de naissance'] && g.naissance) patch['Date de naissance'] = g.naissance;
+    if (!(fields['Téléphone'] || '').trim() && (g.mobile || g.telephone)) patch['Téléphone'] = g.mobile || g.telephone;
+    if (!(fields['Adresse'] || '').trim() && g.adresse) patch['Adresse'] = g.adresse;
+    if (!(fields['Mail'] || '').trim() && g.mail) patch['Mail'] = g.mail;
+    return patch;
+}
+
 async function ajouterUtilisateur(event) {
     event.preventDefault();
     const prenom = document.getElementById('membre-prenom').value.trim();
@@ -625,6 +649,27 @@ async function ajouterUtilisateur(event) {
         }
         const data = await res.json();
         const record = data.records ? data.records[0] : data;
+        // Enrichissement GVV : naissance, telephone, adresse si trouves
+        try {
+            const gvvMembres = await chargerMembresGvv();
+            const g = trouverMembreGvv(gvvMembres, prenom, nom);
+            if (g) {
+                const patch = champsGvvManquants({ 'Téléphone': telephone, 'Mail': mail }, g);
+                if (Object.keys(patch).length) {
+                    const resPatch = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${record.id}`, {
+                        method: 'PATCH',
+                        headers,
+                        body: JSON.stringify({ fields: patch })
+                    });
+                    if (resPatch.ok) {
+                        const rec = await resPatch.json();
+                        record.fields = rec.fields || record.fields;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Enrichissement GVV:', e);
+        }
         afficherInvitation(record, mail);
         await chargerUtilisateurs();
         if (typeof carnetPilotesCache !== 'undefined') carnetPilotesCache = [];
@@ -834,6 +879,59 @@ async function supprimerMembreDepuisListe(recordId, nomComplet = '') {
     }
 }
 
+async function importerMembresDepuisGvv() {
+    if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
+    const btn = document.getElementById('btn-import-gvv-membres');
+    const ok = typeof docsConfirmer === 'function'
+        ? await docsConfirmer('Importer depuis GVV', '<p style="margin:0;">Compléter les fiches membres depuis GVV ?<br>Seuls les champs <strong>vides</strong> (naissance, téléphone, adresse, mail) seront remplis — aucune donnée existante n\'est écrasée.</p>', '📥', 'Importer')
+        : confirm('Compléter les fiches membres depuis GVV ?');
+    if (!ok) return;
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Import…'; }
+    try {
+        const gvvMembres = await chargerMembresGvv();
+        const baseUrl = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?pageSize=100`;
+        const records = [];
+        let offset = '';
+        do {
+            const res = await cachedFetch(baseUrl + (offset ? `&offset=${encodeURIComponent(offset)}` : ''), { headers }, 0, true);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+            records.push(...(data.records || []));
+            offset = data.offset || '';
+        } while (offset);
+        let maj = 0, sansCorrespondance = 0;
+        const details = [];
+        for (const r of records) {
+            const f = r.fields || {};
+            const g = trouverMembreGvv(gvvMembres, f['Prénom'], f['Nom']);
+            if (!g) { sansCorrespondance++; continue; }
+            const patch = champsGvvManquants(f, g);
+            if (!Object.keys(patch).length) continue;
+            const resPatch = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${r.id}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ fields: patch })
+            });
+            if (resPatch.ok) {
+                maj++;
+                details.push(`${f['Prénom'] || ''} ${f['Nom'] || ''} : ${Object.keys(patch).join(', ')}`);
+            }
+        }
+        const resume = `${maj} fiche(s) complétée(s) depuis GVV` + (sansCorrespondance ? ` — ${sansCorrespondance} membre(s) sans correspondance GVV` : '');
+        if (typeof afficherModaleAlerte === 'function') {
+            afficherModaleAlerte('Import GVV', `<p style="margin:0 0 10px;">${resume}.</p>` +
+                (details.length ? `<div style="font-size:13px; color:#475569; max-height:200px; overflow:auto;">${details.map(d => `• ${d}`).join('<br>')}</div>` : ''), '📥');
+        } else alert(resume + '.');
+        if (maj > 0 && typeof enregistrerAudit === 'function') enregistrerAudit('Import GVV membres', '', `${maj} fiche(s) complétée(s)`, 'Membres');
+        await chargerUtilisateurs();
+    } catch (e) {
+        console.error(e);
+        alert('Erreur import GVV : ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '📥 Importer GVV'; }
+    }
+}
+
 function initMembres() {
     const loginBtn = document.getElementById('btn-login');
     if (loginBtn) loginBtn.addEventListener('click', seConnecter);
@@ -857,6 +955,8 @@ function initMembres() {
     if (backLogin) backLogin.addEventListener('click', (e) => { e.preventDefault(); showLogin(); });
     const btnBilan = document.getElementById('btn-bilan-membres');
     if (btnBilan) btnBilan.addEventListener('click', ouvrirBilanMembres);
+    const btnImportGvvM = document.getElementById('btn-import-gvv-membres');
+    if (btnImportGvvM) btnImportGvvM.addEventListener('click', importerMembresDepuisGvv);
     const btnLegendeM = document.getElementById('btn-legende-membres');
     if (btnLegendeM) btnLegendeM.addEventListener('click', () => {
         const titre = t => `<div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin:14px 0 2px;">${t}</div>`;
