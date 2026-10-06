@@ -304,10 +304,11 @@ function renderAccueilMembre(fields) {
                     if (champModifie === 'Date de naissance') v = inp.value;
                     if (champModifie === 'Mot de passe' && !v) return;
                     const nom = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
-                    const libelle = champModifie === 'Mot de passe' ? 'le mot de passe' : `« ${champModifie} » en « ${v || '—'} »`;
-                    const ok = typeof docsConfirmer === 'function'
-                        ? await docsConfirmer('Confirmer la modification', `<p style="margin:0;">Modifier ${libelle} pour <strong>${nom}</strong> ?</p>`, '✏️', 'Modifier')
-                        : confirm(`Modifier ${champModifie} pour ${nom} ?`);
+                    const ok = champModifie === 'Mot de passe'
+                        ? await membreConfirmerMotDePasse(v, nom)
+                        : (typeof docsConfirmer === 'function'
+                            ? await docsConfirmer('Confirmer la modification', `<p style="margin:0;">Modifier « ${champModifie} » en « ${v || '—'} » pour <strong>${nom}</strong> ?</p>`, '✏️', 'Modifier')
+                            : confirm(`Modifier ${champModifie} pour ${nom} ?`));
                     if (!ok) {
                         const ancienne = membreSelectionne.fields[champModifie] || '';
                         if (champModifie === 'Mot de passe') inp.value = '';
@@ -594,6 +595,53 @@ async function mettreAJourPhoto(dataURL) {
         console.error('Erreur upload photo:', err);
         alert('Erreur lors de la sauvegarde de la photo. Vérifiez que le champ "Photo" est un champ Texte dans Airtable.');
     }
+}
+
+function membreConfirmerMotDePasse(mdpSaisi, nom) {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('membre-mdp-modal');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'membre-mdp-modal';
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.style.zIndex = '20000';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width: 440px; text-align: left;">
+                <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
+                <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                    <span style="font-size:28px;">🔑</span>
+                    <span>Confirmer le mot de passe</span>
+                </h3>
+                <p style="margin:0; line-height:1.6; font-size:15px; color:#334155;">
+                    Retapez le nouveau mot de passe de <strong>${typeof docsEscAttr === 'function' ? docsEscAttr(nom) : nom}</strong> pour confirmer.
+                </p>
+                <input type="password" id="membre-mdp-confirm" placeholder="Retapez le mot de passe" autocomplete="new-password"
+                    style="width:100%; margin-top:15px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:15px; box-sizing:border-box;">
+                <p id="membre-mdp-erreur" style="display:none; margin:8px 0 0; color:#dc2626; font-size:13px;">Les deux mots de passe ne correspondent pas.</p>
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                    <button type="button" class="nr-btn-cancel" id="membre-mdp-cancel">Annuler</button>
+                    <button type="button" class="btn-primary" id="membre-mdp-ok">Modifier</button>
+                </div>
+            </div>
+        `;
+        const champ = overlay.querySelector('#membre-mdp-confirm');
+        const erreur = overlay.querySelector('#membre-mdp-erreur');
+        const fermer = (val) => { overlay.remove(); resolve(val); };
+        const valider = () => {
+            if (champ.value === mdpSaisi) { fermer(true); return; }
+            erreur.style.display = 'block';
+            champ.value = '';
+            champ.focus();
+        };
+        overlay.querySelector('.close-modal').addEventListener('click', () => fermer(false));
+        overlay.querySelector('#membre-mdp-cancel').addEventListener('click', () => fermer(false));
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) fermer(false); });
+        overlay.querySelector('#membre-mdp-ok').addEventListener('click', valider);
+        champ.addEventListener('keydown', (e) => { if (e.key === 'Enter') valider(); });
+        document.body.appendChild(overlay);
+        champ.focus();
+    });
 }
 
 async function chargerListeMembres() {
