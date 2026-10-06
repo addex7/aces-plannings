@@ -259,7 +259,7 @@ function renderAccueilMembre(fields) {
     }
     const infosEl = document.getElementById('accueil-infos');
     if (infosEl) {
-        const editable = isSuperAdmin();
+        const editable = isSuperAdmin() || membreSelectionne.id === currentUser.id;
         const toISO = v => { const d = v ? new Date(v) : null; return (d && !isNaN(d)) ? d.toISOString().split('T')[0] : ''; };
         const esc = v => String(v ?? '').replace(/"/g, '&quot;');
         const ligne = (label, cle, val, type) => editable
