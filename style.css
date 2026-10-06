@@ -2247,6 +2247,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 #view-accueil-membre .accueil-profil {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 15px;
     margin-bottom: 0;
     padding: 15px;
@@ -2564,9 +2565,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .accueil-infos {
     flex-basis: 100%;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 6px 18px;
-    margin-top: 8px;
 }
 .accueil-info {
     display: flex;
