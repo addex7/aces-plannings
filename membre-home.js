@@ -260,12 +260,32 @@ function renderAccueilMembre(fields) {
         const ligne = (label, cle, val, type) => editable
             ? `<div class="accueil-info"><span class="accueil-info-label">${label}</span><input type="${type}" class="accueil-info-input" data-field="${cle}" value="${esc(val)}"></div>`
             : `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val">${val || '—'}</span></div>`;
+        const ligneLecture = (label, val, id = '') =>
+            `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val"${id ? ` id="${id}"` : ''}>${val || '—'}</span></div>`;
+        const d0 = fields['Date de naissance'] ? new Date(fields['Date de naissance']) : null;
+        let age = '';
+        if (d0 && !isNaN(d0)) {
+            const auj = new Date();
+            let a = auj.getFullYear() - d0.getFullYear();
+            if (auj.getMonth() < d0.getMonth() || (auj.getMonth() === d0.getMonth() && auj.getDate() < d0.getDate())) a--;
+            age = `${a} ans`;
+        }
         const dn = editable ? toISO(fields['Date de naissance']) : (fields['Date de naissance'] ? new Date(fields['Date de naissance']).toLocaleDateString('fr-FR') : '');
         infosEl.innerHTML =
             ligne('Mail', 'Mail', fields['Mail'], 'email') +
+            ligne('Identifiant', 'Identifiant', fields['Identifiant'], 'text') +
+            (editable
+                ? `<div class="accueil-info"><span class="accueil-info-label">Mot de passe</span><input type="password" class="accueil-info-input" data-field="Mot de passe" value="" placeholder="${fields['Mot de passe'] ? '••••••••' : 'Non défini'}" autocomplete="new-password"></div>`
+                : ligneLecture('Mot de passe', fields['Mot de passe'] ? '••••••••' : '')) +
             ligne('Téléphone', 'Téléphone', fields['Téléphone'], 'text') +
             ligne('Date de naissance', 'Date de naissance', dn, editable ? 'date' : 'text') +
-            ligne('Trigramme', 'Trigramme', fields['Trigramme'], 'text');
+            ligneLecture('Âge', age, 'accueil-age-val') +
+            ligne('Lieu de naissance', 'Lieu de naissance', fields['Lieu de naissance'], 'text') +
+            ligne('Adresse', 'Adresse', fields['Adresse'], 'text') +
+            ligne('Trigramme', 'Trigramme', fields['Trigramme'], 'text') +
+            ligne('Licence FFA', 'Numéro licence FFA', fields['Numéro licence FFA'], 'text') +
+            ligne('Licence FFVP', 'Numéro licence FFVP', fields['Numéro licence FFVP'], 'text') +
+            ligne('Licence FFPLUM', 'Numéro licence FFPLUM', fields['Numéro licence FFPLUM'], 'text');
         if (editable) {
             infosEl.querySelectorAll('input').forEach(inp => {
                 if (inp.dataset.field === 'Trigramme') {
@@ -273,13 +293,31 @@ function renderAccueilMembre(fields) {
                     inp.style.textTransform = 'uppercase';
                 }
                 inp.addEventListener('change', async () => {
+                    const champModifie = inp.dataset.field;
                     let v = inp.value.trim();
-                    if (inp.dataset.field === 'Trigramme') v = v.toUpperCase();
-                    if (inp.dataset.field === 'Date de naissance') v = inp.value;
+                    if (champModifie === 'Trigramme') v = v.toUpperCase();
+                    if (champModifie === 'Date de naissance') v = inp.value;
+                    if (champModifie === 'Mot de passe' && !v) return;
                     try {
-                        await patchMembre(membreSelectionne.id, { [inp.dataset.field]: v || null });
-                        membreSelectionne.fields[inp.dataset.field] = v;
-                        if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim(), `${inp.dataset.field} : ${v}`, 'Membres');
+                        const val = champModifie === 'Mot de passe' ? await hacherMotDePasse(v) : (v || null);
+                        await patchMembre(membreSelectionne.id, { [champModifie]: val });
+                        membreSelectionne.fields[champModifie] = champModifie === 'Mot de passe' ? val : v;
+                        if (champModifie === 'Mot de passe') { inp.value = ''; inp.placeholder = '••••••••'; }
+                        if (champModifie === 'Date de naissance') {
+                            const ageEl = document.getElementById('accueil-age-val');
+                            const nd = v ? new Date(v) : null;
+                            if (ageEl) {
+                                let na = '';
+                                if (nd && !isNaN(nd)) {
+                                    const auj = new Date();
+                                    let a = auj.getFullYear() - nd.getFullYear();
+                                    if (auj.getMonth() < nd.getMonth() || (auj.getMonth() === nd.getMonth() && auj.getDate() < nd.getDate())) a--;
+                                    na = `${a} ans`;
+                                }
+                                ageEl.textContent = na || '—';
+                            }
+                        }
+                        if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim(), champModifie === 'Mot de passe' ? 'Mot de passe modifié' : `${champModifie} : ${v}`, 'Membres');
                     } catch (e) {
                         console.error(e);
                         alert('Erreur lors de la sauvegarde : ' + e.message);
