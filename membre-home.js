@@ -627,14 +627,17 @@ async function verifierFicheMembre() {
         const record = await res.json();
         if (!res.ok) return;
         const f = record.fields || {};
-        if (f['Fiche vérifiée']) return;
-        afficherModaleVerificationFiche(f);
+        // La modale se reaffiche a chaque connexion tant qu'un champ demande est vide
+        const manquants = ['Mail', 'Téléphone', 'Date de naissance', 'Lieu de naissance', 'Adresse']
+            .filter(c => !(f[c] || '').toString().trim());
+        if (!manquants.length && f['Fiche vérifiée']) return;
+        afficherModaleVerificationFiche(f, manquants);
     } catch (e) {
         console.error('Vérification fiche membre:', e);
     }
 }
 
-function afficherModaleVerificationFiche(f) {
+function afficherModaleVerificationFiche(f, manquants = []) {
     const existing = document.getElementById('membre-verif-modal');
     if (existing) existing.remove();
     const overlay = document.createElement('div');
@@ -644,12 +647,15 @@ function afficherModaleVerificationFiche(f) {
     overlay.style.zIndex = '20000';
     const iso = f['Date de naissance'] ? (() => { const d = new Date(f['Date de naissance']); return isNaN(d) ? '' : d.toISOString().split('T')[0]; })() : '';
     const esc = v => String(v ?? '').replace(/"/g, '&quot;');
-    const champ = (id, label, val, type = 'text', ph = '') => `
+    const champ = (id, label, val, type = 'text', ph = '') => {
+        const manque = manquants.includes(label);
+        return `
         <div style="display:flex; flex-direction:column; gap:4px;">
-            <label for="${id}" style="font-size:13px; color:#475569; font-weight:500;">${label}</label>
+            <label for="${id}" style="font-size:13px; color:${manque ? '#dc2626' : '#475569'}; font-weight:500;">${label}${manque ? ' *' : ''}</label>
             <input type="${type}" id="${id}" value="${esc(val)}" placeholder="${ph}"
-                style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+                style="padding:8px 10px; border:1px solid ${manque ? '#fca5a5' : '#cbd5e1'}; border-radius:6px; font-size:14px;${manque ? ' background:#fef2f2;' : ''}">
         </div>`;
+    };
     overlay.innerHTML = `
         <div class="modal-content" style="max-width: 480px; text-align: left;">
             <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
@@ -658,7 +664,9 @@ function afficherModaleVerificationFiche(f) {
                 <span>Bienvenue ! Vérifiez vos informations</span>
             </h3>
             <p style="margin:0; line-height:1.6; font-size:14px; color:#334155;">
-                Certaines données ont été récupérées depuis <strong>GVV</strong>. Merci de les vérifier et de compléter les champs manquants.
+                ${manquants.length
+                    ? `Merci de compléter les champs en rouge (<strong>${manquants.join(', ')}</strong>) — ils sont nécessaires au suivi du club.`
+                    : `Certaines données ont été récupérées depuis <strong>GVV</strong>. Merci de les vérifier.`}
             </p>
             <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
                 ${champ('verif-mail', 'Mail', f['Mail'], 'email')}
