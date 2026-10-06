@@ -195,6 +195,11 @@ function ouvrirModaleRolesMembre() {
     if (isSuperAdmin() && modal) {
         modal.querySelectorAll('input[type="checkbox"][data-role]').forEach(cb => {
             cb.addEventListener('change', async () => {
+                const action = cb.checked ? 'Attribuer' : 'Retirer';
+                const ok = typeof docsConfirmer === 'function'
+                    ? await docsConfirmer(`${action} un rôle`, `<p style="margin:0;">${action} le rôle <strong>« ${cb.dataset.role} »</strong> ${cb.checked ? 'à' : 'de'} <strong>${nom}</strong> ?</p>`, '👤', action, !cb.checked)
+                    : confirm(`${action} le rôle « ${cb.dataset.role} » ?`);
+                if (!ok) { cb.checked = !cb.checked; return; }
                 const coches = modal.querySelectorAll('input[type="checkbox"][data-role]:checked');
                 membreSelectionne.roles = Array.from(coches).map(c => c.dataset.role);
                 if (typeof mettreAJourRolesMembre === 'function') mettreAJourRolesMembre(membreSelectionne.id, coches);
@@ -298,6 +303,18 @@ function renderAccueilMembre(fields) {
                     if (champModifie === 'Trigramme') v = v.toUpperCase();
                     if (champModifie === 'Date de naissance') v = inp.value;
                     if (champModifie === 'Mot de passe' && !v) return;
+                    const nom = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
+                    const libelle = champModifie === 'Mot de passe' ? 'le mot de passe' : `« ${champModifie} » en « ${v || '—'} »`;
+                    const ok = typeof docsConfirmer === 'function'
+                        ? await docsConfirmer('Confirmer la modification', `<p style="margin:0;">Modifier ${libelle} pour <strong>${nom}</strong> ?</p>`, '✏️', 'Modifier')
+                        : confirm(`Modifier ${champModifie} pour ${nom} ?`);
+                    if (!ok) {
+                        const ancienne = membreSelectionne.fields[champModifie] || '';
+                        if (champModifie === 'Mot de passe') inp.value = '';
+                        else if (champModifie === 'Date de naissance') inp.value = ancienne ? new Date(ancienne).toISOString().split('T')[0] : '';
+                        else inp.value = ancienne;
+                        return;
+                    }
                     try {
                         const val = champModifie === 'Mot de passe' ? await hacherMotDePasse(v) : (v || null);
                         await patchMembre(membreSelectionne.id, { [champModifie]: val });
