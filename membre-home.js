@@ -326,18 +326,27 @@ function renderAccueilMembre(fields) {
                 const champs = Object.keys(modifs);
                 if (!champs.length) return;
                 const nom = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
+                let autorisationAuto = null;
+                if (modifs['Date de naissance'] !== undefined) {
+                    const age = ageEnAnnees(modifs['Date de naissance'] || null);
+                    autorisationAuto = age !== null && age < 18;
+                }
                 const listeHtml = '<ul style="margin:10px 0 0; padding-left:20px;">' + champs.map(c =>
                     c === 'Mot de passe'
                         ? '<li><strong>Mot de passe</strong> : sera modifié</li>'
                         : `<li><strong>${esc(c)}</strong> : « ${esc(originales[c]) || '—'} » → « ${esc(modifs[c]) || '—'} »</li>`
-                ).join('') + '</ul>';
+                ).join('') + (autorisationAuto !== null
+                    ? `<li><strong>Autorisation parentale</strong> : ${autorisationAuto ? 'cochée' : 'décochée'} automatiquement (${autorisationAuto ? 'moins de' : 'plus de'} 18 ans)</li>`
+                    : '') + '</ul>';
                 const ok = await membreConfirmerEnregistrement(nom, listeHtml, modifs['Mot de passe'] || null);
                 if (!ok) return;
                 try {
                     const payload = {};
                     for (const c of champs) payload[c] = c === 'Mot de passe' ? await hacherMotDePasse(modifs[c]) : (modifs[c] || null);
+                    if (autorisationAuto !== null) payload[MEMBRE_FIELDS.AUTORISATION_PARENTALE] = autorisationAuto;
                     await patchMembre(membreSelectionne.id, payload);
                     champs.forEach(c => { membreSelectionne.fields[c] = payload[c]; });
+                    if (autorisationAuto !== null) membreSelectionne.fields[MEMBRE_FIELDS.AUTORISATION_PARENTALE] = autorisationAuto;
                     if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', nom, 'Champs modifiés : ' + champs.join(', '), 'Membres');
                     renderAccueilMembre(membreSelectionne.fields);
                 } catch (e) {
