@@ -290,57 +290,60 @@ function renderAccueilMembre(fields) {
             ligne('Trigramme', 'Trigramme', fields['Trigramme'], 'text') +
             ligne('Licence FFA', 'Numéro licence FFA', fields['Numéro licence FFA'], 'text') +
             ligne('Licence FFVP', 'Numéro licence FFVP', fields['Numéro licence FFVP'], 'text') +
-            ligne('Licence FFPLUM', 'Numéro licence FFPLUM', fields['Numéro licence FFPLUM'], 'text');
+            ligne('Licence FFPLUM', 'Numéro licence FFPLUM', fields['Numéro licence FFPLUM'], 'text') +
+            (editable ? `<div id="accueil-infos-actions" style="display:none; grid-column:1/-1; justify-content:flex-end; gap:10px; margin-top:4px;">
+                <button type="button" class="nr-btn-cancel" id="accueil-infos-annuler">Annuler</button>
+                <button type="button" class="btn-primary" id="accueil-infos-sauver">💾 Enregistrer les modifications</button>
+            </div>` : '');
         if (editable) {
+            const originales = {};
+            const modifs = {};
+            const actionsEl = () => document.getElementById('accueil-infos-actions');
+            const majActions = () => { const a = actionsEl(); if (a) a.style.display = Object.keys(modifs).length ? 'flex' : 'none'; };
             infosEl.querySelectorAll('input').forEach(inp => {
-                if (inp.dataset.field === 'Trigramme') {
+                const champ = inp.dataset.field;
+                originales[champ] = inp.value;
+                if (champ === 'Trigramme') {
                     inp.maxLength = 3;
                     inp.style.textTransform = 'uppercase';
                 }
-                inp.addEventListener('change', async () => {
-                    const champModifie = inp.dataset.field;
+                inp.addEventListener('input', () => {
                     let v = inp.value.trim();
-                    if (champModifie === 'Trigramme') v = v.toUpperCase();
-                    if (champModifie === 'Date de naissance') v = inp.value;
-                    if (champModifie === 'Mot de passe' && !v) return;
-                    const nom = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
-                    const ok = champModifie === 'Mot de passe'
-                        ? await membreConfirmerMotDePasse(v, nom)
-                        : (typeof docsConfirmer === 'function'
-                            ? await docsConfirmer('Confirmer la modification', `<p style="margin:0;">Modifier « ${champModifie} » en « ${v || '—'} » pour <strong>${nom}</strong> ?</p>`, '✏️', 'Modifier')
-                            : confirm(`Modifier ${champModifie} pour ${nom} ?`));
-                    if (!ok) {
-                        const ancienne = membreSelectionne.fields[champModifie] || '';
-                        if (champModifie === 'Mot de passe') inp.value = '';
-                        else if (champModifie === 'Date de naissance') inp.value = ancienne ? new Date(ancienne).toISOString().split('T')[0] : '';
-                        else inp.value = ancienne;
-                        return;
-                    }
-                    try {
-                        const val = champModifie === 'Mot de passe' ? await hacherMotDePasse(v) : (v || null);
-                        await patchMembre(membreSelectionne.id, { [champModifie]: val });
-                        membreSelectionne.fields[champModifie] = champModifie === 'Mot de passe' ? val : v;
-                        if (champModifie === 'Mot de passe') { inp.value = ''; inp.placeholder = '••••••••'; }
-                        if (champModifie === 'Date de naissance') {
-                            const ageEl = document.getElementById('accueil-age-val');
-                            const nd = v ? new Date(v) : null;
-                            if (ageEl) {
-                                let na = '';
-                                if (nd && !isNaN(nd)) {
-                                    const auj = new Date();
-                                    let a = auj.getFullYear() - nd.getFullYear();
-                                    if (auj.getMonth() < nd.getMonth() || (auj.getMonth() === nd.getMonth() && auj.getDate() < nd.getDate())) a--;
-                                    na = `${a} ans`;
-                                }
-                                ageEl.textContent = na || '—';
-                            }
-                        }
-                        if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim(), champModifie === 'Mot de passe' ? 'Mot de passe modifié' : `${champModifie} : ${v}`, 'Membres');
-                    } catch (e) {
-                        console.error(e);
-                        alert('Erreur lors de la sauvegarde : ' + e.message);
-                    }
+                    if (champ === 'Trigramme') v = v.toUpperCase();
+                    if (v === originales[champ] || (champ === 'Mot de passe' && !v)) delete modifs[champ];
+                    else modifs[champ] = v;
+                    majActions();
                 });
+            });
+            const btnAnnuler = document.getElementById('accueil-infos-annuler');
+            const btnSauver = document.getElementById('accueil-infos-sauver');
+            if (btnAnnuler) btnAnnuler.addEventListener('click', () => {
+                infosEl.querySelectorAll('input').forEach(inp => { inp.value = originales[inp.dataset.field] ?? ''; });
+                Object.keys(modifs).forEach(c => delete modifs[c]);
+                majActions();
+            });
+            if (btnSauver) btnSauver.addEventListener('click', async () => {
+                const champs = Object.keys(modifs);
+                if (!champs.length) return;
+                const nom = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
+                const listeHtml = '<ul style="margin:10px 0 0; padding-left:20px;">' + champs.map(c =>
+                    c === 'Mot de passe'
+                        ? '<li><strong>Mot de passe</strong> : sera modifié</li>'
+                        : `<li><strong>${esc(c)}</strong> : « ${esc(originales[c]) || '—'} » → « ${esc(modifs[c]) || '—'} »</li>`
+                ).join('') + '</ul>';
+                const ok = await membreConfirmerEnregistrement(nom, listeHtml, modifs['Mot de passe'] || null);
+                if (!ok) return;
+                try {
+                    const payload = {};
+                    for (const c of champs) payload[c] = c === 'Mot de passe' ? await hacherMotDePasse(modifs[c]) : (modifs[c] || null);
+                    await patchMembre(membreSelectionne.id, payload);
+                    champs.forEach(c => { membreSelectionne.fields[c] = payload[c]; });
+                    if (typeof enregistrerAudit === 'function') enregistrerAudit('Mise à jour de membre', nom, 'Champs modifiés : ' + champs.join(', '), 'Membres');
+                    renderAccueilMembre(membreSelectionne.fields);
+                } catch (e) {
+                    console.error(e);
+                    alert('Erreur lors de la sauvegarde : ' + e.message);
+                }
             });
         }
     }
@@ -597,7 +600,7 @@ async function mettreAJourPhoto(dataURL) {
     }
 }
 
-function membreConfirmerMotDePasse(mdpSaisi, nom) {
+function membreConfirmerEnregistrement(nom, listeHtml, mdpSaisi) {
     return new Promise((resolve) => {
         const existing = document.getElementById('membre-mdp-modal');
         if (existing) existing.remove();
@@ -606,22 +609,26 @@ function membreConfirmerMotDePasse(mdpSaisi, nom) {
         overlay.className = 'modal';
         overlay.style.display = 'flex';
         overlay.style.zIndex = '20000';
+        const nomEsc = typeof docsEscAttr === 'function' ? docsEscAttr(nom) : nom;
         overlay.innerHTML = `
-            <div class="modal-content" style="max-width: 440px; text-align: left;">
+            <div class="modal-content" style="max-width: 480px; text-align: left;">
                 <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
                 <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
-                    <span style="font-size:28px;">🔑</span>
-                    <span>Confirmer le mot de passe</span>
+                    <span style="font-size:28px;">✏️</span>
+                    <span>Confirmer les modifications</span>
                 </h3>
                 <p style="margin:0; line-height:1.6; font-size:15px; color:#334155;">
-                    Retapez le nouveau mot de passe de <strong>${typeof docsEscAttr === 'function' ? docsEscAttr(nom) : nom}</strong> pour confirmer.
+                    Enregistrer ces modifications pour <strong>${nomEsc}</strong> :
                 </p>
+                <div style="line-height:1.7; font-size:14px; color:#334155;">${listeHtml}</div>
+                ${mdpSaisi ? `
+                <p style="margin:15px 0 0; line-height:1.6; font-size:15px; color:#334155;">Retapez le nouveau mot de passe pour confirmer.</p>
                 <input type="password" id="membre-mdp-confirm" placeholder="Retapez le mot de passe" autocomplete="new-password"
-                    style="width:100%; margin-top:15px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:15px; box-sizing:border-box;">
-                <p id="membre-mdp-erreur" style="display:none; margin:8px 0 0; color:#dc2626; font-size:13px;">Les deux mots de passe ne correspondent pas.</p>
+                    style="width:100%; margin-top:8px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:15px; box-sizing:border-box;">
+                <p id="membre-mdp-erreur" style="display:none; margin:8px 0 0; color:#dc2626; font-size:13px;">Les deux mots de passe ne correspondent pas.</p>` : ''}
                 <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
                     <button type="button" class="nr-btn-cancel" id="membre-mdp-cancel">Annuler</button>
-                    <button type="button" class="btn-primary" id="membre-mdp-ok">Modifier</button>
+                    <button type="button" class="btn-primary" id="membre-mdp-ok">Enregistrer</button>
                 </div>
             </div>
         `;
@@ -629,7 +636,7 @@ function membreConfirmerMotDePasse(mdpSaisi, nom) {
         const erreur = overlay.querySelector('#membre-mdp-erreur');
         const fermer = (val) => { overlay.remove(); resolve(val); };
         const valider = () => {
-            if (champ.value === mdpSaisi) { fermer(true); return; }
+            if (!mdpSaisi || champ.value === mdpSaisi) { fermer(true); return; }
             erreur.style.display = 'block';
             champ.value = '';
             champ.focus();
@@ -638,9 +645,9 @@ function membreConfirmerMotDePasse(mdpSaisi, nom) {
         overlay.querySelector('#membre-mdp-cancel').addEventListener('click', () => fermer(false));
         overlay.addEventListener('click', (e) => { if (e.target === overlay) fermer(false); });
         overlay.querySelector('#membre-mdp-ok').addEventListener('click', valider);
-        champ.addEventListener('keydown', (e) => { if (e.key === 'Enter') valider(); });
+        if (champ) champ.addEventListener('keydown', (e) => { if (e.key === 'Enter') valider(); });
         document.body.appendChild(overlay);
-        champ.focus();
+        if (champ) champ.focus();
     });
 }
 
