@@ -681,7 +681,7 @@ function renderValidites(data) {
             label = `${item.label} — Non renseigné`;
         } else if (item.ok && item.bientot) {
             dot = 'pastille-orange';
-            label = `⚠ ${item.label} — Bientôt à renouveler`;
+            label = `⚠ ${item.label} — Renouvelable`;
         } else if (item.ok) {
             dot = 'pastille-verte';
             label = `✓ ${item.label} — À jour`;

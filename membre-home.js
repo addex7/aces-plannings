@@ -112,12 +112,12 @@ function pastille(ok, dateStr, texteRouge) {
         seuil.setMonth(seuil.getMonth() + 3);
         if (!isNaN(d.getTime()) && debutJour(d) < debutJour(seuil)) {
             couleur = 'pastille-orange';
-            texte = 'Bientôt à renouveler';
+            texte = 'Renouvelable';
             icone = '⚠';
         }
     }
     const date = formaterDateFr(dateStr) || '-';
-    return `<span class="pastille ${couleur}">${icone} ${texte}</span><span class="validite-date">Valide jusqu'au : ${date}</span>`;
+    return `<span class="pastille ${couleur}">${icone} ${texte}</span>${dateStr ? `<span class="validite-date" title="Valide jusqu'au ${date}">${date}</span>` : ''}`;
 }
 
 async function chargerAccueilMembre(id) {
@@ -389,8 +389,7 @@ function renderAccueilMembre(fields) {
         const disabledClass = actif ? '' : 'suivi-inactif';
         return `
             <div class="validite-card ${disabledClass}" data-label="${item.label}">
-                <div class="validite-label">${item.label}</div>
-                ${activer}
+                <div class="validite-head"><div class="validite-label">${item.label}</div>${activer}</div>
                 <div class="validite-pill">${pastille(ok, val)}</div>
                 ${input}
             </div>
@@ -556,7 +555,7 @@ async function chargerExperiences() {
             if (jours < 0) {
                 updateDetail(elRecent, 'pastille-rouge', '✕ Non à jour', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())}`);
             } else if (jours < 30) {
-                updateDetail(elRecent, 'pastille-orange', 'Bientôt à renouveler', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Valide jusqu'au : ${formaterDateFr(validite.toISOString())}`);
+                updateDetail(elRecent, 'pastille-orange', 'Renouvelable', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Valide jusqu'au : ${formaterDateFr(validite.toISOString())}`);
             } else {
                 updateDetail(elRecent, 'pastille-verte', '✓ À jour', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Valide jusqu'au : ${formaterDateFr(validite.toISOString())}`);
             }
@@ -1193,7 +1192,7 @@ function initAccueilMembre() {
         if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Légende', `
             ${titre('👤 Statuts des validités')}
             ${item('#dcfce7', 'À jour — échéance dans plus de 3 mois')}
-            ${item('#ffedd5', 'Bientôt à renouveler — échéance dans moins de 3 mois')}
+            ${item('#ffedd5', 'Renouvelable — échéance dans moins de 3 mois')}
             ${item('#fee2e2', 'Non à jour — échéance dépassée ou date non renseignée')}
             ${item('#f1f5f9', 'Suivi désactivé (pastille grisée)')}
         `, 'ℹ️');

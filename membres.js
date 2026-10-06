@@ -913,7 +913,7 @@ function initMembres() {
         if (typeof afficherModaleAlerte === 'function') afficherModaleAlerte('Légende', `
             ${titre('👤 Statuts des membres')}
             ${rond('#10b981', 'À jour — échéance dans plus de 3 mois')}
-            ${rond('#f97316', 'Bientôt à renouveler — échéance dans moins de 3 mois')}
+            ${rond('#f97316', 'Renouvelable — échéance dans moins de 3 mois')}
             ${rond('#dc2626', 'Périmé — échéance dépassée ou date non renseignée')}
             ${rond('#cbd5e1', 'Suivi désactivé / non concerné')}
         `, 'ℹ️');
