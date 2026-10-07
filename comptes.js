@@ -25,6 +25,8 @@ function initComptesPilotes() {
     const select = document.getElementById('comptes-pilote-select');
 
 
+    const btnBilan = document.getElementById('comptes-bilan-btn');
+    if (btnBilan) btnBilan.addEventListener('click', ouvrirBilanComptes);
     if (btnSyncGvv) btnSyncGvv.addEventListener('click', () => lancerSyncGvv(btnSyncGvv));
     if (formRecette) formRecette.addEventListener('submit', enregistrerRecetteManuelle);
     if (select) select.addEventListener('change', chargerComptesPilotes);
@@ -73,6 +75,8 @@ function appliquerAccesComptes() {
     }
     const btnSync = document.getElementById('comptes-gvv-sync');
     if (btnSync) btnSync.style.display = isTresorier() ? '' : 'none';
+    const btnBilan = document.getElementById('comptes-bilan-btn');
+    if (btnBilan) btnBilan.style.display = isTresorier() ? '' : 'none';
 }
 
 function afficherVueComptes() {
@@ -671,4 +675,169 @@ async function getSoldePilote(piloteNom, inclureEnAttente = true) {
 async function pilotePeutReserver(piloteNom) {
     const solde = await getSoldePilote(piloteNom, false);
     return solde > -500;
+}
+
+/* ==========================================================================
+   BILAN DES COMPTES PILOTES (trésorier / super admin)
+   ========================================================================== */
+let bilanComptesLignes = [];
+let bilanComptesFiltre = 'tous';   // 'tous' | 'neg' | 'pos'
+let bilanComptesRecherche = '';
+let bilanComptesTri = 'asc';       // 'asc' = du plus débiteur au moins débiteur
+
+function creerModaleBilanComptes() {
+    if (document.getElementById('bilan-comptes-modal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'bilan-comptes-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 680px; width: 96%; max-height: 88vh; overflow: auto;">
+            <span class="close-bilan-comptes">&times;</span>
+            <h3 style="margin:0 0 12px;">Bilan des comptes pilotes</h3>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                <input type="text" id="bilan-comptes-recherche" placeholder="Rechercher un pilote…" style="flex:1; min-width:160px; height:36px; box-sizing:border-box; padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+                <select id="bilan-comptes-filtre" style="height:36px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">
+                    <option value="tous">Tous les soldes</option>
+                    <option value="neg">Débiteurs (solde &lt; 0)</option>
+                    <option value="pos">Créditeurs (solde ≥ 0)</option>
+                </select>
+            </div>
+            <div id="bilan-comptes-table"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('.close-bilan-comptes').addEventListener('click', () => { modal.style.display = 'none'; });
+    modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+    modal.querySelector('#bilan-comptes-recherche').addEventListener('input', e => {
+        bilanComptesRecherche = e.target.value;
+        renderBilanComptes();
+    });
+    modal.querySelector('#bilan-comptes-filtre').addEventListener('change', e => {
+        bilanComptesFiltre = e.target.value;
+        renderBilanComptes();
+    });
+}
+
+async function ouvrirBilanComptes() {
+    if (!isTresorier()) { alert('Accès réservé au trésorier et au super admin.'); return; }
+    creerModaleBilanComptes();
+    const modal = document.getElementById('bilan-comptes-modal');
+    const cont = document.getElementById('bilan-comptes-table');
+    if (!modal || !cont) return;
+    modal.style.display = 'flex';
+    cont.innerHTML = '<p style="color:#64748b;">Chargement…</p>';
+    try {
+        await chargerUtilisateursComptes();
+        const [soldesGvv, enAttenteRecs] = await Promise.all([
+            fetchTousRecords(`${API_BASE}/${encodeURIComponent('Soldes GVV')}?pageSize=100`, { headers }),
+            fetchTousRecords(`${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent("AND({Statut}='En attente',{Source}='Saisie pilote')")}&pageSize=100`, { headers })
+        ]);
+
+        const attenteParNom = {};
+        (enAttenteRecs || []).forEach(r => {
+            const n = normaliserNomGvv(r.fields?.['Pilote']);
+            attenteParNom[n] = (attenteParNom[n] || 0) + parseMontantCompte(r.fields?.['Crédit']);
+        });
+
+        const gvvUtilise = new Set();
+        const trouverGvv = (nom) => {
+            const alias = aliasCompteGvvMembre(nom);
+            const cible = normaliserNomGvv(alias || nom);
+            const lettres = cleNomGvvLettres(alias || nom);
+            return (soldesGvv || []).find(r =>
+                normaliserNomGvv(r.fields?.['Compte']) === cible ||
+                cleNomGvvLettres(r.fields?.['Compte']) === lettres) || null;
+        };
+
+        const lignes = [];
+        const noms = new Set();
+        utilisateursComptesCache.forEach(r => {
+            const f = r.fields || {};
+            const nom = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+            if (!nom || noms.has(nom)) return;
+            noms.add(nom);
+            const gvv = trouverGvv(nom);
+            if (gvv) gvvUtilise.add(gvv.id);
+            const soldeGvv = gvv && gvv.fields?.['Solde'] !== undefined && gvv.fields?.['Solde'] !== null && gvv.fields?.['Solde'] !== ''
+                ? Number(gvv.fields['Solde']) : null;
+            const attente = attenteParNom[normaliserNomGvv(nom)] || 0;
+            lignes.push({ nom, solde: (soldeGvv ?? 0) + attente, attente, connu: !!gvv || attente > 0 });
+        });
+
+        // Comptes GVV sans membre correspondant sur le site
+        (soldesGvv || []).forEach(r => {
+            if (gvvUtilise.has(r.id)) return;
+            const compte = (r.fields?.['Compte'] || '').trim();
+            if (!compte) return;
+            const soldeGvv = r.fields?.['Solde'] !== undefined && r.fields?.['Solde'] !== null && r.fields?.['Solde'] !== ''
+                ? Number(r.fields['Solde']) : null;
+            if (soldeGvv === null) return;
+            lignes.push({ nom: compte, solde: soldeGvv, attente: 0, connu: true, horsMembres: true });
+        });
+
+        bilanComptesLignes = lignes;
+        renderBilanComptes();
+    } catch (err) {
+        console.error('Erreur bilan comptes:', err);
+        cont.innerHTML = `<p style="color:#dc2626;">Erreur : ${escHtml(err.message || err)}</p>`;
+    }
+}
+
+function renderBilanComptes() {
+    const cont = document.getElementById('bilan-comptes-table');
+    if (!cont) return;
+    const rech = normaliserNomGvv(bilanComptesRecherche);
+    const lignes = bilanComptesLignes.filter(l => {
+        if (rech && !normaliserNomGvv(l.nom).includes(rech)) return false;
+        if (bilanComptesFiltre === 'neg' && !(l.connu && l.solde < 0)) return false;
+        if (bilanComptesFiltre === 'pos' && !(l.connu && l.solde >= 0)) return false;
+        return true;
+    });
+    lignes.sort((a, b) => bilanComptesTri === 'asc' ? a.solde - b.solde : b.solde - a.solde);
+
+    const fmt = v => `${v.toFixed(2).replace('.', ',')} €`;
+    const fleche = bilanComptesTri === 'asc' ? ' ↑' : ' ↓';
+    const rows = lignes.map(l => {
+        const couleur = l.solde < 0 ? '#dc2626' : '#166534';
+        const attente = l.attente > 0 ? `<span style="color:#b45309;" title="Versements en attente de validation">+${fmt(l.attente)}</span>` : '—';
+        const nom = escHtml(l.nom) + (l.horsMembres ? ' <span style="color:#94a3b8; font-size:11px;">(compte GVV)</span>' : '');
+        return `<tr>
+            <td class="bilan-machine"><button type="button" class="bilan-machine-btn" data-nom="${escHtml(l.nom)}">${nom}</button></td>
+            <td class="bilan-cell" style="text-align:right;">${attente}</td>
+            <td class="bilan-cell" style="text-align:right; font-weight:600; color:${couleur};">${l.connu ? fmt(l.solde) : '—'}</td>
+        </tr>`;
+    }).join('');
+
+    const total = lignes.reduce((s, l) => s + (l.connu ? l.solde : 0), 0);
+    cont.innerHTML = `
+        <table class="bilan-docs-table">
+            <thead><tr>
+                <th>Pilote</th>
+                <th style="text-align:right;" title="Versements déclarés, en attente de validation">En attente</th>
+                <th class="bilan-tri-solde" style="text-align:right; cursor:pointer;" title="Cliquer pour trier du plus débiteur au moins débiteur, et inversement">Solde${fleche}</th>
+            </tr></thead>
+            <tbody>${rows || '<tr><td colspan="3" style="color:#64748b; padding:10px;">Aucun compte ne correspond.</td></tr>'}</tbody>
+            <tfoot><tr>
+                <td style="font-weight:700; padding:8px;">Total (${lignes.length} compte${lignes.length > 1 ? 's' : ''})</td>
+                <td></td>
+                <td style="text-align:right; font-weight:700; padding:8px; color:${total < 0 ? '#dc2626' : '#166534'};">${fmt(total)}</td>
+            </tr></tfoot>
+        </table>
+    `;
+    const thTri = cont.querySelector('.bilan-tri-solde');
+    if (thTri) thTri.addEventListener('click', () => {
+        bilanComptesTri = bilanComptesTri === 'asc' ? 'desc' : 'asc';
+        renderBilanComptes();
+    });
+    cont.querySelectorAll('.bilan-machine-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const select = document.getElementById('comptes-pilote-select');
+            const nom = btn.dataset.nom;
+            if (select && [...select.options].some(o => o.value === nom)) {
+                select.value = nom;
+                document.getElementById('bilan-comptes-modal').style.display = 'none';
+                chargerComptesPilotes();
+            }
+        });
+    });
 }
