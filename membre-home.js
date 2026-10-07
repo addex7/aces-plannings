@@ -395,17 +395,17 @@ function renderAccueilMembre(fields) {
             </div>
         `;
     }).join('');
-    const docTypeOptions = TYPES_DOCUMENTS.map(t => `<option value="${t}">${t}</option>`).join('');
     const docForm = peutEditer ? `
         <div class="accueil-documents" id="accueil-documents">
             <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
                 <h3 style="margin:0;">Documents du membre</h3>
-                <span style="font-size:13px; color:#64748b; text-align:right;">Pour les pilotes ayant un compte Gesasso, retrouvez les documents sur <a href="https://moncompte.ffvp.fr/auth/realms/heva/protocol/openid-connect/auth?client_id=gesasso&amp;redirect_uri=https%3A%2F%2Fgesasso.ffvp.fr%2Fauth%2Fcallback&amp;state=df83886c-203f-4bc5-bd65-b6e881458f8a&amp;response_type=code&amp;response_mode=query&amp;code_challenge=wAx65brpcl57rOiQsfO0oHYUtOJ_7bFKAiqelhK--sI&amp;code_challenge_method=S256" target="_blank" rel="noopener noreferrer" style="color:#1e3d59; text-decoration:underline;">leur profil Gesasso</a></span>
+                <span style="font-size:13px; color:#64748b; text-align:right;">Pour les pilotes ayant un compte Gesasso, retrouvez les documents sur <a href="https://moncompte.ffvp.fr/auth/realms/heva/protocol/openid-connect/auth?client_id=gesasso&amp;redirect_uri=https%3A%2F%2Fgesasso.ffvp.fr%2Fauth%2Fcallback&amp;state=df83886c-203f-4bc5-bd65-b6e881458f8a&amp;response_type=code&amp;response_mode=query&amp;code_challenge=wAx65brpcl57rOiQsfO0oHYUtOJ_7bFKAiqelhK--sI&amp;code_challenge_method=S256" target="_blank" rel="noopener noreferrer" style="color:#1e3d59; text-decoration:underline;">votre profil Gesasso</a></span>
             </div>
             <form id="accueil-doc-form" class="accueil-doc-form" style="display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
-                <div class="form-group" style="flex:1; min-width:120px; margin:0; display:flex; flex-direction:column;">
+                <div class="form-group" style="flex:1; min-width:160px; margin:0; display:flex; flex-direction:column;">
                     <label for="accueil-doc-type" style="margin-bottom:4px; font-size:13px;">Type</label>
-                    <select id="accueil-doc-type" style="height:40px; box-sizing:border-box; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">${docTypeOptions}</select>
+                    <input type="text" id="accueil-doc-type" list="accueil-doc-types" placeholder="Médical, SEP, ou nom libre…" style="height:40px; box-sizing:border-box; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">
+                    <datalist id="accueil-doc-types">${TYPES_DOCUMENTS.map(t => `<option value="${t}"></option>`).join('')}</datalist>
                 </div>
                 <div class="form-group" style="flex:2; min-width:200px; margin:0; display:flex; flex-direction:column;">
                     <label for="accueil-doc-fichier" style="margin-bottom:4px; font-size:13px;">Fichier</label>
@@ -419,7 +419,7 @@ function renderAccueilMembre(fields) {
         <div class="accueil-documents" id="accueil-documents">
             <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
                 <h3 style="margin:0;">Documents du membre</h3>
-                <span style="font-size:13px; color:#64748b; text-align:right;">Pour les pilotes ayant un compte Gesasso, retrouvez les documents sur <a href="https://moncompte.ffvp.fr/auth/realms/heva/protocol/openid-connect/auth?client_id=gesasso&amp;redirect_uri=https%3A%2F%2Fgesasso.ffvp.fr%2Fauth%2Fcallback&amp;state=df83886c-203f-4bc5-bd65-b6e881458f8a&amp;response_type=code&amp;response_mode=query&amp;code_challenge=wAx65brpcl57rOiQsfO0oHYUtOJ_7bFKAiqelhK--sI&amp;code_challenge_method=S256" target="_blank" rel="noopener noreferrer" style="color:#1e3d59; text-decoration:underline;">leur profil Gesasso</a></span>
+                <span style="font-size:13px; color:#64748b; text-align:right;">Pour les pilotes ayant un compte Gesasso, retrouvez les documents sur <a href="https://moncompte.ffvp.fr/auth/realms/heva/protocol/openid-connect/auth?client_id=gesasso&amp;redirect_uri=https%3A%2F%2Fgesasso.ffvp.fr%2Fauth%2Fcallback&amp;state=df83886c-203f-4bc5-bd65-b6e881458f8a&amp;response_type=code&amp;response_mode=query&amp;code_challenge=wAx65brpcl57rOiQsfO0oHYUtOJ_7bFKAiqelhK--sI&amp;code_challenge_method=S256" target="_blank" rel="noopener noreferrer" style="color:#1e3d59; text-decoration:underline;">votre profil Gesasso</a></span>
             </div>
             <div class="accueil-doc-list" id="accueil-doc-list"><p>Chargement...</p></div>
         </div>
@@ -947,8 +947,9 @@ async function uploaderDocumentMembre(e) {
     const selectType = document.getElementById('accueil-doc-type');
     const inputFichier = document.getElementById('accueil-doc-fichier');
     const btn = e.target.querySelector('button[type="submit"]');
-    const type = selectType ? selectType.value : 'Autre';
+    const type = (selectType ? selectType.value : '').trim();
     const file = inputFichier ? inputFichier.files[0] : null;
+    if (!type) { alert('Veuillez indiquer le nom du document.'); return; }
     if (!file) { alert('Veuillez choisir un fichier.'); return; }
     if (typeof uploaderFichierDocument !== 'function') { alert('Uploader non disponible.'); return; }
     if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours...'; }
