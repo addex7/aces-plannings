@@ -2411,10 +2411,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 .validite-pill {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 4px;
 }
 .pastille {
     display: inline-flex;

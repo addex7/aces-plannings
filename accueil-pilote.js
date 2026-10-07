@@ -548,9 +548,9 @@ async function chargerValiditesAccueil() {
         return {
             items: [
                 { label: 'Cotisation', ok: cotisationOk, bientot: cotisationOk && bientotExpireAccueil(f['Cotisation']), date: f['Cotisation'] },
-                { label: 'Licence assurance', ok: assuranceOk, bientot: assuranceOk && assuranceDates.some(d => bientotExpireAccueil(d)), date: assurancePlusProche },
+                { label: 'Lic/Assu', ok: assuranceOk, bientot: assuranceOk && assuranceDates.some(d => bientotExpireAccueil(d)), date: assurancePlusProche },
                 { label: 'Médical', ok: medicalOk, bientot: medicalOk && bientotExpireAccueil(f['Médical']), date: f['Médical'] },
-                { label: 'Licence SEP', ok: licenceOk, bientot: licenceOk && bientotExpireAccueil(f['Licence SEP']), date: f['Licence SEP'], actif: licenceActive },
+                { label: 'Lic SEP', ok: licenceOk, bientot: licenceOk && bientotExpireAccueil(f['Licence SEP']), date: f['Licence SEP'], actif: licenceActive },
                 { label: 'Expérience récente (1 vol / 3 mois)', ok: recentActive ? experiences.recent : null, bientot: !!experiences.recentBientot, detail: experiences.recentDetail, actif: recentActive },
                 { label: 'Emport de passager avion (3 décollages / 3 atterrissages)', ok: passagerActive ? experiences.passager : null, bientot: !!experiences.passagerBientot, detail: experiences.passagerDetail, actif: passagerActive },
                 { label: 'LAPL', ok: laplActive ? experiences.lapl : null, detail: experiences.laplDetail, actif: laplActive },
@@ -647,7 +647,7 @@ async function chargerExperiencesAccueil(cpl = false) {
         validiteRecent.setMonth(validiteRecent.getMonth() + 3);
         const joursRestants = Math.floor((debutJourAccueil(validiteRecent) - debutJourAccueil(auj)) / (1000 * 60 * 60 * 24));
         recentBientot = joursRestants < 30;
-        recentDetail = `Dernier vol : ${formaterDateAccueil(dernierVol.toISOString())} — Valide jusqu'au : ${formaterDateAccueil(validiteRecent.toISOString())}`;
+        recentDetail = `Dernier vol : ${formaterDateAccueil(dernierVol.toISOString())} — Max ${formaterDateAccueil(validiteRecent.toISOString())}`;
     }
 
     const passagerOk = decollages3m >= 3 && atterrissages3m >= 3;
@@ -692,7 +692,7 @@ function renderValidites(data) {
             dot = 'pastille-rouge';
             label = `✕ ${item.label} — Non à jour`;
         }
-        const detail = item.detail || (item.date ? `Valide jusqu'au : ${formaterDateAccueil(item.date) || '-'}` : '');
+        const detail = item.detail || (item.date ? `Max ${formaterDateAccueil(item.date) || '-'}` : '');
         return `
             <div class="ap-validite-row">
                 <span class="ap-pastille ${dot}"></span>

@@ -482,11 +482,11 @@ function peutVoirBilanMembres() {
 
 const BILAN_PILOTES_TH = {
     'Cotisation': 'Cotis.',
-    'Licence assurance FFVP': 'FFVP',
-    'Licence assurance FFA': 'FFA',
-    'Licence assurance FFPLUM': 'FFPLUM',
+    'Lic/Assu FFVP': 'FFVP',
+    'Lic/Assu FFA': 'FFA',
+    'Lic/Assu FFPLUM': 'FFPLUM',
     'Médical': 'Médical',
-    'Licence SEP': 'SEP',
+    'Lic SEP': 'SEP',
     'Autorisation parentale': 'Auto. parent.',
     'Instructeur avion': 'FI avion',
     'Instructeur ULM': 'FI ULM'
@@ -566,7 +566,7 @@ async function ouvrirBilanMembres() {
         }).join('');
         cont.innerHTML = `
             <table class="bilan-docs-table">
-                <thead><tr><th>Pilote</th>${items.map(i => `<th title="${i.label}">${BILAN_PILOTES_TH[i.label] || i.label}</th>`).join('')}</tr></thead>
+                <thead><tr><th>Pilote</th>${items.map(i => `<th title="${i.dataLabel || i.label}">${BILAN_PILOTES_TH[i.label] || i.label}</th>`).join('')}</tr></thead>
                 <tbody>${lignes}</tbody>
             </table>
         `;

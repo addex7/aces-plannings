@@ -23,11 +23,11 @@ const MEMBRE_FIELDS = {
 
 const VALIDITES = [
     { label: 'Cotisation', field: MEMBRE_FIELDS.COTISATION },
-    { label: 'Licence assurance FFVP', field: MEMBRE_FIELDS.LICENCE_FFVP },
-    { label: 'Licence assurance FFA', field: MEMBRE_FIELDS.LICENCE_FFA },
-    { label: 'Licence assurance FFPLUM', field: MEMBRE_FIELDS.LICENCE_FFPLUM },
+    { label: 'Lic/Assu FFVP', field: MEMBRE_FIELDS.LICENCE_FFVP, dataLabel: 'Licence assurance FFVP', suiviLabels: ['Licence assurance FFVP'] },
+    { label: 'Lic/Assu FFA', field: MEMBRE_FIELDS.LICENCE_FFA, dataLabel: 'Licence assurance FFA', suiviLabels: ['Licence assurance FFA'] },
+    { label: 'Lic/Assu FFPLUM', field: MEMBRE_FIELDS.LICENCE_FFPLUM, dataLabel: 'Licence assurance FFPLUM', suiviLabels: ['Licence assurance FFPLUM'] },
     { label: 'Médical', field: MEMBRE_FIELDS.MEDICAL },
-    { label: 'Licence SEP', field: MEMBRE_FIELDS.LICENCE_SEP },
+    { label: 'Lic SEP', field: MEMBRE_FIELDS.LICENCE_SEP, dataLabel: 'Licence SEP', suiviLabels: ['Licence SEP'] },
     { label: 'Autorisation parentale', field: MEMBRE_FIELDS.AUTORISATION_PARENTALE_DATE },
     { label: 'Instructeur avion', field: MEMBRE_FIELDS.INSTRUCTEUR, dataLabel: 'Instructeur avion', suiviLabels: ['Instructeur', 'Instructeur avion'] },
     { label: 'Instructeur ULM', field: MEMBRE_FIELDS.INSTRUCTEUR_ULM, dataLabel: 'Instructeur ULM', suiviLabels: ['Instructeur ULM'] }
@@ -117,7 +117,7 @@ function pastille(ok, dateStr, texteRouge) {
         }
     }
     const date = formaterDateFr(dateStr) || '-';
-    return `<span class="pastille ${couleur}">${icone} ${texte}</span>${dateStr ? `<span class="validite-date" title="Valide jusqu'au ${date}">${date}</span>` : ''}`;
+    return `<span class="pastille ${couleur}">${icone} ${texte}</span>${dateStr ? `<span class="validite-date" title="Valide jusqu'au ${date}">Max ${date}</span>` : ''}`;
 }
 
 async function chargerAccueilMembre(id) {
@@ -389,7 +389,7 @@ function renderAccueilMembre(fields) {
         const disabledClass = actif ? '' : 'suivi-inactif';
         return `
             <div class="validite-card ${disabledClass}" data-label="${item.label}">
-                <div class="validite-head"><div class="validite-label">${item.label}</div>${activer}</div>
+                <div class="validite-head"><div class="validite-label" title="${item.dataLabel || item.label}">${item.label}</div>${activer}</div>
                 <div class="validite-pill">${pastille(ok, val)}</div>
                 ${input}
             </div>
@@ -555,9 +555,9 @@ async function chargerExperiences() {
             if (jours < 0) {
                 updateDetail(elRecent, 'pastille-rouge', '✕ Non à jour', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())}`);
             } else if (jours < 30) {
-                updateDetail(elRecent, 'pastille-orange', 'Renouvelable', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Valide jusqu'au : ${formaterDateFr(validite.toISOString())}`);
+                updateDetail(elRecent, 'pastille-orange', 'Renouvelable', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Max ${formaterDateFr(validite.toISOString())}`);
             } else {
-                updateDetail(elRecent, 'pastille-verte', '✓ À jour', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Valide jusqu'au : ${formaterDateFr(validite.toISOString())}`);
+                updateDetail(elRecent, 'pastille-verte', '✓ À jour', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Max ${formaterDateFr(validite.toISOString())}`);
             }
         }
 
