@@ -915,6 +915,7 @@ async function chargerDocumentsMembre() {
                 actions += archive
                     ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="restaurerDocumentMembre('${r.id}')">Restaurer</button>`
                     : `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="archiverDocumentMembre('${r.id}')">Archiver</button>`;
+                actions += `<button type="button" class="doc-suppr-btn" title="Supprimer définitivement" onclick="supprimerDocumentMembre('${r.id}', '${titre.replace(/'/g, "\\'")}')">✕</button>`;
             }
             return `
                 <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;${archive ? ' opacity:0.75;' : ''}">
@@ -1024,9 +1025,12 @@ async function renommerDocumentMembre(id, titreActuel) {
     }
 }
 
-async function supprimerDocumentMembre(id) {
-    if (!confirm('Supprimer définitivement ce document ? Cette action est irréversible.')) return;
+async function supprimerDocumentMembre(id, titre) {
     if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
+    const okSuppr = typeof docsConfirmer === 'function'
+        ? await docsConfirmer('Supprimer le document', `<p style="margin:0;">« <strong>${titre || 'Document'}</strong> » sera définitivement supprimé.</p>`, '🗑️', 'Supprimer', true)
+        : confirm('Supprimer définitivement ce document ?');
+    if (!okSuppr) return;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, {
             method: 'DELETE',

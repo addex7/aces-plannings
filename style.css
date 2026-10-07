@@ -2563,6 +2563,20 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     text-decoration: underline;
     word-break: break-all;
 }
+.doc-suppr-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.doc-suppr-btn:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
 .roles-cell {
     line-height: 1.6;
 }
