@@ -683,7 +683,7 @@ async function pilotePeutReserver(piloteNom) {
 let bilanComptesLignes = [];
 let bilanComptesFiltre = 'tous';   // 'tous' | 'neg' | 'pos'
 let bilanComptesRecherche = '';
-let bilanComptesTri = 'asc';       // 'asc' = du plus débiteur au moins débiteur
+let bilanComptesTri = 'nom';       // 'nom' = alphabétique | 'asc' = plus débiteur d'abord | 'desc' = inverse
 
 function creerModaleBilanComptes() {
     if (document.getElementById('bilan-comptes-modal')) return;
@@ -793,10 +793,13 @@ function renderBilanComptes() {
         if (bilanComptesFiltre === 'pos' && !(l.connu && l.solde >= 0)) return false;
         return true;
     });
-    lignes.sort((a, b) => bilanComptesTri === 'asc' ? a.solde - b.solde : b.solde - a.solde);
+    lignes.sort((a, b) => {
+        if (bilanComptesTri === 'nom') return a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
+        return bilanComptesTri === 'asc' ? a.solde - b.solde : b.solde - a.solde;
+    });
 
     const fmt = v => `${v.toFixed(2).replace('.', ',')} €`;
-    const fleche = bilanComptesTri === 'asc' ? ' ↑' : ' ↓';
+    const fleche = bilanComptesTri === 'nom' ? ' ⇅' : (bilanComptesTri === 'asc' ? ' ↑' : ' ↓');
     const rows = lignes.map(l => {
         const couleur = l.solde < 0 ? '#dc2626' : '#166534';
         const attente = l.attente > 0 ? `<span style="color:#b45309;" title="Versements en attente de validation">+${fmt(l.attente)}</span>` : '—';
@@ -826,7 +829,7 @@ function renderBilanComptes() {
     `;
     const thTri = cont.querySelector('.bilan-tri-solde');
     if (thTri) thTri.addEventListener('click', () => {
-        bilanComptesTri = bilanComptesTri === 'asc' ? 'desc' : 'asc';
+        bilanComptesTri = bilanComptesTri === 'nom' ? 'asc' : (bilanComptesTri === 'asc' ? 'desc' : 'asc');
         renderBilanComptes();
     });
     cont.querySelectorAll('.bilan-machine-btn').forEach(btn => {
