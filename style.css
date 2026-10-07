@@ -2544,9 +2544,9 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-size: 13px;
 }
 .accueil-doc-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 .accueil-doc-item {
     display: flex;

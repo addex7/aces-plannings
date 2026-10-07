@@ -917,7 +917,7 @@ async function chargerDocumentsMembre() {
                     : `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="archiverDocumentMembre('${r.id}')">Archiver</button>`;
             }
             return `
-                <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:8px;${archive ? ' opacity:0.75;' : ''}">
+                <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;${archive ? ' opacity:0.75;' : ''}">
                     <span>${titre}</span>
                     <div style="display:flex; align-items:center; gap:8px;">${actions}</div>
                 </div>
