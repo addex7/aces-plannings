@@ -428,6 +428,7 @@ function renderAccueilMembre(fields) {
         <form id="accueil-validites-form">
             <div class="validite-grid">${grid}</div>
         </form>
+        <div class="accueil-duo">
         <div class="validite-card validite-experience">
             <div class="validite-label">Expériences récentes moteur</div>
             <div class="experience-list" id="accueil-experiences">
@@ -460,6 +461,7 @@ function renderAccueilMembre(fields) {
             </div>
         </div>
         ${docForm}
+        </div>
     `;
     renderPhoto(fields);
     chargerExperiences();

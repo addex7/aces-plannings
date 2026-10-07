@@ -2338,6 +2338,16 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-size: 11px;
     white-space: nowrap;
 }
+.accueil-duo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: start;
+    margin-top: 8px;
+}
+@media (max-width: 1100px) {
+    .accueil-duo { grid-template-columns: 1fr; }
+}
 .validite-experience {
     background: #fff;
     border: 1px solid #e2e8f0;
