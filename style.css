@@ -4794,6 +4794,11 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .doc-absent { background: #dc2626; opacity: 0.45; }
 .doc-vide { background: #cbd5e1; }
 
+#documents-bilan-table,
+#bilan-membres-table,
+#bilan-comptes-table {
+    overflow-x: auto;
+}
 .bilan-docs-table {
     width: 100%;
     border-collapse: collapse;
