@@ -764,17 +764,6 @@ async function ouvrirBilanComptes() {
             lignes.push({ nom, solde: (soldeGvv ?? 0) + attente, attente, connu: !!gvv || attente > 0 });
         });
 
-        // Comptes GVV sans membre correspondant sur le site
-        (soldesGvv || []).forEach(r => {
-            if (gvvUtilise.has(r.id)) return;
-            const compte = (r.fields?.['Compte'] || '').trim();
-            if (!compte) return;
-            const soldeGvv = r.fields?.['Solde'] !== undefined && r.fields?.['Solde'] !== null && r.fields?.['Solde'] !== ''
-                ? Number(r.fields['Solde']) : null;
-            if (soldeGvv === null) return;
-            lignes.push({ nom: compte, solde: soldeGvv, attente: 0, connu: true, horsMembres: true });
-        });
-
         bilanComptesLignes = lignes;
         renderBilanComptes();
     } catch (err) {
@@ -803,7 +792,7 @@ function renderBilanComptes() {
     const rows = lignes.map(l => {
         const couleur = l.solde < 0 ? '#dc2626' : '#166534';
         const attente = l.attente > 0 ? `<span style="color:#b45309;" title="Versements en attente de validation">+${fmt(l.attente)}</span>` : '—';
-        const nom = escHtml(l.nom) + (l.horsMembres ? ' <span style="color:#94a3b8; font-size:11px;">(compte GVV)</span>' : '');
+        const nom = escHtml(l.nom);
         return `<tr>
             <td class="bilan-machine"><button type="button" class="bilan-machine-btn" data-nom="${escHtml(l.nom)}">${nom}</button></td>
             <td class="bilan-cell" style="text-align:right;">${attente}</td>
