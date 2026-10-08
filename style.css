@@ -807,7 +807,7 @@ img, table, video, iframe, svg {
     min-width: 100%;
     max-width: 100%;
 }
-.close-modal, .close-modal-vi, .close-modal-carnet, .close-modal-gerer-dispos, .close-modal-disponibilite, .close-modal-instructeur-suivi, .close-documents-aeronef, .close-documents-bilan, .close-bilan-membres {
+.close-modal, .close-modal-vi, .close-modal-carnet, .close-modal-gerer-dispos, .close-modal-disponibilite, .close-modal-instructeur-suivi, .close-documents-aeronef, .close-documents-bilan, .close-bilan-membres, .close-bilan-comptes {
     position: absolute;
     top: 15px; right: 20px;
     font-size: 24px; cursor: pointer;
@@ -4846,7 +4846,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 .close-documents-bilan,
 .close-documents-aeronef,
-.close-bilan-membres {
+.close-bilan-membres,
+.close-bilan-comptes {
     cursor: pointer;
 }
 
