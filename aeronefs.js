@@ -1409,8 +1409,11 @@ async function ouvrirBilanDocumentsAeronefs() {
         if (Array.isArray(liste)) liste.forEach(m => { if (!machines.includes(m)) machines.push(m); });
     });
     Object.keys(parMachine).sort().forEach(m => {
-        // Une remorque/machine exclue est tout de même affichée si des documents existent
-        if (!machines.includes(m) && (!machinesExclues.includes(m) || (parMachine[m] || []).length)) machines.push(m);
+        if (machines.includes(m)) return;
+        // Hors flotte principale (remorques, matériel, autres machines) :
+        // on n'affiche que celles ayant au moins un document actif avec date de péremption
+        const aDocDate = (parMachine[m] || []).some(r => r.fields && r.fields['Date de validité'] && r.fields['Activé'] !== false);
+        if (aDocDate) machines.push(m);
     });
 
     const TYPE_DECL_ULM = "Déclaration d'aptitude au vol d'un ULM";
