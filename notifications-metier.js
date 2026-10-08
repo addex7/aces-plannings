@@ -117,7 +117,7 @@ async function notifierUnique(piloteNom, cle, message, type = 'info', lien = '')
                         'Pilote': cible,
                         'Message': message,
                         'Type': type,
-                        'Date': notifDateIso(new Date()),
+                        'Date': new Date().toISOString(),
                         'Lue': false,
                         'Lien': lien,
                         'Clé': cle

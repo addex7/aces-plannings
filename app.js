@@ -204,6 +204,16 @@ async function chargerNotifications() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur');
         const records = data.records || [];
+        // Tri côté client : Date puis createdTime en dernier recours
+        // (les anciennes notifs n'ont pas d'heure dans Date).
+        records.sort((a, b) => {
+            const da = (a.fields || {})['Date'] || a.createdTime || '';
+            const db = (b.fields || {})['Date'] || b.createdTime || '';
+            if (da !== db) return da < db ? 1 : -1;
+            const ca = a.createdTime || '';
+            const cb = b.createdTime || '';
+            return ca < cb ? 1 : (ca > cb ? -1 : 0);
+        });
         afficherNotifications(records);
         const nonLues = records.filter(r => !(r.fields || {})['Lue']).length;
         if (count) {
@@ -225,7 +235,10 @@ function afficherNotifications(records) {
     }
     list.innerHTML = records.map(r => {
         const f = r.fields || {};
-        const date = f['Date'] ? new Date(f['Date']).toLocaleDateString('fr-FR') : '';
+        const dObj = f['Date'] ? new Date(f['Date']) : (r.createdTime ? new Date(r.createdTime) : null);
+        const date = dObj
+            ? `${dObj.toLocaleDateString('fr-FR')} ${dObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+            : '';
         const message = f['Message'] || '';
         const type = f['Type'] || 'info';
         const lue = f['Lue'];
@@ -319,7 +332,7 @@ async function creerNotification(piloteNom, message, type = 'info', lien = '') {
                 'Pilote': typeof formaterNomPilote === 'function' ? formaterNomPilote(piloteNom) : piloteNom,
                 'Message': message,
                 'Type': type,
-                'Date': new Date().toISOString().slice(0, 10),
+                'Date': new Date().toISOString(),
                 'Lue': false,
                 'Lien': lien
             }
