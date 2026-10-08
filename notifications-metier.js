@@ -326,7 +326,7 @@ async function verifierValiditesPilote() {
         const cle = `validites-${currentUser.id}-${notifHash(lignes.join('|'))}`;
         await notifierUnique(
             nom, cle,
-            `📋 Des éléments de votre dossier expirent bientôt ou sont périmés : ${lignes.join(', ')}. Merci de vous rapprocher du club pour les mettre à jour.`,
+            `📋 Des éléments de votre dossier expirent bientôt ou sont périmés — merci de vous rapprocher du club pour les mettre à jour :\n${lignes.map(l => `• ${l}`).join('\n')}`,
             'warning', 'membres:'
         );
     } catch (e) {
