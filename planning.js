@@ -113,6 +113,80 @@ async function verifierDocumentsAeronefAvantReservation(immat, dateVol) {
     }
 }
 
+// Avertit (sans bloquer) lorsque le pilote choisi a deja un vol qui chevauche
+// le creneau demande : reservations classiques, VI planeur et VI moteur.
+async function verifierConflitHorairePilote(piloteNom, piloteId, debut, fin, idExclu) {
+    if ((!piloteNom && !piloteId) || !(debut instanceof Date) || !(fin instanceof Date) || isNaN(debut) || isNaN(fin)) return;
+    try {
+        await chargerListeMembresCache();
+        const pad2 = n => String(n).padStart(2, '0');
+        const jour = `${debut.getFullYear()}-${pad2(debut.getMonth() + 1)}-${pad2(debut.getDate())}`;
+        const urls = [
+            `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')<='${jour}', DATETIME_FORMAT({Date de fin}, 'YYYY-MM-DD')>='${jour}')`)}&pageSize=100`,
+            `${API_BASE}/${encodeURIComponent('VI Planeur')}?filterByFormula=${encodeURIComponent(`DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')='${jour}'`)}&pageSize=100`,
+            `${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${jour}', {Statut}='Réservé')`)}&pageSize=100`
+        ];
+        const resps = await Promise.all(urls.map(u => apiFetch(u, { headers }).catch(() => null)));
+        const datas = await Promise.all(resps.map(r => (r && r.ok) ? r.json() : {}));
+
+        const memePilote = (champ) => {
+            const vals = Array.isArray(champ) ? champ : (champ ? [champ] : []);
+            return vals.some(v => {
+                const s = (v || '').toString().trim();
+                if (!s) return false;
+                if (piloteId && s === piloteId) return true;
+                if (!piloteNom) return false;
+                const nomResa = nomUtilisateurDepuisId(s, listeMembresCache) || s;
+                return (typeof correspondanceNom === 'function')
+                    ? (correspondanceNom(nomResa, piloteNom) || correspondanceNom(s, piloteNom))
+                    : nomResa.toLowerCase() === piloteNom.toLowerCase();
+            });
+        };
+        const chevauche = (d, f) => d < fin && f > debut;
+        const fmtH = d => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const conflits = [];
+
+        (datas[0].records || []).forEach(r => {
+            if (idExclu && r.id === idExclu) return;
+            const f = r.fields || {};
+            const d = new Date(f['Date de début']);
+            const fn = new Date(f['Date de fin']);
+            if (isNaN(d) || isNaN(fn) || !chevauche(d, fn) || !memePilote(f['Pilote'])) return;
+            const mId = Array.isArray(f['Machine']) ? f['Machine'][0] : f['Machine'];
+            const av = (listeAvionsCache || []).find(a => a.id === mId);
+            const mach = (av && av.fields && (av.fields['Immatriculation'] || av.fields['Nom'])) || mId || '';
+            conflits.push(`${mach} — ${fmtH(d)} → ${fmtH(fn)}`);
+        });
+        (datas[1].records || []).forEach(r => {
+            if (idExclu && r.id === idExclu) return;
+            const f = r.fields || {};
+            const d = new Date(f['Date de début']);
+            const fn = new Date(f['Date de fin']);
+            if (isNaN(d) || isNaN(fn) || !chevauche(d, fn) || !memePilote(f['Pilote'])) return;
+            conflits.push(`VI Planeur — ${fmtH(d)} → ${fmtH(fn)}`);
+        });
+        (datas[2].records || []).forEach(r => {
+            const f = r.fields || {};
+            const dateRaw = f['Date'];
+            if (!dateRaw || !f['Heure début'] || !f['Heure fin']) return;
+            const d = new Date(`${dateRaw}T${f['Heure début']}:00`);
+            const fn = new Date(`${dateRaw}T${f['Heure fin']}:00`);
+            if (isNaN(d) || isNaN(fn) || !chevauche(d, fn) || !memePilote(f['Pilote'])) return;
+            const typeVI = f['Type'] === 'VIULM' ? 'VI ULM' : (f['Type'] === 'VIA' ? 'VI avion' : 'VI');
+            conflits.push(`${typeVI} — ${fmtH(d)} → ${fmtH(fn)}`);
+        });
+
+        if (!conflits.length) return;
+        const lis = conflits.map(c => `<li>${escapeHtml(c)}</li>`).join('');
+        const html = `<p><strong>${escapeHtml(piloteNom || 'Ce pilote')}</strong> a déjà un vol prévu aux mêmes horaires :</p>
+            <ul style="margin:10px 0; padding-left:20px;">${lis}</ul>
+            <p style="margin-top:12px; font-size:13px; color:#64748b;">Ceci n'empêche pas la réservation — vérifiez qu'il ne s'agit pas d'un doublon.</p>`;
+        afficherModaleAlerte('Pilote déjà réservé sur ce créneau', html, '⚠️');
+    } catch (e) {
+        console.warn('Vérification conflit horaire pilote:', e);
+    }
+}
+
 function afficherModaleConfirmation(titre, messageHtml, onConfirm) {
     const existing = document.getElementById('planning-confirm-modal');
     if (existing) existing.remove();
@@ -2731,6 +2805,8 @@ function initGestionnaireModale() {
             if (!isVIPlaneur && machineNom && machineNom !== 'Tous') {
                 await verifierDocumentsAeronefAvantReservation(machineNom, localDebut);
             }
+            // Avertissement non bloquant : le pilote a deja un vol aux memes horaires
+            await verifierConflitHorairePilote(piloteNomEdit, piloteIdEdit, localDebut, localFin, idReservationEnEdition);
             if (instructeur && typeof verifierConflitDisponibiliteInstructeur === 'function') {
                 const conflit = await verifierConflitDisponibiliteInstructeur(instructeur, localDebut, localFin, machineNom, typeMachineSel);
                 const libelleDisc = typeMachineSel === 'avion' ? 'en avion' : typeMachineSel === 'ulm' ? 'en ULM' : typeMachineSel === 'planeur' ? 'en planeur' : '';
