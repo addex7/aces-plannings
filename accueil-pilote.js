@@ -342,7 +342,7 @@ async function chargerProchaineJournee() {
         return (fullLower && t.includes(fullLower)) || (prenomLower && t.includes(prenomLower)) || (nomLower && t.includes(nomLower));
     };
     const sources = [
-        { table: 'Réservations', dateField: 'Date de début', finField: 'Date de fin', presence: (f) => appartient(f['Pilote']) || appartient(f['Pilote (texte)']) },
+        { table: 'Réservations', dateField: 'Date de début', finField: 'Date de fin', presence: (f) => appartient(f['Pilote']) || appartient(f['Pilote (texte)']) || appartient(f['Instructeur']) },
         { table: 'VI Planeur', dateField: 'Date de début', finField: 'Date de fin', presence: (f) => appartient(f['Pilote']) },
         { table: 'VI Créneaux', dateField: 'Date', heureField: 'Heure début', presence: (f) => (f['Statut'] || '') !== 'Annulé' && appartient(f['Pilote']), dateSeule: true },
         { table: 'Présences Planeur', dateField: 'Date', heureField: 'Heure début', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
@@ -400,7 +400,13 @@ function detailProchaineJournee(table, f) {
         const hDeb = fmtH(f['Date de début']);
         const hFin = fmtH(f['Date de fin']);
         const horaire = hDeb && hFin ? `${hDeb} → ${hFin}` : (hDeb || '');
-        return [mach, horaire].filter(Boolean).join(' — ') || 'Réservation';
+        // Marquer quand l'utilisateur est instructeur plutot que pilote
+        const nomCourant = (typeof currentUser !== 'undefined' && currentUser)
+            ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim().toLowerCase() : '';
+        const instr = (Array.isArray(f['Instructeur']) ? f['Instructeur'].join(' ') : (f['Instructeur'] || '')).toString().toLowerCase();
+        const piloteTxt = (Array.isArray(f['Pilote']) ? f['Pilote'].join(' ') : (f['Pilote'] || '')).toString().toLowerCase();
+        const role = (nomCourant && instr.includes(nomCourant) && !piloteTxt.includes(nomCourant)) ? 'instructeur' : '';
+        return [mach, horaire, role].filter(Boolean).join(' — ') || 'Réservation';
     }
     if (table === 'Événements') return f['Nom'] || f['Titre'] || 'Événement';
     if (table === 'VI Créneaux') {
