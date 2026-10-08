@@ -318,7 +318,7 @@ async function persisterMaintenance({ maintenanceId, immat, avionId, dateTime, d
         enregistrerAudit(action, immat, `Date : ${dateStr} | Durée : ${duree}h | Butée : ${nouvelleButee}`, 'Maintenance');
     }
 
-    await notifierReservationsSurMaintenance(immat, dateTime, duree);
+    await notifierReservationsSurMaintenance(immat, dateTime, duree, avionId);
 }
 
 async function enregistrerMaintenance(e) {
@@ -1751,7 +1751,7 @@ async function getNomPiloteReservation(piloteField) {
     return Array.isArray(piloteField) ? piloteField.join(' ') : (piloteField || '').toString().trim();
 }
 
-async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures) {
+async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures, avionId) {
     try {
         if (typeof creerNotification !== 'function') return;
         const dateFin = new Date(dateDebut.getTime() + dureeHeures * 3600000);
@@ -1760,7 +1760,7 @@ async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures)
         const heureDebut = dateDebut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const heureFin = dateFin.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const dateText = dateDebut.toLocaleDateString('fr-FR');
-        const formula = `AND(FIND('${immat.replace(/'/g, "\\'")}', ARRAYJOIN({Machine}, ',')), DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')<='${endDay}', DATETIME_FORMAT({Date de fin}, 'YYYY-MM-DD')>='${startDay}')`;
+        const formula = `AND(DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')<='${endDay}', DATETIME_FORMAT({Date de fin}, 'YYYY-MM-DD')>='${startDay}')`;
         const url = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
         const res = await apiFetch(url, { headers });
         const data = await res.json();
@@ -1772,6 +1772,20 @@ async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures)
             const resaStart = new Date(f['Date de début']);
             const resaEnd = new Date(f['Date de fin']);
             if (resaStart >= dateFin || resaEnd <= dateDebut) continue;
+            // Machine = champ lien (id) ou texte immat selon les enregistrements
+            const machinesResa = Array.isArray(f['Machine']) ? f['Machine'] : [f['Machine']];
+            const machineOk = machinesResa.some(m => {
+                const s = String(m || '').trim();
+                if (!s) return false;
+                if (avionId && s === avionId) return true;
+                if (s === immat) return true;
+                if (s.startsWith('rec')) {
+                    const av = (listeAvionsCache || []).find(a => a.id === s);
+                    return !!av && String((av.fields || {})['Immatriculation'] || (av.fields || {})['Nom'] || '').trim() === immat;
+                }
+                return false;
+            });
+            if (!machineOk) continue;
             const piloteNom = await getNomPiloteReservation(f['Pilote']);
             if (!piloteNom) continue;
             const message = `L'appareil ${immat} est programmé en maintenance le ${dateText} de ${heureDebut} à ${heureFin}. Votre réservation sur cet appareil risque d'être compromise.`;
