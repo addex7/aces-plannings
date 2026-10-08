@@ -187,6 +187,33 @@ async function verifierConflitHorairePilote(piloteNom, piloteId, debut, fin, idE
     }
 }
 
+// Marquage visuel sur le planning : ids des vols dont le pilote a un autre
+// vol qui se chevauche le meme jour (toutes machines, VI compris).
+let conflitsPilotesJour = new Set();
+function calculerConflitsPilotesJour(vols) {
+    const enConflit = new Set();
+    const items = (vols || []).filter(v => v && v.fields && v.fields['Pilote'] && v.fields['Date de début'] && v.fields['Date de fin']);
+    const nomDe = v => (nomUtilisateurDepuisId(v.fields['Pilote'], listeMembresCache) || '').toString().trim();
+    const memePilote = (a, b) => (typeof correspondanceNom === 'function')
+        ? correspondanceNom(a, b) : a.toLowerCase() === b.toLowerCase();
+    for (let i = 0; i < items.length; i++) {
+        const nomA = nomDe(items[i]);
+        if (!nomA) continue;
+        const da = new Date(items[i].fields['Date de début']);
+        const fa = new Date(items[i].fields['Date de fin']);
+        if (isNaN(da) || isNaN(fa)) continue;
+        for (let j = i + 1; j < items.length; j++) {
+            const nomB = nomDe(items[j]);
+            if (!nomB || !memePilote(nomA, nomB)) continue;
+            const db = new Date(items[j].fields['Date de début']);
+            const fb = new Date(items[j].fields['Date de fin']);
+            if (isNaN(db) || isNaN(fb)) continue;
+            if (da < fb && db < fa) { enConflit.add(items[i].id); enConflit.add(items[j].id); }
+        }
+    }
+    return enConflit;
+}
+
 function afficherModaleConfirmation(titre, messageHtml, onConfirm) {
     const existing = document.getElementById('planning-confirm-modal');
     if (existing) existing.remove();
@@ -778,7 +805,9 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                 if (duree <= 1) barresDiv.classList.add('very-short-reservation');
                 barresDiv.style.left = `${positionHeure(heureDebut)}%`;
                 barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
-                const libelle = pilote ? `${type} (${formaterNomPilote(pilote)})` : `${type} — ${nom}`;
+                const enConflitPilote = conflitsPilotesJour.has(vol.id);
+                if (enConflitPilote) barresDiv.classList.add('reservation-conflit-pilote');
+                const libelle = (enConflitPilote ? '⚠️ ' : '') + (pilote ? `${type} (${formaterNomPilote(pilote)})` : `${type} — ${nom}`);
                 barresDiv.innerHTML = `<strong>${libelle}</strong>`;
                 const debutStr = convertirHeureEnHHMM(heureDebut);
                 const finStr = convertirHeureEnHHMM(heureFin);
@@ -788,7 +817,8 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                     `Pilote : ${formaterNomPilote(pilote) || '—'}`,
                     `Horaires : ${debutStr} - ${finStr}`,
                     `Téléphone : ${vol.fields['Téléphone'] || '—'}`,
-                    `Commentaire : ${vol.fields['Commentaire'] || '—'}`
+                    `Commentaire : ${vol.fields['Commentaire'] || '—'}`,
+                    ...(enConflitPilote ? ['⚠️ Pilote déjà réservé aux mêmes horaires'] : [])
                 ].join('\n'));
                 barresDiv.removeAttribute('title');
                 if (!isCreneau) {
@@ -980,6 +1010,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         let hMin = Math.max(0, soleil.aubeAero - 1.5);
         let hMax = Math.min(24, soleil.crepusculeAero + 1.5);
         const toutesReservations = [...listeReservationsCache, ...volsVIP, ...creneauxVIMotor];
+        conflitsPilotesJour = calculerConflitsPilotesJour(toutesReservations);
         let etendreFenetre = false;
         toutesReservations.forEach(vol => {
             if (!vol.fields) return;
@@ -1192,6 +1223,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         }
                         const debutStr = convertirHeureEnHHMM(heureDebut);
                         const finStr = convertirHeureEnHHMM(heureFin);
+                        const enConflitPilote = conflitsPilotesJour.has(vol.id);
                         if (isCreneau) {
                             barresDiv.setAttribute('data-tooltip', (vol.fields['Commentaires VI'] || '') + (passagerNom ? '\nPassager : ' + passagerNom : ''));
                         } else {
@@ -1202,6 +1234,11 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                                 `Instructeur : ${instructeurNom || '—'}`,
                                 `Horaires : ${debutStr} - ${finStr}`
                             ].join('\n'));
+                        }
+                        if (enConflitPilote) {
+                            barresDiv.classList.add('reservation-conflit-pilote');
+                            libelleEntete = `⚠️ ${libelleEntete}`;
+                            barresDiv.setAttribute('data-tooltip', (barresDiv.getAttribute('data-tooltip') || '') + '\n⚠️ Pilote déjà réservé aux mêmes horaires');
                         }
                         barresDiv.removeAttribute('title');
                         barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
@@ -3341,6 +3378,7 @@ function initBoutonsNavigation() {
                 ${item('#00adb5', "Vol d'initiation à pourvoir")}
                 ${item('#8e44ad', 'VI Planeur')}
                 ${item('#10b981', 'Mes réservations')}
+                <div class="legende-ligne"><span class="legende-pastille" style="background:#ff6e40; outline:3px dashed #fbbf24; outline-offset:-3px;"></span><span>⚠️ Pilote déjà réservé aux mêmes horaires</span></div>
                 ${item('#475569', 'Vol effectué (carnet de route)')}
                 ${titre('👨‍✈️ Disponibilités instructeurs')}
                 ${item('rgba(34,197,94,0.45)', 'Instructeur disponible')}

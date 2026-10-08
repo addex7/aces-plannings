@@ -499,6 +499,10 @@ img, table, video, iframe, svg {
     background-color: #10b981 !important;
     border-left: 5px solid #047857 !important;
 }
+.reservation-bar.reservation-conflit-pilote {
+    outline: 3px dashed #fbbf24;
+    outline-offset: -3px;
+}
 .timeline-row.vi-planeur-row {
     background-color: #f8f0fc;
 }
