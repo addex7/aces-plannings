@@ -236,8 +236,60 @@ function afficherNotifications(records) {
         </div>`;
     }).join('');
     list.querySelectorAll('.notification-item').forEach(item => {
-        item.addEventListener('click', () => marquerNotificationLue(item.dataset.id));
+        item.addEventListener('click', () => {
+            marquerNotificationLue(item.dataset.id);
+            const rec = records.find(r => r.id === item.dataset.id);
+            if (rec) naviguerDepuisNotification(rec.fields || {});
+            const panneau = document.getElementById('notifications-panel');
+            if (panneau) panneau.style.display = 'none';
+        });
     });
+}
+
+// Navigation depuis une notification : le champ "Lien" porte la cible
+// au format "vue:parametre" (ex. "planning:2026-10-11", "aeronefs:", "messagerie:").
+// Sans lien, on tente d'extraire une date du message pour aller au planning du jour.
+function naviguerDepuisNotification(fields) {
+    const lien = (fields['Lien'] || '').toString().trim();
+    const message = (fields['Message'] || '').toString();
+    const allerJourPlanning = (iso) => {
+        const [y, m, j] = iso.split('-').map(Number);
+        if (!y || !m || !j) return;
+        dateAffichee = new Date(y, m - 1, j, 12, 0, 0);
+        if (typeof mettreAJourDateAffichee === 'function') mettreAJourDateAffichee();
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning();
+        if (typeof chargerPresencesPlaneur === 'function') chargerPresencesPlaneur();
+        if (typeof chargerPresencesClub === 'function') chargerPresencesClub();
+        if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
+        if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
+        const t = document.getElementById('tab-planning');
+        if (t) t.click();
+    };
+    const allerVue = (tabId) => { const t = document.getElementById(tabId); if (t) t.click(); };
+
+    if (lien) {
+        const idx = lien.indexOf(':');
+        const cible = idx >= 0 ? lien.slice(0, idx) : lien;
+        const param = idx >= 0 ? lien.slice(idx + 1) : '';
+        if (cible === 'planning') { if (param) allerJourPlanning(param); else allerVue('tab-planning'); return; }
+        const vues = {
+            'aeronefs': 'tab-aeronefs',
+            'initiation': 'tab-initiation',
+            'instructeur': 'tab-instructeur',
+            'carnet': 'tab-carnet',
+            'carnet-vol': 'tab-carnet-vol',
+            'documents': 'tab-documents',
+            'comptes': 'tab-comptes',
+            'membres': 'tab-membres',
+            'messagerie': 'tab-messagerie',
+            'audit': 'tab-audit',
+            'accueil': 'tab-accueil'
+        };
+        if (vues[cible]) allerVue(vues[cible]);
+        return;
+    }
+    const mDate = message.match(/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})\b/);
+    if (mDate) allerJourPlanning(`${mDate[3]}-${mDate[2].padStart(2, '0')}-${mDate[1].padStart(2, '0')}`);
 }
 
 async function marquerNotificationLue(recordId) {

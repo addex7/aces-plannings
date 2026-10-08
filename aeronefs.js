@@ -1789,7 +1789,7 @@ async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures,
             const piloteNom = await getNomPiloteReservation(f['Pilote']);
             if (!piloteNom) continue;
             const message = `L'appareil ${immat} est programmé en maintenance le ${dateText} de ${heureDebut} à ${heureFin}. Votre réservation sur cet appareil risque d'être compromise.`;
-            await creerNotification(piloteNom, message, 'warning');
+            await creerNotification(piloteNom, message, 'warning', `planning:${startDay}`);
         }
     } catch (err) {
         console.error('Erreur notification maintenance:', err);
