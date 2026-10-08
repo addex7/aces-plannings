@@ -342,18 +342,20 @@ async function chargerProchaineJournee() {
         return (fullLower && t.includes(fullLower)) || (prenomLower && t.includes(prenomLower)) || (nomLower && t.includes(nomLower));
     };
     const sources = [
-        { table: 'Réservations', dateField: 'Date de début', presence: (f) => appartient(f['Pilote']) || appartient(f['Pilote (texte)']) },
-        { table: 'VI Planeur', dateField: 'Date de début', presence: (f) => appartient(f['Pilote']) },
-        { table: 'VI Créneaux', dateField: 'Date', presence: (f) => (f['Statut'] || '') !== 'Annulé' && appartient(f['Pilote']), dateSeule: true },
-        { table: 'Présences Planeur', dateField: 'Date', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
-        { table: 'Présences Club', dateField: 'Date', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
-        { table: 'Événements', dateField: 'Date début', presence: (f) => inscritEv(f['Inscrits']) }
+        { table: 'Réservations', dateField: 'Date de début', finField: 'Date de fin', presence: (f) => appartient(f['Pilote']) || appartient(f['Pilote (texte)']) },
+        { table: 'VI Planeur', dateField: 'Date de début', finField: 'Date de fin', presence: (f) => appartient(f['Pilote']) },
+        { table: 'VI Créneaux', dateField: 'Date', heureField: 'Heure début', presence: (f) => (f['Statut'] || '') !== 'Annulé' && appartient(f['Pilote']), dateSeule: true },
+        { table: 'Présences Planeur', dateField: 'Date', heureField: 'Heure début', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
+        { table: 'Présences Club', dateField: 'Date', heureField: 'Heure début', presence: (f) => appartient(f['Nom du pilote']) || appartient(f['Pilote']) },
+        { table: 'Événements', dateField: 'Date début', heureField: 'Heure début', presence: (f) => inscritEv(f['Inscrits']) }
     ];
     const matches = [];
     for (const s of sources) {
         try {
+            // Pour les réservations, filtrer sur la fin : un vol en cours reste affiché
+            const champFutur = s.finField || s.dateField;
             const nowFormula = (s.table === 'Réservations' || s.table === 'VI Planeur')
-                ? `IS_AFTER({${s.dateField}}, NOW())`
+                ? `IS_AFTER({${champFutur}}, NOW())`
                 : `IS_AFTER({${s.dateField}}, DATEADD(NOW(), -1, 'days'))`;
             const pageSize = 100;
             const url = `${API_BASE}/${encodeURIComponent(s.table)}?filterByFormula=${encodeURIComponent(nowFormula)}&sort[0][field]=${encodeURIComponent(s.dateField)}&sort[0][direction]=asc&pageSize=${pageSize}`;
@@ -361,10 +363,16 @@ async function chargerProchaineJournee() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error?.message);
             (data.records || []).forEach(r => {
-                if (s.presence(r.fields || {})) {
-                    const dateStr = r.fields[s.dateField];
-                    const d = new Date(dateStr);
-                    if (!isNaN(d.getTime())) matches.push({ date: d, dateStr, source: s.table, detail: detailProchaineJournee(s.table, r.fields || {}) });
+                const f = r.fields || {};
+                if (s.presence(f)) {
+                    const dateStr = f[s.dateField];
+                    let d = new Date(dateStr);
+                    // Les sources a date seule trient a minuit : ajouter l'heure de debut
+                    if (s.heureField && /^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) {
+                        const h = String(f[s.heureField] || '').slice(0, 5);
+                        if (h) d = new Date(`${dateStr}T${h}:00`);
+                    }
+                    if (!isNaN(d.getTime())) matches.push({ date: d, dateStr, source: s.table, detail: detailProchaineJournee(s.table, f) });
                 }
             });
         } catch (err) {
@@ -383,7 +391,12 @@ function detailProchaineJournee(table, f) {
         return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     };
     if (table === 'Réservations') {
-        const mach = Array.isArray(f['Machine']) ? f['Machine'].join(', ') : (f['Machine'] || '');
+        let mach = Array.isArray(f['Machine']) ? f['Machine'][0] : (f['Machine'] || '');
+        // Machine liee : resoudre l'ID en immatriculation via le cache avions
+        if (mach && String(mach).startsWith('rec') && typeof listeAvionsCache !== 'undefined') {
+            const av = (listeAvionsCache || []).find(a => a.id === mach);
+            if (av) mach = (av.fields || {})['Immatriculation'] || (av.fields || {})['Nom'] || mach;
+        }
         const hDeb = fmtH(f['Date de début']);
         const hFin = fmtH(f['Date de fin']);
         const horaire = hDeb && hFin ? `${hDeb} → ${hFin}` : (hDeb || '');
