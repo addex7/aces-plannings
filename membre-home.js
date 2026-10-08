@@ -37,19 +37,6 @@ const TYPES_DOCUMENTS = ['Médical', 'SEP', 'Autorisation parentale', 'Brevet UL
 const SUIVIS_ACTIFS = 'Suivis actifs';
 let membreSelectionne = null;
 
-function formaterDateFr(str) {
-    if (!str) return null;
-    const d = new Date(str);
-    if (isNaN(d.getTime())) return null;
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-function debutJour(d) {
-    const j = new Date(d);
-    j.setHours(0, 0, 0, 0);
-    return j;
-}
-
 function ageEnAnnees(dob) {
     if (!dob) return null;
     const naissance = new Date(dob);
@@ -73,33 +60,6 @@ function estSuiviActif(fields, labelOrLabels) {
     const actifList = Array.isArray(fields[SUIVIS_ACTIFS]) ? fields[SUIVIS_ACTIFS] : (fields[SUIVIS_ACTIFS] ? [fields[SUIVIS_ACTIFS]] : []);
     const labels = Array.isArray(labelOrLabels) ? labelOrLabels : [labelOrLabels];
     return actifList.length ? labels.some(l => actifList.includes(l)) : true;
-}
-
-function dureeVolMinutes(f) {
-    if (f['Horamètre départ'] !== undefined && f['Horamètre arrivée'] !== undefined) {
-        const dep = parseFloat(f['Horamètre départ']);
-        const arr = parseFloat(f['Horamètre arrivée']);
-        if (!isNaN(dep) && !isNaN(arr) && arr >= dep) return Math.round((arr - dep) * 60);
-    }
-    if (!f['Heure départ'] || !f['Heure arrivée']) return 0;
-    const [hD, mD] = f['Heure départ'].split(':').map(Number);
-    const [hA, mA] = f['Heure arrivée'].split(':').map(Number);
-    if (isNaN(hD) || isNaN(mD) || isNaN(hA) || isNaN(mA)) return 0;
-    let minutes = (hA * 60 + mA) - (hD * 60 + mD);
-    if (minutes < 0) minutes += 24 * 60;
-    return minutes;
-}
-
-function dateIlYAMois(mois) {
-    const auj = new Date();
-    return new Date(auj.getFullYear(), auj.getMonth() - mois, auj.getDate());
-}
-
-function estValideJusqua(str) {
-    if (!str) return false;
-    const d = new Date(str);
-    if (isNaN(d.getTime())) return false;
-    return debutJour(d) >= debutJour(new Date());
 }
 
 function pastille(ok, dateStr, texteRouge) {
@@ -481,114 +441,33 @@ async function chargerExperiences() {
     const updateDetail = (el, couleur, texte, detail) => { if (el) el.innerHTML = `<span class="pastille ${couleur}">${texte}</span>${detail ? `<span class="validite-date">${detail}</span>` : ''}`; };
 
     try {
-        const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
-        const prenom = (membreSelectionne.prenom || '').replace(/"/g, '\\"');
-        const nom = (membreSelectionne.nom || '').replace(/"/g, '\\"');
-        const mois24 = dateIlYAMois(24);
-        const dateMin = `${mois24.getFullYear()}-${String(mois24.getMonth() + 1).padStart(2, '0')}-${String(mois24.getDate()).padStart(2, '0')}`;
-        const formula = `AND(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0, IS_AFTER({Date}, "${dateMin}"))`;
-        const baseUrl = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
-
-        let records = [];
-        let offset = '';
-        do {
-            const url = baseUrl + (offset ? `&offset=${offset}` : '');
-            const res = await cachedFetch(url, { headers });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-            records = records.concat(data.records || []);
-            offset = data.offset || '';
-        } while (offset);
-
-        // Vols extérieurs saisis à la main dans le carnet de vol du pilote
-        try {
-            const urlManu = `${API_BASE}/${encodeURIComponent('Carnet de vol')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
-            records = records.concat(await fetchTousRecords(urlManu, { headers }));
-        } catch (e) { console.error('Erreur lecture carnet de vol manuel:', e); }
-
-        const auj = new Date();
-        const limite3m = dateIlYAMois(3);
-        const limite12m = dateIlYAMois(12);
-        const limite24m = dateIlYAMois(24);
-
-        let dernierVol = null;
-        let decollages3m = 0, atterrissages3m = 0;
-        let minutes24m = 0, decollages24m = 0, atterrissages24m = 0, instruction1h = false;
-        let minutes12m = 0;
-
-        records.forEach(r => {
-            const f = r.fields || {};
-            if (!f['Date']) return;
-            const d = new Date(f['Date']);
-            if (d < limite24m) return;
-            if (!dernierVol || d > dernierVol) dernierVol = d;
-            const duree = dureeVolMinutes(f);
-            const dec = parseInt(f['Décollages'], 10) || 1;
-            const att = parseInt(f['Atterrissages'], 10) || 1;
-
-            if (d >= limite3m) {
-                decollages3m += dec;
-                atterrissages3m += att;
-            }
-            if (d >= limite24m) {
-                minutes24m += duree;
-                decollages24m += dec;
-                atterrissages24m += att;
-                const inst = (f['Instructeur'] || '').trim();
-                if (inst && duree >= 60) instruction1h = true;
-            }
-            if (d >= limite12m) {
-                minutes12m += duree;
-            }
-        });
-
-        const h24 = Math.floor(minutes24m / 60);
-        const m24 = minutes24m % 60;
-        const h12 = Math.floor(minutes12m / 60);
-        const m12 = minutes12m % 60;
+        const records = await chargerVolsPilote(membreSelectionne.prenom, membreSelectionne.nom);
+        const fields = membreSelectionne.fields || {};
+        const exp = calculerExperiencesPilote(records, fields[MEMBRE_FIELDS.CPL] === true);
 
         // 1 vol 3 mois
-        if (!dernierVol || dernierVol < limite3m) {
+        if (!exp.recent) {
             updatePill(elRecent, 'pastille-rouge', '✕ Aucun vol dans les 3 derniers mois');
+        } else if (exp.recentBientot) {
+            updateDetail(elRecent, 'pastille-orange', 'Renouvelable', exp.recentDetail);
         } else {
-            const validite = new Date(dernierVol);
-            validite.setMonth(validite.getMonth() + 3);
-            const jours = Math.floor((debutJour(validite) - debutJour(auj)) / (1000 * 60 * 60 * 24));
-            if (jours < 0) {
-                updateDetail(elRecent, 'pastille-rouge', '✕ Non à jour', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())}`);
-            } else if (jours < 30) {
-                updateDetail(elRecent, 'pastille-orange', 'Renouvelable', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Max ${formaterDateFr(validite.toISOString())}`);
-            } else {
-                updateDetail(elRecent, 'pastille-verte', '✓ À jour', `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Max ${formaterDateFr(validite.toISOString())}`);
-            }
+            updateDetail(elRecent, 'pastille-verte', '✓ À jour', exp.recentDetail);
         }
 
         // Emport de passager
-        const emportOk = decollages3m >= 3 && atterrissages3m >= 3;
-        if (emportOk) {
-            updatePill(elPassager, 'pastille-verte', `✓ À jour (${decollages3m} décollages, ${atterrissages3m} atterrissages)`);
-        } else if (decollages3m > 0 || atterrissages3m > 0) {
-            updatePill(elPassager, 'pastille-orange', `${decollages3m} décollages, ${atterrissages3m} atterrissages / 3`);
+        if (exp.passager) {
+            updatePill(elPassager, 'pastille-verte', `✓ À jour (${exp.decollages3m} décollages, ${exp.atterrissages3m} atterrissages)`);
+        } else if (exp.passagerBientot) {
+            updatePill(elPassager, 'pastille-orange', exp.passagerDetail);
         } else {
             updatePill(elPassager, 'pastille-rouge', '✕ Aucun décollage/atterrissage sur 3 mois');
         }
 
         // LAPL
-        const heuresLAPL = minutes24m >= 12 * 60;
-        const decLAPL = decollages24m >= 12;
-        const attLAPL = atterrissages24m >= 12;
-        const laplOk = heuresLAPL && decLAPL && attLAPL && instruction1h;
-        const texteLAPL = `${h24}h${String(m24).padStart(2, '0')} / 12h00 — ${decollages24m} décollages / 12 — ${atterrissages24m} atterrissages / 12 — 1h instructeur : ${instruction1h ? 'oui' : 'non'}`;
-        updatePill(elLAPL, laplOk ? 'pastille-verte' : 'pastille-rouge', (laplOk ? '✓ À jour — ' : '✕ Non à jour — ') + texteLAPL);
+        updatePill(elLAPL, exp.lapl ? 'pastille-verte' : 'pastille-rouge', (exp.lapl ? '✓ À jour — ' : '✕ Non à jour — ') + exp.laplDetail);
 
         // Initiation avion
-        const fields = membreSelectionne.fields || {};
-        const cpl = fields[MEMBRE_FIELDS.CPL] === true;
-        const initiationOk = emportOk && (cpl || minutes12m >= 25 * 60);
-        const texteInit = cpl
-            ? `Pilote CPL — ${h12}h${String(m12).padStart(2, '0')} sur 12 mois`
-            : `${h12}h${String(m12).padStart(2, '0')} / 25h00 sur 12 mois — emport passager : ${emportOk ? 'oui' : 'non'}`;
-        updatePill(elInitiation, initiationOk ? 'pastille-verte' : 'pastille-rouge', (initiationOk ? '✓ À jour — ' : '✕ Non à jour — ') + texteInit);
+        updatePill(elInitiation, exp.initiation ? 'pastille-verte' : 'pastille-rouge', (exp.initiation ? '✓ À jour — ' : '✕ Non à jour — ') + exp.initiationDetail);
     } catch (err) {
         console.error('Erreur chargement expériences:', err);
         if (elRecent) elRecent.innerHTML = pastille(false, null, 'Erreur de chargement');

@@ -6,6 +6,162 @@
 const LFOY_LAT = 49.533;
 const LFOY_LON = 0.088;
 
+// ==========================================================================
+// HELPERS DATE / VOL - partagés entre l'accueil pilote et l'espace membre.
+// ==========================================================================
+
+function debutJour(d) {
+    const j = new Date(d);
+    j.setHours(0, 0, 0, 0);
+    return j;
+}
+
+function formaterDateFr(str) {
+    if (!str) return null;
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function dateIlYAMois(mois) {
+    const auj = new Date();
+    return new Date(auj.getFullYear(), auj.getMonth() - mois, auj.getDate());
+}
+
+function estValideJusqua(str) {
+    if (!str) return false;
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return false;
+    return debutJour(d) >= debutJour(new Date());
+}
+
+// Échéance à moins de 3 mois (mais encore valide).
+function bientotExpire(str) {
+    if (!str) return false;
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return false;
+    const seuil = new Date();
+    seuil.setMonth(seuil.getMonth() + 3);
+    return debutJour(d) >= debutJour(new Date()) && debutJour(d) < debutJour(seuil);
+}
+
+// Durée d'un vol en minutes : horamètres en priorité, sinon heures départ/arrivée.
+function dureeVolMinutes(f) {
+    if (f['Horamètre départ'] !== undefined && f['Horamètre arrivée'] !== undefined) {
+        const dep = parseFloat(f['Horamètre départ']);
+        const arr = parseFloat(f['Horamètre arrivée']);
+        if (!isNaN(dep) && !isNaN(arr) && arr >= dep) return Math.round((arr - dep) * 60);
+    }
+    if (!f['Heure départ'] || !f['Heure arrivée']) return 0;
+    const [hD, mD] = f['Heure départ'].split(':').map(Number);
+    const [hA, mA] = f['Heure arrivée'].split(':').map(Number);
+    if (isNaN(hD) || isNaN(mD) || isNaN(hA) || isNaN(mA)) return 0;
+    let minutes = (hA * 60 + mA) - (hD * 60 + mD);
+    if (minutes < 0) minutes += 24 * 60;
+    return minutes;
+}
+
+// ==========================================================================
+// EXPÉRIENCES PILOTE - calcul partagé (accueil pilote + espace membre).
+// ==========================================================================
+
+// Récupère tous les vols d'un pilote sur 24 mois : carnet de route (filtré
+// par nom côté serveur) + vols extérieurs saisis à la main (carnet de vol).
+async function chargerVolsPilote(prenom, nom) {
+    const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
+    const p = (prenom || '').replace(/"/g, '\\"');
+    const n = (nom || '').replace(/"/g, '\\"');
+    const mois24 = dateIlYAMois(24);
+    const dateMin = `${mois24.getFullYear()}-${String(mois24.getMonth() + 1).padStart(2, '0')}-${String(mois24.getDate()).padStart(2, '0')}`;
+    const formula = `AND(FIND(UPPER("${p}"), UPPER({Pilote})) > 0, FIND(UPPER("${n}"), UPPER({Pilote})) > 0, IS_AFTER({Date}, "${dateMin}"))`;
+    const url = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
+
+    let records = await fetchTousRecordsCache(url, { headers });
+    try {
+        const urlManu = `${API_BASE}/${encodeURIComponent('Carnet de vol')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+        records = records.concat(await fetchTousRecordsCache(urlManu, { headers }));
+    } catch (e) { console.error('Erreur lecture carnet de vol manuel:', e); }
+    return records;
+}
+
+// Agrège les vols en métriques d'expérience (3 mois / 12 mois / 24 mois) puis
+// évalue les validités : expérience récente, emport passager, LAPL, initiation.
+function calculerExperiencesPilote(records, cpl = false) {
+    const auj = new Date();
+    const limite3m = dateIlYAMois(3);
+    const limite12m = dateIlYAMois(12);
+    const limite24m = dateIlYAMois(24);
+
+    let dernierVol = null;
+    let decollages3m = 0, atterrissages3m = 0;
+    let minutes24m = 0, decollages24m = 0, atterrissages24m = 0, instruction1h = false;
+    let minutes12m = 0;
+
+    records.forEach(r => {
+        const f = r.fields || {};
+        if (!f['Date']) return;
+        const d = new Date(f['Date']);
+        if (d < limite24m) return;
+        if (!dernierVol || d > dernierVol) dernierVol = d;
+        const duree = dureeVolMinutes(f);
+        const dec = parseInt(f['Décollages'], 10) || 1;
+        const att = parseInt(f['Atterrissages'], 10) || 1;
+
+        if (d >= limite3m) {
+            decollages3m += dec;
+            atterrissages3m += att;
+        }
+        if (d >= limite24m) {
+            minutes24m += duree;
+            decollages24m += dec;
+            atterrissages24m += att;
+            const inst = (f['Instructeur'] || '').toString().trim();
+            if (inst && duree >= 60) instruction1h = true;
+        }
+        if (d >= limite12m) {
+            minutes12m += duree;
+        }
+    });
+
+    const h24 = Math.floor(minutes24m / 60);
+    const m24 = minutes24m % 60;
+    const h12 = Math.floor(minutes12m / 60);
+    const m12 = minutes12m % 60;
+
+    let recent = false;
+    let recentBientot = false;
+    let recentDetail = 'Aucun vol dans les 3 derniers mois';
+    if (dernierVol) {
+        // Échéance du recency = dernier vol + 3 mois ; alerte orange < 30 jours.
+        const validiteRecent = new Date(dernierVol);
+        validiteRecent.setMonth(validiteRecent.getMonth() + 3);
+        const joursRestants = Math.floor((debutJour(validiteRecent) - debutJour(auj)) / (1000 * 60 * 60 * 24));
+        recent = dernierVol >= limite3m;
+        recentBientot = joursRestants >= 0 && joursRestants < 30;
+        recentDetail = `Dernier vol : ${formaterDateFr(dernierVol.toISOString())} — Max ${formaterDateFr(validiteRecent.toISOString())}`;
+    }
+
+    const passager = decollages3m >= 3 && atterrissages3m >= 3;
+    const passagerBientot = !passager && (decollages3m > 0 || atterrissages3m > 0);
+    const passagerDetail = `${decollages3m} décollages, ${atterrissages3m} atterrissages / 3`;
+
+    const lapl = minutes24m >= 12 * 60 && decollages24m >= 12 && atterrissages24m >= 12 && instruction1h;
+    const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00 — ${decollages24m} décollages / 12 — ${atterrissages24m} atterrissages / 12 — 1h instructeur : ${instruction1h ? 'oui' : 'non'}`;
+
+    const initiation = passager && (cpl || minutes12m >= 25 * 60);
+    const initiationDetail = cpl
+        ? `Pilote CPL — ${h12}h${String(m12).padStart(2, '0')} sur 12 mois`
+        : `${h12}h${String(m12).padStart(2, '0')} / 25h00 sur 12 mois — emport passager : ${passager ? 'oui' : 'non'}`;
+
+    return {
+        dernierVol, decollages3m, atterrissages3m,
+        minutes24m, decollages24m, atterrissages24m, instruction1h, minutes12m,
+        recent, recentBientot, recentDetail,
+        passager, passagerBientot, passagerDetail,
+        lapl, laplDetail, initiation, initiationDetail
+    };
+}
+
 function normaliserNom(n) {
     return (n || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
 }

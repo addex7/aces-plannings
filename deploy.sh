@@ -1,7 +1,8 @@
 #!/bin/bash
 # Déploie le frontend sur le VPS OVH.
 # - régénère version.js avec l'horodatage courant (affiché en bas à droite)
-# - met à jour le cache-buster version.js?v=... dans index.html
+# - met à jour TOUS les cache-busters ?v=... avec le hash du contenu :
+#   tout fichier modifié obtient automatiquement une nouvelle URL
 # - synchronise les fichiers statiques vers /opt/glide2000 (nginx)
 # Usage : ./deploy.sh
 set -e
@@ -12,7 +13,6 @@ KEY="$HOME/.ssh/glide2000_vps"
 REMOTE="/opt/glide2000"
 
 TS_LABEL="$(date '+%Y-%m-%d %H:%M:%S')"
-TS_PARAM="$(date '+%Y%m%d%H%M%S')"
 
 cat > version.js <<EOF
 const APP_VERSION = 'v${TS_LABEL}';
@@ -23,12 +23,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 EOF
 
-python3 - "$TS_PARAM" <<'PY'
-import re, sys
-p = 'index.html'
-s = open(p).read()
-s = re.sub(r'version\.js\?v=\d+', 'version.js?v=' + sys.argv[1], s)
-open(p, 'w').write(s)
+python3 <<'PY'
+import hashlib, os, re
+
+def bust(page):
+    s = open(page).read()
+    def repl(m):
+        fname = m.group(1)
+        if not os.path.exists(fname):
+            return m.group(0)
+        h = hashlib.md5(open(fname, 'rb').read()).hexdigest()[:10]
+        return f'{fname}?v={h}'
+    s = re.sub(r'([A-Za-z0-9_.-]+\.(?:js|css))\?v=[0-9a-zA-Z]+', repl, s)
+    open(page, 'w').write(s)
+
+for page in ('index.html', 'reserver-vi.html'):
+    if os.path.exists(page):
+        bust(page)
 PY
 
 rsync -az -e "ssh -i $KEY" \

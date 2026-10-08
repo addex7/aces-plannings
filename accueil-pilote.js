@@ -11,57 +11,6 @@ function initAccueilPilote() {
     if (tab) tab.addEventListener('click', chargerAccueilPilote);
 }
 
-function formaterDateAccueil(str) {
-    if (!str) return null;
-    const d = new Date(str);
-    if (isNaN(d.getTime())) return null;
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-function debutJourAccueil(d) {
-    const j = new Date(d);
-    j.setHours(0, 0, 0, 0);
-    return j;
-}
-
-function estValideJusquaAccueil(str) {
-    if (!str) return false;
-    const d = new Date(str);
-    if (isNaN(d.getTime())) return false;
-    return debutJourAccueil(d) >= debutJourAccueil(new Date());
-}
-
-// Échéance à moins de 3 mois (mais encore valide) — même seuil que les
-// cartes de l'espace membre.
-function bientotExpireAccueil(str) {
-    if (!str) return false;
-    const d = new Date(str);
-    if (isNaN(d.getTime())) return false;
-    const seuil = new Date();
-    seuil.setMonth(seuil.getMonth() + 3);
-    return debutJourAccueil(d) >= debutJourAccueil(new Date()) && debutJourAccueil(d) < debutJourAccueil(seuil);
-}
-
-function dateIlYAMoisAccueil(mois) {
-    const auj = new Date();
-    return new Date(auj.getFullYear(), auj.getMonth() - mois, auj.getDate());
-}
-
-function dureeVolMinutesAccueil(f) {
-    if (f['Horamètre départ'] !== undefined && f['Horamètre arrivée'] !== undefined) {
-        const dep = parseFloat(f['Horamètre départ']);
-        const arr = parseFloat(f['Horamètre arrivée']);
-        if (!isNaN(dep) && !isNaN(arr) && arr >= dep) return Math.round((arr - dep) * 60);
-    }
-    if (!f['Heure départ'] || !f['Heure arrivée']) return 0;
-    const [hD, mD] = f['Heure départ'].split(':').map(Number);
-    const [hA, mA] = f['Heure arrivée'].split(':').map(Number);
-    if (isNaN(hD) || isNaN(mD) || isNaN(hA) || isNaN(mA)) return 0;
-    let minutes = (hA * 60 + mA) - (hD * 60 + mD);
-    if (minutes < 0) minutes += 24 * 60;
-    return minutes;
-}
-
 async function chargerAccueilPilote() {
     const container = document.getElementById('accueil-pilote-container');
     if (!container) return;
@@ -386,7 +335,7 @@ async function chargerProchaineJournee() {
     matches.sort((a, b) => a.date - b.date);
     const next = matches[0];
     if (!next) return { text: '-', date: null, label: 'Aucune inscription', detail: '' };
-    return { text: formaterDateAccueil(next.dateStr), date: next.dateStr, label: 'Prochaine journée', source: next.source, detail: next.detail || '' };
+    return { text: formaterDateFr(next.dateStr), date: next.dateStr, label: 'Prochaine journée', source: next.source, detail: next.detail || '' };
 }
 
 function detailProchaineJournee(table, f) {
@@ -484,13 +433,13 @@ async function chargerDernierVol() {
             const f = r.fields || {};
             const match = correspond(f['Pilote']) || correspond(f['Instructeur']);
             if (match && estUnVol(f)) {
-                const duree = dureeVolMinutesAccueil(f);
+                const duree = dureeVolMinutes(f);
                 const h = Math.floor(duree / 60);
                 const m = duree % 60;
                 const dureeText = duree > 0 ? `${h}h${String(m).padStart(2, '0')}` : '-';
                 return {
                     date: f['Date'],
-                    dateText: formaterDateAccueil(f['Date']),
+                    dateText: formaterDateFr(f['Date']),
                     machine: f['Machine'] || '?',
                     duree: dureeText,
                     instructeur: f['Instructeur'] || '',
@@ -542,20 +491,19 @@ async function chargerValiditesAccueil() {
         if (!res.ok) throw new Error(data.error?.message);
         const f = data.fields || {};
 
-        const suivisActifs = Array.isArray(f['Suivis actifs']) ? f['Suivis actifs'] : (f['Suivis actifs'] ? [f['Suivis actifs']] : []);
-        const estSuivi = (label) => suivisActifs.length ? suivisActifs.includes(label) : true;
+        const estSuivi = (label) => estSuiviActif(f, label);
 
-        const cotisationOk = estValideJusquaAccueil(f['Cotisation']);
+        const cotisationOk = estValideJusqua(f['Cotisation']);
 
         const assuranceFields = ['Licence FFVP', 'Licence FFA', 'Licence FFPLUM'];
         const assuranceDates = assuranceFields.map(k => f[k]).filter(Boolean);
-        const assuranceOk = assuranceDates.some(d => estValideJusquaAccueil(d));
+        const assuranceOk = assuranceDates.some(d => estValideJusqua(d));
         const assurancePlusProche = assuranceDates.slice().sort()[0];
 
-        const medicalOk = estValideJusquaAccueil(f['Médical']);
+        const medicalOk = estValideJusqua(f['Médical']);
 
         const licenceActive = estSuivi('Licence SEP');
-        const licenceOk = licenceActive ? estValideJusquaAccueil(f['Licence SEP']) : null;
+        const licenceOk = licenceActive ? estValideJusqua(f['Licence SEP']) : null;
 
         const laplActive = estSuivi('LAPL');
         const initiationActive = estSuivi('Pilote vol initiation avion');
@@ -566,10 +514,10 @@ async function chargerValiditesAccueil() {
 
         return {
             items: [
-                { label: 'Cotisation', ok: cotisationOk, bientot: cotisationOk && bientotExpireAccueil(f['Cotisation']), date: f['Cotisation'] },
-                { label: 'Lic/Assu', ok: assuranceOk, bientot: assuranceOk && assuranceDates.some(d => bientotExpireAccueil(d)), date: assurancePlusProche },
-                { label: 'Médical', ok: medicalOk, bientot: medicalOk && bientotExpireAccueil(f['Médical']), date: f['Médical'] },
-                { label: 'Lic SEP', ok: licenceOk, bientot: licenceOk && bientotExpireAccueil(f['Licence SEP']), date: f['Licence SEP'], actif: licenceActive },
+                { label: 'Cotisation', ok: cotisationOk, bientot: cotisationOk && bientotExpire(f['Cotisation']), date: f['Cotisation'] },
+                { label: 'Lic/Assu', ok: assuranceOk, bientot: assuranceOk && assuranceDates.some(d => bientotExpire(d)), date: assurancePlusProche },
+                { label: 'Médical', ok: medicalOk, bientot: medicalOk && bientotExpire(f['Médical']), date: f['Médical'] },
+                { label: 'Lic SEP', ok: licenceOk, bientot: licenceOk && bientotExpire(f['Licence SEP']), date: f['Licence SEP'], actif: licenceActive },
                 { label: 'Expérience récente (1 vol / 3 mois)', ok: recentActive ? experiences.recent : null, bientot: !!experiences.recentBientot, detail: experiences.recentDetail, actif: recentActive },
                 { label: 'Emport de passager avion (3 décollages / 3 atterrissages)', ok: passagerActive ? experiences.passager : null, bientot: !!experiences.passagerBientot, detail: experiences.passagerDetail, actif: passagerActive },
                 { label: 'LAPL', ok: laplActive ? experiences.lapl : null, detail: experiences.laplDetail, actif: laplActive },
@@ -584,104 +532,19 @@ async function chargerValiditesAccueil() {
 }
 
 async function chargerExperiencesAccueil(cpl = false) {
-    const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
-    const prenom = (currentUser.prenom || '').replace(/"/g, '\\"');
-    const nom = (currentUser.nom || '').replace(/"/g, '\\"');
-    const mois24 = dateIlYAMoisAccueil(24);
-    const dateMin = `${mois24.getFullYear()}-${String(mois24.getMonth() + 1).padStart(2, '0')}-${String(mois24.getDate()).padStart(2, '0')}`;
-    const formula = `AND(FIND(UPPER("${prenom}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0, IS_AFTER({Date}, "${dateMin}"))`;
-    const baseUrl = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
-
-    let records = [];
-    let offset = '';
     try {
-        do {
-            const url = baseUrl + (offset ? `&offset=${offset}` : '');
-            const res = await cachedFetch(url, { headers });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message);
-            records = records.concat(data.records || []);
-            offset = data.offset || '';
-        } while (offset);
-        // Vols extérieurs saisis à la main dans le carnet de vol du pilote
-        try {
-            const urlManu = `${API_BASE}/${encodeURIComponent('Carnet de vol')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
-            records = records.concat(await fetchTousRecords(urlManu, { headers }));
-        } catch (e) { console.error('Erreur lecture carnet de vol manuel:', e); }
+        const records = await chargerVolsPilote(currentUser.prenom, currentUser.nom);
+        const exp = calculerExperiencesPilote(records, cpl);
+        return {
+            recent: exp.recent, recentBientot: exp.recentBientot, recentDetail: exp.recentDetail,
+            passager: exp.passager, passagerBientot: exp.passagerBientot, passagerDetail: exp.passagerDetail,
+            lapl: exp.lapl, laplDetail: exp.laplDetail,
+            initiation: exp.initiation, initiationDetail: exp.initiationDetail
+        };
     } catch (err) {
         console.error('Erreur chargement expériences accueil:', err);
         return { recent: false, passager: false, lapl: false, initiation: false };
     }
-
-    const auj = new Date();
-    const limite3m = dateIlYAMoisAccueil(3);
-    const limite12m = dateIlYAMoisAccueil(12);
-    const limite24m = dateIlYAMoisAccueil(24);
-
-    let dernierVol = null;
-    let decollages3m = 0, atterrissages3m = 0;
-    let minutes24m = 0, decollages24m = 0, atterrissages24m = 0, instruction1h = false;
-    let minutes12m = 0;
-
-    records.forEach(r => {
-        const f = r.fields || {};
-        if (!f['Date']) return;
-        const d = new Date(f['Date']);
-        if (d < limite24m) return;
-        if (!dernierVol || d > dernierVol) dernierVol = d;
-        const duree = dureeVolMinutesAccueil(f);
-        const dec = parseInt(f['Décollages'], 10) || 1;
-        const att = parseInt(f['Atterrissages'], 10) || 1;
-
-        if (d >= limite3m) {
-            decollages3m += dec;
-            atterrissages3m += att;
-        }
-        if (d >= limite24m) {
-            minutes24m += duree;
-            decollages24m += dec;
-            atterrissages24m += att;
-            const inst = (f['Instructeur'] || '').toString().trim();
-            if (inst && duree >= 60) instruction1h = true;
-        }
-        if (d >= limite12m) {
-            minutes12m += duree;
-        }
-    });
-
-    const h24 = Math.floor(minutes24m / 60);
-    const m24 = minutes24m % 60;
-    const h12 = Math.floor(minutes12m / 60);
-    const m12 = minutes12m % 60;
-
-    let recentOk = false;
-    let recentBientot = false;
-    let recentDetail = 'Aucun vol dans les 3 derniers mois';
-    if (dernierVol && dernierVol >= limite3m) {
-        recentOk = true;
-        // Échéance du recency = dernier vol + 3 mois ; alerte orange < 30 jours
-        // (comme sur l'espace membre : une fenêtre glissante de 3 mois est
-        // par construction toujours à moins de 3 mois).
-        const validiteRecent = new Date(dernierVol);
-        validiteRecent.setMonth(validiteRecent.getMonth() + 3);
-        const joursRestants = Math.floor((debutJourAccueil(validiteRecent) - debutJourAccueil(auj)) / (1000 * 60 * 60 * 24));
-        recentBientot = joursRestants < 30;
-        recentDetail = `Dernier vol : ${formaterDateAccueil(dernierVol.toISOString())} — Max ${formaterDateAccueil(validiteRecent.toISOString())}`;
-    }
-
-    const passagerOk = decollages3m >= 3 && atterrissages3m >= 3;
-    const passagerBientot = !passagerOk && (decollages3m > 0 || atterrissages3m > 0);
-    const passagerDetail = `${decollages3m} décollages, ${atterrissages3m} atterrissages / 3`;
-
-    const laplOk = minutes24m >= 12 * 60 && decollages24m >= 12 && atterrissages24m >= 12 && instruction1h;
-    const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00 — ${decollages24m} décollages / 12 — ${atterrissages24m} atterrissages / 12 — 1h instructeur : ${instruction1h ? 'oui' : 'non'}`;
-
-    const initiationOk = passagerOk && (cpl || minutes12m >= 25 * 60);
-    const initiationDetail = cpl
-        ? `Pilote CPL — ${h12}h${String(m12).padStart(2, '0')} sur 12 mois`
-        : `${h12}h${String(m12).padStart(2, '0')} / 25h00 sur 12 mois — emport passager : ${passagerOk ? 'oui' : 'non'}`;
-
-    return { recent: recentOk, recentBientot, recentDetail, passager: passagerOk, passagerBientot, passagerDetail, lapl: laplOk, laplDetail, initiation: initiationOk, initiationDetail };
 }
 
 function renderValidites(data) {
@@ -711,7 +574,7 @@ function renderValidites(data) {
             dot = 'pastille-rouge';
             label = `✕ ${item.label} — Non à jour`;
         }
-        const detail = item.detail || (item.date ? `Max ${formaterDateAccueil(item.date) || '-'}` : '');
+        const detail = item.detail || (item.date ? `Max ${formaterDateFr(item.date) || '-'}` : '');
         return `
             <div class="ap-validite-row">
                 <span class="ap-pastille ${dot}"></span>
@@ -850,7 +713,7 @@ async function retirerMessageClub(recordId) {
 function renderMessagesClub(records) {
     const messages = (records || []).map(r => {
         const f = r.fields || {};
-        const date = f['Date'] ? formaterDateAccueil(f['Date']) : '';
+        const date = f['Date'] ? formaterDateFr(f['Date']) : '';
         const expediteur = f['Expéditeur'] || '';
         const objet = f['Objet'] || '(sans objet)';
         const corps = f['Corps'] || '';
