@@ -1385,12 +1385,14 @@ async function ouvrirBilanDocumentsAeronefs() {
 
     const parMachine = {};
     const typesCustom = new Set();
+    const typesAvecDate = new Set();
     records.forEach(r => {
         const f = r.fields || {};
         const m = (f['Machine'] || '').trim() || '(Sans machine)';
         (parMachine[m] = parMachine[m] || []).push(r);
         const t = f['Type de document'];
         if (t && !TYPES_DOCUMENTS_AERONEFS.some(x => x.code === t)) typesCustom.add(t);
+        if (t && f['Date de validité'] && f['Activé'] !== false) typesAvecDate.add(t);
     });
 
     const machinesExclues = [...(REMOQUES_PLANEURS || []), ...(MATERIEL_AUTRES || [])];
@@ -1407,7 +1409,7 @@ async function ouvrirBilanDocumentsAeronefs() {
     const codesPrioritaires = ['CEN', 'Assurance', TYPE_DECL_ULM, 'Carte Total'];
     const LIBELLES_COLONNES = { [TYPE_DECL_ULM]: 'Décl. ULM' };
     const tousTypes = [
-        ...TYPES_DOCUMENTS_AERONEFS.filter(t => t.code !== 'Autre' && t.code !== 'Accusé'),
+        ...TYPES_DOCUMENTS_AERONEFS.filter(t => (t.code !== 'Autre' && t.code !== 'Accusé') || typesAvecDate.has(t.code)),
         ...[...typesCustom].sort().map(code => ({ code, nom: code, dateRequise: false }))
     ];
     const colonnes = codesPrioritaires.map(code =>
