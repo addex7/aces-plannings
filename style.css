@@ -2129,6 +2129,12 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     margin-bottom: 4px;
     padding-right: 26px;
 }
+.evenement-createur {
+    font-size: 11px;
+    font-weight: 400;
+    color: #94a3b8;
+    margin-left: 6px;
+}
 .evenement-sous-titre {
     font-size: 13px;
     color: #64748b;

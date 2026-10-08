@@ -40,6 +40,13 @@ function initEvenements() {
     if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) fermerModaleEvenement(); });
     if (form) form.addEventListener('submit', enregistrerEvenement);
 
+    // La date de fin suit la date de début par défaut
+    const dateDebutInput = document.getElementById('ev-date-debut');
+    const dateFinInput = document.getElementById('ev-date-fin');
+    if (dateDebutInput && dateFinInput) {
+        dateDebutInput.addEventListener('change', () => { dateFinInput.value = dateDebutInput.value; });
+    }
+
     chargerProchainsEvenements();
     chargerEvenementsJour();
 }
@@ -106,7 +113,7 @@ async function enregistrerEvenement(e) {
                 [FIELDS.HEURE_DEBUT]: heureDebut,
                 [FIELDS.DATE_FIN]: dateFin,
                 [FIELDS.HEURE_FIN]: heureFin,
-                [FIELDS.INSCRITS]: nom + '|',
+                [FIELDS.INSCRITS]: '',
                 [FIELDS.AJOUTE_PAR]: nom
             }
         }]
@@ -130,6 +137,7 @@ async function enregistrerEvenement(e) {
         if (typeof enregistrerAudit === 'function') enregistrerAudit('Création d\'événement', titre, `Du ${dateDebut} ${heureDebut} au ${dateFin} ${heureFin}`, 'Événements');
         const evtId = (data.records && data.records[0] && data.records[0].id) || '';
         if (typeof notifierNouvelEvenement === 'function') notifierNouvelEvenement(evtId, titre, dateDebut, nom);
+        allerAEvenement(dateDebut);
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la création de l\'événement.');
@@ -220,7 +228,7 @@ function renderEvenement(record) {
         <div class="evenement-card" data-record-id="${record.id}">
             ${btnSupprimer}
             <div class="evenement-header">
-                <div class="evenement-titre">${titre}</div>
+                <div class="evenement-titre">${titre}${createur ? ` <span class="evenement-createur">par ${escapeHtml(createur)}</span>` : ''}</div>
                 <div class="evenement-sous-titre">${dateTexte} • ${horaireTexte}</div>
                 ${description ? `<div class="evenement-description">${description}</div>` : ''}
             </div>
