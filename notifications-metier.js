@@ -243,18 +243,20 @@ function notifTrajectoirePotentiel(aeronef, reservations, carnets, maintenances)
     });
 }
 
-// Notifie les pilotes dont une réservation laisse le potentiel sous 0.
+// Notifie les pilotes dont une réservation laisse le potentiel sous 0,
+// et inversement rassure ceux dont le vol redevient assuré après une
+// alerte (maintenance faite, réservation annulée/déplacée).
 // `avionIdRestreint` : limiter à une machine (appel post-enregistrement).
 async function verifierPotentielReservations(avionIdRestreint = '') {
     try {
         const { aeronefs, reservations, carnets, maintenances } = await chargerContextePotentiel();
         const machines = aeronefs.filter(a => !avionIdRestreint || a.id === avionIdRestreint);
         const membres = await notifChargerMembres();
+        const clesEmises = await chargerClesNotifications();
         for (const aeronef of machines) {
             const immat = notifImmat(aeronef);
             const traj = notifTrajectoirePotentiel(aeronef, reservations, carnets, maintenances);
             for (const { resa, potentielApres } of traj) {
-                if (potentielApres >= 0) continue;
                 const f = resa.fields || {};
                 const piloteBrut = Array.isArray(f['Pilote']) ? f['Pilote'][0] : (f['Pilote'] || '');
                 let piloteNom = piloteBrut;
@@ -267,12 +269,25 @@ async function verifierPotentielReservations(avionIdRestreint = '') {
                 const jourIso = notifDateIso(jour);
                 const jourFr = jour.toLocaleDateString('fr-FR');
                 const reste = potentielApres.toFixed(1).replace('.', ',');
-                const cle = `potneg-${resa.id}-${jourIso}`;
-                await notifierUnique(
-                    piloteNom, cle,
-                    `⚠️ Le potentiel de ${immat} sera épuisé lors de votre vol du ${jourFr} (estimation : ${reste} h restantes). Contactez le club pour anticiper la maintenance.`,
-                    'warning', `planning:${jourIso}`
-                );
+                const cleNeg = `potneg-${resa.id}-${jourIso}`;
+                if (potentielApres < 0) {
+                    await notifierUnique(
+                        piloteNom, cleNeg,
+                        `⚠️ Le potentiel de ${immat} sera épuisé lors de votre vol du ${jourFr} (estimation : ${reste} h restantes). Contactez le club pour anticiper la maintenance.`,
+                        'warning', `planning:${jourIso}`
+                    );
+                } else {
+                    // Le pilote avait été alerté pour ce vol et le potentiel
+                    // est redevenu suffisant -> notification "de nouveau assuré".
+                    const cible = typeof formaterNomPilote === 'function' ? formaterNomPilote(piloteNom) : piloteNom;
+                    if (clesEmises.has(`${cible}|${cleNeg}`)) {
+                        await notifierUnique(
+                            piloteNom, `potok-${resa.id}-${jourIso}`,
+                            `✅ Bonne nouvelle : le potentiel de ${immat} est redevenu suffisant pour votre vol du ${jourFr} (estimation : ${reste} h restantes). Votre réservation est de nouveau assurée.`,
+                            'info', `planning:${jourIso}`
+                        );
+                    }
+                }
             }
         }
     } catch (e) {

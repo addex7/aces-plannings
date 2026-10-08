@@ -2094,7 +2094,7 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
                     enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning').catch(err => console.error('Audit:', err));
                 }
             }
-            if (!isMaintenance && typeof verifierPotentielReservations === 'function') verifierPotentielReservations(machine);
+            if (typeof verifierPotentielReservations === 'function') verifierPotentielReservations(machine);
             const viewAeronefs = document.getElementById('view-aeronefs');
             if (viewAeronefs && viewAeronefs.style.display !== 'none' && typeof chargerSuiviAeronef === 'function') {
                 chargerDonneesPlanning(true, true, true).catch(() => {});
@@ -3139,6 +3139,8 @@ function initGestionnaireModale() {
                         await mettreAJourStatutCreneauxConflit(resaDate, resaMachine);
                         await chargerVolsInitiation();
                     }
+                    // Le potentiel peut etre redevenu suffisant -> rassurer les pilotes alertes
+                    if (resaMachine && typeof verifierPotentielReservations === 'function') verifierPotentielReservations(resaMachine);
                     const viewAeronefs = document.getElementById('view-aeronefs');
                     if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                         chargerSuiviAeronef();

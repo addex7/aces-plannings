@@ -319,6 +319,8 @@ async function persisterMaintenance({ maintenanceId, immat, avionId, dateTime, d
     }
 
     await notifierReservationsSurMaintenance(immat, dateTime, duree, avionId);
+    // La nouvelle butée peut rendre le potentiel a nouveau suffisant
+    if (typeof verifierPotentielReservations === 'function') verifierPotentielReservations(avionId);
 }
 
 async function enregistrerMaintenance(e) {
