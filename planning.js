@@ -2094,6 +2094,7 @@ async function sauvegarderDeplacementVol(volId, avionId, nouvelleHeureDebut, dur
                     enregistrerAudit('Modification de réservation (déplacement)', machineNom, `Pilote : ${pilote} | Début initial : ${ancienDebut.slice(0,16).replace('T',' ')} | Fin initiale : ${ancienFin.slice(0,16).replace('T',' ')} | ${message}`, 'Planning').catch(err => console.error('Audit:', err));
                 }
             }
+            if (!isMaintenance && typeof verifierPotentielReservations === 'function') verifierPotentielReservations(machine);
             const viewAeronefs = document.getElementById('view-aeronefs');
             if (viewAeronefs && viewAeronefs.style.display !== 'none' && typeof chargerSuiviAeronef === 'function') {
                 chargerDonneesPlanning(true, true, true).catch(() => {});
@@ -3028,6 +3029,7 @@ function initGestionnaireModale() {
                         await chargerDonneesPlanning(true);
                         await mettreAJourStatutCreneauxConflit(dateJour, machineId);
                         await chargerVolsInitiation();
+                        if (typeof verifierPotentielReservations === 'function') verifierPotentielReservations(machineId);
                         const viewAeronefs = document.getElementById('view-aeronefs');
                         if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                             chargerSuiviAeronef();
@@ -3093,6 +3095,7 @@ function initGestionnaireModale() {
                     await chargerDonneesPlanning(true);
                     await mettreAJourStatutCreneauxConflit(dateJour, machineId);
                     await chargerVolsInitiation();
+                    if (typeof verifierPotentielReservations === 'function') verifierPotentielReservations(machineId);
                     const viewAeronefs = document.getElementById('view-aeronefs');
                     if (viewAeronefs && viewAeronefs.style.display !== 'none') {
                         chargerSuiviAeronef();

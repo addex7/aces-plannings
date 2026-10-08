@@ -248,8 +248,6 @@ function afficherNotifications(records) {
             marquerNotificationLue(item.dataset.id);
             const rec = records.find(r => r.id === item.dataset.id);
             if (rec) naviguerDepuisNotification(rec.fields || {});
-            const panneau = document.getElementById('notifications-panel');
-            if (panneau) panneau.style.display = 'none';
         });
     });
 }
