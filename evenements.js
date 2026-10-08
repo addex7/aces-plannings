@@ -182,6 +182,17 @@ async function chargerEvenementsJour() {
     }
 }
 
+// Delegation de clics : nom/commentaire des inscrits voyagent en data-*
+// (echappes pour le HTML) au lieu d'etre injectes dans onclick="..." (XSS).
+document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-evt-action]');
+    if (!el) return;
+    const d = el.dataset;
+    if (d.evtAction === 'desinscrire') desinscrireEvenement(d.rid, d.nom);
+    else if (d.evtAction === 'commentaire') modifierCommentaireEvenement(d.rid, d.nom, d.commentaire || '');
+    else if (d.evtAction === 'aller') allerAEvenement(d.date);
+});
+
 function renderEvenement(record) {
     const f = record.fields || {};
     const titre = escapeHtml(f[FIELDS.TITRE] || 'Événement');
@@ -199,12 +210,11 @@ function renderEvenement(record) {
 
     const listeInscrits = inscrits.map(i => {
         const nom = escapeHtml(i.nom);
-        const commentaire = escapeHtml(i.commentaire || '');
         const estSuperAdmin = currentUser && currentUser.roles && currentUser.roles.includes('Super admin');
         const removable = memeNom(i.nom, nomConnecte) || memeNom(createur, nomConnecte) || estSuperAdmin;
-        const btnSup = removable ? `<button class="btn-remove-inscrit" onclick="desinscrireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}')" title="Supprimer">×</button>` : '';
+        const btnSup = removable ? `<button class="btn-remove-inscrit" data-evt-action="desinscrire" data-rid="${escapeHtml(record.id)}" data-nom="${nom}" title="Supprimer">×</button>` : '';
         const peutCommenter = memeNom(i.nom, nomConnecte) || estSuperAdmin;
-        const btnComment = peutCommenter ? `<button class="btn-comment" onclick="modifierCommentaireEvenement('${record.id}', '${nom.replace(/'/g, "\\'")}', '${commentaire.replace(/'/g, "\\'")}')" title="Ajouter/Modifier un commentaire">💬</button>` : '';
+        const btnComment = peutCommenter ? `<button class="btn-comment" data-evt-action="commentaire" data-rid="${escapeHtml(record.id)}" data-nom="${nom}" data-commentaire="${escapeHtml(i.commentaire || '')}" title="Ajouter/Modifier un commentaire">💬</button>` : '';
         const commentText = i.commentaire ? escapeHtml(i.commentaire) : '';
         return `<div class="inscrit-ligne">
             <span class="inscrit-nom">- ${nom}</span>
@@ -371,7 +381,7 @@ async function chargerProchainsEvenements() {
                 const f = r.fields || {};
                 const titre = escapeHtml(f[FIELDS.TITRE] || 'Événement');
                 const date = formatDateEvenement(f[FIELDS.DATE_DEBUT]);
-                return `<div class="prochain-evenement" onclick="allerAEvenement('${f[FIELDS.DATE_DEBUT]}')" title="${titre}">- ${date}: ${titre}</div>`;
+                return `<div class="prochain-evenement" data-evt-action="aller" data-date="${escapeHtml(f[FIELDS.DATE_DEBUT])}" title="${titre}">- ${date}: ${titre}</div>`;
             }).join('');
     } catch (err) {
         console.error(err);
@@ -396,12 +406,3 @@ function formatDateEvenement(dateStr) {
     return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }).replace('.', '');
 }
 
-function escapeHtml(text) {
-    if (typeof text !== 'string') return '';
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}

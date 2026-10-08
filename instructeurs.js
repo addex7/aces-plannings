@@ -147,7 +147,7 @@ function ouvrirModaleDisponibilite() {
         html += '<optgroup label="Aéronefs">';
         (listeAvionsCache || []).forEach(a => {
             const nom = a.fields && (a.fields['Immatriculation'] || a.fields['Nom']);
-            if (nom) html += `<option value="${nom}">${nom}</option>`;
+            if (nom) html += `<option value="${escapeHtml(nom)}">${escapeHtml(nom)}</option>`;
         });
         html += '</optgroup>';
         machineSel.innerHTML = html;
@@ -178,7 +178,7 @@ function editerDisponibilite(record) {
         html += '<optgroup label="Aéronefs">';
         (listeAvionsCache || []).forEach(a => {
             const nom = a.fields && (a.fields['Immatriculation'] || a.fields['Nom']);
-            if (nom) html += `<option value="${nom}">${nom}</option>`;
+            if (nom) html += `<option value="${escapeHtml(nom)}">${escapeHtml(nom)}</option>`;
         });
         html += '</optgroup>';
         machineSel.innerHTML = html;
@@ -254,8 +254,8 @@ async function ouvrirModaleGererDispos() {
                 return `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #e2e8f0;">
                         <div style="font-size:13px;">
-                            <strong>${dateFr}</strong> — ${f['Heure début']} à ${f['Heure fin']}<br>
-                            <span style="color:#64748b; font-size:12px;">${f['Machine'] || 'Tous'}</span> — ${statut}
+                            <strong>${dateFr}</strong> — ${escapeHtml(f['Heure début'])} à ${escapeHtml(f['Heure fin'])}<br>
+                            <span style="color:#64748b; font-size:12px;">${escapeHtml(f['Machine'] || 'Tous')}</span> — ${statut}
                         </div>
                         <div style="display:flex; gap:6px; align-items:center;">
                             <button class="btn-primary" data-id="${r.id}" data-action="edit" style="font-size:12px; padding:6px 10px;">Modifier</button>
@@ -506,7 +506,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
             barresDiv.style.left = `${positionHeure(heureDebut)}%`;
             barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
             barresDiv.title = `${libelleEntete} — ${immat}`;
-            barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
+            barresDiv.innerHTML = `<strong>${escapeHtml(libelleEntete)}</strong>`;
             barresDiv.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (isCreneau) return;

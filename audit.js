@@ -69,6 +69,62 @@ function initAudit() {
             `, 'ℹ️');
         });
     }
+
+    const btnErreurs = document.getElementById('audit-erreurs');
+    if (btnErreurs) btnErreurs.addEventListener('click', afficherErreursClient);
+}
+
+// --- ERREURS JS REMONTEES PAR LES NAVIGATEURS ---
+
+function echapperAudit(s) {
+    if (typeof escapeHtml === 'function') return escapeHtml(s);
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+async function afficherErreursClient() {
+    if (typeof afficherModaleAlerte !== 'function') return;
+    afficherModaleAlerte('Erreurs JavaScript', '<p>Chargement…</p>', '🐛');
+    try {
+        const res = await apiFetch(`${API_BASE}/erreurs-js`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur ' + res.status);
+        const records = data.records || [];
+        if (!records.length) {
+            afficherModaleAlerte('Erreurs JavaScript', '<p class="carnet-empty">Aucune erreur remontée. 🎉</p>', '🐛');
+            return;
+        }
+        // Regroupement par message : une erreur vue 40 fois n'affiche qu'une ligne.
+        const groupes = {};
+        records.forEach(r => {
+            const cle = r.message || '?';
+            if (!groupes[cle]) groupes[cle] = { count: 0, last: r, users: new Set() };
+            groupes[cle].count++;
+            groupes[cle].users.add(r.utilisateur || '—');
+            if (new Date(r.date) > new Date(groupes[cle].last.date)) groupes[cle].last = r;
+        });
+        const lignes = Object.values(groupes).map(g => {
+            const r = g.last;
+            const d = new Date(r.date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            const users = [...g.users].slice(0, 4).join(', ') + (g.users.size > 4 ? '…' : '');
+            const src = (r.source || '').split('/').pop();
+            return `<div style="border-bottom:1px solid #e2e8f0; padding:10px 0;">
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:baseline;">
+                    <strong style="color:#b91c1c; font-size:13px; word-break:break-word;">${echapperAudit(r.message)}</strong>
+                    <span style="white-space:nowrap; font-size:12px; color:#64748b;">×${g.count}</span>
+                </div>
+                <div style="font-size:12px; color:#64748b; margin-top:3px;">
+                    ${d} — ${echapperAudit(users)} — <code style="font-size:11px;">${echapperAudit(src)}</code>
+                </div>
+                ${r.pile ? `<details style="margin-top:4px;"><summary style="font-size:12px; color:#94a3b8; cursor:pointer;">Pile d'appel</summary><pre style="font-size:11px; white-space:pre-wrap; word-break:break-word; background:#f1f5f9; padding:8px; border-radius:6px; max-height:180px; overflow:auto;">${echapperAudit(r.pile)}</pre></details>` : ''}
+            </div>`;
+        }).join('');
+        afficherModaleAlerte('Erreurs JavaScript', `
+            <div style="font-size:12px; color:#64748b; margin-bottom:10px;">${records.length} erreur(s) remontée(s) — ${Object.keys(groupes).length} distincte(s), 200 dernières max.</div>
+            <div style="max-height:60vh; overflow-y:auto; text-align:left;">${lignes}</div>
+        `, '🐛');
+    } catch (err) {
+        afficherModaleAlerte('Erreurs JavaScript', `<p>Impossible de charger le journal : ${echapperAudit(err.message)}</p>`, '❌');
+    }
 }
 
 async function enregistrerAudit(action, cible = '', details = '', module = '') {

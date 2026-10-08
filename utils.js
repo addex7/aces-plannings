@@ -162,6 +162,26 @@ function calculerExperiencesPilote(records, cpl = false) {
     };
 }
 
+// Echappement HTML canonique — TOUJOURS l'utiliser avant d'injecter des
+// donnees utilisateur dans innerHTML. escHtml est un alias historique.
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return text.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+function escHtml(s) { return escapeHtml(s); }
+
+// Ne retourne l'URL que si elle est inoffensive dans un href/src — sinon '#'.
+// Bloque javascript:, data:, vbscript: (XSS via <a href>).
+function urlSure(u) {
+    const s = (u || '').toString().trim();
+    return /^(https?:\/\/|\/|mailto:|tel:)/i.test(s) ? s : '#';
+}
+
 function normaliserNom(n) {
     return (n || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
 }

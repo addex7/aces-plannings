@@ -816,26 +816,34 @@ function docsCarteMachineHtml(r, machine, canEdit, aujourdhui, dans3mois, contex
         else dateTxt = `Valide jusqu'au ${dateStr}`;
     }
     const lien = f['Lien']
-        ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir le document ↗</a>`
+        ? `<a href="${escapeHtml(urlSure(f['Lien']))}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir le document ↗</a>`
         : `<span style="font-size:13px; color:#94a3b8;">Aucun fichier lié</span>`;
     return `
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; display:flex; flex-direction:column;">
             <h4 style="margin:0 0 6px; color:#0f172a; display:flex; align-items:center; gap:8px;">
                 <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block; flex-shrink:0;"></span>
-                ${type.nom}
+                ${escapeHtml(type.nom)}
             </h4>
             ${contexte ? `<div style="font-size:12px; color:#64748b; margin:-2px 0 6px;">🛩️ ${docsEscAttr(machine)}</div>` : ''}
             <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${dateTxt}</p>
             <div style="margin-top:auto;">
                 ${lien}
                 ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
-                    <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="modifierDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Modifier</button>
-                    <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocumentAeronefBiblio('${r.id}', '${docsEscAttr(machine)}')">Supprimer</button>
+                    <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" data-docbib-action="modifier" data-rid="${escapeHtml(r.id)}" data-machine="${docsEscAttr(machine)}">Modifier</button>
+                    <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" data-docbib-action="supprimer" data-rid="${escapeHtml(r.id)}" data-machine="${docsEscAttr(machine)}">Supprimer</button>
                 </div>` : ''}
             </div>
         </div>
     `;
 }
+
+// Delegation : machine voyage en data-* au lieu d'etre injectee dans onclick.
+document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-docbib-action]');
+    if (!el) return;
+    if (el.dataset.docbibAction === 'modifier') modifierDocumentAeronefBiblio(el.dataset.rid, el.dataset.machine);
+    else if (el.dataset.docbibAction === 'supprimer') supprimerDocumentAeronefBiblio(el.dataset.rid, el.dataset.machine);
+});
 
 function docsHtmlMachine(machine) {
     const docs = (documentsAeronefsBibliothequeCache[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
@@ -885,11 +893,11 @@ function creerCarteDocument(rec, contexte = '') {
     const canEdit = isDocumentaliste();
     return `
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; display:flex; flex-direction:column;">
-            <h4 style="margin:0 0 6px; color:#0f172a;">${f['Titre'] || 'Sans titre'}</h4>
-            ${contexte ? `<div style="font-size:12px; color:#64748b; margin:-2px 0 6px;">${contexte}</div>` : ''}
-            <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${f['Description'] || ''}</p>
+            <h4 style="margin:0 0 6px; color:#0f172a;">${escapeHtml(f['Titre']) || 'Sans titre'}</h4>
+            ${contexte ? `<div style="font-size:12px; color:#64748b; margin:-2px 0 6px;">${escapeHtml(contexte)}</div>` : ''}
+            <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${escapeHtml(f['Description'])}</p>
             <div style="margin-top:auto;">
-                <a href="${f['Lien'] || '#'}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">Ouvrir le document ↗</a>
+                <a href="${escapeHtml(urlSure(f['Lien']))}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">Ouvrir le document ↗</a>
                 ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
                     <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="ouvrirFormDocument('${rec.id}')">Modifier</button>
                     <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocument('${rec.id}')">Supprimer</button>

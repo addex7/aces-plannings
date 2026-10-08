@@ -197,7 +197,7 @@ async function cvPeuplerSelectPilotes() {
     if (!select) return;
     const membres = await cvChargerMembres();
     select.innerHTML = membres.map(m =>
-        `<option value="${m.id}">${m.prenom} ${m.nom}</option>`).join('');
+        `<option value="${cvEscape(m.id)}">${cvEscape(m.prenom)} ${cvEscape(m.nom)}</option>`).join('');
     if (!cvSelectPilotePret) {
         select.addEventListener('change', () => {
             const m = membres.find(x => x.id === select.value);

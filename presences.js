@@ -26,22 +26,38 @@ function peutModifierCommentaire(nom) {
     return typeof correspondanceNom === 'function' ? correspondanceNom(nom, nomUtilisateur) : nom === nomUtilisateur;
 }
 
+// Delegation de clics : les anciennes balises injectaient noms/commentaires
+// dans onclick="..." (XSS). Les valeurs voyagent en data-* (echappees pour
+// le HTML, decodees automatiquement a la lecture -> chaine brute exacte).
+document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-presence-action]');
+    if (!el) return;
+    const d = el.dataset;
+    switch (d.presenceAction) {
+        case 'desinscrire-club': desinscrireClub(d.rid); break;
+        case 'desinscrire-planeur': desinscrirePlaneur(d.rid); break;
+        case 'commentaire': modifierCommentaire(d.rid, d.table, d.commentaire || '', d.nom || ''); break;
+        case 'info-membre': ouvrirInfoMembre(d.nom || '', d.role || '', d.info || '', d.commentaire || ''); break;
+        case 'heures-instructeur': modifierHeuresInstructeurPlaneur(d.rid, d.nom); break;
+        case 'commentaire-instructeur': modifierCommentaireInstructeurPlaneur(d.rid, d.commentaire || '', d.nom || ''); break;
+        case 'briefing': definirBriefingPlaneur(d.rid, d.nom, d.briefing || ''); break;
+        case 'desinscrire-instructeur': desinscrireInstructeurPlaneur(d.rid, d.nom); break;
+    }
+});
+
 function creerLignePresence(nom, commentaire, recordId, tableName, roleLabel = '') {
-    const commentaireEscaped = commentaire.replace(/"/g, '&quot;');
-    const commentaireJs = commentaire.replace(/"/g, '&quot;').replace(/'/g, "\\'");
-    const nomEscaped = nom.replace(/"/g, '&quot;').replace(/'/g, "\\'");
-    const roleEscaped = roleLabel.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+    const actionSup = tableName === 'Présences Club' ? 'desinscrire-club' : 'desinscrire-planeur';
     const btnSupprimer = peutSupprimerPresence(nom)
-        ? `<button class="btn-remove-presence" onclick="desinscrire${tableName === 'Présences Club' ? 'Club' : 'Planeur'}('${recordId}')">❌</button>`
+        ? `<button class="btn-remove-presence" data-presence-action="${actionSup}" data-rid="${escapeHtml(recordId)}">❌</button>`
         : '';
     const btnCommentaire = peutModifierCommentaire(nom)
-        ? `<button class="btn-comment" onclick="modifierCommentaire('${recordId}', '${tableName}', '${commentaireEscaped}', '${nomEscaped}')" title="Ajouter/Modifier un commentaire">💬</button>`
+        ? `<button class="btn-comment" data-presence-action="commentaire" data-rid="${escapeHtml(recordId)}" data-table="${escapeHtml(tableName)}" data-commentaire="${escapeHtml(commentaire)}" data-nom="${escapeHtml(nom)}" title="Ajouter/Modifier un commentaire">💬</button>`
         : '';
     return `
         <div class="inscrit-ligne presence-ligne">
-            <span class="inscrit-nom inscrit-nom-lien" onclick="ouvrirInfoMembre('${nomEscaped}', '${roleEscaped}', '', '${commentaireJs}')" title="Voir la fiche">- ${nom}</span>
+            <span class="inscrit-nom inscrit-nom-lien" data-presence-action="info-membre" data-nom="${escapeHtml(nom)}" data-role="${escapeHtml(roleLabel)}" data-info="" data-commentaire="${escapeHtml(commentaire)}" title="Voir la fiche">- ${escapeHtml(nom)}</span>
             <span class="inscrit-slot">${btnCommentaire}</span>
-            <span class="comment-text">${commentaireEscaped}</span>
+            <span class="comment-text">${escapeHtml(commentaire)}</span>
             <span class="inscrit-slot">${btnSupprimer}</span>
         </div>
     `;
@@ -65,25 +81,25 @@ async function ouvrirInfoMembre(nom, roleLabel = '', infoSupp = '', commentaire 
             <span class="info-vol-valeur">${valeurHtml}</span>
         </div>` : '';
     const lignes = [
-        ligne('🕐', 'Horaires / infos', infoSupp),
-        ligne('📞', 'Téléphone', tel ? `<a href="tel:${String(tel).replace(/\s/g, '')}" style="color:#1e3d59;">${tel}</a>` : ''),
-        ligne('✉️', 'Mail', mail ? `<a href="mailto:${mail}" style="color:#1e3d59;">${mail}</a>` : ''),
-        ligne('🎖️', 'Rôles', roles)
+        ligne('🕐', 'Horaires / infos', escapeHtml(infoSupp)),
+        ligne('📞', 'Téléphone', tel ? `<a href="tel:${String(tel).replace(/\s/g, '')}" style="color:#1e3d59;">${escapeHtml(tel)}</a>` : ''),
+        ligne('✉️', 'Mail', mail ? `<a href="mailto:${escapeHtml(mail)}" style="color:#1e3d59;">${escapeHtml(mail)}</a>` : ''),
+        ligne('🎖️', 'Rôles', escapeHtml(roles))
     ].join('');
     content.innerHTML = `
         <div class="info-vol-header">
             <div class="info-vol-personnes">
                 <div class="info-vol-personne">
-                    <img class="info-vol-photo" src="${photo}" alt="" onerror="this.style.visibility='hidden'">
+                    <img class="info-vol-photo" src="${escapeHtml(photo)}" alt="" onerror="this.style.visibility='hidden'">
                     <div>
-                        <div class="info-vol-role">${roleLabel || 'Membre'}</div>
-                        <div class="info-vol-pilote">${nom}</div>
+                        <div class="info-vol-role">${escapeHtml(roleLabel) || 'Membre'}</div>
+                        <div class="info-vol-pilote">${escapeHtml(nom)}</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="info-vol-grille">${lignes || '<p style="color:#64748b; margin:0;">Aucune information supplémentaire.</p>'}</div>
-        ${commentaire ? `<div class="info-vol-commentaires"><span class="info-vol-icone">💬</span><div><div class="info-vol-label">Commentaire</div><div class="info-vol-valeur">${commentaire}</div></div></div>` : ''}
+        ${commentaire ? `<div class="info-vol-commentaires"><span class="info-vol-icone">💬</span><div><div class="info-vol-label">Commentaire</div><div class="info-vol-valeur">${escapeHtml(commentaire)}</div></div></div>` : ''}
     `;
     modal.style.display = 'flex';
 }
@@ -461,9 +477,6 @@ async function desinscrireInstructeurPlaneur(recordId, nom) {
 }
 
 function creerLigneInstructeurPlaneur(nom, commentaire, briefing, recordId, intervalles) {
-    const nomEscaped = nom.replace(/"/g, '&quot;').replace(/'/g, "\\'");
-    const commentaireEscaped = (commentaire || '').replace(/"/g, '&quot;');
-    const briefingEscaped = (briefing || '').replace(/"/g, '&quot;');
     const rid = recordId || '';
     const briefingTxt = briefing ? `Briefing à ${briefing.replace(':', 'h')}` : '';
     const modifiable = peutModifierCommentaire(nom);
@@ -471,27 +484,25 @@ function creerLigneInstructeurPlaneur(nom, commentaire, briefing, recordId, inte
         ? intervalles.map(iv => `${minutesVersHeure(iv[0])}–${minutesVersHeure(iv[1])}`).join(', ')
         : '+ horaires';
     const heures = modifiable
-        ? `<button class="presence-heures presence-heures-btn" onclick="modifierHeuresInstructeurPlaneur('${rid}', '${nomEscaped}')" title="Modifier mes horaires de dispo">${heuresLabel}</button>`
-        : ((intervalles && intervalles.length) ? `<span class="presence-heures">${heuresLabel}</span>` : '');
+        ? `<button class="presence-heures presence-heures-btn" data-presence-action="heures-instructeur" data-rid="${escapeHtml(rid)}" data-nom="${escapeHtml(nom)}" title="Modifier mes horaires de dispo">${escapeHtml(heuresLabel)}</button>`
+        : ((intervalles && intervalles.length) ? `<span class="presence-heures">${escapeHtml(heuresLabel)}</span>` : '');
     const btnCommentaire = modifiable
-        ? `<button class="btn-comment" onclick="modifierCommentaireInstructeurPlaneur('${rid}', '${commentaireEscaped}', '${nomEscaped}')" title="Ajouter/Modifier un commentaire">💬</button>`
+        ? `<button class="btn-comment" data-presence-action="commentaire-instructeur" data-rid="${escapeHtml(rid)}" data-commentaire="${escapeHtml(commentaire || '')}" data-nom="${escapeHtml(nom)}" title="Ajouter/Modifier un commentaire">💬</button>`
         : '';
     const briefingHtml = modifiable
-        ? `<button class="btn-comment presence-briefing" onclick="definirBriefingPlaneur('${rid}', '${nomEscaped}', '${briefingEscaped}')" title="Définir l'heure de briefing planeur">${briefing ? `📣 ${briefingTxt}` : '📣 Briefing ?'}</button>`
-        : (briefing ? `<span class="presence-briefing">📣 ${briefingTxt}</span>` : '');
+        ? `<button class="btn-comment presence-briefing" data-presence-action="briefing" data-rid="${escapeHtml(rid)}" data-nom="${escapeHtml(nom)}" data-briefing="${escapeHtml(briefing || '')}" title="Définir l'heure de briefing planeur">${briefing ? `📣 ${escapeHtml(briefingTxt)}` : '📣 Briefing ?'}</button>`
+        : (briefing ? `<span class="presence-briefing">📣 ${escapeHtml(briefingTxt)}</span>` : '');
     const btnSupprimer = peutSupprimerPresence(nom)
-        ? `<button class="btn-remove-presence" onclick="desinscrireInstructeurPlaneur('${rid}', '${nomEscaped}')">❌</button>`
+        ? `<button class="btn-remove-presence" data-presence-action="desinscrire-instructeur" data-rid="${escapeHtml(rid)}" data-nom="${escapeHtml(nom)}">❌</button>`
         : '';
-    const infoSupp = [heuresLabel !== '+ horaires' ? heuresLabel : '', briefingTxt].filter(Boolean).join(' · ')
-        .replace(/"/g, '&quot;').replace(/'/g, "\\'");
-    const commentaireJs = (commentaire || '').replace(/"/g, '&quot;').replace(/'/g, "\\'");
+    const infoSupp = [heuresLabel !== '+ horaires' ? heuresLabel : '', briefingTxt].filter(Boolean).join(' · ');
     return `
         <div class="inscrit-ligne presence-ligne presence-ligne-instructeur">
-            <span class="inscrit-nom inscrit-nom-lien" onclick="ouvrirInfoMembre('${nomEscaped}', 'Instructeur planeur', '${infoSupp}', '${commentaireJs}')" title="Voir la fiche">- ${nom}</span>
+            <span class="inscrit-nom inscrit-nom-lien" data-presence-action="info-membre" data-nom="${escapeHtml(nom)}" data-role="Instructeur planeur" data-info="${escapeHtml(infoSupp)}" data-commentaire="${escapeHtml(commentaire || '')}" title="Voir la fiche">- ${escapeHtml(nom)}</span>
             <span class="inscrit-slot">${heures}</span>
             <span class="inscrit-slot">${briefingHtml}</span>
             <span class="inscrit-slot">${btnCommentaire}</span>
-            <span class="comment-text">${commentaireEscaped}</span>
+            <span class="comment-text">${escapeHtml(commentaire || '')}</span>
             <span class="inscrit-slot">${btnSupprimer}</span>
         </div>
     `;

@@ -36,16 +36,6 @@ function parseTempsDeVol(tempsStr) {
     return h + m / 60;
 }
 
-function escapeHtml(text) {
-    if (text === null || text === undefined) return '';
-    return text.toString()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
 function afficherModaleAlerte(titre, messageHtml, icone = '⚠️') {
     const existing = document.getElementById('planning-alert-modal');
     if (existing) existing.remove();
@@ -808,7 +798,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                 const enConflitPilote = conflitsPilotesJour.has(vol.id);
                 if (enConflitPilote) barresDiv.classList.add('reservation-conflit-pilote');
                 const libelle = (enConflitPilote ? '⚠️ ' : '') + (pilote ? `${type} (${formaterNomPilote(pilote)})` : `${type} — ${nom}`);
-                barresDiv.innerHTML = `<strong>${libelle}</strong>`;
+                barresDiv.innerHTML = `<strong>${escapeHtml(libelle)}</strong>`;
                 const debutStr = convertirHeureEnHHMM(heureDebut);
                 const finStr = convertirHeureEnHHMM(heureFin);
                 barresDiv.setAttribute('data-tooltip', [
@@ -1227,7 +1217,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             barresDiv.setAttribute('data-tooltip', (barresDiv.getAttribute('data-tooltip') || '') + '\n⚠️ Pilote déjà réservé aux mêmes horaires');
                         }
                         barresDiv.removeAttribute('title');
-                        barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
+                        barresDiv.innerHTML = `<strong>${escapeHtml(libelleEntete)}</strong>`;
                         if (!isCreneau) {
                             const handleLeft = document.createElement('div');
                             handleLeft.className = 'resize-handle resize-handle-left';
@@ -3333,24 +3323,24 @@ async function ouvrirModaleInformation(vol) {
         const tel = mf['Téléphone'] || '';
         const mail = mf['Mail'] || '';
         const parties = [];
-        if (tel) parties.push(`<a href="tel:${String(tel).replace(/\s/g, '')}" style="color:rgba(255,255,255,0.95); text-decoration:none;">📞 ${tel}</a>`);
-        if (mail) parties.push(`<a href="mailto:${mail}" style="color:rgba(255,255,255,0.95); text-decoration:none;">✉️ ${mail}</a>`);
+        if (tel) parties.push(`<a href="tel:${String(tel).replace(/\s/g, '')}" style="color:rgba(255,255,255,0.95); text-decoration:none;">📞 ${escapeHtml(tel)}</a>`);
+        if (mail) parties.push(`<a href="mailto:${escapeHtml(mail)}" style="color:rgba(255,255,255,0.95); text-decoration:none;">✉️ ${escapeHtml(mail)}</a>`);
         return parties.length ? `<div class="info-vol-contact">${parties.join(' · ')}</div>` : '';
     };
     const personne = (photo, role, nom, membre) => `
         <div class="info-vol-personne">
-            <img class="info-vol-photo" src="${photo}" alt="" onerror="this.style.visibility='hidden'">
+            <img class="info-vol-photo" src="${escapeHtml(photo)}" alt="" onerror="this.style.visibility='hidden'">
             <div>
-                <div class="info-vol-role">${role}</div>
-                <div class="info-vol-pilote">${nom}</div>
+                <div class="info-vol-role">${escapeHtml(role)}</div>
+                <div class="info-vol-pilote">${escapeHtml(nom)}</div>
                 ${contactHtml(membre)}
             </div>
         </div>`;
     const ligne = (icone, label, valeur) => `
         <div class="info-vol-ligne">
             <span class="info-vol-icone">${icone}</span>
-            <span class="info-vol-label">${label}</span>
-            <span class="info-vol-valeur">${valeur || '—'}</span>
+            <span class="info-vol-label">${escapeHtml(label)}</span>
+            <span class="info-vol-valeur">${valeur ? escapeHtml(valeur) : '—'}</span>
         </div>`;
     content.innerHTML = `
         <div class="info-vol-header">
@@ -3358,7 +3348,7 @@ async function ouvrirModaleInformation(vol) {
                 ${personne(photoPilote, 'Pilote', pilote, membrePilote)}
                 ${instructeur !== '—' ? personne(urlPhotoMembre(membreInstructeur, instructeur), 'Instructeur', instructeur, membreInstructeur) : ''}
             </div>
-            <div class="info-vol-machine">✈️ ${machine}</div>
+            <div class="info-vol-machine">✈️ ${escapeHtml(machine)}</div>
         </div>
         <div class="info-vol-grille">
             ${ligne('🛩️', 'Type de vol', type)}
@@ -3366,7 +3356,7 @@ async function ouvrirModaleInformation(vol) {
             ${ligne('🕑', 'Fin', fin)}
             ${ligne('⏱️', 'Durée estimée', duree)}
         </div>
-        ${commentaires ? `<div class="info-vol-commentaires"><span class="info-vol-icone">💬</span><div><div class="info-vol-label">Commentaires</div><div class="info-vol-valeur">${commentaires}</div></div></div>` : ''}
+        ${commentaires ? `<div class="info-vol-commentaires"><span class="info-vol-icone">💬</span><div><div class="info-vol-label">Commentaires</div><div class="info-vol-valeur">${escapeHtml(commentaires)}</div></div></div>` : ''}
     `;
     infoModal.style.display = 'flex';
 }
@@ -3603,7 +3593,7 @@ function afficherVolsInitiation() {
             piloteText = `👤 Pilote : ${formaterNomPilote(vol.pilote)}`;
             nomClient = vol.passager || 'Passager non renseigné';
         }
-        const machineText = vol.source === 'moteur' && vol.machineName ? `🛩️ ${vol.machineName}<br>` : '';
+        const machineText = vol.source === 'moteur' && vol.machineName ? `🛩️ ${escapeHtml(vol.machineName)}<br>` : '';
         const peutSInscrire = !estArchive && isAPourvoir && hasRolePiloteVI() && piloteAutoriseSurTypeVI((currentUser || {}).roles || [], vol.type);
         const boutonSInscrire = peutSInscrire ? `<button class="btn-reserver-initiation" data-id="${vol.id}" data-source="${vol.source}">S'inscrire</button>` : '';
         const rolesInscrireAutre = ['Super admin', 'Gestion VI', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
@@ -3629,11 +3619,11 @@ function afficherVolsInitiation() {
             card.classList.add('initiation-card-compact');
             card.innerHTML = `
                 <div class="initiation-info initiation-info-compact">
-                    <h4>🎯 ${typeText}</h4>
-                    <p>📅 ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}</p>
+                    <h4>🎯 ${escapeHtml(typeText)}</h4>
+                    <p>📅 ${escapeHtml(vol.dateStr)} • ${escapeHtml(vol.heureDebut)} - ${escapeHtml(vol.heureFin)}</p>
                 </div>
                 <div class="initiation-meta">
-                    <strong>${piloteText}</strong>
+                    <strong>${escapeHtml(piloteText)}</strong>
                     ${caseSelection}
                     ${boutonSupprimer}
                 </div>
@@ -3641,13 +3631,13 @@ function afficherVolsInitiation() {
         } else {
             card.innerHTML = `
                 <div class="initiation-info">
-                    <h4>🎯 ${typeText} — ${nomClient}</h4>
-                    <p>📅 ${vol.dateStr} • ${vol.heureDebut} - ${vol.heureFin}</p>
-                    <p>${machineText}📞 ${vol.telephone || 'Non renseigné'}</p>
-                    ${vol.commentaire ? `<p style="margin-top:6px; font-style:italic;">💬 ${vol.commentaire}</p>` : ''}
+                    <h4>🎯 ${escapeHtml(typeText)} — ${escapeHtml(nomClient)}</h4>
+                    <p>📅 ${escapeHtml(vol.dateStr)} • ${escapeHtml(vol.heureDebut)} - ${escapeHtml(vol.heureFin)}</p>
+                    <p>${machineText}📞 ${escapeHtml(vol.telephone || 'Non renseigné')}</p>
+                    ${vol.commentaire ? `<p style="margin-top:6px; font-style:italic;">💬 ${escapeHtml(vol.commentaire)}</p>` : ''}
                 </div>
                 <div class="initiation-meta">
-                    <strong>${piloteText}</strong>
+                    <strong>${escapeHtml(piloteText)}</strong>
                     ${boutonSInscrire}
                     ${boutonInscrireAutre}
                     ${boutonPilote}
@@ -4416,7 +4406,7 @@ function ouvrirModaleChoixModifierCreneau(vol) {
     if (info) {
         info.innerHTML = aUnPassager
             ? `Modifier le créneau de <strong>${escapeHtml(vol.passager)}</strong> ?`
-            : `Modifier le créneau <strong>${escapeHtml(vol.type || 'VI')}</strong> du ${escapeHtml(vol.dateStr || '')} (${vol.heureDebut} - ${vol.heureFin}) ?`;
+            : `Modifier le créneau <strong>${escapeHtml(vol.type || 'VI')}</strong> du ${escapeHtml(vol.dateStr || '')} (${escapeHtml(vol.heureDebut)} - ${escapeHtml(vol.heureFin)}) ?`;
     }
     modal.style.display = 'flex';
 }

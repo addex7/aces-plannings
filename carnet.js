@@ -1216,19 +1216,19 @@ function afficherCarnet(records) {
         } else if (isJVIO) {
             tr.innerHTML = `
                 <td>${dateStr}${f['GVV ID'] ? ' <span class="badge-gvv" title="Envoyé à GVV (#' + f['GVV ID'] + ')">GVV</span>' : ''}</td>
-                <td>${formatEquipageCourt(f['Pilote']) || '-'}</td>
-                <td>${formatEquipageCourt(f['Instructeur']) || '-'}</td>
-                <td>${f['Fonction'] || '-'}</td>
-                <td>${f['Nature'] || '-'}</td>
-                <td>${f['Départ'] || '-'}</td>
-                <td>${f['Arrivée'] || '-'}</td>
-                <td>${f['Heure départ'] || ''}</td>
-                <td>${f['Heure arrivée'] || ''}</td>
+                <td>${escHtml(formatEquipageCourt(f['Pilote'])) || '-'}</td>
+                <td>${escHtml(formatEquipageCourt(f['Instructeur'])) || '-'}</td>
+                <td>${escHtml(f['Fonction']) || '-'}</td>
+                <td>${escHtml(f['Nature']) || '-'}</td>
+                <td>${escHtml(f['Départ']) || '-'}</td>
+                <td>${escHtml(f['Arrivée']) || '-'}</td>
+                <td>${escHtml(f['Heure départ'])}</td>
+                <td>${escHtml(f['Heure arrivée'])}</td>
                 <td>${formaterNombre(f['Horamètre arrivée']) || '-'}</td>
-                <td>${afficherCarburant(f['Carburant départ'])}</td>
-                <td>${afficherCarburant(f['Carburant arrivée'])}</td>
-                <td>${(f['Maintenance'] || '').toString().trim() || '-'}</td>
-                <td>${(f['Observations'] || '').trim() || '-'}</td>
+                <td>${escHtml(afficherCarburant(f['Carburant départ']))}</td>
+                <td>${escHtml(afficherCarburant(f['Carburant arrivée']))}</td>
+                <td>${escHtml((f['Maintenance'] || '').toString().trim()) || '-'}</td>
+                <td>${escHtml((f['Observations'] || '').trim()) || '-'}</td>
             `;
         } else {
             const equipage = [f['Pilote'], f['Instructeur']].filter(Boolean).map(formatEquipageCourt).join(' / ') || '-';
@@ -1237,19 +1237,19 @@ function afficherCarnet(records) {
             const horametre = [formaterNombre(f['Horamètre départ']), formaterNombre(f['Horamètre arrivée'])].filter(v => v !== '').join(' / ') || '-';
             tr.innerHTML = `
                 <td>${dateStr}${f['GVV ID'] ? ' <span class="badge-gvv" title="Envoyé à GVV (#' + f['GVV ID'] + ')">GVV</span>' : ''}</td>
-                <td>${equipage}</td>
-                <td>${f['Fonction'] || '-'}</td>
-                <td>${f['Départ'] || '-'}</td>
-                <td>${f['Arrivée'] || '-'}</td>
-                <td>${f['Heure départ'] || ''}</td>
-                <td>${f['Heure arrivée'] || ''}</td>
+                <td>${escHtml(equipage)}</td>
+                <td>${escHtml(f['Fonction']) || '-'}</td>
+                <td>${escHtml(f['Départ']) || '-'}</td>
+                <td>${escHtml(f['Arrivée']) || '-'}</td>
+                <td>${escHtml(f['Heure départ'])}</td>
+                <td>${escHtml(f['Heure arrivée'])}</td>
                 <td>${temps || '-'}</td>
-                <td>${f['Nature'] || '-'}</td>
-                <td>${afficherCarburant(f['Carburant départ'])}</td>
-                <td>${afficherCarburant(f['Carburant arrivée'])}</td>
-                <td>${afficherHuile(f['Huile départ'])}</td>
-                <td>${afficherHuile(f['Huile arrivée'])}</td>
-                <td>${(f['Observations'] || '').trim() || '-'}</td>
+                <td>${escHtml(f['Nature']) || '-'}</td>
+                <td>${escHtml(afficherCarburant(f['Carburant départ']))}</td>
+                <td>${escHtml(afficherCarburant(f['Carburant arrivée']))}</td>
+                <td>${escHtml(afficherHuile(f['Huile départ']))}</td>
+                <td>${escHtml(afficherHuile(f['Huile arrivée']))}</td>
+                <td>${escHtml((f['Observations'] || '').trim()) || '-'}</td>
                 <td${idsEcartHorametre.has(record.id) ? ' class="horametre-ecart"' : ''}>${horametre}</td>
             `;
         }
@@ -1362,8 +1362,8 @@ function afficherAlarmeObservation(records) {
         html += `
             <div data-record-id="${obs.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0 6px 10px; border-bottom: 1px solid rgba(180, 83, 9, 0.2); border-left: 4px solid ${couleur};">
                 <div>
-                    <strong>🛠️ ${f['Machine'] || ''} — ${dateStr}</strong> — ${(f['Observations'] || '').trim()}
-                    <span class="obs-statut" style="font-style: italic; margin-left: 8px; font-weight: 700; color: ${couleur};">(${statut})</span>
+                    <strong>🛠️ ${escHtml(f['Machine'])} — ${dateStr}</strong> — ${escHtml((f['Observations'] || '').trim())}
+                    <span class="obs-statut" style="font-style: italic; margin-left: 8px; font-weight: 700; color: ${couleur};">(${escHtml(statut)})</span>
                 </div>
                 ${btnsHtml ? `<div class="obs-btns" style="display: flex; gap: 6px; flex-shrink: 0;">${btnsHtml}</div>` : ''}
             </div>

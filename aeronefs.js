@@ -702,7 +702,7 @@ async function chargerSuiviAeronef() {
                         pointer-events: auto;
                     `;
 
-                    barresDiv.innerHTML = `<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${piloteFormate || 'Réservé'}</span><span style="font-size:10px; font-weight:700; opacity:0.95; flex-shrink:0; margin-left:4px;">${labelPotentiel}</span>`;
+                    barresDiv.innerHTML = `<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${piloteFormate ? escapeHtml(piloteFormate) : 'Réservé'}</span><span style="font-size:10px; font-weight:700; opacity:0.95; flex-shrink:0; margin-left:4px;">${escapeHtml(labelPotentiel)}</span>`;
 
                     const handleLeft = document.createElement('div');
                     handleLeft.className = 'resize-handle resize-handle-left';
@@ -1554,8 +1554,8 @@ function htmlChipDocAeronef(r, aujourdhui, dans3mois) {
     const couleur = couleurDocAeronef(f, aujourdhui, dans3mois);
     const dateTxt = f['Date de validité'] ? ` – ${new Date(f['Date de validité'] + 'T00:00:00').toLocaleDateString('fr-FR')}` : '';
     const label = f['Lien']
-        ? `<a href="${f['Lien']}" target="_blank" rel="noopener" style="color:#0f172a; text-decoration:underline;">${type.nom}${dateTxt}</a>`
-        : `<span style="color:#0f172a;">${type.nom}${dateTxt}</span>`;
+        ? `<a href="${escapeHtml(urlSure(f['Lien']))}" target="_blank" rel="noopener" style="color:#0f172a; text-decoration:underline;">${escapeHtml(type.nom)}${dateTxt}</a>`
+        : `<span style="color:#0f172a;">${escapeHtml(type.nom)}${dateTxt}</span>`;
     return `
         <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
             <span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block;"></span>

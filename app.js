@@ -27,6 +27,52 @@ function definirTokenSession(token) {
     if (typeof viderApiCache === 'function') viderApiCache();
 }
 
+// ==========================================================================
+// JOURNAL DES ERREURS JS -> serveur (table erreurs_client, vue dans l'audit)
+// ==========================================================================
+const erreursVues = new Set();
+let erreursEnvoyees = 0;
+
+function journaliserErreur(detail) {
+    try {
+        if (erreursEnvoyees >= 10) return;
+        const cle = `${detail.message}|${detail.source}`;
+        if (erreursVues.has(cle)) return;
+        erreursVues.add(cle);
+        erreursEnvoyees++;
+        fetch(`${API_BASE}/log-erreur`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': headers.Authorization },
+            body: JSON.stringify(detail),
+            keepalive: true
+        }).catch(() => {});
+    } catch (e) { /* le journal ne doit jamais casser l'app */ }
+}
+
+window.addEventListener('error', (e) => {
+    if (!e.message || e.message === 'Script error.') return;
+    // Ignore les scripts tiers (CDN emailjs...) : pas notre code.
+    if (e.filename && !e.filename.includes(location.host)) return;
+    journaliserErreur({
+        message: String(e.message).slice(0, 500),
+        source: `${e.filename || ''}:${e.lineno || ''}:${e.colno || ''}`.slice(0, 300),
+        pile: ((e.error && e.error.stack) || '').slice(0, 4000),
+        url: location.pathname.slice(0, 300)
+    });
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+    const r = e.reason;
+    const msg = r instanceof Error ? r.message : String(r);
+    if (!msg || /AbortError/i.test(msg)) return;
+    journaliserErreur({
+        message: msg.slice(0, 500),
+        source: 'promesse non interceptée',
+        pile: ((r && r.stack) || '').slice(0, 4000),
+        url: location.pathname.slice(0, 300)
+    });
+});
+
 // Variables globales partagées entre tous les modules
 let dateAffichee = new Date();
 dateAffichee.setHours(12, 0, 0, 0);
@@ -178,10 +224,6 @@ function initSidebarResize() {
     };
     resizer.addEventListener('pointerup', stop);
     resizer.addEventListener('pointercancel', stop);
-}
-
-function escHtml(s) {
-    return (s || '').toString().replace(/[&<"']/g, c => ({ '&': '&amp;', '<': '&lt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function initNotifications() {

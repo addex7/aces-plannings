@@ -425,7 +425,7 @@ function selectCreneau(record) {
     const typeValue = record.fields['Type'] || 'VI';
     const type = escapeHtml(TYPE_LABELS[typeValue] || typeValue);
     const date = formatDate(record.fields['Date']);
-    const heure = `${record.fields['Heure début']} - ${record.fields['Heure fin']}`;
+    const heure = `${escapeHtml(record.fields['Heure début'])} - ${escapeHtml(record.fields['Heure fin'])}`;
     document.getElementById('selected-creneau-info').innerHTML = `
         <div class="initiation-info">
             <h4>${type}</h4>
@@ -594,7 +594,7 @@ function showConfirmation(record, token, contact) {
     const f = record.fields || {};
     const type = escapeHtml(TYPE_VI_LIBELLES[f['Type']] || f['Type'] || 'VI');
     const date = formatDate(f['Date']);
-    const heure = `${f['Heure début']} - ${f['Heure fin']}`;
+    const heure = `${escapeHtml(f['Heure début'])} - ${escapeHtml(f['Heure fin'])}`;
     const prenom = (contact && contact.prenom) || f['Prénom'] || '';
     const nom = (contact && contact.nom) || f['Nom'] || '';
     const email = (contact && contact.email) || f['Email'] || '';
@@ -679,7 +679,7 @@ function showManageView(record) {
     const f = record.fields || {};
     const type = escapeHtml(TYPE_VI_LIBELLES[f['Type']] || f['Type'] || 'VI');
     const date = formatDate(f['Date']);
-    const heure = `${f['Heure début']} - ${f['Heure fin']}`;
+    const heure = `${escapeHtml(f['Heure début'])} - ${escapeHtml(f['Heure fin'])}`;
     const modifiable = creneauModifiable(record);
     document.getElementById('manage-info').innerHTML = `
         <div class="initiation-card pris" style="margin-bottom: 15px;">

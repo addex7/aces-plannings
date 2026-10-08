@@ -50,7 +50,7 @@ async function peuplerSelectInstructeurSuivi() {
     });
     html += '</optgroup><optgroup label="Par instructeur">';
     instructeurs.forEach(u => {
-        html += `<option value="${u.nomComplet}" ${!activiteSelectionnee && u.nomComplet === instructeurSelectionne ? 'selected' : ''}>${u.nomComplet}</option>`;
+        html += `<option value="${escapeHtml(u.nomComplet)}" ${!activiteSelectionnee && u.nomComplet === instructeurSelectionne ? 'selected' : ''}>${escapeHtml(u.nomComplet)}</option>`;
     });
     html += '</optgroup>';
     sel.innerHTML = html;
@@ -511,7 +511,7 @@ function ajouterBarresJour(reservationsJour, dateJour, conteneur, filtreNom, bar
         barresDiv.style.top = barTop;
         barresDiv.style.height = barHeight;
         barresDiv.title = `${libelleEntete} — ${immat}`;
-        barresDiv.innerHTML = `<strong>${libelleEntete}</strong>`;
+        barresDiv.innerHTML = `<strong>${escapeHtml(libelleEntete)}</strong>`;
         barresDiv.addEventListener('click', (e) => { e.stopPropagation(); if (typeof ouvrirModaleModification === 'function') ouvrirModaleModification(r.id); });
         conteneur.appendChild(barresDiv);
         barresInfos.push({ bar: barresDiv, debut: heureDebut, fin: heureFin });

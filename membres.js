@@ -215,7 +215,7 @@ async function chargerReset(recordId) {
 function setupError(msg) {
     const setup = document.getElementById('setup-overlay');
     if (setup) {
-        setup.innerHTML = `<div style="padding:30px; text-align:center;"><p style="color:#dc2626;">${msg}</p><button onclick="location.href=location.pathname" class="btn-primary" style="margin-top:10px;">Retour</button></div>`;
+        setup.innerHTML = `<div style="padding:30px; text-align:center;"><p style="color:#dc2626;">${escapeHtml(msg)}</p><button onclick="location.href=location.pathname" class="btn-primary" style="margin-top:10px;">Retour</button></div>`;
     }
 }
 
@@ -392,17 +392,17 @@ async function chargerUtilisateurs() {
             const nomComplet = `${prenom} ${nom}`.trim();
             const rolesActuels = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
             const rolesText = rolesActuels.map(role =>
-                `<span class="role-info" title="${(DESCRIPTIONS_ROLES[role] || '').replace(/"/g, '&quot;')}">${role}</span>`
+                `<span class="role-info" title="${escapeHtml(DESCRIPTIONS_ROLES[role] || '')}">${escapeHtml(role)}</span>`
             ).join(', ') || '-';
             const canDelete = isSuperAdmin();
             const tr = document.createElement('tr');
             tr.className = 'ligne-membre';
             tr.innerHTML = `
-                <td><span class="membre-nom">${prenom} ${nom}</span></td>
-                <td>${f['Mail'] || ''}</td>
-                <td>${f['Téléphone'] || ''}</td>
+                <td><span class="membre-nom">${escapeHtml(prenom)} ${escapeHtml(nom)}</span></td>
+                <td>${escapeHtml(f['Mail'])}</td>
+                <td>${escapeHtml(f['Téléphone'])}</td>
                 <td class="roles-cell">${rolesText}</td>
-                <td>${f['Identifiant'] || (canDelete ? `<button type="button" class="btn-invit" data-id="${r.id}" title="Renvoyer le mail d'invitation">✉️ Invitation</button>` : '')}</td>
+                <td>${f['Identifiant'] ? escapeHtml(f['Identifiant']) : (canDelete ? `<button type="button" class="btn-invit" data-id="${r.id}" title="Renvoyer le mail d'invitation">✉️ Invitation</button>` : '')}</td>
                 <td class="membre-actions">${canDelete ? `<button type="button" class="membre-delete" data-id="${r.id}" title="Supprimer">&times;</button>` : ''}</td>
             `;
             tr.addEventListener('click', () => ouvrirSuiviMembre(r.id));
@@ -700,7 +700,7 @@ function afficherInvitation(record, email) {
     const setupUrl = `${PUBLIC_URL}?token=${record.id}`;
     zone.innerHTML = `
         <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:6px; color:#166534; margin-top:10px;">
-            <strong>Invitation créée pour ${f['Prénom'] || ''} ${f['Nom'] || ''}.</strong><br>
+            <strong>Invitation créée pour ${escapeHtml(f['Prénom'])} ${escapeHtml(f['Nom'])}.</strong><br>
             <div id="membre-email-status" style="margin-top:8px; font-weight:500;">Envoi automatique...</div>
         </div>
     `;

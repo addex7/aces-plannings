@@ -224,9 +224,9 @@ function renderAccueilMembre(fields) {
         const esc = v => String(v ?? '').replace(/"/g, '&quot;');
         const ligne = (label, cle, val, type) => editable
             ? `<div class="accueil-info"><span class="accueil-info-label">${label}</span><input type="${type}" class="accueil-info-input" data-field="${cle}" value="${esc(val)}"></div>`
-            : `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val">${val || '—'}</span></div>`;
+            : `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val">${val ? escapeHtml(val) : '—'}</span></div>`;
         const ligneLecture = (label, val, id = '') =>
-            `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val"${id ? ` id="${id}"` : ''}>${val || '—'}</span></div>`;
+            `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val"${id ? ` id="${id}"` : ''}>${val ? escapeHtml(val) : '—'}</span></div>`;
         const d0 = fields['Date de naissance'] ? new Date(fields['Date de naissance']) : null;
         let age = '';
         if (d0 && !isNaN(d0)) {
@@ -293,7 +293,7 @@ function renderAccueilMembre(fields) {
                 const listeHtml = '<ul style="margin:10px 0 0; padding-left:20px;">' + champs.map(c =>
                     c === 'Mot de passe'
                         ? '<li><strong>Mot de passe</strong> : sera modifié</li>'
-                        : `<li><strong>${esc(c)}</strong> : « ${esc(originales[c]) || '—'} » → « ${esc(modifs[c]) || '—'} »</li>`
+                        : `<li><strong>${escapeHtml(c)}</strong> : « ${escapeHtml(originales[c]) || '—'} » → « ${escapeHtml(modifs[c]) || '—'} »</li>`
                 ).join('') + (autorisationAuto !== null
                     ? `<li><strong>Autorisation parentale</strong> : suivi ${autorisationAuto ? 'activé' : 'désactivé'} automatiquement (${autorisationAuto ? 'moins de' : 'plus de'} 18 ans)</li>`
                     : '') + '</ul>';

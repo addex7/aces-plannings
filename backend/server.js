@@ -86,6 +86,18 @@ setInterval(() => {
     pool.query('DELETE FROM sessions WHERE expire_le < now()').catch(() => {});
 }, 3600 * 1000).unref();
 
+// Journal des erreurs JS remontées par les navigateurs (window.onerror).
+pool.query(`CREATE TABLE IF NOT EXISTS erreurs_client (
+    id SERIAL PRIMARY KEY,
+    date TIMESTAMPTZ DEFAULT now(),
+    utilisateur TEXT DEFAULT '',
+    message TEXT,
+    source TEXT,
+    pile TEXT,
+    url TEXT,
+    navigateur TEXT
+)`).catch(e => console.error('Init table erreurs_client:', e.message));
+
 function hacherMdpServeur(mdp) {
     return crypto.createHash('sha256').update('aces-planning-salt-v1:' + mdp).digest('hex');
 }
@@ -336,6 +348,54 @@ app.use(async (req, res, next) => {
     if (!user) return erreur(res, 401, 'Session invalide ou expirée');
     req.user = user;
     next();
+});
+
+// --- JOURNAL DES ERREURS CLIENT (window.onerror -> POST) ---
+// Tout jeton valide peut ecrire (session ou public : page reserver-vi).
+// Anti-tempete : 30 erreurs / 10 min / IP.
+const erreursThrottle = new Map();
+function throttleErreurs(ip) {
+    const now = Date.now();
+    const e = erreursThrottle.get(ip) || { n: 0, t: now };
+    if (now - e.t > 10 * 60 * 1000) { e.n = 0; e.t = now; }
+    e.n++;
+    erreursThrottle.set(ip, e);
+    return e.n <= 30;
+}
+
+app.post('/v0/:base/log-erreur', async (req, res) => {
+    if (!throttleErreurs(req.ip)) return erreur(res, 429, 'Trop d\'erreurs envoyées');
+    const b = req.body || {};
+    const tronque = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
+    try {
+        await pool.query(
+            'INSERT INTO erreurs_client (utilisateur, message, source, pile, url, navigateur) VALUES ($1,$2,$3,$4,$5,$6)',
+            [
+                req.user ? req.user.nom : (req.publicAccess ? 'public' : ''),
+                tronque(b.message, 500),
+                tronque(b.source, 300),
+                tronque(b.pile, 4000),
+                tronque(b.url, 300),
+                tronque(req.headers['user-agent'], 300)
+            ]);
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('Log erreur client:', e.message);
+        erreur(res, 500, 'Erreur serveur');
+    }
+});
+
+// Lecture reservee aux Super admin (avant la route generique /v0/:base/:table).
+app.get('/v0/:base/erreurs-js', async (req, res) => {
+    if (!requireRoles(req, res, ['Super admin'])) return;
+    try {
+        const { rows } = await pool.query(
+            'SELECT id, date, utilisateur, message, source, pile, url, navigateur FROM erreurs_client ORDER BY date DESC LIMIT 200');
+        res.json({ records: rows });
+    } catch (e) {
+        console.error('Lecture erreurs client:', e.message);
+        erreur(res, 500, 'Erreur serveur');
+    }
 });
 
 // --- ENVOI D'EMAILS VIA LE SERVEUR (SMTP) ---

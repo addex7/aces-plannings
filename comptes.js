@@ -503,10 +503,6 @@ function stripOrdre(s) {
     return String(s || '').replace(/^~#\d{4}~/, '');
 }
 
-function escHtml(s) {
-    return (s || '').toString().replace(/[&<"']/g, c => ({ '&': '&amp;', '<': '&lt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
 
 async function enregistrerRecetteManuelle(e) {
     e.preventDefault();
