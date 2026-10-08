@@ -269,7 +269,7 @@ async function sinscrireEvenement(recordId) {
 }
 
 async function desinscrireEvenement(recordId, nom) {
-    if (!confirm(`Retirer ${nom} de l'événement ?`)) return;
+    if (!(await confirmerAction(`Retirer ${nom} de l'événement ?`, { okLabel: 'Retirer', icone: '👋' }))) return;
     try {
         const getRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });
         const record = await getRes.json();
@@ -311,11 +311,7 @@ async function supprimerEvenement(recordId) {
             else alert('Erreur lors de la suppression.');
         }
     };
-    if (typeof afficherModaleConfirmation === 'function') {
-        afficherModaleConfirmation('Supprimer cet évènement ?', '<p>Cette action est définitive.</p>', executer);
-    } else if (confirm('Supprimer définitivement cet évènement ?')) {
-        executer();
-    }
+    confirmerSuppression('Supprimer définitivement cet évènement ?\nCette action est définitive.').then(ok => { if (ok) executer(); });
 }
 
 async function modifierCommentaireEvenement(recordId, nom, commentaireActuel) {
@@ -325,7 +321,7 @@ async function modifierCommentaireEvenement(recordId, nom, commentaireActuel) {
         alert("Tu ne peux modifier le commentaire que de ta propre inscription.");
         return;
     }
-    const nouveauCommentaire = prompt("Commentaire :", commentaireActuel || "");
+    const nouveauCommentaire = await demanderSaisie("Commentaire", commentaireActuel || "", { textarea: true });
     if (nouveauCommentaire === null) return;
     try {
         const getRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_EVENEMENTS)}/${recordId}`, { headers });

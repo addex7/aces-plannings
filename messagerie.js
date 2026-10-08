@@ -521,7 +521,7 @@ async function archiverThreadsSelectionnes() {
     const threads = grouperParThread(messagesCache).filter(t => threadsSelectionnes.has(t.key));
     if (!threads.length) return;
     const nbMsg = threads.reduce((n, t) => n + t.messages.length, 0);
-    if (!confirm(`Archiver ${threads.length} conversation(s) (${nbMsg} message(s)) ? Elles seront conservées 30 jours dans « Messages archivés ».`)) return;
+    if (!(await confirmerAction(`Archiver ${threads.length} conversation(s) (${nbMsg} message(s)) ? Elles seront conservées 30 jours dans « Messages archivés ».`, { okLabel: 'Archiver', icone: '📦' }))) return;
     await archiverThreads(threads);
     threadsSelectionnes.clear();
     afficherMessages(messagesCache);

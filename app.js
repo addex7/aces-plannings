@@ -196,6 +196,8 @@ function initNotifications() {
         });
     }
     if (close && panel) close.addEventListener('click', () => panel.style.display = 'none');
+    const toutLu = document.getElementById('notifications-tout-lu');
+    if (toutLu) toutLu.addEventListener('click', (e) => { e.stopPropagation(); marquerToutesNotificationsLues(); });
     document.addEventListener('click', (e) => {
         if (panel && bell && !panel.contains(e.target) && !bell.contains(e.target)) {
             panel.style.display = 'none';
@@ -232,6 +234,8 @@ async function chargerNotifications() {
             count.textContent = nonLues;
             count.style.display = nonLues > 0 ? 'inline' : 'none';
         }
+        const toutLuBtn = document.getElementById('notifications-tout-lu');
+        if (toutLuBtn) toutLuBtn.style.display = nonLues > 1 ? 'inline-block' : 'none';
     } catch (err) {
         console.error(err);
         list.innerHTML = '<p class="notifications-vide">Impossible de charger les notifications.</p>';
@@ -323,6 +327,33 @@ function naviguerDepuisNotification(fields) {
     if (mDate) allerJourPlanning(`${mDate[3]}-${mDate[2].padStart(2, '0')}-${mDate[1].padStart(2, '0')}`);
 }
 
+// Marque toutes les notifications non lues du pilote courant, y compris
+// celles au-dela des 20 affichees dans le panneau.
+async function marquerToutesNotificationsLues() {
+    const piloteNom = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
+    if (!piloteNom) return;
+    const btn = document.getElementById('notifications-tout-lu');
+    if (btn) btn.disabled = true;
+    try {
+        const formula = `AND({Pilote}='${piloteNom.replace(/'/g, "\\'")}', {Lue}=FALSE())`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_NOTIFICATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+        const nonLues = await fetchTousRecords(url, { headers });
+        for (let i = 0; i < nonLues.length; i += 10) {
+            const batch = nonLues.slice(i, i + 10).map(r => ({ id: r.id, fields: { Lue: true } }));
+            await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_NOTIFICATIONS)}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ records: batch })
+            });
+        }
+        await chargerNotifications();
+    } catch (err) {
+        console.error(err);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
 async function marquerNotificationLue(recordId) {
     try {
         const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_NOTIFICATIONS)}/${recordId}`, {
@@ -380,6 +411,26 @@ document.addEventListener('DOMContentLoaded', () => {
         croix.title = 'Fermer';
         content.prepend(croix);
     });
+});
+
+// Echap ferme la modale la plus haute (z-index max, puis derniere dans le DOM).
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    const visibles = [...document.querySelectorAll('.modal')].filter(m => {
+        const s = m.style.display;
+        if (s === 'flex' || s === 'block') return true;
+        if (s === 'none' || s === '') return false;
+        return getComputedStyle(m).display !== 'none';
+    });
+    if (!visibles.length) return;
+    const haut = visibles.reduce((a, b) => {
+        const za = parseInt(getComputedStyle(a).zIndex) || 0;
+        const zb = parseInt(getComputedStyle(b).zIndex) || 0;
+        return zb >= za ? b : a;
+    });
+    const croix = haut.querySelector('.modal-close-x, [class*="close-modal"]');
+    if (croix) croix.click();
+    else haut.style.display = 'none';
 });
 
 /* ==========================================================================

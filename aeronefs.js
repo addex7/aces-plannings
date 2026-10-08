@@ -260,7 +260,7 @@ function fermerModaleMaintenance() {
 
 async function supprimerMaintenance() {
     const maintenanceId = document.getElementById('maintenance-id').value;
-    if (!maintenanceId || !confirm('Confirmer la suppression de cet acte de maintenance ?')) return;
+    if (!maintenanceId || !(await confirmerSuppression('Confirmer la suppression de cet acte de maintenance ?'))) return;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Maintenance')}/${maintenanceId}`, { method: 'DELETE', headers });
         if (!res.ok) throw new Error(await res.text());
@@ -1703,7 +1703,7 @@ async function supprimerDocumentAeronef(record) {
     if (!peutGererDocumentsAeronef()) { alert("Tu n'as pas le droit de supprimer les documents machine."); return; }
     const f = record.fields || {};
     const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) || { nom: f['Type de document'] };
-    if (!confirm(`Supprimer le document "${type.nom}" ?`)) return;
+    if (!(await confirmerSuppression(`Supprimer le document "${type.nom}" ?`))) return;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}/${record.id}`, { method: 'DELETE', headers });
         if (!res.ok) throw new Error('Erreur Airtable');

@@ -728,10 +728,10 @@ function afficherInvitation(record, email) {
     });
 }
 
-function renvoyerInvitation(record) {
+async function renvoyerInvitation(record) {
     const f = record.fields || {};
     const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
-    if (!confirm(`Renvoyer le mail d'invitation à ${nomComplet} (${f['Mail'] || 'aucun email'}) ?`)) return;
+    if (!(await confirmerAction(`Renvoyer le mail d'invitation à ${nomComplet} (${f['Mail'] || 'aucun email'}) ?`, { okLabel: 'Renvoyer', icone: '✉️', danger: false }))) return;
     afficherInvitation(record);
     const zone = document.getElementById('membre-invitation');
     if (zone) zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -817,7 +817,7 @@ async function sauvegarderMembre(event) {
 
 async function supprimerMembre() {
     if (!idMembreEnEdition) return;
-    if (!confirm('Confirmer la suppression de ce membre ?')) return;
+    if (!(await confirmerSuppression('Confirmer la suppression de ce membre ?'))) return;
     const prenom = document.getElementById('edit-membre-prenom')?.value?.trim() || '';
     const nom = document.getElementById('edit-membre-nom')?.value?.trim() || '';
     await supprimerMembreDepuisListe(idMembreEnEdition, `${prenom} ${nom}`.trim());
@@ -826,7 +826,7 @@ async function supprimerMembre() {
 
 async function supprimerMembreDepuisListe(recordId, nomComplet = '') {
     if (!recordId) return;
-    if (!confirm(nomComplet ? `Confirmer la suppression de ${nomComplet} ?` : 'Confirmer la suppression de ce membre ?')) return;
+    if (!(await confirmerSuppression(nomComplet ? `Confirmer la suppression de ${nomComplet} ?` : 'Confirmer la suppression de ce membre ?'))) return;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { method: 'DELETE', headers });
         if (!res.ok) {

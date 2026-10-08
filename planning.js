@@ -602,7 +602,7 @@ async function supprimerReservation() {
         return;
     }
 
-    if (!confirm("Es-tu sûr de vouloir supprimer cette réservation ?")) return;
+    if (!(await confirmerSuppression("Es-tu sûr de vouloir supprimer cette réservation ?"))) return;
 
     try {
         const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Réservations')}?records[]=${idReservationEnEdition}`, {
@@ -2369,7 +2369,7 @@ function initGestionnaireModaleVIPlaneur() {
     if (btnDeleteVI) {
         btnDeleteVI.addEventListener('click', async () => {
             if (!idVIModale || tableVIModale !== 'VI Planeur') return;
-            if (!confirm("Es-tu sûr de vouloir supprimer ce VI Planeur ?")) return;
+            if (!(await confirmerSuppression("Es-tu sûr de vouloir supprimer ce VI Planeur ?"))) return;
             try {
                 const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Planeur')}?records[]=${idVIModale}`, {
                     method: 'DELETE',
@@ -2843,7 +2843,7 @@ function initGestionnaireModale() {
                 const conflit = await verifierConflitDisponibiliteInstructeur(instructeur, localDebut, localFin, machineNom, typeMachineSel);
                 const libelleDisc = typeMachineSel === 'avion' ? 'en avion' : typeMachineSel === 'ulm' ? 'en ULM' : typeMachineSel === 'planeur' ? 'en planeur' : '';
                 const msg = `L'instructeur n'est pas disponible${libelleDisc ? ' ' + libelleDisc : ''} sur ce créneau. Voulez-vous quand même réserver ?`;
-                if (conflit && !confirm(msg)) return;
+                if (conflit && !(await confirmerAction(msg, { okLabel: 'Réserver quand même', icone: '⚠️' }))) return;
             }
             if (isVI) {
                 if (!prenomPassager || !nomPassager) {
@@ -2901,7 +2901,7 @@ function initGestionnaireModale() {
                                 alert(`Un créneau ${typeVI} existe déjà le ${dateStr} de ${hDebut} à ${hFin} (statut : ${identique.fields['Statut']}).`);
                                 return;
                             }
-                            if (!confirm(`Un créneau ${typeVI} disponible existe déjà le ${dateStr} de ${hDebut} à ${hFin}.\nLe vol sera réservé sur ce créneau existant. Continuer ?`)) return;
+                            if (!(await confirmerAction(`Un créneau ${typeVI} disponible existe déjà le ${dateStr} de ${hDebut} à ${hFin}.\nLe vol sera réservé sur ce créneau existant. Continuer ?`, { okLabel: 'Réserver ce créneau', icone: '📋', danger: false }))) return;
                             response = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
                                 method: 'PATCH',
                                 headers: headers,
@@ -2916,7 +2916,7 @@ function initGestionnaireModale() {
                             }
                             if (chevauches.length) {
                                 const liste = chevauches.map(r => `${r.fields['Heure début']} - ${r.fields['Heure fin']}`).join(', ');
-                                if (!confirm(`⚠️ Ce vol empiète sur ${chevauches.length} créneau(x) libre(s) :\n${liste}\n\nContinuer ? Les créneaux libres chevauchés seront supprimés.`)) return;
+                                if (!(await confirmerAction(`⚠️ Ce vol empiète sur ${chevauches.length} créneau(x) libre(s) :\n${liste}\n\nContinuer ? Les créneaux libres chevauchés seront supprimés.`, { okLabel: 'Continuer', icone: '⚠️' }))) return;
                                 for (const r of chevauches) {
                                     await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}/${r.id}`, { method: 'DELETE', headers });
                                 }
@@ -3095,7 +3095,7 @@ function initGestionnaireModale() {
             const resa = cache.find(r => r.id === idReservationEnEdition);
             const resaMachine = (resa && resa.fields && resa.fields['Machine'] || [])[0];
             const resaDate = resa && resa.fields && resa.fields['Date de début'] ? formaterDateISO(new Date(resa.fields['Date de début'])) : null;
-            if (!confirm("Es-tu sûr de vouloir supprimer cette réservation ?")) return;
+            if (!(await confirmerSuppression("Es-tu sûr de vouloir supprimer cette réservation ?"))) return;
             try {
                 const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Réservations')}?records[]=${idReservationEnEdition}`, {
                     method: 'DELETE',
@@ -3835,7 +3835,7 @@ async function convertirVolEnCreneauVI(vol) {
             }
             if (chevauches.length) {
                 const liste = chevauches.map(r => `${r.fields['Heure début']} - ${r.fields['Heure fin']}`).join(', ');
-                if (!confirm(`⚠️ Ce vol empiète sur ${chevauches.length} créneau(x) libre(s) :\n${liste}\n\nContinuer ? Les créneaux libres chevauchés seront supprimés.`)) return null;
+                if (!(await confirmerAction(`⚠️ Ce vol empiète sur ${chevauches.length} créneau(x) libre(s) :\n${liste}\n\nContinuer ? Les créneaux libres chevauchés seront supprimés.`, { okLabel: 'Continuer', icone: '⚠️' }))) return null;
                 for (const r of chevauches) {
                     await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}/${r.id}`, { method: 'DELETE', headers });
                 }
@@ -3878,7 +3878,7 @@ async function convertirVolEnCreneauVI(vol) {
 async function nettoyerArchivesVI(vols) {
     const cibles = (vols || []).filter(v => !v.passager && v.id);
     if (!cibles.length) return;
-    if (!confirm(`Supprimer définitivement ${cibles.length} vol(s) sans passager des archives ?`)) return;
+    if (!(await confirmerSuppression(`Supprimer définitivement ${cibles.length} vol(s) sans passager des archives ?`))) return;
     const parTable = {};
     cibles.forEach(v => {
         const table = v.source === 'moteur' ? 'Réservations' : (v.source === 'creneau' ? 'VI Créneaux' : 'VI Planeur');
@@ -3908,7 +3908,7 @@ async function nettoyerArchivesVI(vols) {
 async function supprimerCreneauxSelection(ids) {
     if (!hasRoleGestionVI()) return;
     if (!ids || !ids.length) return;
-    if (!confirm(`Supprimer ${ids.length} créneau(x) sélectionné(s) ?`)) return;
+    if (!(await confirmerSuppression(`Supprimer ${ids.length} créneau(x) sélectionné(s) ?`))) return;
     try {
         const qs = ids.map(id => `records[]=${encodeURIComponent(id)}`).join('&');
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?${qs}`, {
@@ -4384,7 +4384,7 @@ async function supprimerCreneauVI(vol) {
     if (!hasRoleGestionVI()) return;
     if (!vol || !vol.id) return;
     const table = vol._table || 'VI Créneaux';
-    if (!confirm('Es-tu sûr de vouloir supprimer ce créneau ?')) return;
+    if (!(await confirmerSuppression('Es-tu sûr de vouloir supprimer ce créneau ?'))) return;
     try {
         const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}?records[]=${vol.id}`, {
             method: 'DELETE',

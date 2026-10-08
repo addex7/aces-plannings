@@ -357,7 +357,7 @@ async function chargerProchaineJournee() {
             listeAvionsCache = typeof trierAvionsParImmat === 'function' ? trierAvionsParImmat(recordsAv) : recordsAv;
         } catch (e) { /* pas bloquant */ }
     }
-    for (const s of sources) {
+    await Promise.all(sources.map(async (s) => {
         try {
             // Pour les réservations, filtrer sur la fin : un vol en cours reste affiché
             const champFutur = s.finField || s.dateField;
@@ -382,7 +382,7 @@ async function chargerProchaineJournee() {
         } catch (err) {
             console.warn('Prochaine journée', s.table, err);
         }
-    }
+    }));
     matches.sort((a, b) => a.date - b.date);
     const next = matches[0];
     if (!next) return { text: '-', date: null, label: 'Aucune inscription', detail: '' };
@@ -810,7 +810,7 @@ function parseDestinataires(str) {
 
 async function retirerMessageClub(recordId) {
     if (!peutEcrireMessagesClub()) { alert('Seuls les super-administrateurs peuvent retirer un message club.'); return; }
-    if (!confirm('Retirer ce message du Messages club ?\nIl restera dans les boîtes mail des membres.')) return;
+    if (!(await confirmerAction('Retirer ce message du Messages club ?\nIl restera dans les boîtes mail des membres.', { okLabel: 'Retirer', icone: '📨' }))) return;
     const table = typeof TABLE_MESSAGERIE !== 'undefined' ? TABLE_MESSAGERIE : 'Messagerie';
     try {
         const getRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}/${recordId}`, { headers });

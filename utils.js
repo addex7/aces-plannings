@@ -650,3 +650,111 @@ function demanderDateModal(dateInitiale) {
         input.focus();
     });
 }
+
+// ==========================================================================
+// MODALES GENERIQUES - remplacent alert(), confirm() et prompt() natifs.
+// ==========================================================================
+
+// alert() natif -> modale non bloquante. Le texte est echappe, les \n deviennent
+// des <br>. Fallback sur l'alert natif si la modale n'est pas encore chargee.
+const __alertNatif = window.alert.bind(window);
+window.alert = function(message) {
+    if (typeof afficherModaleAlerte !== 'function') return __alertNatif(message);
+    const texte = String(message === undefined || message === null ? '' : message);
+    const estErreur = /^err/i.test(texte.trim());
+    const html = `<p style="margin:0; white-space:pre-wrap;">${escapeHtml(texte).replace(/\n/g, '<br>')}</p>`;
+    try {
+        afficherModaleAlerte(estErreur ? 'Erreur' : 'Information', html, estErreur ? '❌' : 'ℹ️');
+    } catch (e) {
+        __alertNatif(message);
+    }
+};
+
+// confirm() natif -> Promise<boolean>. Libelles/icones personnalisables.
+function demanderConfirmation(titre, messageHtml, opts = {}) {
+    const { okLabel = 'Confirmer', cancelLabel = 'Annuler', icone = '❓', danger = true } = opts;
+    return new Promise(resolve => {
+        const existing = document.getElementById('confirm-modal-generique');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'confirm-modal-generique';
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.style.zIndex = '20000';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width: 420px; text-align: left;">
+                <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                    <span style="font-size:26px;">${icone}</span>
+                    <span>${escapeHtml(titre)}</span>
+                </h3>
+                <div style="margin-top:15px; line-height:1.6; font-size:15px; color:#334155;">${messageHtml}</div>
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                    <button type="button" class="nr-btn-cancel" id="confirm-gen-cancel">${escapeHtml(cancelLabel)}</button>
+                    <button type="button" id="confirm-gen-ok" style="background:${danger ? '#dc2626' : '#1e3d59'}; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600;">${escapeHtml(okLabel)}</button>
+                </div>
+            </div>
+        `;
+        const fermer = val => { overlay.remove(); resolve(val); };
+        overlay.querySelector('#confirm-gen-cancel').addEventListener('click', () => fermer(false));
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) fermer(false); });
+        overlay.querySelector('#confirm-gen-ok').addEventListener('click', () => fermer(true));
+        overlay.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); fermer(true); }
+            if (e.key === 'Escape') { e.preventDefault(); fermer(false); }
+        });
+        document.body.appendChild(overlay);
+        overlay.setAttribute('tabindex', '-1');
+        overlay.focus();
+    });
+}
+
+// prompt() natif -> Promise<string|null>. Multiligne possible via opts.textarea.
+function demanderSaisie(titre, defaut = '', opts = {}) {
+    const { placeholder = '', okLabel = 'Valider', textarea = false } = opts;
+    return new Promise(resolve => {
+        const existing = document.getElementById('saisie-modal-generique');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'saisie-modal-generique';
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.style.zIndex = '20000';
+        const champ = textarea
+            ? `<textarea id="saisie-gen-input" rows="4" placeholder="${escapeHtml(placeholder)}" style="width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; font-family:inherit; color:#1e3d59; margin:6px 0 18px; resize:vertical;">${escapeHtml(defaut)}</textarea>`
+            : `<input type="text" id="saisie-gen-input" value="${escapeHtml(defaut)}" placeholder="${escapeHtml(placeholder)}" style="width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; font-family:inherit; color:#1e3d59; margin:6px 0 18px;">`;
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width: 380px; text-align: left;">
+                <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
+                    <span style="font-size:22px;">✏️</span>
+                    <span>${escapeHtml(titre)}</span>
+                </h3>
+                ${champ}
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" class="nr-btn-cancel" id="saisie-gen-cancel">Annuler</button>
+                    <button type="button" class="btn-primary" id="saisie-gen-ok">${escapeHtml(okLabel)}</button>
+                </div>
+            </div>
+        `;
+        const input = overlay.querySelector('#saisie-gen-input');
+        const fermer = val => { overlay.remove(); resolve(val); };
+        overlay.querySelector('#saisie-gen-cancel').addEventListener('click', () => fermer(null));
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) fermer(null); });
+        overlay.querySelector('#saisie-gen-ok').addEventListener('click', () => fermer(input.value));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !textarea) { e.preventDefault(); fermer(input.value); }
+            if (e.key === 'Escape') { e.preventDefault(); fermer(null); }
+        });
+        document.body.appendChild(overlay);
+        input.focus();
+        input.select();
+    });
+}
+
+// Raccourcis : texte brut auto-echappe, \n -> <br>.
+function confirmerAction(texte, opts = {}) {
+    const html = `<p style="margin:0; white-space:pre-wrap;">${escapeHtml(texte).replace(/\n/g, '<br>')}</p>`;
+    return demanderConfirmation(opts.titre || 'Confirmation', html, opts);
+}
+function confirmerSuppression(texte, titre = 'Confirmer la suppression') {
+    return confirmerAction(texte, { titre, okLabel: 'Supprimer', icone: '🗑️' });
+}

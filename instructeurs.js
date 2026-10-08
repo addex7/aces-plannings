@@ -200,7 +200,7 @@ function editerDisponibilite(record) {
 async function supprimerDisponibilite(record) {
     const f = record.fields || {};
     const dateFr = new Date(f['Date'] + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-    if (!confirm(`Supprimer la disponibilité du ${dateFr} de ${f['Heure début']} à ${f['Heure fin']} ?`)) return;
+    if (!(await confirmerSuppression(`Supprimer la disponibilité du ${dateFr} de ${f['Heure début']} à ${f['Heure fin']} ?`))) return;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}/${record.id}`, { method: 'DELETE', headers });
         if (!res.ok) throw new Error('Erreur Airtable');

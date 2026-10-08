@@ -498,11 +498,7 @@ function cvSupprimerVol(recId) {
             alert('Erreur lors de la suppression du vol.');
         }
     };
-    if (typeof afficherModaleConfirmation === 'function') {
-        afficherModaleConfirmation('Supprimer ce vol du carnet ?', '<p>Cette action est définitive.</p>', executer);
-    } else if (confirm('Supprimer ce vol de votre carnet ?')) {
-        executer();
-    }
+    confirmerSuppression('Supprimer ce vol de votre carnet ?').then(ok => { if (ok) executer(); });
 }
 
 function initCarnetVol() {

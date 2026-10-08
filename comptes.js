@@ -462,7 +462,7 @@ function afficherTransactions(records, container, piloteNom, showAll = comptesSh
 
     container.querySelectorAll('.comptes-delete').forEach(btn => {
         btn.addEventListener('click', async (ev) => {
-            if (!confirm('Supprimer cette recette manuelle ?')) return;
+            if (!(await confirmerSuppression('Supprimer cette recette manuelle ?'))) return;
             const id = ev.currentTarget.dataset.id;
             try {
                 await supprimerRecetteManuelle(id);

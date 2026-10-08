@@ -3219,6 +3219,27 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     margin: 0;
     font-size: 16px;
 }
+.notifications-header h4 {
+    flex: 1;
+}
+.notifications-tout-lu {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+.notifications-tout-lu:hover {
+    background: #eff6ff;
+}
+.notifications-tout-lu:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
 .notifications-close {
     background: none;
     border: none;

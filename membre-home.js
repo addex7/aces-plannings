@@ -198,7 +198,7 @@ function ouvrirModaleRolesMembre() {
                 const action = cb.checked ? 'Attribuer' : 'Retirer';
                 const ok = typeof docsConfirmer === 'function'
                     ? await docsConfirmer(`${action} un rôle`, `<p style="margin:0;">${action} le rôle <strong>« ${cb.dataset.role} »</strong> ${cb.checked ? 'à' : 'de'} <strong>${nom}</strong> ?</p>`, '👤', action, !cb.checked)
-                    : confirm(`${action} le rôle « ${cb.dataset.role} » ?`);
+                    : await confirmerAction(`${action} le rôle « ${cb.dataset.role} » ?`, { okLabel: action, icone: '👤', danger: !cb.checked });
                 if (!ok) { cb.checked = !cb.checked; return; }
                 const coches = modal.querySelectorAll('input[type="checkbox"][data-role]:checked');
                 membreSelectionne.roles = Array.from(coches).map(c => c.dataset.role);
@@ -206,7 +206,7 @@ function ouvrirModaleRolesMembre() {
                 // Attribution d'un role instructeur : demander le trigramme si absent
                 if (cb.checked && /instructeur/i.test(cb.dataset.role || '') && !(membreSelectionne.fields['Trigramme'] || '').trim()) {
                     const sugg = ((((membreSelectionne.prenom || '')[0]) || '') + ((membreSelectionne.nom || '').replace(/\s/g, '').slice(0, 2))).toUpperCase();
-                    const saisie = prompt(`Rôle instructeur attribué à ${nom}.\nTrigramme à enregistrer :`, sugg);
+                    const saisie = await demanderSaisie(`Trigramme instructeur — ${nom}`, sugg, { placeholder: 'ex : BQU' });
                     if (saisie && saisie.trim()) {
                         const tri = saisie.trim().toUpperCase().slice(0, 3);
                         try {
@@ -1002,7 +1002,7 @@ async function basculerArchiveDocumentMembre(id, archive) {
 
 async function renommerDocumentMembre(id, titreActuel) {
     if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
-    const nouveau = prompt('Nouveau nom du document :', titreActuel || '');
+    const nouveau = await demanderSaisie('Nouveau nom du document', titreActuel || '');
     if (nouveau === null) return;
     const titre = nouveau.trim();
     if (!titre) { alert('Le nom ne peut pas être vide.'); return; }
@@ -1024,7 +1024,7 @@ async function supprimerDocumentMembre(id, titre) {
     if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
     const okSuppr = typeof docsConfirmer === 'function'
         ? await docsConfirmer('Supprimer le document', `<p style="margin:0;">« <strong>${titre || 'Document'}</strong> » sera définitivement supprimé.</p>`, '🗑️', 'Supprimer', true)
-        : confirm('Supprimer définitivement ce document ?');
+        : await confirmerSuppression('Supprimer définitivement ce document ?');
     if (!okSuppr) return;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, {

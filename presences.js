@@ -93,7 +93,7 @@ async function modifierCommentaire(recordId, tableName, commentaireActuel, nom =
         alert("Tu ne peux modifier que ton propre commentaire.");
         return;
     }
-    const nouveauCommentaire = prompt("Ajouter un commentaire :", commentaireActuel || "");
+    const nouveauCommentaire = await demanderSaisie("Ajouter un commentaire", commentaireActuel || "", { textarea: true });
     if (nouveauCommentaire === null) return;
     try {
         const response = await cachedFetch(`${API_BASE}/${encodeURIComponent(tableName)}/${recordId}`, {
@@ -208,7 +208,7 @@ async function desinscrireClub(recordId) {
             alert("Tu n'as pas le droit de supprimer cette inscription.");
             return;
         }
-        if (!confirm("Voulez-vous supprimer cette inscription ?")) return;
+        if (!(await confirmerSuppression("Voulez-vous supprimer cette inscription ?"))) return;
         const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Club')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
         if (response.ok) {
             if (typeof enregistrerAudit === 'function' && rec) {
@@ -376,7 +376,7 @@ async function modifierHeuresInstructeurPlaneur(recordId, nom) {
         alert("Seul l'instructeur concerné peut modifier ses horaires.");
         return;
     }
-    const saisie = prompt("Tes horaires de dispo planeur (ex : 13-15, 13h30-15h, Max 17h, à partir de 14h) :", '');
+    const saisie = await demanderSaisie("Tes horaires de dispo planeur", '', { placeholder: 'ex : 13-15, 13h30-15h, Max 17h, à partir de 14h' });
     if (saisie === null) return;
     if (!saisie.trim()) return;
     if (!parseDureesCommentaire(saisie)) {
@@ -410,7 +410,7 @@ async function definirBriefingPlaneur(recordId, nom, briefingActuel) {
         alert("Seul l'instructeur concerné peut définir le briefing.");
         return;
     }
-    const saisie = prompt("Heure du briefing planeur (ex : 09:30, vide pour effacer) :", briefingActuel || '');
+    const saisie = await demanderSaisie("Heure du briefing planeur", briefingActuel || '', { placeholder: 'ex : 09:30 (vide pour effacer)' });
     if (saisie === null) return;
     let val = saisie.trim().toLowerCase().replace('h', ':');
     if (/^\d{1,2}$/.test(val)) val += ':00';
@@ -438,7 +438,7 @@ async function desinscrireInstructeurPlaneur(recordId, nom) {
         alert("Tu n'as pas le droit de supprimer cette inscription.");
         return;
     }
-    if (!confirm(`Retirer ${nom} des instructeurs planeur du jour ?`)) return;
+    if (!(await confirmerAction(`Retirer ${nom} des instructeurs planeur du jour ?`, { okLabel: 'Retirer', icone: '👋' }))) return;
     try {
         const dateStr = dateAffichee.toISOString().split('T')[0];
         const formula = `AND(IS_SAME({Date}, '${dateStr}', 'day'), {Rôle}='Instructeur')`;
@@ -629,7 +629,7 @@ async function desinscrirePlaneur(recordId) {
             alert("Tu n'as pas le droit de supprimer cette inscription.");
             return;
         }
-        if (!confirm("Voulez-vous supprimer cette inscription ?")) return;
+        if (!(await confirmerSuppression("Voulez-vous supprimer cette inscription ?"))) return;
         const response = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?records[]=${recordId}`, { method: 'DELETE', headers: headers });
         if (response.ok) {
             if (typeof enregistrerAudit === 'function' && rec) {

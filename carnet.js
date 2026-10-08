@@ -291,7 +291,7 @@ async function envoyerVolVersGvv() {
     }
     const d = f['Date'] ? new Date(f['Date']).toLocaleDateString('fr-FR') : '?';
     const recap = `${f['Pilote'] || '?'} — ${f['Machine'] || '?'} — ${d} — ${f['Temps de vol'] || 'durée inconnue'}`;
-    if (!confirm(`Envoyer ce vol vers GVV ?\n\n${recap}\n\nGVV créera l'écriture comptable correspondante sur le compte du payeur.`)) return;
+    if (!(await confirmerAction(`Envoyer ce vol vers GVV ?\n\n${recap}\n\nGVV créera l'écriture comptable correspondante sur le compte du payeur.`, { okLabel: 'Envoyer', icone: '📤', danger: false }))) return;
     const btn = document.getElementById('btn-gvv-carnet');
     try {
         if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
@@ -1701,7 +1701,7 @@ async function supprimerCarnetRoute() {
         alert("Tu n'as pas le droit de supprimer ce vol.");
         return;
     }
-    if (!confirm('Supprimer ce vol du carnet de route ?')) return;
+    if (!(await confirmerSuppression('Supprimer ce vol du carnet de route ?'))) return;
     const f = record && record.fields ? record.fields : {};
     const machine = f['Machine'] || '';
     const date = f['Date'] || '';
