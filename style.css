@@ -817,6 +817,39 @@ img, table, video, iframe, svg {
     font-size: 24px; cursor: pointer;
     color: #64748b;
 }
+/* --- CROIX DE FERMETURE GENERIQUE --- */
+.modal .modal-content {
+    position: relative;
+}
+.modal-close-x {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    color: #64748b;
+    background: none;
+    border: none;
+    padding: 0;
+    z-index: 5;
+}
+.modal-close-x:hover {
+    color: #1e3d59;
+}
+/* --- BOUTONS DE PIED DE MODALE : HAUTEUR STANDARDISEE --- */
+.nr-footer button,
+.modal .form-actions button {
+    min-height: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+#carnet-form.carnet-form-jvio .form-actions button {
+    min-height: 0;
+}
 #carnet-modal .modal-content {
     width: 100%;
     max-width: none;

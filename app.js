@@ -346,6 +346,31 @@ async function creerNotification(piloteNom, message, type = 'info', lien = '') {
 }
 
 /* ==========================================================================
+   FERMETURE DES MODALES PAR CROIX
+   Toute croix [class*="close-modal"] ou .modal-close-x ferme la .modal qui la
+   contient — filet de securite pour les croix sans handler dedie. Une croix
+   est injectee automatiquement dans les modales qui n'en ont pas.
+   ========================================================================== */
+document.addEventListener('click', (e) => {
+    const croix = e.target.closest('.modal-close-x, [class*="close-modal"]');
+    if (!croix) return;
+    const modale = croix.closest('.modal');
+    if (modale) modale.style.display = 'none';
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.modal .modal-content').forEach(content => {
+        if (content.querySelector('[class*="close"]')) return;
+        const croix = document.createElement('button');
+        croix.type = 'button';
+        croix.className = 'modal-close-x';
+        croix.innerHTML = '&times;';
+        croix.title = 'Fermer';
+        content.prepend(croix);
+    });
+});
+
+/* ==========================================================================
    ACTUALISATION AUTOMATIQUE DE LA VUE COURANTE
    Recharge les donnees de la vue affichee toutes les 60 s et au retour de
    focus sur l'onglet, sans intervention de l'utilisateur. Suspendu quand

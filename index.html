@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=276">
+    <link rel="stylesheet" href="style.css?v=277">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -985,8 +985,8 @@
                 </div>
                 <div class="nr-footer">
                     <button type="button" class="nr-btn-cancel" onclick="document.getElementById('reservation-modal').style.display='none'">Annuler</button>
-                    <button type="submit" class="nr-btn-save" id="btn-save-reservation"><span class="nr-icon-save">💾</span> Enregistrer</button>
                     <button type="button" id="btn-delete-reservation" style="display: none;">Supprimer</button>
+                    <button type="submit" class="nr-btn-save" id="btn-save-reservation"><span class="nr-icon-save">💾</span> Enregistrer</button>
                 </div>
             </form>
         </div>
@@ -1051,8 +1051,9 @@
                     <textarea id="form-vi-commentaire" rows="2" placeholder="Coordonnées, remarques..."></textarea>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn-submit">Enregistrer</button>
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('vi-planeur-modal').style.display='none'">Annuler</button>
                     <button type="button" id="btn-delete-vi-planeur" style="display: none;">Supprimer</button>
+                    <button type="submit" class="btn-submit">Enregistrer</button>
                 </div>
             </form>
         </div>
@@ -1281,8 +1282,8 @@
                 <div class="form-actions full-width">
                     <button type="button" id="btn-gvv-carnet" style="display:none;" title="Envoyer ce vol vers GVV (compta)">⇒ GVV</button>
                     <span id="carnet-gvv-statut" style="display:none;"></span>
-                    <button type="button" id="btn-delete-carnet" style="display:none;">Supprimer</button>
                     <button type="button" id="btn-cancel-carnet" class="btn-cancel">Annuler</button>
+                    <button type="button" id="btn-delete-carnet" style="display:none;">Supprimer</button>
                     <button type="submit" class="btn-submit">Enregistrer</button>
                 </div>
             </form>
@@ -1337,8 +1338,8 @@
                 </div>
                 <div class="nr-footer">
                     <button type="button" class="nr-btn-cancel" onclick="document.getElementById('maintenance-modal').style.display='none'">Annuler</button>
-                    <button type="submit" class="nr-btn-save"><span class="nr-icon-save">💾</span> Enregistrer</button>
                     <button type="button" id="btn-delete-maintenance" style="display:none;">Supprimer</button>
+                    <button type="submit" class="nr-btn-save"><span class="nr-icon-save">💾</span> Enregistrer</button>
                 </div>
             </form>
         </div>
@@ -1476,8 +1477,8 @@
                     </div>
                 </div>
                 <div class="nr-footer">
-                    <button type="button" id="cv-btn-supprimer" style="display:none; background:#dc2626; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600; margin-right:auto;">🗑️ Supprimer</button>
                     <button type="button" class="nr-btn-cancel" onclick="document.getElementById('carnet-vol-modal').style.display='none'">Annuler</button>
+                    <button type="button" id="cv-btn-supprimer" style="display:none; background:#dc2626; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Supprimer</button>
                     <button type="submit" class="nr-btn-save"><span class="nr-icon-save">💾</span> Enregistrer</button>
                 </div>
             </form>
@@ -1529,6 +1530,7 @@
                     </div>
                 </div>
                 <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('membre-modal').style.display='none'">Annuler</button>
                     <button type="button" id="btn-delete-membre" class="btn-delete">Supprimer</button>
                     <button type="submit" class="btn-submit">Enregistrer</button>
                 </div>
@@ -1623,8 +1625,8 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=95"></script>
-    <script src="version.js?v=20261008195124"></script>
-    <script src="app.js?v=97"></script>
+    <script src="version.js?v=20261008195551"></script>
+    <script src="app.js?v=98"></script>
     <script src="utils.js?v=121"></script>
     <script src="presences.js?v=105"></script>
     <script src="planning.js?v=227"></script>
