@@ -882,7 +882,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         await chargerListeMembresCache();
         if (forceRefresh || listeAvionsCache.length === 0) {
             const recordsAvions = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers }, API_CACHE_TTL, forceRefresh);
-            if (recordsAvions.length) listeAvionsCache = trierAvionsParImmat(recordsAvions);
+            listeAvionsCache = trierAvionsParImmat(recordsAvions);
         }
         const trouverAvionParImmat = (immat) => (listeAvionsCache || []).find(a => (a.fields['Immatriculation'] || a.fields['Nom'] || '').toString().trim().toUpperCase() === immat.toUpperCase());
         const avionJVIO = trouverAvionParImmat('F-JVIO');
@@ -903,7 +903,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         if (typeof afficherDisposInstructeurs !== 'undefined' && afficherDisposInstructeurs) {
             disposInstructeurs = await chargerDisponibilitesInstructeurs(dateAffichee, forceRefresh);
         }
-        if (recordsReservations.length) listeReservationsCache = recordsReservations;
+        listeReservationsCache = recordsReservations;
         let volsVIP = recordsVIPlaneur.filter(vol => {
             if (!vol.fields) return false;
             const debutRaw = vol.fields['Date de début'];

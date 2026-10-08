@@ -354,9 +354,7 @@ async function chargerProchaineJournee() {
     if (!(typeof listeAvionsCache !== 'undefined' && (listeAvionsCache || []).length)) {
         try {
             const recordsAv = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Aéronefs')}?pageSize=100`, { headers });
-            if (recordsAv.length) {
-                listeAvionsCache = typeof trierAvionsParImmat === 'function' ? trierAvionsParImmat(recordsAv) : recordsAv;
-            }
+            listeAvionsCache = typeof trierAvionsParImmat === 'function' ? trierAvionsParImmat(recordsAv) : recordsAv;
         } catch (e) { /* pas bloquant */ }
     }
     for (const s of sources) {
