@@ -250,7 +250,10 @@ function notifTrajectoirePotentiel(aeronef, reservations, carnets, maintenances)
 async function verifierPotentielReservations(avionIdRestreint = '') {
     try {
         const { aeronefs, reservations, carnets, maintenances } = await chargerContextePotentiel();
-        const machines = aeronefs.filter(a => !avionIdRestreint || a.id === avionIdRestreint);
+        const restreint = (avionIdRestreint || '').toString().trim().toUpperCase();
+        const machines = aeronefs.filter(a => !restreint
+            || a.id.toUpperCase() === restreint
+            || notifImmat(a).toUpperCase() === restreint);
         const membres = await notifChargerMembres();
         const clesEmises = await chargerClesNotifications();
         for (const aeronef of machines) {
