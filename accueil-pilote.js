@@ -350,6 +350,16 @@ async function chargerProchaineJournee() {
         { table: 'Événements', dateField: 'Date début', heureField: 'Heure début', presence: (f) => inscritEv(f['Inscrits']) }
     ];
     const matches = [];
+    // Charger le cache avions si besoin pour resoudre les machines liees
+    if (!(typeof listeAvionsCache !== 'undefined' && (listeAvionsCache || []).length)) {
+        try {
+            const resAv = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}?pageSize=100`, { headers });
+            const dataAv = await resAv.json();
+            if (resAv.ok && dataAv.records) {
+                listeAvionsCache = typeof trierAvionsParImmat === 'function' ? trierAvionsParImmat(dataAv.records) : dataAv.records;
+            }
+        } catch (e) { /* pas bloquant */ }
+    }
     for (const s of sources) {
         try {
             // Pour les réservations, filtrer sur la fin : un vol en cours reste affiché
