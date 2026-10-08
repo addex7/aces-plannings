@@ -1401,7 +1401,8 @@ async function ouvrirBilanDocumentsAeronefs() {
         if (Array.isArray(liste)) liste.forEach(m => { if (!machines.includes(m)) machines.push(m); });
     });
     Object.keys(parMachine).sort().forEach(m => {
-        if (!machines.includes(m) && !machinesExclues.includes(m)) machines.push(m);
+        // Une remorque/machine exclue est tout de même affichée si des documents existent
+        if (!machines.includes(m) && (!machinesExclues.includes(m) || (parMachine[m] || []).length)) machines.push(m);
     });
 
     const TYPE_DECL_ULM = "Déclaration d'aptitude au vol d'un ULM";
