@@ -280,8 +280,8 @@ function renderAccueilMembre(fields) {
             ligne('Mail', 'Mail', fields['Mail'], 'email') +
             ligne('Identifiant', 'Identifiant', fields['Identifiant'], 'text') +
             (editable
-                ? `<div class="accueil-info"><span class="accueil-info-label">Mot de passe</span><input type="password" class="accueil-info-input" data-field="Mot de passe" value="" placeholder="${fields['Mot de passe'] ? '••••••••' : 'Non défini'}" autocomplete="new-password"></div>`
-                : ligneLecture('Mot de passe', fields['Mot de passe'] ? '••••••••' : '')) +
+                ? `<div class="accueil-info"><span class="accueil-info-label">Mot de passe</span><input type="password" class="accueil-info-input" data-field="Mot de passe" value="" placeholder="••••••••" autocomplete="new-password"></div>`
+                : ligneLecture('Mot de passe', '••••••••')) +
             ligne('Téléphone', 'Téléphone', fields['Téléphone'], 'text') +
             ligne('Date de naissance', 'Date de naissance', dn, editable ? 'date' : 'text') +
             ligneLecture('Âge', age, 'accueil-age-val') +

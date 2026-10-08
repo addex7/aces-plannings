@@ -105,10 +105,12 @@ function initAuth() {
         return;
     }
     const saved = localStorage.getItem('currentUser');
-    if (saved) {
+    const session = localStorage.getItem('acesSession');
+    if (saved && session) {
         try {
             const parsed = JSON.parse(saved);
             if (parsed && parsed.id) {
+                headers.Authorization = `Bearer ${session}`;
                 setCurrentUser(parsed);
                 showApp();
                 if (typeof appliquerAccesDocumentaire === 'function') appliquerAccesDocumentaire();
@@ -116,8 +118,10 @@ function initAuth() {
             }
         } catch (e) {
             localStorage.removeItem('currentUser');
+            localStorage.removeItem('acesSession');
         }
     }
+    if (saved) localStorage.removeItem('currentUser');
     showLogin();
 }
 
@@ -146,26 +150,25 @@ async function chargerInvitation(recordId) {
     const setup = document.getElementById('setup-overlay');
     const nameEl = document.getElementById('setup-name');
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
+        const res = await fetch(`${AUTH_BASE}/invite/${encodeURIComponent(recordId)}`);
         if (!res.ok) {
             setupError(res.status === 404
                 ? 'Ce lien d\'invitation n\'est plus valide. Vous avez probablement cliqué sur un <strong>ancien lien</strong> : si plusieurs invitations vous ont été envoyées, ouvrez le mail <strong>le plus récent</strong>. Sinon, demandez un nouvel envoi à l\'administrateur.'
                 : 'Erreur lors du chargement de l\'invitation.');
             return;
         }
-        const record = await res.json();
-        if (!record || !record.id || record.fields['Actif']) {
+        const data = await res.json();
+        if (data.actif) {
             setupError('Lien d\'invitation invalide ou déjà utilisé — si plusieurs invitations vous ont été envoyées, ouvrez le mail <strong>le plus récent</strong>.');
             return;
         }
-        setup.dataset.recordId = record.id;
+        setup.dataset.recordId = recordId;
         setup.dataset.mode = 'setup';
-        const f = record.fields || {};
         const h2 = setup.querySelector('h2');
         const btn = document.getElementById('btn-setup');
         const identifiantInput = document.getElementById('setup-identifiant');
         if (h2) h2.textContent = 'Créer mon compte';
-        if (nameEl) nameEl.textContent = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+        if (nameEl) nameEl.textContent = `${data.prenom || ''} ${data.nom || ''}`.trim();
         if (identifiantInput) { identifiantInput.value = ''; identifiantInput.disabled = false; }
         if (btn) btn.textContent = 'Activer mon compte';
     } catch (err) {
@@ -193,17 +196,15 @@ async function chargerReset(recordId) {
     const btn = document.getElementById('btn-setup');
     const identifiantInput = document.getElementById('setup-identifiant');
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, { headers });
-        const record = await res.json();
-        if (!res.ok) throw new Error(record.error?.message || 'Erreur');
-        if (!record || !record.id) { setupError('Lien de réinitialisation invalide.'); return; }
-        if (!record.fields['Actif']) { setupError('Ce compte n\'est pas actif.'); return; }
-        setup.dataset.recordId = record.id;
+        const res = await fetch(`${AUTH_BASE}/invite/${encodeURIComponent(recordId)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        if (!data.actif) { setupError('Lien de réinitialisation invalide ou compte inactif.'); return; }
+        setup.dataset.recordId = recordId;
         setup.dataset.mode = 'reset';
-        const f = record.fields || {};
         if (h2) h2.textContent = 'Réinitialiser mon mot de passe';
-        if (nameEl) nameEl.textContent = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
-        if (identifiantInput) { identifiantInput.value = f['Identifiant'] || ''; identifiantInput.disabled = true; }
+        if (nameEl) nameEl.textContent = `${data.prenom || ''} ${data.nom || ''}`.trim();
+        if (identifiantInput) { identifiantInput.value = data.identifiant || ''; identifiantInput.disabled = true; }
         if (btn) btn.textContent = 'Réinitialiser le mot de passe';
     } catch (err) {
         console.error(err);
@@ -236,39 +237,18 @@ async function seConnecter() {
     const motDePasse = document.getElementById('login-password').value;
     if (!identifiant || !motDePasse) { alert('Identifiant et mot de passe sont requis.'); return; }
     try {
-        const champ = identifiant;
-        const formula = `AND(OR({Identifiant}='${champ}', {Mail}='${champ}'), {Actif}=1)`;
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}`, { headers });
+        const res = await fetch(`${AUTH_BASE}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifiant, motDePasse })
+        });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        const record = (data.records || [])[0];
-        const stocke = record ? (record.fields['Mot de passe'] || '').toString() : '';
-        const hashSaisi = await hacherMotDePasse(motDePasse);
-        if (!record || (stocke !== hashSaisi && stocke !== motDePasse)) {
-            alert('Identifiant ou mot de passe incorrect.');
+        if (!res.ok) {
+            alert(data.error?.message || 'Identifiant ou mot de passe incorrect.');
             return;
         }
-        // Migration : remplace un mot de passe stocké en clair par son empreinte
-        if (stocke === motDePasse && stocke !== hashSaisi) {
-            try {
-                await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${record.id}`, {
-                    method: 'PATCH',
-                    headers,
-                    body: JSON.stringify({ fields: { 'Mot de passe': hashSaisi } })
-                });
-            } catch (e) { console.error('Migration hash mot de passe', e); }
-        }
-        const f = record.fields || {};
-        currentUser = {
-            id: record.id,
-            prenom: f['Prénom'],
-            nom: f['Nom'],
-            mail: f['Mail'],
-            telephone: f['Téléphone'],
-            identifiant: f['Identifiant'],
-            roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean),
-            compteGvv: f['Compte GVV'] || ''
-        };
+        definirTokenSession(data.token);
+        currentUser = data.user;
         setCurrentUser(currentUser);
         showApp();
     if (typeof appliquerAccesDocumentaire === 'function') appliquerAccesDocumentaire();
@@ -279,6 +259,8 @@ async function seConnecter() {
 }
 
 function seDeconnecter() {
+    fetch(`${AUTH_BASE}/logout`, { method: 'POST', headers }).catch(() => {});
+    definirTokenSession(null);
     setCurrentUser(null);
     location.reload();
 }
@@ -295,35 +277,17 @@ async function validerSetup() {
     if (!motDePasse) { alert('Mot de passe requis.'); return; }
     if (mode === 'setup' && !identifiant) { alert('Identifiant requis.'); return; }
     if (motDePasse !== confirmation) { alert('Les mots de passe ne correspondent pas.'); return; }
-    const fields = { 'Mot de passe': await hacherMotDePasse(motDePasse) };
-    if (mode === 'setup') {
-        fields['Identifiant'] = identifiant;
-        fields['Actif'] = true;
-    }
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${recordId}`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ fields })
+        const res = await fetch(`${AUTH_BASE}/activate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recordId, mode, identifiant, motDePasse })
         });
-        if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error?.message || 'Erreur Airtable ' + res.status);
-        }
-        const record = await res.json();
-        const f = record.fields || {};
-        currentUser = {
-            id: record.id,
-            prenom: f['Prénom'],
-            nom: f['Nom'],
-            mail: f['Mail'],
-            telephone: f['Téléphone'],
-            identifiant: f['Identifiant'],
-            roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean),
-            compteGvv: f['Compte GVV'] || ''
-        };
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Erreur ' + res.status);
+        definirTokenSession(data.token);
+        currentUser = data.user;
         setCurrentUser(currentUser);
-        if (typeof enregistrerAudit === 'function') enregistrerAudit('Activation de compte', `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), `Mode : ${mode}`, 'Membres');
         const url = new URL(window.location.href);
         url.searchParams.delete('token');
         url.searchParams.delete('reset');
@@ -352,14 +316,15 @@ async function envoyerReset() {
     if (!email) { if (status) status.textContent = 'Email requis.'; return; }
     if (status) status.textContent = 'Recherche du compte...';
     try {
-        const formula = `AND({Mail}='${email}', {Actif}=1)`;
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`, { headers });
+        const res = await fetch(`${AUTH_BASE}/forgot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mail: email })
+        });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        const record = (data.records || [])[0];
-        if (!record) { if (status) status.textContent = 'Aucun compte actif trouvé avec cet email.'; return; }
-        const f = record.fields || {};
-        const resetUrl = `${PUBLIC_URL}?reset=${record.id}`;
+        if (!res.ok) { if (status) status.textContent = data.error?.message || 'Aucun compte actif trouvé.'; return; }
+        const f = { 'Prénom': data.prenom || '' };
+        const resetUrl = `${PUBLIC_URL}?reset=${data.recordId}`;
         if (status) status.textContent = 'Envoi de l\'email...';
         const envoyeServeur = await envoyerEmailServeur(email, f['Prénom'] || '', resetUrl, 'reset');
         if (envoyeServeur) {

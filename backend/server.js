@@ -65,11 +65,276 @@ function erreur(res, status, message) {
     res.status(status).json({ error: { type: 'ERROR', message } });
 }
 
-// Auth : jeton partage (meme niveau que le PAT Airtable actuel)
-app.use((req, res, next) => {
-    if (req.path === '/health') return next();
-    const auth = req.headers.authorization || '';
-    if (auth !== `Bearer ${API_TOKEN}`) return erreur(res, 401, 'Non autorise');
+/* ==========================================================================
+   SESSIONS PAR UTILISATEUR
+   Le login verifie le mot de passe cote serveur et emet un jeton de session.
+   API_TOKEN reste accepte comme jeton PUBLIC restreint : il est embarque dans
+   reserver-vi.html et sert uniquement au parcours de reservation VI en ligne
+   (lecture VI/Aeronefs/Reservations, ecriture VI Creneaux + Audit).
+   ========================================================================== */
+const DUREE_SESSION_MS = 30 * 24 * 3600 * 1000; // 30 jours
+const SESSION_CACHE_TTL = 60 * 1000;
+const sessionsCache = new Map(); // token -> { user, chargeeLe }
+
+pool.query(`CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    cree_le TIMESTAMPTZ DEFAULT now(),
+    expire_le TIMESTAMPTZ NOT NULL
+)`).catch(e => console.error('Init table sessions:', e.message));
+setInterval(() => {
+    pool.query('DELETE FROM sessions WHERE expire_le < now()').catch(() => {});
+}, 3600 * 1000).unref();
+
+function hacherMdpServeur(mdp) {
+    return crypto.createHash('sha256').update('aces-planning-salt-v1:' + mdp).digest('hex');
+}
+
+async function resoudreSession(token) {
+    const hit = sessionsCache.get(token);
+    if (hit && Date.now() - hit.chargeeLe < SESSION_CACHE_TTL) return hit.user;
+    try {
+        const { rows } = await pool.query(
+            `SELECT u.id AS uid, u.fields
+             FROM sessions s JOIN utilisateurs u ON u.id = s.user_id
+             WHERE s.token = $1 AND s.expire_le > now()`,
+            [token]);
+        if (!rows.length) { sessionsCache.delete(token); return null; }
+        const f = rows[0].fields || {};
+        const user = {
+            id: rows[0].uid,
+            nom: `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(),
+            roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean)
+        };
+        sessionsCache.set(token, { user, chargeeLe: Date.now() });
+        return user;
+    } catch (e) {
+        console.error('Session:', e.message);
+        return null;
+    }
+}
+
+function sessionUserResponse(f, id) {
+    return {
+        id,
+        prenom: f['Prénom'],
+        nom: f['Nom'],
+        mail: f['Mail'],
+        telephone: f['Téléphone'],
+        identifiant: f['Identifiant'],
+        roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean),
+        compteGvv: f['Compte GVV'] || ''
+    };
+}
+
+// Anti force brute : 10 essais / 10 min / IP
+const essaisLogin = new Map();
+function loginThrottle(ip) {
+    const now = Date.now();
+    const e = essaisLogin.get(ip) || { n: 0, t: now };
+    if (now - e.t > 10 * 60 * 1000) { e.n = 0; e.t = now; }
+    e.n++;
+    essaisLogin.set(ip, e);
+    return e.n <= 10;
+}
+
+app.post('/v0/auth/login', async (req, res) => {
+    const idf = String((req.body || {}).identifiant || '').trim();
+    const mdp = String((req.body || {}).motDePasse || '');
+    if (!idf || !mdp) return erreur(res, 400, 'Identifiant et mot de passe requis');
+    if (!loginThrottle(req.ip)) return erreur(res, 429, 'Trop de tentatives, réessayez plus tard');
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, fields FROM utilisateurs
+             WHERE (fields->>'Identifiant' = $1 OR lower(fields->>'Mail') = lower($1))
+             LIMIT 1`,
+            [idf]);
+        const u = rows[0];
+        const f = (u && u.fields) || {};
+        const actif = !!f['Actif'] && !['false', '0', 'non', 'Non'].includes(String(f['Actif']));
+        const stocke = String(f['Mot de passe'] || '');
+        const hash = hacherMdpServeur(mdp);
+        if (!u || !actif || (stocke !== hash && stocke !== mdp)) {
+            return erreur(res, 401, 'Identifiant ou mot de passe incorrect');
+        }
+        // Migration : remplace un mot de passe stocke en clair par son empreinte
+        if (stocke === mdp && stocke !== hash) {
+            const nf = { ...f, 'Mot de passe': hash };
+            pool.query('UPDATE utilisateurs SET fields = $1 WHERE id = $2', [JSON.stringify(nf), u.id]).catch(() => {});
+            f['Mot de passe'] = hash;
+        }
+        const token = crypto.randomBytes(32).toString('hex');
+        await pool.query(
+            'INSERT INTO sessions (token, user_id, expire_le) VALUES ($1, $2, $3)',
+            [token, u.id, new Date(Date.now() + DUREE_SESSION_MS)]);
+        res.json({ token, user: sessionUserResponse(f, u.id) });
+        journaliserEcriture(req, 'Utilisateurs', 'Connexion', `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim(), u.id);
+    } catch (e) {
+        console.error('Login:', e);
+        erreur(res, 500, 'Erreur de connexion');
+    }
+});
+
+app.post('/v0/auth/logout', (req, res) => {
+    const m = (req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
+    if (m) {
+        sessionsCache.delete(m[1]);
+        pool.query('DELETE FROM sessions WHERE token = $1', [m[1]]).catch(() => {});
+    }
+    res.json({ ok: true });
+});
+
+// Infos minimales pour la page d'activation / reinitialisation
+// (le recordId sert de capacite : il n'est pas enumerable).
+app.get('/v0/auth/invite/:id', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT fields FROM utilisateurs WHERE id = $1', [req.params.id]);
+        if (!rows.length) return erreur(res, 404, 'Compte introuvable');
+        const f = rows[0].fields || {};
+        res.json({
+            prenom: f['Prénom'] || '',
+            nom: f['Nom'] || '',
+            identifiant: f['Identifiant'] || '',
+            actif: !!f['Actif'] && !['false', '0', 'non', 'Non'].includes(String(f['Actif']))
+        });
+    } catch (e) { erreur(res, 500, e.message); }
+});
+
+// Activation de compte ou reinitialisation : applique uniquement les champs
+// d'identite (jamais Rôles/validités), cree une session et la renvoie.
+app.post('/v0/auth/activate', async (req, res) => {
+    const { recordId, mode, identifiant, motDePasse } = req.body || {};
+    const mdp = String(motDePasse || '');
+    if (!recordId || !mdp) return erreur(res, 400, 'Paramètres incomplets');
+    if (mode === 'setup' && !String(identifiant || '').trim()) return erreur(res, 400, 'Identifiant requis');
+    try {
+        const { rows } = await pool.query('SELECT fields FROM utilisateurs WHERE id = $1', [recordId]);
+        if (!rows.length) return erreur(res, 404, 'Lien invalide');
+        const f = rows[0].fields || {};
+        if (mode === 'setup' && f['Actif'] && !['false', '0', 'non', 'Non'].includes(String(f['Actif']))) {
+            return erreur(res, 409, 'Compte déjà activé');
+        }
+        const nf = { ...f, 'Mot de passe': hacherMdpServeur(mdp) };
+        if (mode === 'setup') {
+            nf['Identifiant'] = String(identifiant).trim();
+            nf['Actif'] = true;
+        }
+        await pool.query('UPDATE utilisateurs SET fields = $1 WHERE id = $2', [JSON.stringify(nf), recordId]);
+        const token = crypto.randomBytes(32).toString('hex');
+        await pool.query(
+            'INSERT INTO sessions (token, user_id, expire_le) VALUES ($1, $2, $3)',
+            [token, recordId, new Date(Date.now() + DUREE_SESSION_MS)]);
+        res.json({ token, user: sessionUserResponse(nf, recordId) });
+        journaliserEcriture(req, 'Utilisateurs', mode === 'setup' ? 'Activation de compte' : 'Réinitialisation mot de passe',
+            `${nf['Prénom'] || ''} ${nf['Nom'] || ''}`.trim(), recordId);
+    } catch (e) {
+        console.error('Activate:', e);
+        erreur(res, 500, "Erreur lors de l'activation");
+    }
+});
+
+// Recherche de compte pour "mot de passe oublié" : le jeton public ne peut
+// plus lister Utilisateurs, cette route rend le service sans exposer la table.
+app.post('/v0/auth/forgot', async (req, res) => {
+    const mail = String((req.body || {}).mail || '').trim();
+    if (!mail) return erreur(res, 400, 'Email requis');
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, fields FROM utilisateurs
+             WHERE lower(fields->>'Mail') = lower($1)
+               AND (fields->>'Actif')::text NOT IN ('false', '0', 'non', 'Non', '')
+             LIMIT 1`,
+            [mail]);
+        if (!rows.length) return erreur(res, 404, 'Aucun compte actif trouvé avec cet email.');
+        const f = rows[0].fields || {};
+        res.json({ recordId: rows[0].id, prenom: f['Prénom'] || '' });
+    } catch (e) {
+        console.error('Forgot:', e);
+        erreur(res, 500, 'Erreur de recherche');
+    }
+});
+
+// --- ACCES PUBLIC RESTREINT (jeton partage, page reserver-vi.html) ---
+const TABLES_LECTURE_PUBLIQUE = new Set(['vi_creneaux', 'aeronefs', 'reservations']);
+const TABLES_ECRITURE_PUBLIQUE = new Set(['vi_creneaux', 'audit']);
+
+// --- DROITS D'ÉCRITURE PAR TABLE ---
+// Non listee = tout membre authentifie. Pour les tables listees, l'un des
+// roles doit figurer dans la fiche Utilisateurs.
+const DROITS_ECRITURE = {
+    'Utilisateurs': ['Super admin'],
+    'Comptes Pilotes': ['Super admin', 'Trésorier'],
+    'Soldes GVV': ['Super admin', 'Trésorier'],
+    'Écritures GVV': ['Super admin', 'Trésorier'],
+    'Aéronefs': ['Super admin', 'Mécanicien', 'Trésorier', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'],
+    'Maintenance': ['Super admin', 'Mécanicien'],
+    'Documents Aéronefs': ['Super admin', 'Mécanicien', 'Documentaliste'],
+    'Documents': ['Super admin', 'Documentaliste'],
+    'Dossiers': ['Super admin', 'Documentaliste'],
+    'Signalements': ['Super admin', 'Mécanicien', 'Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'],
+};
+
+// Auto-edition : un membre peut modifier SA fiche, uniquement ces champs
+// (jamais Rôles, Actif, validités — reservés aux admins).
+const CHAMPS_SELF_UTILISATEUR = new Set([
+    'Mail', 'Identifiant', 'Mot de passe', 'Téléphone', 'Date de naissance',
+    'Lieu de naissance', 'Adresse', 'Trigramme', 'Photo', 'Fiche vérifiée',
+    'Numéro licence FFA', 'Numéro licence FFVP', 'Numéro licence FFPLUM',
+    'Autorisation parentale', 'Suivis actifs',
+    'Prénom', 'Nom', 'Compte GVV'
+]);
+// Un membre met a jour ces compteurs en enregistrant un vol.
+const CHAMPS_MEMBRE_AERONEF = new Set(['Horamètre actuel', 'Potentiel restant']);
+
+// Jamais renvoye au client : l'empreinte du mot de passe ne sert qu'au login.
+const CHAMPS_INVISIBLES_UTILISATEURS = ['Mot de passe'];
+function epurerRecordSensible(table, record) {
+    if (table !== 'utilisateurs' || !record.fields) return;
+    for (const c of CHAMPS_INVISIBLES_UTILISATEURS) delete record.fields[c];
+}
+
+function droitEcriture(req, res, tableNom, records) {
+    const table = TABLES[tableNom];
+    if (req.publicAccess) {
+        if (TABLES_ECRITURE_PUBLIQUE.has(table)) return true;
+        erreur(res, 403, 'Accès public limité à la réservation de VI');
+        return false;
+    }
+    const regles = DROITS_ECRITURE[tableNom];
+    if (!regles) return true;
+    if ((req.user.roles || []).some(r => regles.includes(r))) return true;
+    // Cas particuliers : auto-edition encadree (les marqueurs internes _x ne comptent pas).
+    const champsOk = (r, set) => Object.keys(r.fields || {}).every(c => c.startsWith('_') || set.has(c));
+    if (tableNom === 'Utilisateurs' && (req.method === 'PATCH' || req.method === 'PUT')) {
+        if ((records || []).every(r => r.id === req.user.id && champsOk(r, CHAMPS_SELF_UTILISATEUR))) return true;
+    }
+    if (tableNom === 'Aéronefs' && (req.method === 'PATCH' || req.method === 'PUT')) {
+        if ((records || []).every(r => champsOk(r, CHAMPS_MEMBRE_AERONEF))) return true;
+    }
+    if (tableNom === 'Signalements' && req.method === 'POST') return true; // tout membre signale
+    erreur(res, 403, `Droits insuffisants pour écrire sur ${tableNom}`);
+    return false;
+}
+
+function requireRoles(req, res, roles) {
+    if (req.user && (req.user.roles || []).some(r => roles.includes(r))) return true;
+    erreur(res, 403, 'Droits insuffisants');
+    return false;
+}
+
+// Auth : session utilisateur, ou jeton public restreint (reserver-vi.html).
+app.use(async (req, res, next) => {
+    if (req.path === '/health' || req.path.startsWith('/v0/auth')) return next();
+    const m = (req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
+    const token = m && m[1];
+    if (!token) return erreur(res, 401, 'Non autorise');
+    if (token === API_TOKEN) {
+        req.publicAccess = true;
+        return next();
+    }
+    const user = await resoudreSession(token);
+    if (!user) return erreur(res, 401, 'Session invalide ou expirée');
+    req.user = user;
     next();
 });
 
@@ -421,6 +686,7 @@ const uploadFichier = multer({
 });
 
 app.post('/v0/upload', (req, res) => {
+    if (req.publicAccess) return erreur(res, 403, 'Upload réservé aux membres');
     uploadFichier.single('file')(req, res, (err) => {
         if (err) {
             const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Fichier trop volumineux (50 Mo max)' : (err.message || 'Erreur upload');
@@ -441,6 +707,7 @@ let gvvSyncEnCours = false;
 let gvvSyncDernier = null;
 
 app.post('/v0/:base/sync-gvv', (req, res) => {
+    if (!requireRoles(req, res, ['Super admin', 'Trésorier'])) return;
     if (gvvSyncEnCours) return erreur(res, 409, 'Synchro GVV déjà en cours');
     gvvSyncEnCours = true;
     gvvSyncDernier = null;
@@ -468,6 +735,7 @@ app.get('/v0/:base/sync-gvv/statut', (req, res) => {
 let gvvMembresCache = null;
 let gvvMembresCacheAt = 0;
 app.get('/v0/:base/gvv-membres', async (req, res) => {
+    if (!requireRoles(req, res, ['Super admin', 'Trésorier'])) return;
     if (gvvMembresCache && Date.now() - gvvMembresCacheAt < 10 * 60 * 1000) {
         return res.json({ membres: gvvMembresCache, cache: true });
     }
@@ -487,6 +755,7 @@ app.get('/v0/:base/gvv-membres', async (req, res) => {
 // Bouton reserve aux super admin cote front. Cree le vol dans GVV (vols_avion),
 // ce qui declenche la facturation GVV, puis note l'id GVV sur le record.
 app.post('/v0/:base/gvv-vol', async (req, res) => {
+    if (!requireRoles(req, res, ['Super admin', 'Trésorier'])) return;
     const recordId = String((req.body || {}).recordId || '');
     if (!recordId) return erreur(res, 400, 'recordId requis');
     try {
@@ -530,6 +799,9 @@ app.post('/v0/:base/gvv-vol', async (req, res) => {
 app.get('/v0/:base/:table', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;
+    if (req.publicAccess && !TABLES_LECTURE_PUBLIQUE.has(table)) {
+        return erreur(res, 403, 'Lecture réservée aux membres');
+    }
     try {
         const params = [];
         let where = '';
@@ -578,7 +850,9 @@ app.get('/v0/:base/:table', async (req, res) => {
             });
         }
 
-        const body = { records: records.map(formatRecord) };
+        const recordsFmt = records.map(formatRecord);
+        recordsFmt.forEach(r => epurerRecordSensible(table, r));
+        const body = { records: recordsFmt };
         if (aPlus) body.offset = String(offset + pageSize);
         res.json(body);
     } catch (e) {
@@ -591,10 +865,15 @@ app.get('/v0/:base/:table', async (req, res) => {
 app.get('/v0/:base/:table/:id', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;
+    if (req.publicAccess && !TABLES_LECTURE_PUBLIQUE.has(table)) {
+        return erreur(res, 403, 'Lecture réservée aux membres');
+    }
     try {
         const { rows } = await pool.query(`SELECT id, fields, created_at FROM ${table} WHERE id = $1`, [req.params.id]);
         if (!rows.length) return erreur(res, 404, 'Record introuvable');
-        res.json(formatRecord(rows[0]));
+        const rec = formatRecord(rows[0]);
+        epurerRecordSensible(table, rec);
+        res.json(rec);
     } catch (e) {
         console.error('GET one:', e);
         erreur(res, 500, e.message);
@@ -607,6 +886,7 @@ app.get('/v0/:base/:table/:id', async (req, res) => {
 // l'utilisateur transmis par le header X-User-Name. La table audit elle-meme
 // est exclue (les entrees du journal ne doivent pas s'auto-journaliser).
 function utilisateurDepuis(req) {
+    if (req.user && req.user.nom) return req.user.nom;
     return (req.headers['x-user-name'] || '').toString().trim() || 'Visiteur';
 }
 
@@ -686,6 +966,7 @@ app.post('/v0/:base/:table', async (req, res) => {
         if (!records && req.body.fields) records = [{ fields: req.body.fields }];
         if (!Array.isArray(records) || !records.length) return erreur(res, 422, 'records manquant');
         const tableNom = decodeURIComponent(req.params.table || '');
+        if (!droitEcriture(req, res, tableNom, records)) return;
         const crees = [];
         const decalages = [];
         for (const r of records) {
@@ -767,6 +1048,7 @@ async function majRecords(req, res, remplacer) {
         const records = req.body.records;
         if (!Array.isArray(records) || !records.length) return erreur(res, 422, 'records manquant');
         const tableNom = decodeURIComponent(req.params.table || '');
+        if (!droitEcriture(req, res, tableNom, records)) return;
         let anciensMap = {};
         try {
             const idsMaj = records.map(r => r.id).filter(Boolean);
@@ -784,6 +1066,12 @@ async function majRecords(req, res, remplacer) {
             if (r.fields && r.fields._decalage) {
                 decalage = true;
                 delete r.fields._decalage;
+            }
+            // Un PUT de fiche ne recoit plus l'empreinte (champ epure en lecture) :
+            // on la preserve pour ne pas casser le compte.
+            if (remplacer && table === 'utilisateurs' && r.fields && !('Mot de passe' in r.fields)) {
+                const mp = anciensMap[r.id] && anciensMap[r.id]['Mot de passe'];
+                if (mp) r.fields['Mot de passe'] = mp;
             }
             let ancien = null;
             if (tableNom === 'VI Créneaux' && r.fields && r.fields['Statut'] === 'Disponible') {
@@ -837,14 +1125,19 @@ app.put('/v0/:base/:table', (req, res) => majRecords(req, res, true));
 async function majRecordUnitaire(req, res, remplacer) {
     const table = tableSql(req, res);
     if (!table) return;
+    const tableNom = decodeURIComponent(req.params.table || '');
     try {
         const fields = req.body.fields;
         if (!fields) return erreur(res, 422, 'fields manquant');
+        if (!droitEcriture(req, res, tableNom, [{ id: req.params.id, fields }])) return;
         let ancien = null;
         try {
             const { rows: av } = await pool.query(`SELECT fields FROM ${table} WHERE id = $1`, [req.params.id]);
             ancien = av.length ? av[0].fields : null;
         } catch (e) { console.error('Audit diff:', e); }
+        if (remplacer && table === 'utilisateurs' && !('Mot de passe' in fields) && ancien && ancien['Mot de passe']) {
+            fields['Mot de passe'] = ancien['Mot de passe'];
+        }
         const { rows } = await pool.query(
             remplacer
                 ? `UPDATE ${table} SET fields = $2 WHERE id = $1 RETURNING id, fields, created_at`
@@ -855,9 +1148,9 @@ async function majRecordUnitaire(req, res, remplacer) {
         res.json(formatRecord(rows[0]));
         const diff = diffChamps(ancien, fields);
         if (diff) {
-            journaliserEcriture(req, decodeURIComponent(req.params.table || ''), 'Modification',
+            journaliserEcriture(req, tableNom, 'Modification',
                 diff,
-                libelleRecord(rows[0].fields) || decodeURIComponent(req.params.table || ''));
+                libelleRecord(rows[0].fields) || tableNom);
         }
     } catch (e) {
         console.error('PATCH/PUT one:', e);
@@ -901,6 +1194,8 @@ async function supprimerIds(req, res, table, ids) {
 app.delete('/v0/:base/:table/:id', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;
+    const tableNom = decodeURIComponent(req.params.table || '');
+    if (!droitEcriture(req, res, tableNom, null)) return;
     try {
         await supprimerIds(req, res, table, [req.params.id]);
     } catch (e) {
@@ -911,6 +1206,8 @@ app.delete('/v0/:base/:table/:id', async (req, res) => {
 app.delete('/v0/:base/:table', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;
+    const tableNom = decodeURIComponent(req.params.table || '');
+    if (!droitEcriture(req, res, tableNom, null)) return;
     try {
         let ids = req.query['records[]'] || req.query.records;
         if (!ids) return erreur(res, 422, 'records manquant');

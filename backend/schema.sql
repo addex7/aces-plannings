@@ -154,3 +154,11 @@ CREATE TABLE IF NOT EXISTS gvv_ecritures (
 
 CREATE INDEX IF NOT EXISTS idx_gvv_ecritures_compte ON gvv_ecritures ((fields->>'Compte'));
 CREATE INDEX IF NOT EXISTS idx_gvv_ecritures_date   ON gvv_ecritures ((fields->>'Date'));
+
+-- Sessions utilisateurs (jetons emis par /v0/auth/login)
+CREATE TABLE IF NOT EXISTS sessions (
+    token       TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    cree_le     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expire_le   TIMESTAMPTZ NOT NULL
+);

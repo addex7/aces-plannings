@@ -6,14 +6,26 @@ let currentUser = null;
 
 // Configuration API (globale pour tous les modules)
 // Backend auto-heberge sur le VPS OVH (PostgreSQL + facade compatible Airtable)
+// API_TOKEN = jeton PUBLIC restreint : lecture VI/Aeronefs/Reservations et
+// parcours d'invitation uniquement. Apres connexion, headers.Authorization
+// porte le jeton de session personnel (droits selon les roles du membre).
 const API_TOKEN = '487b83e3d804b74ba432d76a5fe4fcb3a8fae00cd4714c0ec2582403b3b55efb';
 const AIRTABLE_PAT = API_TOKEN;
 const API_BASE = 'https://vps-1a4fbee9.vps.ovh.net/v0/glide2000';
+const AUTH_BASE = API_BASE.slice(0, API_BASE.lastIndexOf('/')) + '/auth';
 const TABLE_NOTIFICATIONS = 'Notifications';
 const headers = { 
     Authorization: `Bearer ${AIRTABLE_PAT}`,
     'Content-Type': 'application/json'
 };
+
+// Bascule l'app sur le jeton de session personnel (ou retour au jeton public).
+function definirTokenSession(token) {
+    headers.Authorization = token ? `Bearer ${token}` : `Bearer ${API_TOKEN}`;
+    if (token) localStorage.setItem('acesSession', token);
+    else localStorage.removeItem('acesSession');
+    if (typeof viderApiCache === 'function') viderApiCache();
+}
 
 // Variables globales partagées entre tous les modules
 let dateAffichee = new Date();

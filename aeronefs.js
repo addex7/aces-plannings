@@ -235,9 +235,19 @@ async function ouvrirModaleMaintenance(record = null) {
     const tachesInput = document.getElementById('maintenance-taches');
     if (tachesInput) tachesInput.value = f['Tâches'] || '';
     if (modal) modal.style.display = 'flex';
+    // Lecture seule pour les membres sans droit maintenance (le serveur refuserait l'ecriture).
+    const lectureSeule = !peutGererMaintenance();
+    const form = document.getElementById('maintenance-form');
+    if (form) {
+        form.querySelectorAll('input, textarea, select').forEach(el => { el.disabled = lectureSeule; });
+        const chips = form.querySelector('.nr-options-grid');
+        if (chips) { chips.style.pointerEvents = lectureSeule ? 'none' : ''; chips.style.opacity = lectureSeule ? '0.6' : ''; }
+        const saveBtn = form.querySelector('.nr-btn-save');
+        if (saveBtn) saveBtn.style.display = lectureSeule ? 'none' : '';
+    }
     const btnDelete = document.getElementById('btn-delete-maintenance');
     if (btnDelete) {
-        btnDelete.style.display = record ? 'inline-block' : 'none';
+        btnDelete.style.display = (record && !lectureSeule) ? 'inline-block' : 'none';
         btnDelete.onclick = record ? supprimerMaintenance : null;
     }
 }

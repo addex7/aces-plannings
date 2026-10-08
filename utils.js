@@ -288,6 +288,14 @@ function apiFetch(url, options = {}, maxEssais = 3) {
     // Dedoublonne les GET identiques deja en vol (clone pour ne pas consommer le body partage).
     if (method === 'GET' && _apiEnVol.has(cle)) return _apiEnVol.get(cle).then(r => r.clone());
     const promesse = _apiExecuterAvecRetry(url, opts, maxEssais);
+    // Session expirée ou révoquée : purge et retour à l'écran de connexion.
+    promesse.then(r => {
+        if (r && r.status === 401 && localStorage.getItem('acesSession')) {
+            localStorage.removeItem('acesSession');
+            localStorage.removeItem('currentUser');
+            location.reload();
+        }
+    }).catch(() => {});
     if (method === 'GET') {
         _apiEnVol.set(cle, promesse);
         promesse.finally(() => _apiEnVol.delete(cle)).catch(() => {});
