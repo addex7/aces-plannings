@@ -44,6 +44,7 @@ function setCurrentUser(user) {
     if (typeof appliquerAccesMaintenanceEtDocuments === 'function') appliquerAccesMaintenanceEtDocuments();
     if (typeof appliquerAccesComptes === 'function') appliquerAccesComptes();
     if (typeof chargerNotifications === 'function') chargerNotifications();
+    if (user && typeof verifierNotificationsMetier === 'function') verifierNotificationsMetier();
     if (typeof rafraichirMiniCalendrier === 'function') rafraichirMiniCalendrier();
     if (typeof renderMiniCalendrier === 'function') renderMiniCalendrier();
     if (user && document.readyState === 'complete') {

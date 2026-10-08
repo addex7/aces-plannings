@@ -570,6 +570,8 @@ async function sauvegarderReservation() {
         await chargerDonneesPlanning();
         await mettreAJourStatutCreneauxConflit(dateJour, avionId);
         await chargerVolsInitiation();
+        // Notification : alerte les pilotes dont le vol ferait passer le potentiel sous 0h
+        if (typeof verifierPotentielReservations === 'function') verifierPotentielReservations(avionId);
 
         // Fermer la modale
         const modal = document.getElementById('reservation-modal');
@@ -4760,6 +4762,7 @@ async function creerCreneauxVI(e) {
         alert(`${records.length} créneau(x) créé(s) sur ${dates.length} date(s).`);
         document.getElementById('form-creneaux-vi').reset();
         if (typeof chargerVolsInitiation === 'function') chargerVolsInitiation();
+        if (typeof notifierNouveauxCreneauxVI === 'function') notifierNouveauxCreneauxVI(type, dates);
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la création : ' + err.message);

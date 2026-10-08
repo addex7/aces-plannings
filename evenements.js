@@ -128,6 +128,8 @@ async function enregistrerEvenement(e) {
         chargerProchainsEvenements();
         chargerEvenementsJour();
         if (typeof enregistrerAudit === 'function') enregistrerAudit('Création d\'événement', titre, `Du ${dateDebut} ${heureDebut} au ${dateFin} ${heureFin}`, 'Événements');
+        const evtId = (data.records && data.records[0] && data.records[0].id) || '';
+        if (typeof notifierNouvelEvenement === 'function') notifierNouvelEvenement(evtId, titre, dateDebut, nom);
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la création de l\'événement.');

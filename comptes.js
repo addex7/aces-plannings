@@ -361,6 +361,7 @@ function afficherResume(records, summary, piloteNom, gvv) {
 
     const soldeGvv = (gvv && gvv['Solde'] !== undefined && gvv['Solde'] !== null && gvv['Solde'] !== '') ? Number(gvv['Solde']) : null;
     const soldeFinal = (soldeGvv !== null ? soldeGvv : solde) + enAttente;
+    if (soldeFinal < 0 && typeof notifierCompteNegatif === 'function') notifierCompteNegatif(piloteNom, soldeFinal);
 
     const html = `
         <div class="comptes-summary-card">
