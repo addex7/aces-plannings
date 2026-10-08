@@ -5251,3 +5251,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     color: #1e3d59;
     text-decoration: underline;
 }
+
+.info-vol-contact {
+    font-size: 11px;
+    margin-top: 3px;
+    opacity: 0.9;
+    line-height: 1.5;
+}

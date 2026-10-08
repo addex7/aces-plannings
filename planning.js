@@ -3330,12 +3330,22 @@ async function ouvrirModaleInformation(vol) {
     const duree = f['Temps estimé'] || '—';
     const commentaires = f['Commentaires'] || f['Commentaires VI'] || '';
     const membreInstructeur = instructeur !== '—' ? trouverMembreParField(instructeur) : null;
-    const personne = (photo, role, nom) => `
+    const contactHtml = (membre) => {
+        const mf = (membre && membre.fields) || {};
+        const tel = mf['Téléphone'] || '';
+        const mail = mf['Mail'] || '';
+        const parties = [];
+        if (tel) parties.push(`<a href="tel:${String(tel).replace(/\s/g, '')}" style="color:rgba(255,255,255,0.95); text-decoration:none;">📞 ${tel}</a>`);
+        if (mail) parties.push(`<a href="mailto:${mail}" style="color:rgba(255,255,255,0.95); text-decoration:none;">✉️ ${mail}</a>`);
+        return parties.length ? `<div class="info-vol-contact">${parties.join(' · ')}</div>` : '';
+    };
+    const personne = (photo, role, nom, membre) => `
         <div class="info-vol-personne">
             <img class="info-vol-photo" src="${photo}" alt="" onerror="this.style.visibility='hidden'">
             <div>
                 <div class="info-vol-role">${role}</div>
                 <div class="info-vol-pilote">${nom}</div>
+                ${contactHtml(membre)}
             </div>
         </div>`;
     const ligne = (icone, label, valeur) => `
@@ -3347,8 +3357,8 @@ async function ouvrirModaleInformation(vol) {
     content.innerHTML = `
         <div class="info-vol-header">
             <div class="info-vol-personnes">
-                ${personne(photoPilote, 'Pilote', pilote)}
-                ${instructeur !== '—' ? personne(urlPhotoMembre(membreInstructeur, instructeur), 'Instructeur', instructeur) : ''}
+                ${personne(photoPilote, 'Pilote', pilote, membrePilote)}
+                ${instructeur !== '—' ? personne(urlPhotoMembre(membreInstructeur, instructeur), 'Instructeur', instructeur, membreInstructeur) : ''}
             </div>
             <div class="info-vol-machine">✈️ ${machine}</div>
         </div>
