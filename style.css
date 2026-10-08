@@ -3233,6 +3233,18 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     line-height: 1.4;
     color: #1e3d59;
 }
+.notification-list {
+    margin: 6px 0 0;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #1e3d59;
+    max-height: 180px;
+    overflow-y: auto;
+}
+.notification-list li::marker {
+    color: #94a3b8;
+}
 .maintenance-bar {
     position: absolute;
     top: 0;

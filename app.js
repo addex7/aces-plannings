@@ -230,9 +230,17 @@ function afficherNotifications(records) {
         const type = f['Type'] || 'info';
         const lue = f['Lue'];
         const cls = lue ? 'notification-lue' : 'notification-non-lue';
+        const lignesMsg = message.split('\n').map(l => l.trim()).filter(Boolean);
+        let corps;
+        if (lignesMsg.length > 1) {
+            const puces = lignesMsg.slice(1).map(l => `<li>${escHtml(l.replace(/^[•\-]\s*/, ''))}</li>`).join('');
+            corps = `<p class="notification-message">${escHtml(lignesMsg[0])}</p><ul class="notification-list">${puces}</ul>`;
+        } else {
+            corps = `<p class="notification-message">${escHtml(message)}</p>`;
+        }
         return `<div class="notification-item ${cls}" data-id="${escHtml(r.id)}">
             <div class="notification-meta"><span class="notification-type">${escHtml(type)}</span><span class="notification-date">${escHtml(date)}</span></div>
-            <p class="notification-message">${escHtml(message)}</p>
+            ${corps}
         </div>`;
     }).join('');
     list.querySelectorAll('.notification-item').forEach(item => {
