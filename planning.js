@@ -3329,6 +3329,15 @@ async function ouvrirModaleInformation(vol) {
     const fin = f['Date de fin'] ? formaterDateHeureLocal(new Date(f['Date de fin'])) : '—';
     const duree = f['Temps estimé'] || '—';
     const commentaires = f['Commentaires'] || f['Commentaires VI'] || '';
+    const membreInstructeur = instructeur !== '—' ? trouverMembreParField(instructeur) : null;
+    const personne = (photo, role, nom) => `
+        <div class="info-vol-personne">
+            <img class="info-vol-photo" src="${photo}" alt="" onerror="this.style.visibility='hidden'">
+            <div>
+                <div class="info-vol-role">${role}</div>
+                <div class="info-vol-pilote">${nom}</div>
+            </div>
+        </div>`;
     const ligne = (icone, label, valeur) => `
         <div class="info-vol-ligne">
             <span class="info-vol-icone">${icone}</span>
@@ -3337,15 +3346,14 @@ async function ouvrirModaleInformation(vol) {
         </div>`;
     content.innerHTML = `
         <div class="info-vol-header">
-            <img class="info-vol-photo" src="${photoPilote}" alt="" onerror="this.style.visibility='hidden'">
-            <div class="info-vol-header-txt">
-                <div class="info-vol-pilote">${pilote}</div>
-                <div class="info-vol-machine">${machine}</div>
+            <div class="info-vol-personnes">
+                ${personne(photoPilote, 'Pilote', pilote)}
+                ${instructeur !== '—' ? personne(urlPhotoMembre(membreInstructeur, instructeur), 'Instructeur', instructeur) : ''}
             </div>
+            <div class="info-vol-machine">✈️ ${machine}</div>
         </div>
         <div class="info-vol-grille">
             ${ligne('🛩️', 'Type de vol', type)}
-            ${ligne('👨‍✈️', 'Instructeur', instructeur)}
             ${ligne('🕐', 'Début', debut)}
             ${ligne('🕑', 'Fin', fin)}
             ${ligne('⏱️', 'Durée estimée', duree)}
