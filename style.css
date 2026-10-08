@@ -5140,7 +5140,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 
 /* ── Modale consultation réservation ── */
-#reservation-info-modal .info-vol-header {
+#reservation-info-modal .info-vol-header,
+#membre-info-modal .info-vol-header {
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -5150,18 +5151,21 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     border-radius: 10px;
     color: #fff;
 }
-#reservation-info-modal .info-vol-personnes {
+#reservation-info-modal .info-vol-personnes,
+#membre-info-modal .info-vol-personnes {
     display: flex;
     align-items: center;
     gap: 22px;
     flex-wrap: wrap;
 }
-#reservation-info-modal .info-vol-personne {
+#reservation-info-modal .info-vol-personne,
+#membre-info-modal .info-vol-personne {
     display: flex;
     align-items: center;
     gap: 12px;
 }
-#reservation-info-modal .info-vol-photo {
+#reservation-info-modal .info-vol-photo,
+#membre-info-modal .info-vol-photo {
     width: 52px;
     height: 52px;
     border-radius: 50%;
@@ -5170,56 +5174,66 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     flex-shrink: 0;
     background: #fff;
 }
-#reservation-info-modal .info-vol-role {
+#reservation-info-modal .info-vol-role,
+#membre-info-modal .info-vol-role {
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     opacity: 0.75;
 }
-#reservation-info-modal .info-vol-pilote {
+#reservation-info-modal .info-vol-pilote,
+#membre-info-modal .info-vol-pilote {
     font-size: 15px;
     font-weight: 700;
 }
-#reservation-info-modal .info-vol-machine {
+#reservation-info-modal .info-vol-machine,
+#membre-info-modal .info-vol-machine {
     font-size: 13px;
     font-weight: 600;
     opacity: 0.9;
 }
-#reservation-info-modal .info-vol-grille {
+#reservation-info-modal .info-vol-grille,
+#membre-info-modal .info-vol-grille {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
-#reservation-info-modal .info-vol-ligne {
+#reservation-info-modal .info-vol-ligne,
+#membre-info-modal .info-vol-ligne {
     display: flex;
     align-items: baseline;
     gap: 10px;
     padding: 7px 10px;
     border-radius: 6px;
 }
-#reservation-info-modal .info-vol-ligne:nth-child(odd) {
+#reservation-info-modal .info-vol-ligne:nth-child(odd),
+#membre-info-modal .info-vol-ligne:nth-child(odd) {
     background: #f1f5f9;
 }
-#reservation-info-modal .info-vol-icone {
+#reservation-info-modal .info-vol-icone,
+#membre-info-modal .info-vol-icone {
     flex-shrink: 0;
     width: 20px;
     text-align: center;
 }
-#reservation-info-modal .info-vol-label {
+#reservation-info-modal .info-vol-label,
+#membre-info-modal .info-vol-label {
     color: #64748b;
     font-size: 12px;
     font-weight: 600;
     min-width: 105px;
     flex-shrink: 0;
 }
-#reservation-info-modal .info-vol-valeur {
+#reservation-info-modal .info-vol-valeur,
+#membre-info-modal .info-vol-valeur {
     font-size: 13px;
     font-weight: 600;
     color: #1e3d59;
     word-break: break-word;
 }
-#reservation-info-modal .info-vol-commentaires {
+#reservation-info-modal .info-vol-commentaires,
+#membre-info-modal .info-vol-commentaires {
     display: flex;
     gap: 10px;
     margin-top: 10px;
@@ -5227,4 +5241,13 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #fef9e7;
     border-left: 3px solid #e6b93d;
     border-radius: 6px;
+}
+
+.inscrit-nom-lien {
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+.inscrit-nom-lien:hover {
+    color: #1e3d59;
+    text-decoration: underline;
 }

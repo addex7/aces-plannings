@@ -26,9 +26,11 @@ function peutModifierCommentaire(nom) {
     return typeof correspondanceNom === 'function' ? correspondanceNom(nom, nomUtilisateur) : nom === nomUtilisateur;
 }
 
-function creerLignePresence(nom, commentaire, recordId, tableName) {
+function creerLignePresence(nom, commentaire, recordId, tableName, roleLabel = '') {
     const commentaireEscaped = commentaire.replace(/"/g, '&quot;');
+    const commentaireJs = commentaire.replace(/"/g, '&quot;').replace(/'/g, "\\'");
     const nomEscaped = nom.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+    const roleEscaped = roleLabel.replace(/"/g, '&quot;').replace(/'/g, "\\'");
     const btnSupprimer = peutSupprimerPresence(nom)
         ? `<button class="btn-remove-presence" onclick="desinscrire${tableName === 'Présences Club' ? 'Club' : 'Planeur'}('${recordId}')">❌</button>`
         : '';
@@ -37,12 +39,53 @@ function creerLignePresence(nom, commentaire, recordId, tableName) {
         : '';
     return `
         <div class="inscrit-ligne presence-ligne">
-            <span class="inscrit-nom">- ${nom}</span>
+            <span class="inscrit-nom inscrit-nom-lien" onclick="ouvrirInfoMembre('${nomEscaped}', '${roleEscaped}', '', '${commentaireJs}')" title="Voir la fiche">- ${nom}</span>
             <span class="inscrit-slot">${btnCommentaire}</span>
             <span class="comment-text">${commentaireEscaped}</span>
             <span class="inscrit-slot">${btnSupprimer}</span>
         </div>
     `;
+}
+
+async function ouvrirInfoMembre(nom, roleLabel = '', infoSupp = '', commentaire = '') {
+    const modal = document.getElementById('membre-info-modal');
+    const content = document.getElementById('membre-info-content');
+    if (!modal || !content) return;
+    if (typeof chargerListeMembresCache === 'function') await chargerListeMembresCache();
+    const membre = typeof trouverMembreParField === 'function' ? trouverMembreParField(nom) : null;
+    const f = (membre && membre.fields) || {};
+    const photo = typeof urlPhotoMembre === 'function' ? urlPhotoMembre(membre, nom) : '';
+    const tel = f['Téléphone'] || '';
+    const mail = f['Mail'] || '';
+    const roles = Array.isArray(f['Rôles']) ? f['Rôles'].join(', ') : (f['Rôles'] || '');
+    const ligne = (icone, label, valeurHtml) => valeurHtml ? `
+        <div class="info-vol-ligne">
+            <span class="info-vol-icone">${icone}</span>
+            <span class="info-vol-label">${label}</span>
+            <span class="info-vol-valeur">${valeurHtml}</span>
+        </div>` : '';
+    const lignes = [
+        ligne('🕐', 'Horaires / infos', infoSupp),
+        ligne('📞', 'Téléphone', tel ? `<a href="tel:${String(tel).replace(/\s/g, '')}" style="color:#1e3d59;">${tel}</a>` : ''),
+        ligne('✉️', 'Mail', mail ? `<a href="mailto:${mail}" style="color:#1e3d59;">${mail}</a>` : ''),
+        ligne('🎖️', 'Rôles', roles)
+    ].join('');
+    content.innerHTML = `
+        <div class="info-vol-header">
+            <div class="info-vol-personnes">
+                <div class="info-vol-personne">
+                    <img class="info-vol-photo" src="${photo}" alt="" onerror="this.style.visibility='hidden'">
+                    <div>
+                        <div class="info-vol-role">${roleLabel || 'Membre'}</div>
+                        <div class="info-vol-pilote">${nom}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="info-vol-grille">${lignes || '<p style="color:#64748b; margin:0;">Aucune information supplémentaire.</p>'}</div>
+        ${commentaire ? `<div class="info-vol-commentaires"><span class="info-vol-icone">💬</span><div><div class="info-vol-label">Commentaire</div><div class="info-vol-valeur">${commentaire}</div></div></div>` : ''}
+    `;
+    modal.style.display = 'flex';
 }
 
 async function modifierCommentaire(recordId, tableName, commentaireActuel, nom = '') {
@@ -107,7 +150,7 @@ async function chargerPresencesClub() {
                 dejaVus.push({ lieu, nom });
                 const commentaire = rec.fields['Commentaire'] || '';
                 const li = document.createElement('li');
-                li.innerHTML = creerLignePresence(nom, commentaire, rec.id, 'Présences Club');
+                li.innerHTML = creerLignePresence(nom, commentaire, rec.id, 'Présences Club', lieu || 'Présence club');
                 if (lieu === 'Atelier Alain Bernage') listAtelier.appendChild(li);
                 if (lieu === 'Salle Ernest Meyer') listSalle.appendChild(li);
             });
@@ -445,9 +488,12 @@ function creerLigneInstructeurPlaneur(nom, commentaire, briefing, recordId, inte
     const btnSupprimer = peutSupprimerPresence(nom)
         ? `<button class="btn-remove-presence" onclick="desinscrireInstructeurPlaneur('${rid}', '${nomEscaped}')">❌</button>`
         : '';
+    const infoSupp = [heuresLabel !== '+ horaires' ? heuresLabel : '', briefingTxt].filter(Boolean).join(' · ')
+        .replace(/"/g, '&quot;').replace(/'/g, "\\'");
+    const commentaireJs = (commentaire || '').replace(/"/g, '&quot;').replace(/'/g, "\\'");
     return `
         <div class="inscrit-ligne presence-ligne presence-ligne-instructeur">
-            <span class="inscrit-nom">- ${nom}</span>
+            <span class="inscrit-nom inscrit-nom-lien" onclick="ouvrirInfoMembre('${nomEscaped}', 'Instructeur planeur', '${infoSupp}', '${commentaireJs}')" title="Voir la fiche">- ${nom}</span>
             <span class="inscrit-slot">${heures}</span>
             <span class="inscrit-slot">${briefingHtml}</span>
             <span class="inscrit-slot">${btnCommentaire}</span>
@@ -491,7 +537,7 @@ async function chargerPresencesPlaneur() {
                     li.innerHTML = creerLigneInstructeurPlaneur(nom, commentaire, rec.fields['Briefing'] || '', rec.id, intervallesDispoPlaneur(nom, dispos));
                     listInst.appendChild(li);
                 } else {
-                    li.innerHTML = creerLignePresence(nom, commentaire, rec.id, 'Présences Planeur');
+                    li.innerHTML = creerLignePresence(nom, commentaire, rec.id, 'Présences Planeur', role === 'Élève' ? 'Élève' : (role === 'Pilote' ? 'Pilote' : role || ''));
                     if (role === 'Élève') listElev.appendChild(li);
                     if (role === 'Pilote') listPilo.appendChild(li);
                 }

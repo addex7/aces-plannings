@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=272">
+    <link rel="stylesheet" href="style.css?v=273">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -1001,6 +1001,15 @@
         </div>
     </div>
 
+    <!-- Fenêtre Modale : Fiche membre (depuis les présences) -->
+    <div id="membre-info-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 420px;">
+            <span class="close-modal" onclick="document.getElementById('membre-info-modal').style.display='none'">&times;</span>
+            <h3>Fiche membre</h3>
+            <div id="membre-info-content" style="margin-top: 15px; line-height: 1.6;"></div>
+        </div>
+    </div>
+
     <!-- Fenêtre Modale : Création VI Planeur -->
     <div id="vi-planeur-modal" class="modal">
         <div class="modal-content">
@@ -1614,10 +1623,10 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=93"></script>
-    <script src="version.js?v=20261008145810"></script>
+    <script src="version.js?v=20261008151529"></script>
     <script src="app.js?v=93"></script>
     <script src="utils.js?v=120"></script>
-    <script src="presences.js?v=104"></script>
+    <script src="presences.js?v=105"></script>
     <script src="planning.js?v=221"></script>
     <script src="calendrier.js?v=91"></script>
     <script src="comptes.js?v=124"></script>
