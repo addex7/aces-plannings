@@ -3271,12 +3271,38 @@ function ouvrirModaleCreationDepuisGrilleDate(avionId, heureDebutClic, dateCible
     modal.style.display = 'flex';
 }
 
-function ouvrirModaleInformation(vol) {
+function trouverMembreParField(field) {
+    if (!field) return null;
+    const ids = Array.isArray(field) ? field : [field];
+    const val = String(ids[0] || '').trim();
+    if (!val) return null;
+    const cache = listeMembresCache || [];
+    let membre = cache.find(r => r.id === val);
+    if (!membre) {
+        const norm = s => (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+        membre = cache.find(r => norm(`${(r.fields || {})['Prénom'] || ''} ${(r.fields || {})['Nom'] || ''}`) === norm(val));
+    }
+    return membre || null;
+}
+
+function urlPhotoMembre(membre, nomFallback) {
+    const f = (membre && membre.fields) || {};
+    const photoField = f['Photo'];
+    if (Array.isArray(photoField) && photoField.length && photoField[0].url) return photoField[0].url;
+    if (typeof photoField === 'string' && photoField.trim()) return photoField.trim();
+    const initiales = (nomFallback || 'U').split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(initiales)}&background=1e3d59&color=fff&size=128`;
+}
+
+async function ouvrirModaleInformation(vol) {
     const infoModal = document.getElementById('reservation-info-modal');
     const content = document.getElementById('reservation-info-content');
     if (!infoModal || !content || !vol || !vol.fields) return;
+    if (!listeMembresCache.length && typeof chargerListeMembresCache === 'function') await chargerListeMembresCache();
     const f = vol.fields;
+    const membrePilote = trouverMembreParField(f['Pilote']);
     const pilote = nomUtilisateurDepuisId(f['Pilote'], listeMembresCache) || '—';
+    const photoPilote = urlPhotoMembre(membrePilote, pilote);
     let machine = f['Machine'] || '—';
     if (Array.isArray(machine) && machine.length > 0) {
         const raw = machine[0];
@@ -3303,15 +3329,28 @@ function ouvrirModaleInformation(vol) {
     const fin = f['Date de fin'] ? formaterDateHeureLocal(new Date(f['Date de fin'])) : '—';
     const duree = f['Temps estimé'] || '—';
     const commentaires = f['Commentaires'] || f['Commentaires VI'] || '';
+    const ligne = (icone, label, valeur) => `
+        <div class="info-vol-ligne">
+            <span class="info-vol-icone">${icone}</span>
+            <span class="info-vol-label">${label}</span>
+            <span class="info-vol-valeur">${valeur || '—'}</span>
+        </div>`;
     content.innerHTML = `
-        <p><strong>Pilote :</strong> ${pilote}</p>
-        <p><strong>Machine :</strong> ${machine}</p>
-        <p><strong>Type de vol :</strong> ${type}</p>
-        <p><strong>Instructeur :</strong> ${instructeur}</p>
-        <p><strong>Début :</strong> ${debut}</p>
-        <p><strong>Fin :</strong> ${fin}</p>
-        <p><strong>Durée estimée :</strong> ${duree}</p>
-        ${commentaires ? `<p><strong>Commentaires :</strong> ${commentaires}</p>` : ''}
+        <div class="info-vol-header">
+            <img class="info-vol-photo" src="${photoPilote}" alt="" onerror="this.style.visibility='hidden'">
+            <div class="info-vol-header-txt">
+                <div class="info-vol-pilote">${pilote}</div>
+                <div class="info-vol-machine">${machine}</div>
+            </div>
+        </div>
+        <div class="info-vol-grille">
+            ${ligne('🛩️', 'Type de vol', type)}
+            ${ligne('👨‍✈️', 'Instructeur', instructeur)}
+            ${ligne('🕐', 'Début', debut)}
+            ${ligne('🕑', 'Fin', fin)}
+            ${ligne('⏱️', 'Durée estimée', duree)}
+        </div>
+        ${commentaires ? `<div class="info-vol-commentaires"><span class="info-vol-icone">💬</span><div><div class="info-vol-label">Commentaires</div><div class="info-vol-valeur">${commentaires}</div></div></div>` : ''}
     `;
     infoModal.style.display = 'flex';
 }

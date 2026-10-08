@@ -5138,3 +5138,75 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     color: #1e3d59;
     word-break: break-word;
 }
+
+/* ── Modale consultation réservation ── */
+#reservation-info-modal .info-vol-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    margin: -4px 0 14px;
+    background: linear-gradient(135deg, #1e3d59 0%, #2d5a7b 100%);
+    border-radius: 10px;
+    color: #fff;
+}
+#reservation-info-modal .info-vol-photo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.65);
+    flex-shrink: 0;
+    background: #fff;
+}
+#reservation-info-modal .info-vol-pilote {
+    font-size: 16px;
+    font-weight: 700;
+}
+#reservation-info-modal .info-vol-machine {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+#reservation-info-modal .info-vol-grille {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+#reservation-info-modal .info-vol-ligne {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 6px;
+}
+#reservation-info-modal .info-vol-ligne:nth-child(odd) {
+    background: #f1f5f9;
+}
+#reservation-info-modal .info-vol-icone {
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+}
+#reservation-info-modal .info-vol-label {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 105px;
+    flex-shrink: 0;
+}
+#reservation-info-modal .info-vol-valeur {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e3d59;
+    word-break: break-word;
+}
+#reservation-info-modal .info-vol-commentaires {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 10px;
+    background: #fef9e7;
+    border-left: 3px solid #e6b93d;
+    border-radius: 6px;
+}
