@@ -3325,8 +3325,8 @@ async function ouvrirModaleInformation(vol) {
             instructeur = idInstructeur;
         }
     }
-    const debut = f['Date de début'] ? formaterDateHeureLocal(new Date(f['Date de début'])) : '—';
-    const fin = f['Date de fin'] ? formaterDateHeureLocal(new Date(f['Date de fin'])) : '—';
+    const debut = f['Date de début'] ? formaterDateHeureAffichage(new Date(f['Date de début'])) : '—';
+    const fin = f['Date de fin'] ? formaterDateHeureAffichage(new Date(f['Date de fin'])) : '—';
     const duree = f['Temps estimé'] || '—';
     const commentaires = f['Commentaires'] || f['Commentaires VI'] || '';
     const membreInstructeur = instructeur !== '—' ? trouverMembreParField(instructeur) : null;

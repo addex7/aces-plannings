@@ -197,6 +197,11 @@ function formaterDateHeureLocal(d) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function formaterDateHeureAffichage(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}h${pad(d.getMinutes())} LT`;
+}
+
 // PostgreSQL renvoie les lignes dans un ordre arbitraire — tri alphabetique par immatriculation.
 function trierAvionsParImmat(records) {
     return (records || []).slice().sort((a, b) => {
