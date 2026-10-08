@@ -40,10 +40,9 @@ let tarifsAeronefsCache = null;
 async function chargerTarifsAeronefs() {
     if (tarifsAeronefsCache !== null) return tarifsAeronefsCache;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers });
-        const data = await res.json();
+        const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers });
         const cache = {};
-        (data.records || []).forEach(r => {
+        tous.forEach(r => {
             if (r.fields && r.fields['Immatriculation']) {
                 cache[r.fields['Immatriculation']] = parseFloat(String(r.fields['Prix heure'] || '').replace(',', '.')) || 0;
             }
@@ -474,10 +473,8 @@ async function peuplerPilotesSelect(pilote = '') {
     try {
         if (peutChoisir && !carnetPilotesCache.length) {
             const table = typeof TABLE_UTILISATEURS !== 'undefined' ? TABLE_UTILISATEURS : 'Utilisateurs';
-            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message);
-            carnetPilotesCache = (data.records || []).map(r => {
+            const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+            carnetPilotesCache = tous.map(r => {
                 const f = r.fields || {};
                 return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
             }).filter(Boolean);
@@ -535,10 +532,8 @@ async function peuplerCarnetInstructeurs(instructeur = '', machine = '') {
             const ROLES_INSTRUCTEUR = ['Instructeur avion', 'Instructeur planeur', 'Instructeur ULM'];
             if (!carnetInstructeursCache.length) {
                 const table = typeof TABLE_UTILISATEURS !== 'undefined' ? TABLE_UTILISATEURS : 'Utilisateurs';
-                const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error?.message);
-                carnetInstructeursCache = (data.records || []).filter(r => {
+                const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+                carnetInstructeursCache = tous.filter(r => {
                     const roles = Array.isArray(r.fields?.['Rôles']) ? r.fields['Rôles'] : [r.fields?.['Rôles']].filter(Boolean);
                     return roles.some(role => ROLES_INSTRUCTEUR.includes(role));
                 });
@@ -1473,9 +1468,8 @@ async function chargerCarnetRoute() {
         });
         if (isJVIO) {
             try {
-                const resMaint = await cachedFetch(`${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent("{Machine}='F-JVIO'")}`, { headers });
-                const dataMaint = await resMaint.json();
-                (dataMaint.records || []).forEach(r => {
+                const recordsMaint = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent("{Machine}='F-JVIO'")}`, { headers });
+                recordsMaint.forEach(r => {
                     volsMachine.push({ id: r.id, fields: r.fields || {}, _estMaintenance: true, _maintenanceRecord: r });
                 });
                 volsMachine.sort((a, b) => cleDateHeureCarnet(a) - cleDateHeureCarnet(b));
@@ -1501,10 +1495,9 @@ async function synchroniserVolMaintenance(machine, date, pilote, horametreArrive
     try {
         const urlBaseAeronefs = `${API_BASE}/${encodeURIComponent('Aéronefs')}`;
         const filter = `?filterByFormula=${encodeURIComponent(`{Immatriculation}='${machine}'`)}`;
-        const resA = await cachedFetch(urlBaseAeronefs + filter, { headers });
-        const dataA = await resA.json();
-        if (!dataA.records || dataA.records.length === 0) return;
-        const avionId = dataA.records[0].id;
+        const recordsA = await fetchTousRecordsCache(urlBaseAeronefs + filter, { headers });
+        if (!recordsA.length) return;
+        const avionId = recordsA[0].id;
 
         const dateObj = new Date(`${date}T00:00:00`);
         const dateISO = isNaN(dateObj.getTime()) ? date : dateObj.toISOString();
@@ -1738,9 +1731,8 @@ async function supprimerCarnetRoute() {
 async function getAvionId(machineImmat) {
     try {
         const url = `${API_BASE}/${encodeURIComponent('Aéronefs')}?filterByFormula=${encodeURIComponent(`{Immatriculation}='${machineImmat}'`)}`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (data.records && data.records.length > 0) return data.records[0].id;
+        const tous = await fetchTousRecordsCache(url, { headers });
+        if (tous.length) return tous[0].id;
     } catch (e) { console.error(e); }
     return null;
 }
@@ -1752,9 +1744,8 @@ async function supprimerVolMaintenance(machineImmat, date, horametreArrivee) {
     if (isNaN(h)) return;
     try {
         const url = `${API_BASE}/${encodeURIComponent('Carnet de route')}?filterByFormula=${encodeURIComponent(`{Nouvel Horamètre}=${h}`)}`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        const records = (data.records || []).filter(r => {
+        const tous = await fetchTousRecordsCache(url, { headers });
+        const records = tous.filter(r => {
             const f = r.fields || {};
             const m = f['Machine'];
             const machines = Array.isArray(m) ? m : [m];
@@ -1777,9 +1768,7 @@ async function synchroniserHorametreAeronef(machineImmat, carnets) {
     if (!records) {
         try {
             const url = `${API_BASE}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?filterByFormula=${encodeURIComponent(`{Machine}='${machineImmat}'`)}`;
-            const res = await cachedFetch(url, { headers });
-            const data = await res.json();
-            records = data.records || [];
+            records = await fetchTousRecordsCache(url, { headers });
         } catch (e) { console.error(e); return; }
     }
     const maxH = (records || []).reduce((max, c) => {
@@ -1802,9 +1791,8 @@ async function nettoyerCarnetRouteMaintenance(machineImmat) {
     if (!avionId) return;
     try {
         const url = `${API_BASE}/${encodeURIComponent('Carnet de route')}`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        const records = (data.records || []).filter(r => {
+        const tous = await fetchTousRecordsCache(url, { headers });
+        const records = tous.filter(r => {
             const f = r.fields || {};
             const m = f['Machine'];
             const machines = Array.isArray(m) ? m : [m];

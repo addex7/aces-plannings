@@ -153,11 +153,9 @@ async function chargerDisposInstructeurPlage(start, end) {
     const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
     const formula = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        console.log('[INSTRUCTEUR DISPOS] records:', data.records ? data.records.length : 0);
-        return data.records || [];
+        const records = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
+        console.log('[INSTRUCTEUR DISPOS] records:', records.length);
+        return records;
     } catch (err) { console.error('[INSTRUCTEUR DISPOS] erreur:', err); return []; }
 }
 
@@ -167,10 +165,7 @@ async function chargerReservationsInstructeurPlage(nom, start, end) {
     const prenom = (nom.split(' ')[0] || nom).replace(/'/g, "\\'");
     const formula = `AND(OR(SEARCH('${prenom}', {Instructeur}) > 0, SEARCH('${prenom}', {Pilote}) > 0), DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${endStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${startStr}')`;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        const records = data.records || [];
+        const records = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
         if (!Array.isArray(listeReservationsCache)) listeReservationsCache = [];
         records.forEach(r => {
             const i = listeReservationsCache.findIndex(x => x.id === r.id);
@@ -191,11 +186,9 @@ async function supprimerDisposChevauchantes(dateStr, debutMin, finMin, nom, cons
     const selEnd = finMin;
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
         const discLow = (discipline || '').toLowerCase();
-        const records = (data.records || []).filter(r => {
+        const records = tous.filter(r => {
             const f = r.fields || {};
             const nomOk = typeof correspondanceNom === 'function'
                 ? correspondanceNom(f['Instructeur'], nom)
@@ -632,10 +625,7 @@ async function chargerReservationsPlage(start, end) {
     const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
     const formula = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${endStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${startStr}')`;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur API');
-        return data.records || [];
+        return await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
     } catch (err) { console.error(err); return []; }
 }
 

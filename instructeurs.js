@@ -237,10 +237,7 @@ async function ouvrirModaleGererDispos() {
     const formula = `AND({Instructeur}='${nom}', DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${todayStr}')`;
     const url = `${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc`;
     try {
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        const records = data.records || [];
+        const records = await fetchTousRecordsCache(url, { headers });
         const now = new Date();
         const futurs = records.filter(r => {
             const f = r.fields || {};
@@ -329,10 +326,7 @@ async function chargerDisponibilitesInstructeurs(dateCible, forceRefresh = false
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
     const url = `${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
     try {
-        const res = await cachedFetch(url, { headers }, API_CACHE_TTL, forceRefresh);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur API');
-        disposInstructeursCache = data.records || [];
+        disposInstructeursCache = await fetchTousRecordsCache(url, { headers }, API_CACHE_TTL, forceRefresh);
     } catch (err) {
         console.error('[DISPOS] error:', err);
         disposInstructeursCache = [];
@@ -581,10 +575,7 @@ async function chargerSuiviInstructeur14Jours(nom, start) {
     const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
     const formula = `AND({Instructeur}='${nom.replace(/'/g, "\\'")}', DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${startStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${endStr}')`;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=200`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        const records = data.records || [];
+        const records = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
         document.querySelectorAll('#instructeur-suivi-body tr').forEach(tr => {
             const cell = tr.querySelector('td:nth-child(2)');
             if (!cell) return;
@@ -620,10 +611,8 @@ async function chargerSuiviInstructeur14Jours(nom, start) {
 async function chargerListeInstructeurs(forceRefresh = false) {
     if (!forceRefresh && listeInstructeursCache.length) return;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        listeInstructeursCache = (data.records || []).map(r => {
+        const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?pageSize=100`, { headers }, API_CACHE_TTL, forceRefresh);
+        listeInstructeursCache = tous.map(r => {
             const f = r.fields || {};
             const prenom = f['Prénom'] || '';
             const nom = f['Nom'] || '';
@@ -678,10 +667,7 @@ async function verifierConflitDisponibiliteInstructeur(nom, dateDebut, dateFin, 
     const dates = Array.from(jours).map(j => `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${j}'`);
     const formula = `AND(SEARCH('${prenom.replace(/'/g, "\\'")}', {Instructeur}) > 0, OR(${dates.join(',')}))`;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        const records = data.records || [];
+        const records = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers });
         for (let t = new Date(dateDebut); t < dateFin; t.setMinutes(t.getMinutes() + 5)) {
             const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
             const min = t.getHours() * 60 + t.getMinutes();

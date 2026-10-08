@@ -163,11 +163,9 @@ async function chargerEvenementsJour() {
     try {
         const formula = encodeURIComponent(`OR(NOT(IS_BEFORE({${FIELDS.DATE_FIN}}, DATETIME_PARSE('${dateIso}', 'YYYY-MM-DD'))), NOT(IS_BEFORE({${FIELDS.DATE_DEBUT}}, DATETIME_PARSE('${dateIso}', 'YYYY-MM-DD'))))`);
         const url = `${API_BASE}/${encodeURIComponent(TABLE_EVENEMENTS)}?filterByFormula=${formula}&sort[0][field]=${encodeURIComponent(FIELDS.DATE_DEBUT)}&sort[0][direction]=asc&pageSize=100`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ? data.error.message : 'Erreur Airtable');
+        const records = await fetchTousRecordsCache(url, { headers });
 
-        const evenements = (data.records || []).filter(r => estDansIntervalle(dateIso, r.fields[FIELDS.DATE_DEBUT], r.fields[FIELDS.DATE_FIN]));
+        const evenements = records.filter(r => estDansIntervalle(dateIso, r.fields[FIELDS.DATE_DEBUT], r.fields[FIELDS.DATE_FIN]));
         if (!evenements.length) {
             container.innerHTML = '';
             if (section) section.style.display = 'none';

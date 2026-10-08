@@ -129,10 +129,8 @@ async function chargerDonneesCalendrier(annee, mois) {
     try {
         const formulaResa = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${finStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${debutStr}')`;
         const url = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formulaResa)}&pageSize=100`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        (data.records || []).forEach(r => {
+        const records = await fetchTousRecordsCache(url, { headers });
+        records.forEach(r => {
             const f = r.fields || {};
             const rStart = new Date(f['Date de début']);
             const rEnd = new Date(f['Date de fin']);
@@ -163,10 +161,8 @@ async function chargerDonneesCalendrier(annee, mois) {
     try {
         const formulaPlaneur = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${debutStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${finStr}')`;
         const url = `${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formulaPlaneur)}&pageSize=100`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        (data.records || []).forEach(r => {
+        const records = await fetchTousRecordsCache(url, { headers });
+        records.forEach(r => {
             const f = r.fields || {};
             const d = f['Date'] ? new Date(f['Date'] + 'T00:00:00') : null;
             if (!d) return;
@@ -189,10 +185,8 @@ async function chargerDonneesCalendrier(annee, mois) {
     try {
         const formulaClub = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${debutStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${finStr}')`;
         const url = `${API_BASE}/${encodeURIComponent('Présences Club')}?filterByFormula=${encodeURIComponent(formulaClub)}&pageSize=100`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        (data.records || []).forEach(r => {
+        const records = await fetchTousRecordsCache(url, { headers });
+        records.forEach(r => {
             const f = r.fields || {};
             const d = f['Date'] ? new Date(f['Date'] + 'T00:00:00') : null;
             if (!d) return;
@@ -215,10 +209,8 @@ async function chargerDonneesCalendrier(annee, mois) {
     try {
         const formulaCren = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')>='${debutStr}', DATETIME_FORMAT({Date},'YYYY-MM-DD')<='${finStr}')`;
         const url = `${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formulaCren)}&pageSize=100`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        (data.records || []).forEach(r => {
+        const records = await fetchTousRecordsCache(url, { headers });
+        records.forEach(r => {
             const f = r.fields || {};
             if ((f['Statut'] || 'Disponible') === 'Annulé') return;
             const pilote = (f['Pilote'] || '').toString().trim();
@@ -237,10 +229,8 @@ async function chargerDonneesCalendrier(annee, mois) {
     try {
         const formulaVIP = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${finStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${debutStr}')`;
         const url = `${API_BASE}/${encodeURIComponent('VI Planeur')}?filterByFormula=${encodeURIComponent(formulaVIP)}&pageSize=100`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        (data.records || []).forEach(r => {
+        const records = await fetchTousRecordsCache(url, { headers });
+        records.forEach(r => {
             const f = r.fields || {};
             const rStart = new Date(f['Date de début']);
             const rEnd = new Date(f['Date de fin']);
@@ -263,10 +253,8 @@ async function chargerDonneesCalendrier(annee, mois) {
     try {
         const formulaEvt = `AND(DATETIME_FORMAT({Date début},'YYYY-MM-DD')<='${finStr}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${debutStr}')`;
         const url = `${API_BASE}/${encodeURIComponent('Événements')}?filterByFormula=${encodeURIComponent(formulaEvt)}&pageSize=100`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        (data.records || []).forEach(r => {
+        const records = await fetchTousRecordsCache(url, { headers });
+        records.forEach(r => {
             const f = r.fields || {};
             const dStart = f['Date début'] ? new Date(f['Date début'] + 'T00:00:00') : null;
             const dEnd = f['Date de fin'] ? new Date(f['Date de fin'] + 'T00:00:00') : dStart;

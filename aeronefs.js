@@ -158,9 +158,8 @@ function parseTempsDeVol(tempsStr) {
 async function ouvrirModaleMaintenance(record = null) {
     if (!(listeAvionsCache || []).length) {
         try {
-            const res = await apiFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers });
-            const data = await res.json();
-            listeAvionsCache = trierAvionsParImmat(data.records || []);
+            const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers });
+            listeAvionsCache = trierAvionsParImmat(tous);
         } catch (e) { console.warn('Aéronefs indisponibles:', e); }
     }
     const modal = document.getElementById('maintenance-modal');
@@ -303,9 +302,8 @@ async function persisterMaintenance({ maintenanceId, immat, avionId, dateTime, d
         throw new Error(await resMaint.text());
     }
 
-    const maintenancesRes = await cachedFetch(`${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(`{Machine}='${immat}'`)}`, { headers });
-    const maintenancesData = await maintenancesRes.json();
-    const maintenancesMachine = (maintenancesData.records || []).sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
+    const recordsMaint = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(`{Machine}='${immat}'`)}`, { headers });
+    const maintenancesMachine = recordsMaint.sort((a, b) => new Date(a.fields['Date']) - new Date(b.fields['Date']));
     const derniereMaintenance = maintenancesMachine[maintenancesMachine.length - 1];
     const nouvelleButeeAvion = derniereMaintenance ? parseFloat(String(derniereMaintenance.fields['Nouvelle Butée'] || '').replace(',', '.')) : nouvelleButee;
 
@@ -423,17 +421,14 @@ async function chargerSuiviAeronef() {
     tbody.innerHTML = "<tr><td colspan='2' style='padding:15px;'>Chargement des données...</td></tr>";
 
     try {
-        const [resMachines, resReservations, resPilotes, carnetsPilotes] = await Promise.all([
-            apiFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers }),
-            apiFetch(`${API_BASE}/${encodeURIComponent('Réservations')}`, { headers }),
-            apiFetch(`${API_BASE}/${encodeURIComponent('Utilisateurs')}`, { headers }),
+        const [machinesBase, reservationsToutes, pilotesTous, carnetsPilotes] = await Promise.all([
+            fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers }),
+            fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Réservations')}`, { headers }),
+            fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Utilisateurs')}`, { headers }),
             fetchTousRecords(`${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}?pageSize=100`, { headers })
         ]);
 
-        const dataMachines = await resMachines.json();
-        const dataReservations = await resReservations.json();
-        const dataPilotes = await resPilotes.json();
-        const piloteMap = (dataPilotes.records || []).reduce((acc, p) => {
+        const piloteMap = pilotesTous.reduce((acc, p) => {
             const nom = `${p.fields['Prénom'] || ''} ${p.fields['Nom'] || ''}`.trim();
             if (p.id) acc[p.id] = nom;
             return acc;
@@ -441,15 +436,13 @@ async function chargerSuiviAeronef() {
 
         let maintenanceRecords = [];
         try {
-            const resMaintenance = await cachedFetch(`${API_BASE}/${encodeURIComponent('Maintenance')}`, { headers });
-            const dataMaintenance = await resMaintenance.json();
-            maintenanceRecords = dataMaintenance.records || [];
+            maintenanceRecords = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Maintenance')}`, { headers });
             maintenancesSuiviCache = maintenanceRecords;
         } catch (err) {
             console.warn('Erreur chargement Maintenance:', err);
         }
 
-        const recordsMachines = trierAvionsParImmat(dataMachines.records || []);
+        const recordsMachines = trierAvionsParImmat(machinesBase);
         listeAvionsCache = recordsMachines;
         populerSelectAvions(recordsMachines);
 
@@ -514,7 +507,7 @@ async function chargerSuiviAeronef() {
         const dateDepartMinuit = new Date(dateDepart.getFullYear(), dateDepart.getMonth(), dateDepart.getDate());
         const dateFin14 = new Date(dateDepartMinuit);
         dateFin14.setDate(dateDepartMinuit.getDate() + 14);
-        const tousLesVolsSorte = (dataReservations.records || []).filter(res => {
+        const tousLesVolsSorte = reservationsToutes.filter(res => {
             if (!res.fields || !res.fields['Machine'] || !res.fields['Date de début'] || !res.fields['Date de fin']) return false;
 
             const machinesLiees = Array.isArray(res.fields['Machine']) ? res.fields['Machine'] : [res.fields['Machine']];
@@ -1536,10 +1529,7 @@ async function chargerDocumentsAeronef(machine, forceRefresh = false) {
     try {
         const formula = `{Machine}='${machine}'`;
         const url = `${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
-        const res = await cachedFetch(url, { headers }, API_CACHE_TTL, forceRefresh);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
-        const records = data.records || [];
+        const records = await fetchTousRecordsCache(url, { headers }, API_CACHE_TTL, forceRefresh);
         documentsAeronefsParMachine[machine] = records;
         afficherRecapDocumentsAeronef(machine);
         return records;
@@ -1774,10 +1764,7 @@ async function notifierReservationsSurMaintenance(immat, dateDebut, dureeHeures,
         const dateText = dateDebut.toLocaleDateString('fr-FR');
         const formula = `AND(DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')<='${endDay}', DATETIME_FORMAT({Date de fin}, 'YYYY-MM-DD')>='${startDay}')`;
         const url = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
-        const res = await apiFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        const records = data.records || [];
+        const records = await fetchTousRecordsCache(url, { headers });
         for (const r of records) {
             const f = r.fields || {};
             if (!f['Date de début'] || !f['Date de fin']) continue;

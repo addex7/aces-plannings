@@ -126,8 +126,9 @@ async function verifierConflitHorairePilote(piloteNom, piloteId, debut, fin, idE
             `${API_BASE}/${encodeURIComponent('VI Planeur')}?filterByFormula=${encodeURIComponent(`DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')='${jour}'`)}&pageSize=100`,
             `${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${jour}', {Statut}='Réservé')`)}&pageSize=100`
         ];
-        const resps = await Promise.all(urls.map(u => apiFetch(u, { headers }).catch(() => null)));
-        const datas = await Promise.all(resps.map(r => (r && r.ok) ? r.json() : {}));
+        const datas = await Promise.all(urls.map(u =>
+            fetchTousRecordsCache(u, { headers }).then(records => ({ records })).catch(() => ({}))
+        ));
 
         const memePilote = (champ) => {
             const vals = Array.isArray(champ) ? champ : (champ ? [champ] : []);
@@ -320,14 +321,11 @@ async function mettreAJourStatutCreneauxConflit(dateJour, avionId) {
     if (!typeAttendu) return;
     try {
         const urlCreneaux = `${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateJour}'&pageSize=100&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
-        const resCreneaux = await cachedFetch(urlCreneaux, { headers });
-        const dataCreneaux = await resCreneaux.json();
+        const dataCreneauxRecords = await fetchTousRecordsCache(urlCreneaux, { headers });
         const urlResa = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(`AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateJour}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateJour}', FIND('${immat}', ARRAYJOIN({Machine},',')))`)}&pageSize=100`;
-        const resResa = await cachedFetch(urlResa, { headers });
-        const dataResa = await resResa.json();
-        const reservations = dataResa.records || [];
+        const reservations = await fetchTousRecordsCache(urlResa, { headers });
         const updates = [];
-        (dataCreneaux.records || []).forEach(r => {
+        dataCreneauxRecords.forEach(r => {
             const f = r.fields || {};
             if ((f['Type'] || '') !== typeAttendu) return;
             const heureDebut = f['Heure début'] || '00:00';
@@ -883,9 +881,8 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
     try {
         await chargerListeMembresCache();
         if (forceRefresh || listeAvionsCache.length === 0) {
-            const resAvions = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers });
-            const dataAvions = await resAvions.json();
-            if (dataAvions.records) listeAvionsCache = trierAvionsParImmat(dataAvions.records);
+            const recordsAvions = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Aéronefs')}`, { headers }, API_CACHE_TTL, forceRefresh);
+            if (recordsAvions.length) listeAvionsCache = trierAvionsParImmat(recordsAvions);
         }
         const trouverAvionParImmat = (immat) => (listeAvionsCache || []).find(a => (a.fields['Immatriculation'] || a.fields['Nom'] || '').toString().trim().toUpperCase() === immat.toUpperCase());
         const avionJVIO = trouverAvionParImmat('F-JVIO');
@@ -897,22 +894,17 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         const urlVIPlaneur = `${API_BASE}/${encodeURIComponent('VI Planeur')}?filterByFormula=DATETIME_FORMAT({Date de début}, 'YYYY-MM-DD')='${debutJour}'`;
         const urlVICreneaux = `${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${debutJour}'`;
 
-        const [resReservations, resVIPlaneur, resVICreneaux] = await Promise.all([
-            cachedFetch(urlReservations, { headers }, API_CACHE_TTL, forceRefresh),
-            cachedFetch(urlVIPlaneur, { headers }, API_CACHE_TTL, forceRefresh),
-            cachedFetch(urlVICreneaux, { headers }, API_CACHE_TTL, forceRefresh)
-        ]);
-        const [dataReservations, dataVIPlaneur, dataVICreneaux] = await Promise.all([
-            resReservations.json(),
-            resVIPlaneur.json(),
-            resVICreneaux.json()
+        const [recordsReservations, recordsVIPlaneur, recordsVICreneaux] = await Promise.all([
+            fetchTousRecordsCache(urlReservations, { headers }, API_CACHE_TTL, forceRefresh),
+            fetchTousRecordsCache(urlVIPlaneur, { headers }, API_CACHE_TTL, forceRefresh),
+            fetchTousRecordsCache(urlVICreneaux, { headers }, API_CACHE_TTL, forceRefresh)
         ]);
         let disposInstructeurs = [];
         if (typeof afficherDisposInstructeurs !== 'undefined' && afficherDisposInstructeurs) {
             disposInstructeurs = await chargerDisponibilitesInstructeurs(dateAffichee, forceRefresh);
         }
-        if (dataReservations.records) listeReservationsCache = dataReservations.records;
-        let volsVIP = (dataVIPlaneur.records || []).filter(vol => {
+        if (recordsReservations.length) listeReservationsCache = recordsReservations;
+        let volsVIP = recordsVIPlaneur.filter(vol => {
             if (!vol.fields) return false;
             const debutRaw = vol.fields['Date de début'];
             if (!debutRaw) return false;
@@ -921,7 +913,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                    dateVol.getMonth() === dateAffichee.getMonth() &&
                    dateVol.getDate() === dateAffichee.getDate();
         });
-        const creneauxVI = (dataVICreneaux.records || []).map(vol => {
+        const creneauxVI = recordsVICreneaux.map(vol => {
             if (!vol.fields) return null;
             const f = vol.fields;
             const statut = f['Statut'] || 'Disponible';
@@ -987,19 +979,11 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
         const finJourDt = new Date(debutJourDt.getTime() + 24 * 60 * 60 * 1000);
         const formulaMaint = `AND(IS_BEFORE({Date},DATETIME_PARSE('${finJourDt.toISOString()}')),IS_AFTER(DATEADD({Date},{durée},'hours'),DATETIME_PARSE('${debutJourDt.toISOString()}')))`;
         const urlMaintenance = `${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent(formulaMaint)}`;
-        const [resCarnetPilotes, resCarnetPilotesTous, resMaintenance] = await Promise.all([
-            cachedFetch(urlCarnetPilotes, { headers }, API_CACHE_TTL, forceRefresh),
-            cachedFetch(urlCarnetPilotesTous, { headers }, API_CACHE_TTL, forceRefresh),
-            cachedFetch(urlMaintenance, { headers }, API_CACHE_TTL, forceRefresh)
+        const [carnetsPilotes, carnetsPilotesTous, maintenancesJour] = await Promise.all([
+            fetchTousRecordsCache(urlCarnetPilotes, { headers }, API_CACHE_TTL, forceRefresh),
+            fetchTousRecordsCache(urlCarnetPilotesTous, { headers }, API_CACHE_TTL, forceRefresh),
+            fetchTousRecordsCache(urlMaintenance, { headers }, API_CACHE_TTL, forceRefresh)
         ]);
-        const [dataCarnetPilotes, dataCarnetPilotesTous, dataMaintenance] = await Promise.all([
-            resCarnetPilotes.json(),
-            resCarnetPilotesTous.json(),
-            resMaintenance.json()
-        ]);
-        const carnetsPilotes = dataCarnetPilotes.records || [];
-        const carnetsPilotesTous = dataCarnetPilotesTous.records || [];
-        const maintenancesJour = dataMaintenance.records || [];
         rowsContainer.innerHTML = "";
         if (listeAvionsCache.length === 0) {
             rowsContainer.innerHTML = "<div class='loading'>Aucun aéronef trouvé.</div>";
@@ -1553,10 +1537,8 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
     }
     try {
         if (!listeMembresCache.length) {
-            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-            listeMembresCache = data.records || [];
+            listeMembresCache = await fetchTousRecordsCache(
+                `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
         }
         sel.innerHTML = `<option value="">${piloteLimiteVI ? '-- Choisir un pilote VI --' : '-- Choisir un pilote --'}</option>`;
         listeMembresCache.forEach(r => {
@@ -1608,10 +1590,8 @@ async function peuplerPiloteSelect(piloteSelectionne = null) {
 async function chargerListeMembresCache(force = false) {
     if (!force && listeMembresCache.length) return;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        listeMembresCache = data.records || [];
+        listeMembresCache = await fetchTousRecordsCache(
+            `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
     } catch (err) {
         console.error('Erreur chargement membres:', err);
     }
@@ -2905,12 +2885,11 @@ function initGestionnaireModale() {
                     };
                     try {
                         const formJour = `DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${dateStr}'`;
-                        const resJour = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formJour)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
-                        const dataJour = await resJour.json();
+                        const recordsJour = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formJour)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
                         const toMin = h => { const p = (h || '00:00').split(':'); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); };
                         const dMin = toMin(hDebut);
                         const fMin = toMin(hFin);
-                        const memeType = (dataJour.records || []).filter(r => {
+                        const memeType = recordsJour.filter(r => {
                             const f = r.fields || {};
                             return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === typeVI;
                         });
@@ -3825,12 +3804,11 @@ async function convertirVolEnCreneauVI(vol) {
     };
     try {
         const formJour = `DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${dateStr}'`;
-        const resJour = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formJour)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
-        const dataJour = await resJour.json();
+        const recordsJour = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formJour)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
         const toMin = h => { const p = (h || '00:00').split(':'); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); };
         const dMin = toMin(hDebut);
         const fMin = toMin(hFin);
-        const memeType = (dataJour.records || []).filter(r => {
+        const memeType = recordsJour.filter(r => {
             const f = r.fields || {};
             return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === typeVI;
         });
@@ -4100,17 +4078,16 @@ async function chargerVolsInitiation() {
     if (container) container.innerHTML = "<div class='loading'>Chargement des vols d'initiation...</div>";
     try {
         const urlVIPlaneur = `${API_BASE}/${encodeURIComponent('VI Planeur')}?pageSize=100&sort[0][field]=${encodeURIComponent('Date de début')}&sort[0][direction]=asc`;
-        const resVI = await cachedFetch(urlVIPlaneur, { headers });
-        const dataVI = await resVI.json();
         const typeFormula = `OR(FIND('VI Moteur', {Type de vol}), FIND("Vol d'Initiation", {Type de vol}), FIND("Vol d'Initiation (VI)", {Type de vol}))`;
         const urlReservations = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(typeFormula)}&pageSize=100&sort[0][field]=${encodeURIComponent('Date de début')}&sort[0][direction]=asc`;
-        const resResa = await cachedFetch(urlReservations, { headers });
-        const dataResa = await resResa.json();
         const urlCreneaux = `${API_BASE}/${encodeURIComponent('VI Créneaux')}?pageSize=100&sort[0][field]=Date&sort[0][direction]=asc&sort[1][field]=${encodeURIComponent('Heure début')}&sort[1][direction]=asc`;
-        const resCreneaux = await cachedFetch(urlCreneaux, { headers });
-        const dataCreneaux = await resCreneaux.json();
+        const [recordsVI, recordsResa, recordsCreneaux] = await Promise.all([
+            fetchTousRecordsCache(urlVIPlaneur, { headers }),
+            fetchTousRecordsCache(urlReservations, { headers }),
+            fetchTousRecordsCache(urlCreneaux, { headers })
+        ]);
         listeVolsInitiationCache = [];
-        (dataVI.records || []).forEach(vol => {
+        recordsVI.forEach(vol => {
             if (!vol.fields) return;
             const debutRaw = vol.fields['Date de début'];
             if (!debutRaw) return;
@@ -4127,7 +4104,7 @@ async function chargerVolsInitiation() {
                 machineName: ''
             });
         });
-        (dataResa.records || []).forEach(vol => {
+        recordsResa.forEach(vol => {
             if (!vol.fields) return;
             const types = Array.isArray(vol.fields['Type de vol']) ? vol.fields['Type de vol'] : [vol.fields['Type de vol']];
             if (!types.includes('VI Moteur') && !types.includes("Vol d'Initiation") && !types.includes("Vol d'Initiation (VI)")) return;
@@ -4150,7 +4127,7 @@ async function chargerVolsInitiation() {
                 machineName: machineName
             });
         });
-        (dataCreneaux.records || []).forEach(vol => {
+        recordsCreneaux.forEach(vol => {
             if (!vol.fields) return;
             const dateRaw = vol.fields['Date'];
             if (!dateRaw) return;
@@ -4182,10 +4159,7 @@ async function chargerVolsInitiation() {
             const formulaConflit = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${dateMax}', DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${dateMin}', OR(FIND('F-JVIO', ARRAYJOIN({Machine},',')), FIND('F-GASB', ARRAYJOIN({Machine},','))))`;
             const urlConflit = `${API_BASE}/${encodeURIComponent('Réservations')}?filterByFormula=${encodeURIComponent(formulaConflit)}&pageSize=100`;
             try {
-                const resConflit = await cachedFetch(urlConflit, { headers });
-                const dataConflit = await resConflit.json();
-                if (!resConflit.ok) throw new Error(dataConflit.error?.message || 'Erreur Airtable');
-                listeReservationsConflits = dataConflit.records || [];
+                listeReservationsConflits = await fetchTousRecordsCache(urlConflit, { headers });
             } catch (err) { console.error('Erreur chargement réservations conflit:', err); listeReservationsConflits = []; }
         } else {
             listeReservationsConflits = [];
@@ -4718,9 +4692,8 @@ async function creerCreneauxVI(e) {
     try {
         const ors = dates.map(d => `DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${d}'`).join(', ');
         const formConflit = dates.length > 1 ? `OR(${ors})` : ors;
-        const resExist = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formConflit)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
-        const dataExist = await resExist.json();
-        const existants = (dataExist.records || []).filter(r => {
+        const recordsExist = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formConflit)}&pageSize=100`, { headers }, API_CACHE_TTL, true);
+        const existants = recordsExist.filter(r => {
             const f = r.fields || {};
             return f['Statut'] !== 'Annulé' && (f['Type'] || 'VI') === type;
         });

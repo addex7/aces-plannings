@@ -781,12 +781,10 @@ async function chargerListeMembres() {
     const select = document.getElementById('accueil-select-membre');
     if (!select || !isSuperAdmin()) return;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
+        const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         const previous = select.value;
         select.innerHTML = '';
-        (data.records || []).forEach(r => {
+        tous.forEach(r => {
             const f = r.fields || {};
             const nomComplet = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'Membre';
             const opt = document.createElement('option');
@@ -898,10 +896,7 @@ async function chargerDocumentsMembre() {
         const nomComplet = `${(membreSelectionne.prenom || '').replace(/"/g, '\\"')} ${(membreSelectionne.nom || '').replace(/"/g, '\\"')}`.trim();
         const formula = `FIND(UPPER("${nomComplet}"), UPPER({Sous-dossier})) > 0`;
         const url = `${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}?filterByFormula=${encodeURIComponent(formula)}`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        const records = data.records || [];
+        const records = await fetchTousRecordsCache(url, { headers });
         const actifs = records.filter(r => !(r.fields || {})['Archivé']);
         const archives = records.filter(r => (r.fields || {})['Archivé']);
 
@@ -1126,10 +1121,8 @@ async function ouvrirAnnuaireMembres() {
     if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="carnet-empty">Chargement...</td></tr>';
     modal.style.display = 'flex';
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        const records = (data.records || []).filter(r => r.fields && r.fields['Actif'] !== false);
+        const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+        const records = tous.filter(r => r.fields && r.fields['Actif'] !== false);
         window.annuaireMembresCache = records;
         afficherAnnuaireMembres(records);
         if (search) {

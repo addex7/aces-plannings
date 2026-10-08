@@ -353,10 +353,9 @@ async function chargerProchaineJournee() {
     // Charger le cache avions si besoin pour resoudre les machines liees
     if (!(typeof listeAvionsCache !== 'undefined' && (listeAvionsCache || []).length)) {
         try {
-            const resAv = await cachedFetch(`${API_BASE}/${encodeURIComponent('Aéronefs')}?pageSize=100`, { headers });
-            const dataAv = await resAv.json();
-            if (resAv.ok && dataAv.records) {
-                listeAvionsCache = typeof trierAvionsParImmat === 'function' ? trierAvionsParImmat(dataAv.records) : dataAv.records;
+            const recordsAv = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Aéronefs')}?pageSize=100`, { headers });
+            if (recordsAv.length) {
+                listeAvionsCache = typeof trierAvionsParImmat === 'function' ? trierAvionsParImmat(recordsAv) : recordsAv;
             }
         } catch (e) { /* pas bloquant */ }
     }
@@ -367,12 +366,9 @@ async function chargerProchaineJournee() {
             const nowFormula = (s.table === 'Réservations' || s.table === 'VI Planeur')
                 ? `IS_AFTER({${champFutur}}, NOW())`
                 : `IS_AFTER({${s.dateField}}, DATEADD(NOW(), -1, 'days'))`;
-            const pageSize = 100;
-            const url = `${API_BASE}/${encodeURIComponent(s.table)}?filterByFormula=${encodeURIComponent(nowFormula)}&sort[0][field]=${encodeURIComponent(s.dateField)}&sort[0][direction]=asc&pageSize=${pageSize}`;
-            const res = await cachedFetch(url, { headers });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message);
-            (data.records || []).forEach(r => {
+            const url = `${API_BASE}/${encodeURIComponent(s.table)}?filterByFormula=${encodeURIComponent(nowFormula)}&sort[0][field]=${encodeURIComponent(s.dateField)}&sort[0][direction]=asc&pageSize=100`;
+            const records = await fetchTousRecordsCache(url, { headers });
+            records.forEach(r => {
                 const f = r.fields || {};
                 if (s.presence(f)) {
                     const dateStr = f[s.dateField];
@@ -450,10 +446,8 @@ async function chargerDernierVol() {
     const nom = (currentUser.nom || '').toLowerCase();
     const id = currentUser.id;
     try {
-        const url = `${API_BASE}/${encodeURIComponent(table)}?sort[0][field]=Date&sort[0][direction]=desc&pageSize=50`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message);
+        const url = `${API_BASE}/${encodeURIComponent(table)}?sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
+        const tousRecords = await fetchTousRecordsCache(url, { headers });
 
         const estUnVol = (f) => {
             const hDep = (f['Heure départ'] || '').toString().trim();
@@ -464,7 +458,7 @@ async function chargerDernierVol() {
             return !isNaN(dec) && dec > 0 && !isNaN(att) && att > 0;
         };
 
-        const records = (data.records || []).slice().sort((a, b) => {
+        const records = tousRecords.slice().sort((a, b) => {
             const dA = new Date(a.fields['Date'] || 0);
             const dB = new Date(b.fields['Date'] || 0);
             if (dB - dA !== 0) return dB - dA;
@@ -518,11 +512,9 @@ async function chargerSignalementsAccueil() {
     try {
         const formula = `TRIM({Observations}) != ''`;
         const url = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
-        const res = await cachedFetch(url, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message);
+        const tous = await fetchTousRecordsCache(url, { headers });
 
-        const records = (data.records || []).map(r => {
+        const records = tous.map(r => {
             const f = r.fields || {};
             const immat = (f['Machine'] || '').toString().trim() || '?';
             const description = (f['Observations'] || '').toString().trim() || 'Signalement';

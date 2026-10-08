@@ -110,7 +110,7 @@ async function chargerAudit(force = false) {
     try {
         const tous = [];
         let offset = '';
-        for (let page = 0; page < 10; page++) {
+        for (let page = 0; page < 50; page++) {
             const url = `${API_BASE}/${encodeURIComponent(TABLE_AUDIT)}?sort[0][field]=${FIELDS_AUDIT.DATE}&sort[0][direction]=desc&pageSize=100${offset ? '&offset=' + encodeURIComponent(offset) : ''}`;
             const res = await cachedFetch(url, { headers }, 30000, force);
             const data = await res.json();

@@ -136,14 +136,13 @@ async function chargerPresencesClub() {
     const dateIsoStr = dateAffichee.toISOString().split('T')[0];
     try {
         const url = `${API_BASE}/${encodeURIComponent('Présences Club')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
-        const response = await cachedFetch(url, { headers });
-        const data = await response.json();
+        const records = await fetchTousRecordsCache(url, { headers });
         if (gen !== presencesClubGen) return;
         listAtelier.innerHTML = "";
         listSalle.innerHTML = "";
         const dejaVus = [];
-        if (data.records) {
-            data.records.forEach(rec => {
+        if (records) {
+            records.forEach(rec => {
                 const nom = rec.fields['Nom du pilote'] || 'Anonyme';
                 const lieu = rec.fields['Lieu'];
                 if (dejaVus.some(e => e.lieu === lieu && correspondanceNom(e.nom, nom))) return;
@@ -291,12 +290,10 @@ function parseDureesCommentaire(texte) {
 async function supprimerDisposPlaneurJour(nom, dateStr, inclureGeneriquesSiPlaneurSeul = true) {
     const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
-        const data = await res.json();
-        if (!res.ok) return;
+        const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
         const seulementPlaneur = (typeof disciplinesInstructeur === 'function')
             && disciplinesInstructeur(nom).every(d => d.toLowerCase() === 'planeur');
-        const ids = (data.records || []).filter(r => {
+        const ids = tous.filter(r => {
             const f = r.fields || {};
             if (!correspondanceNom(f['Instructeur'], nom)) return false;
             const mach = (f['Machine'] || '').toString().trim().toLowerCase();
@@ -314,9 +311,8 @@ async function synchroniserDisposPlaneur(nom, dateStr, commentaire) {
     if (!nom || !dateStr) return;
     try {
         const formula = `DATETIME_FORMAT({Date},'YYYY-MM-DD')='${dateStr}'`;
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
-        const data = await res.json();
-        const existantes = ((res.ok && data.records) || []).filter(r =>
+        const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_DISPONIBILITES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
+        const existantes = tous.filter(r =>
             correspondanceNom((r.fields || {})['Instructeur'], nom));
         let intervalles = parseDureesCommentaire(commentaire);
         if (intervalles && intervalles.length) {
@@ -364,9 +360,8 @@ async function assurerRecordPresencePlaneur(nom) {
     if (!roleAutorise(['Instructeur planeur', 'Super admin'])) return null;
     const dateStr = dateAffichee.toISOString().split('T')[0];
     const formula = `AND(IS_SAME({Date}, '${dateStr}', 'day'), {Rôle}='Instructeur')`;
-    const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
-    const data = await res.json();
-    const existant = (data.records || []).find(r => correspondanceNom((r.fields || {})['Nom du pilote'], nom));
+    const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
+    const existant = tous.find(r => correspondanceNom((r.fields || {})['Nom du pilote'], nom));
     if (existant) return existant.id;
     const post = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}`, {
         method: 'POST', headers,
@@ -447,9 +442,8 @@ async function desinscrireInstructeurPlaneur(recordId, nom) {
     try {
         const dateStr = dateAffichee.toISOString().split('T')[0];
         const formula = `AND(IS_SAME({Date}, '${dateStr}', 'day'), {Rôle}='Instructeur')`;
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
-        const data = await res.json();
-        const ids = (data.records || [])
+        const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
+        const ids = tous
             .filter(r => correspondanceNom((r.fields || {})['Nom du pilote'], nom))
             .map(r => r.id);
         if (recordId && !ids.includes(recordId)) ids.push(recordId);
@@ -515,8 +509,7 @@ async function chargerPresencesPlaneur() {
     const dateIsoStr = dateAffichee.toISOString().split('T')[0];
     try {
         const url = `${API_BASE}/${encodeURIComponent('Présences Planeur')}?filterByFormula=IS_SAME({Date}, '${dateIsoStr}', 'day')`;
-        const response = await cachedFetch(url, { headers });
-        const data = await response.json();
+        const records = await fetchTousRecordsCache(url, { headers });
         const dispos = (typeof chargerDisponibilitesInstructeurs === 'function')
             ? await chargerDisponibilitesInstructeurs(dateAffichee)
             : [];
@@ -524,8 +517,8 @@ async function chargerPresencesPlaneur() {
         listInst.innerHTML = ""; listElev.innerHTML = ""; listPilo.innerHTML = "";
         const nomsInscrits = [];
         const nomsVus = { 'Instructeur': [], 'Élève': [], 'Pilote': [] };
-        if (data.records) {
-            data.records.forEach(rec => {
+        if (records) {
+            records.forEach(rec => {
                 const nom = rec.fields['Nom du pilote'] || 'Anonyme';
                 const role = rec.fields['Rôle'];
                 if (nomsVus[role] && nomsVus[role].some(n => correspondanceNom(n, nom))) return;

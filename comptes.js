@@ -109,11 +109,8 @@ function peutVoirBilansPilotes() {
 
 async function chargerUtilisateursComptes() {
     if (utilisateursComptesCache.length) return;
-    const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=Pr%C3%A9nom&fields%5B%5D=Nom&fields%5B%5D=Compte%20GVV&pageSize%3D100`;
-    const res = await apiFetch(url, { headers });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Erreur lors du chargement des pilotes.');
-    utilisateursComptesCache = data.records || [];
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS_COMPTES)}?fields%5B%5D=${encodeURIComponent('Prénom')}&fields%5B%5D=${encodeURIComponent('Nom')}&fields%5B%5D=${encodeURIComponent('Compte GVV')}&pageSize=100`;
+    utilisateursComptesCache = await fetchTousRecords(url, { headers });
 }
 
 async function chargerComptesPilotes() {
@@ -320,10 +317,7 @@ async function fetchComptes(piloteNom) {
     if (!piloteNom) return [];
     const formula = `{Pilote}='${piloteNom.replace(/'/g, "\\'")}'`;
     const url = `${API_BASE}/${encodeURIComponent(TABLE_COMPTES)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100&sort[0][field]=Date&sort[0][direction]=desc`;
-    const res = await apiFetch(url, { headers });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Impossible de lire les comptes.');
-    const records = data.records || [];
+    const records = await fetchTousRecords(url, { headers });
     records.sort((a, b) => {
         const dateA = new Date(a.fields?.['Date'] || '1970-01-01');
         const dateB = new Date(b.fields?.['Date'] || '1970-01-01');

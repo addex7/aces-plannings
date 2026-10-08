@@ -291,10 +291,9 @@ function basculerTousLesDestinataires() {
 
 async function chargerDestinataires() {
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS_MESSAGERIE)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        utilisateursMessagerieCache = data.records || [];
+        utilisateursMessagerieCache = await fetchTousRecordsCache(
+            `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS_MESSAGERIE)}?sort[0][field]=Nom&sort[0][direction]=asc`,
+            { headers });
         renderDestinatairesListe();
     } catch (err) {
         console.error('Erreur chargement destinataires:', err);

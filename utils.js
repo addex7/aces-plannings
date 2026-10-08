@@ -321,6 +321,23 @@ async function fetchTousRecords(url, options = {}) {
     return tous;
 }
 
+// Variante avec cache : chaque page est mise en cache (meme TTL que cachedFetch).
+async function fetchTousRecordsCache(url, options = {}, ttl = API_CACHE_TTL, force = false) {
+    const tous = [];
+    let offset = null;
+    let garde = 0;
+    do {
+        const sep = url.includes('?') ? '&' : '?';
+        const full = offset ? `${url}${sep}offset=${encodeURIComponent(offset)}` : url;
+        const res = await cachedFetch(full, options, ttl, force);
+        const data = await res.json();
+        if (!res.ok) throw new Error((data.error && data.error.message) || 'Erreur chargement');
+        tous.push(...(data.records || []));
+        offset = data.offset || null;
+    } while (offset && ++garde < 50);
+    return tous;
+}
+
 function viderApiCache() {
     Object.keys(API_CACHE).forEach(k => delete API_CACHE[k]);
 }

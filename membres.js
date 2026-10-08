@@ -382,10 +382,7 @@ async function chargerUtilisateurs() {
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Chargement...</td></tr>';
     try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur');
-        const records = data.records || [];
+        const records = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
         if (records.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Aucun utilisateur.</td></tr>'; return; }
         tbody.innerHTML = '';
         records.forEach(r => {
@@ -513,10 +510,7 @@ async function ouvrirBilanMembres() {
     cont.innerHTML = '<p style="color:#64748b;">Chargement…</p>';
     try {
         const url = `${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`;
-        const res = await cachedFetch(url, { headers }, API_CACHE_TTL, true);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur chargement');
-        const records = (data.records || []).filter(r => {
+        const records = (await fetchTousRecordsCache(url, { headers }, API_CACHE_TTL, true)).filter(r => {
             const f = r.fields || {};
             return (f['Prénom'] || f['Nom']);
         });
