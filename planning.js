@@ -1672,14 +1672,24 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
     let gridCible = gridBg;
     let dateJourCible = null;
     const rectGrid = gridBg.getBoundingClientRect();
+    // Seuil de declenchement : evite qu'un clic qui bouge de quelques
+    // pixels devienne un deplacement involontaire
+    const SEUIL_DRAG_PX = 6;
+    const xDebut = e.clientX;
+    const yDebut = e.clientY;
+    // Ecart entre le point de saisie et le debut de la barre, conserve
+    // pendant le drag pour que la barre ne saute pas sous le pointeur
+    const heureGrab = positionHeureInverse(Math.max(0, Math.min(1, (e.clientX - rectGrid.left) / rectGrid.width)) * 100);
+    const decalageGrab = heureDebutInitiale - heureGrab;
     document.body.style.userSelect = 'none';
     document.body.style.webkitUserSelect = 'none';
     document.body.style.mozUserSelect = 'none';
-    barresDiv.style.opacity = '0.4';
     function onMouseMove(evt) {
         if (!aBouge) {
+            if (Math.abs(evt.clientX - xDebut) < SEUIL_DRAG_PX && Math.abs(evt.clientY - yDebut) < SEUIL_DRAG_PX) return;
             aBouge = true;
             isDraggingBar = true;
+            barresDiv.style.opacity = '0.4';
             ghost = document.createElement('div');
             ghost.className = 'drag-ghost-preview';
             ghost.style.width = `${positionHeure(heureDebutInitiale + dureeVol) - positionHeure(heureDebutInitiale)}%`;
@@ -1691,8 +1701,9 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
         }
         const xPos = evt.clientX - rectGrid.left;
         let pourcentageX = Math.max(0, Math.min(1, xPos / rectGrid.width));
-        let nouvelleHeureDebut = positionHeureInverse(pourcentageX * 100);
+        let nouvelleHeureDebut = positionHeureInverse(pourcentageX * 100) + decalageGrab;
         nouvelleHeureDebut = Math.round(nouvelleHeureDebut * 4) / 4;
+        if (nouvelleHeureDebut < 0) nouvelleHeureDebut = 0;
         if (nouvelleHeureDebut + dureeVol > 24) {
             nouvelleHeureDebut = 24 - dureeVol;
         }
@@ -1756,7 +1767,8 @@ function initierDeplacementBarre(e, volId, avionId, gridBg, barresDiv, heureDebu
             if (ghost) ghost.remove();
             const xPosFinal = evt.clientX - rectGrid.left;
             let pourcentageFin = Math.max(0, Math.min(1, xPosFinal / rectGrid.width));
-            let heureFinale = Math.round(positionHeureInverse(pourcentageFin * 100) * 4) / 4;
+            let heureFinale = Math.round((positionHeureInverse(pourcentageFin * 100) + decalageGrab) * 4) / 4;
+            if (heureFinale < 0) heureFinale = 0;
             if (heureFinale + dureeVol > 24) heureFinale = 24 - dureeVol;
             const jourChangeMove = tableName === 'Maintenance' && gridCible && gridCible !== gridBg;
             if (!jourChangeMove) {
