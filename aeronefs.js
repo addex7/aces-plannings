@@ -1344,10 +1344,18 @@ function fermerBilanDocumentsAeronefs() {
 async function chargerTousDocumentsAeronefs(forceRefresh = false) {
     try {
         const url = `${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS_AERONEFS)}?pageSize=100`;
-        const res = await cachedFetch(url, { headers }, API_CACHE_TTL, forceRefresh);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Erreur chargement');
-        return data.records || [];
+        const tous = [];
+        let offset = null;
+        let garde = 0;
+        do {
+            const full = offset ? `${url}&offset=${encodeURIComponent(offset)}` : url;
+            const res = await cachedFetch(full, { headers }, API_CACHE_TTL, forceRefresh);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || 'Erreur chargement');
+            tous.push(...(data.records || []));
+            offset = data.offset || null;
+        } while (offset && ++garde < 50);
+        return tous;
     } catch (err) {
         console.warn('Erreur chargement bilan documents:', err);
         return [];
