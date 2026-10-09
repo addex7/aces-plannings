@@ -51,8 +51,8 @@ function initEvenements() {
         dateDebutInput.addEventListener('change', () => { dateFinInput.value = dateDebutInput.value; });
     }
 
-    chargerProchainsEvenements();
-    chargerEvenementsJour();
+    // Les donnees sont chargees par chargerDonneesInitiales() (app.js) une fois
+    // le jeton de session restaure — sinon le jeton public renvoie 403.
 }
 
 function ouvrirModaleEvenement(date, record) {

@@ -103,11 +103,23 @@ document.addEventListener('DOMContentLoaded', () => {
     initNotifications();
     afficherAvertissementMobile();
     adapterTableauxPetitEcran();
+});
+
+// Lance une seule fois, depuis showApp() — apres la restauration du jeton de
+// session. Au DOMContentLoaded, headers porte encore le jeton public restreint
+// VI : toute lecture d'une table non publique (Evenements, Presences...)
+// renverrait 403.
+let chargementInitialFait = false;
+function chargerDonneesInitiales() {
+    if (chargementInitialFait) return;
+    chargementInitialFait = true;
     Promise.all([
         chargerDonneesPlanning(),
         chargerPresencesClub()
     ]).catch(err => console.error('Erreur chargement initial:', err));
-});
+    if (typeof chargerProchainsEvenements === 'function') chargerProchainsEvenements();
+    if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
+}
 
 // Détection téléphone : les tablettes (iPad, Android) affichent le site
 // complet adapte via media queries ; seuls les petits ecrans tactiles
