@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=4e1385fb9e">
+    <link rel="stylesheet" href="style.css?v=1512f0a1a9">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -1544,7 +1544,7 @@
     <div id="modale-evenement" class="modal" style="display:none;">
         <div class="modal-content" style="max-width:420px; width:100%;">
             <button type="button" id="btn-close-evenement" class="close-modal">&times;</button>
-            <h3>Créer un évènement</h3>
+            <h3 id="titre-modale-evenement">Créer un évènement</h3>
             <form id="form-evenement">
                 <div class="form-group">
                     <label for="ev-titre">Titre *</label>
@@ -1573,7 +1573,7 @@
                     </div>
                 </div>
                 <div class="form-actions" style="margin-top:15px;">
-                    <button type="submit" class="btn-submit">Créer</button>
+                    <button type="submit" id="btn-submit-evenement" class="btn-submit">Créer</button>
                 </div>
             </form>
         </div>
@@ -1626,8 +1626,8 @@
     </div>
 
     <!-- Chargement des Scripts Applicatifs -->
-    <script src="evenements.js?v=83c4d31a46"></script>
-    <script src="version.js?v=20261008210058"></script>
+    <script src="evenements.js?v=cb0c52de9f"></script>
+    <script src="version.js?v=20261009144221"></script>
     <script src="app.js?v=355629c1ff"></script>
     <script src="utils.js?v=34bd013fe7"></script>
     <script src="presences.js?v=5da5f247ed"></script>

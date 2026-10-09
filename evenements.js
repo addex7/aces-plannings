@@ -4,6 +4,10 @@
 
 const TABLE_EVENEMENTS = 'Événements';
 
+// Record en cours d'edition (null = creation) + cache du jour affiche pour rouvrir la modale.
+let evenementEnEdition = null;
+const evenementsJourCache = new Map();
+
 const FIELDS = {
     TITRE: 'Titre',
     DESCRIPTION: 'Description',
@@ -51,23 +55,42 @@ function initEvenements() {
     chargerEvenementsJour();
 }
 
-function ouvrirModaleEvenement(date) {
+function ouvrirModaleEvenement(date, record) {
     const overlay = document.getElementById('modale-evenement');
     if (!overlay) return;
-    const d = (date instanceof Date ? date : null) || dateAffichee || new Date();
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    document.getElementById('ev-titre').value = '';
-    document.getElementById('ev-description').value = '';
-    document.getElementById('ev-date-debut').value = iso;
-    document.getElementById('ev-heure-debut').value = '09:00';
-    document.getElementById('ev-date-fin').value = iso;
-    document.getElementById('ev-heure-fin').value = '11:00';
+    const titreModale = document.getElementById('titre-modale-evenement');
+    const btnSubmit = document.getElementById('btn-submit-evenement');
+    if (record && record.fields) {
+        const f = record.fields;
+        evenementEnEdition = record.id;
+        if (titreModale) titreModale.textContent = 'Modifier l\'évènement';
+        if (btnSubmit) btnSubmit.textContent = 'Enregistrer';
+        document.getElementById('ev-titre').value = f[FIELDS.TITRE] || '';
+        document.getElementById('ev-description').value = f[FIELDS.DESCRIPTION] || '';
+        document.getElementById('ev-date-debut').value = f[FIELDS.DATE_DEBUT] || '';
+        document.getElementById('ev-heure-debut').value = f[FIELDS.HEURE_DEBUT] || '09:00';
+        document.getElementById('ev-date-fin').value = f[FIELDS.DATE_FIN] || f[FIELDS.DATE_DEBUT] || '';
+        document.getElementById('ev-heure-fin').value = f[FIELDS.HEURE_FIN] || '11:00';
+    } else {
+        evenementEnEdition = null;
+        if (titreModale) titreModale.textContent = 'Créer un évènement';
+        if (btnSubmit) btnSubmit.textContent = 'Créer';
+        const d = (date instanceof Date ? date : null) || dateAffichee || new Date();
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        document.getElementById('ev-titre').value = '';
+        document.getElementById('ev-description').value = '';
+        document.getElementById('ev-date-debut').value = iso;
+        document.getElementById('ev-heure-debut').value = '09:00';
+        document.getElementById('ev-date-fin').value = iso;
+        document.getElementById('ev-heure-fin').value = '11:00';
+    }
     overlay.style.display = 'flex';
 }
 
 function fermerModaleEvenement() {
     const overlay = document.getElementById('modale-evenement');
     if (overlay) overlay.style.display = 'none';
+    evenementEnEdition = null;
 }
 
 // Nom complet de l'utilisateur + correspondance tolerante avec les anciens
@@ -104,43 +127,46 @@ async function enregistrerEvenement(e) {
         return;
     }
 
-    const payload = {
-        records: [{
-            fields: {
-                [FIELDS.TITRE]: titre,
-                [FIELDS.DESCRIPTION]: description,
-                [FIELDS.DATE_DEBUT]: dateDebut,
-                [FIELDS.HEURE_DEBUT]: heureDebut,
-                [FIELDS.DATE_FIN]: dateFin,
-                [FIELDS.HEURE_FIN]: heureFin,
-                [FIELDS.INSCRITS]: '',
-                [FIELDS.AJOUTE_PAR]: nom
-            }
-        }]
+    const champsEditables = {
+        [FIELDS.TITRE]: titre,
+        [FIELDS.DESCRIPTION]: description,
+        [FIELDS.DATE_DEBUT]: dateDebut,
+        [FIELDS.HEURE_DEBUT]: heureDebut,
+        [FIELDS.DATE_FIN]: dateFin,
+        [FIELDS.HEURE_FIN]: heureFin
     };
+    const edition = evenementEnEdition;
+    const payload = edition
+        ? { records: [{ id: edition, fields: champsEditables }] }
+        : { records: [{ fields: { ...champsEditables, [FIELDS.INSCRITS]: '', [FIELDS.AJOUTE_PAR]: nom } }] };
 
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_EVENEMENTS)}`, {
-            method: 'POST',
+            method: edition ? 'PATCH' : 'POST',
             headers: headers,
             body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (!res.ok) {
             console.error(data);
-            alert(`Erreur lors de la création : ${data.error ? data.error.message : 'Erreur inconnue'}`);
+            alert(`Erreur lors de l'enregistrement : ${data.error ? data.error.message : 'Erreur inconnue'}`);
             return;
         }
         fermerModaleEvenement();
         chargerProchainsEvenements();
         chargerEvenementsJour();
-        if (typeof enregistrerAudit === 'function') enregistrerAudit('Création d\'événement', titre, `Du ${dateDebut} ${heureDebut} au ${dateFin} ${heureFin}`, 'Événements');
-        const evtId = (data.records && data.records[0] && data.records[0].id) || '';
-        if (typeof notifierNouvelEvenement === 'function') notifierNouvelEvenement(evtId, titre, dateDebut, nom);
-        allerAEvenement(dateDebut);
+        if (edition) {
+            if (typeof enregistrerAudit === 'function') enregistrerAudit('Modification d\'événement', titre, `Du ${dateDebut} ${heureDebut} au ${dateFin} ${heureFin}`, 'Événements');
+            allerAEvenement(dateDebut);
+        } else {
+            if (typeof enregistrerAudit === 'function') enregistrerAudit('Création d\'événement', titre, `Du ${dateDebut} ${heureDebut} au ${dateFin} ${heureFin}`, 'Événements');
+            const evtId = (data.records && data.records[0] && data.records[0].id) || '';
+            if (typeof notifierNouvelEvenement === 'function') notifierNouvelEvenement(evtId, titre, dateDebut, nom);
+            allerAEvenement(dateDebut);
+        }
     } catch (err) {
         console.error(err);
-        alert('Erreur lors de la création de l\'événement.');
+        alert('Erreur lors de l\'enregistrement de l\'événement.');
     }
 }
 
@@ -166,6 +192,8 @@ async function chargerEvenementsJour() {
         const records = await fetchTousRecordsCache(url, { headers });
 
         const evenements = records.filter(r => estDansIntervalle(dateIso, r.fields[FIELDS.DATE_DEBUT], r.fields[FIELDS.DATE_FIN]));
+        evenementsJourCache.clear();
+        evenements.forEach(r => evenementsJourCache.set(r.id, r));
         if (!evenements.length) {
             container.innerHTML = '';
             if (section) section.style.display = 'none';
@@ -190,6 +218,7 @@ document.addEventListener('click', (e) => {
     const d = el.dataset;
     if (d.evtAction === 'desinscrire') desinscrireEvenement(d.rid, d.nom);
     else if (d.evtAction === 'commentaire') modifierCommentaireEvenement(d.rid, d.nom, d.commentaire || '');
+    else if (d.evtAction === 'modifier') modifierEvenement(d.rid);
     else if (d.evtAction === 'aller') allerAEvenement(d.date);
 });
 
@@ -229,12 +258,14 @@ function renderEvenement(record) {
         : `<button class="btn-inscription" onclick="sinscrireEvenement('${record.id}')">M'inscrire</button>`;
     const peutInscrireAutre = typeof roleAutorise === 'function' && roleAutorise(['Super admin', 'Instructeur avion', 'Instructeur planeur', 'Instructeur ULM']);
     const btnInscrireAutre = peutInscrireAutre ? `<button class="btn-inscription" onclick="ouvrirInscrireAutre('Événements', '${record.id}')">Inscrire quelqu'un d'autre</button>` : '';
-    const peutSupprimer = memeNom(createur, nomConnecte) || (currentUser && currentUser.roles && currentUser.roles.includes('Super admin'));
-    const btnSupprimer = peutSupprimer ? `<button class="btn-supprimer-evenement" onclick="supprimerEvenement('${record.id}')" title="Supprimer l'évènement">×</button>` : '';
+    const peutModifier = memeNom(createur, nomConnecte) || (currentUser && currentUser.roles && currentUser.roles.includes('Super admin'));
+    const btnSupprimer = peutModifier ? `<button class="btn-supprimer-evenement" onclick="supprimerEvenement('${record.id}')" title="Supprimer l'évènement">×</button>` : '';
+    const btnModifier = peutModifier ? `<button class="btn-modifier-evenement" data-evt-action="modifier" data-rid="${escapeHtml(record.id)}" title="Modifier l'évènement">✏️</button>` : '';
 
     return `
         <div class="evenement-card" data-record-id="${record.id}">
             ${btnSupprimer}
+            ${btnModifier}
             <div class="evenement-header">
                 <div class="evenement-titre">${titre}${createur ? ` <span class="evenement-createur">par ${escapeHtml(createur)}</span>` : ''}</div>
                 <div class="evenement-sous-titre">${dateTexte} • ${horaireTexte}</div>
@@ -300,6 +331,18 @@ async function desinscrireEvenement(recordId, nom) {
         console.error(err);
         alert('Erreur lors de la désinscription.');
     }
+}
+
+function modifierEvenement(recordId) {
+    const record = evenementsJourCache.get(recordId);
+    if (!record) { alert('Événement introuvable — recharge la page.'); return; }
+    const createur = (record.fields || {})[FIELDS.AJOUTE_PAR] || '';
+    const estSuperAdmin = currentUser && currentUser.roles && currentUser.roles.includes('Super admin');
+    if (!memeNom(createur, nomCompletUtilisateur()) && !estSuperAdmin) {
+        alert('Seul le créateur de l\'évènement (ou un Super admin) peut le modifier.');
+        return;
+    }
+    ouvrirModaleEvenement(null, record);
 }
 
 async function supprimerEvenement(recordId) {

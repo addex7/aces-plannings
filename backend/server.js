@@ -305,13 +305,64 @@ function epurerRecordSensible(table, record) {
     for (const c of CHAMPS_INVISIBLES_UTILISATEURS) delete record.fields[c];
 }
 
-function droitEcriture(req, res, tableNom, records) {
+// Equivalent serveur de formaterNomPilote/memeNom : "Benjamin Quoniam" -> "Benjamin Q."
+function formaterNomCourt(nomComplet) {
+    const parties = String(nomComplet || '').trim().split(/\s+/).filter(Boolean);
+    if (parties.length <= 1) return parties[0] || '';
+    const premier = parties[0];
+    const estNomEnPremier = premier === premier.toUpperCase() && premier.length > 1;
+    const prenom = estNomEnPremier ? parties.slice(1).join(' ') : premier;
+    const nom = estNomEnPremier ? premier : parties.slice(1).join(' ');
+    return `${prenom} ${nom.charAt(0).toUpperCase()}.`;
+}
+function memeNomCreateur(stocke, nomComplet) {
+    if (!stocke || !nomComplet) return false;
+    return stocke === nomComplet || stocke === formaterNomCourt(nomComplet);
+}
+
+// Evenements : seul le createur ("Ajouté par") ou un Super admin modifie/supprime.
+// Exception : le champ "Inscrits" reste ouvert a tout membre (inscriptions, commentaires).
+const CHAMPS_INSCRITS_EVENEMENT = new Set(['Inscrits']);
+async function createursEvenementsOk(req, res, ids) {
+    if ((req.user.roles || []).includes('Super admin')) return true;
+    ids = (ids || []).filter(Boolean);
+    if (!ids.length) { erreur(res, 403, 'Droits insuffisants'); return false; }
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, fields->>'Ajouté par' AS createur FROM evenements WHERE id = ANY($1)`, [ids]);
+        const ok = rows.length === ids.length && rows.every(r => memeNomCreateur(r.createur, req.user.nom));
+        if (!ok) erreur(res, 403, 'Seul le créateur de l\'événement (ou un Super admin) peut le modifier');
+        return ok;
+    } catch (e) {
+        console.error('Droits evenements:', e.message);
+        erreur(res, 500, 'Erreur serveur');
+        return false;
+    }
+}
+async function droitEcritureEvenements(req, res, records) {
+    if (req.method === 'POST') {
+        // Anti-usurpation : le createur est toujours l'utilisateur connecte.
+        for (const r of records || []) { if (r.fields) r.fields['Ajouté par'] = req.user.nom; }
+        return true;
+    }
+    if (req.method === 'PATCH' || req.method === 'PUT') {
+        const seulementInscrits = (records || []).length > 0 &&
+            records.every(r => Object.keys(r.fields || {}).every(c => c.startsWith('_') || CHAMPS_INSCRITS_EVENEMENT.has(c)));
+        if (seulementInscrits) return true;
+        return createursEvenementsOk(req, res, (records || []).map(r => r.id));
+    }
+    if (req.method === 'DELETE') return createursEvenementsOk(req, res, (records || []).map(r => r.id));
+    return true;
+}
+
+async function droitEcriture(req, res, tableNom, records) {
     const table = TABLES[tableNom];
     if (req.publicAccess) {
         if (TABLES_ECRITURE_PUBLIQUE.has(table)) return true;
         erreur(res, 403, 'Accès public limité à la réservation de VI');
         return false;
     }
+    if (tableNom === 'Événements') return droitEcritureEvenements(req, res, records);
     const regles = DROITS_ECRITURE[tableNom];
     if (!regles) return true;
     if ((req.user.roles || []).some(r => regles.includes(r))) return true;
@@ -1026,7 +1077,7 @@ app.post('/v0/:base/:table', async (req, res) => {
         if (!records && req.body.fields) records = [{ fields: req.body.fields }];
         if (!Array.isArray(records) || !records.length) return erreur(res, 422, 'records manquant');
         const tableNom = decodeURIComponent(req.params.table || '');
-        if (!droitEcriture(req, res, tableNom, records)) return;
+        if (!await droitEcriture(req, res, tableNom, records)) return;
         const crees = [];
         const decalages = [];
         for (const r of records) {
@@ -1108,7 +1159,7 @@ async function majRecords(req, res, remplacer) {
         const records = req.body.records;
         if (!Array.isArray(records) || !records.length) return erreur(res, 422, 'records manquant');
         const tableNom = decodeURIComponent(req.params.table || '');
-        if (!droitEcriture(req, res, tableNom, records)) return;
+        if (!await droitEcriture(req, res, tableNom, records)) return;
         let anciensMap = {};
         try {
             const idsMaj = records.map(r => r.id).filter(Boolean);
@@ -1189,7 +1240,7 @@ async function majRecordUnitaire(req, res, remplacer) {
     try {
         const fields = req.body.fields;
         if (!fields) return erreur(res, 422, 'fields manquant');
-        if (!droitEcriture(req, res, tableNom, [{ id: req.params.id, fields }])) return;
+        if (!await droitEcriture(req, res, tableNom, [{ id: req.params.id, fields }])) return;
         let ancien = null;
         try {
             const { rows: av } = await pool.query(`SELECT fields FROM ${table} WHERE id = $1`, [req.params.id]);
@@ -1255,7 +1306,7 @@ app.delete('/v0/:base/:table/:id', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;
     const tableNom = decodeURIComponent(req.params.table || '');
-    if (!droitEcriture(req, res, tableNom, null)) return;
+    if (!await droitEcriture(req, res, tableNom, [{ id: req.params.id }])) return;
     try {
         await supprimerIds(req, res, table, [req.params.id]);
     } catch (e) {
@@ -1267,11 +1318,11 @@ app.delete('/v0/:base/:table', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;
     const tableNom = decodeURIComponent(req.params.table || '');
-    if (!droitEcriture(req, res, tableNom, null)) return;
+    let ids = req.query['records[]'] || req.query.records;
+    if (!ids) return erreur(res, 422, 'records manquant');
+    if (!Array.isArray(ids)) ids = [ids];
+    if (!await droitEcriture(req, res, tableNom, ids.map(id => ({ id })))) return;
     try {
-        let ids = req.query['records[]'] || req.query.records;
-        if (!ids) return erreur(res, 422, 'records manquant');
-        if (!Array.isArray(ids)) ids = [ids];
         await supprimerIds(req, res, table, ids);
     } catch (e) {
         console.error('DELETE:', e);
