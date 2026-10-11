@@ -51,22 +51,28 @@ async function mettreAJourAccesFormation() {
 async function chargerSuivis(force = false) {
     if (suivisCache && !force) return suivisCache;
     const url = `${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}?sort[0][field]=${encodeURIComponent('Date début')}&sort[0][direction]=desc&pageSize=100`;
-    suivisCache = await fetchTousRecordsCache(url, { headers });
+    suivisCache = await fetchTousRecordsCache(url, { headers }, API_CACHE_TTL, force);
     return suivisCache;
 }
 async function chargerToutesSeances(force = false) {
     if (seancesCache && !force) return seancesCache;
     const url = `${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}?sort[0][field]=Date&sort[0][direction]=asc&pageSize=100`;
-    seancesCache = await fetchTousRecordsCache(url, { headers });
+    seancesCache = await fetchTousRecordsCache(url, { headers }, API_CACHE_TTL, force);
     return seancesCache;
 }
 async function chargerFormationsCatalogue(force = false) {
     if (formationsCache.length && !force) return formationsCache;
     const url = `${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS)}?pageSize=100`;
-    formationsCache = await fetchTousRecordsCache(url, { headers });
+    formationsCache = await fetchTousRecordsCache(url, { headers }, API_CACHE_TTL, force);
     return formationsCache;
 }
-function invaliderFormationCache() { suivisCache = null; seancesCache = null; }
+// Vide les deux niveaux de cache : variables du module ET cache HTTP partage
+// (apiFetch n'invalide pas le cache — contrairement a cachedFetch sur non-GET).
+function invaliderFormationCache() {
+    suivisCache = null;
+    seancesCache = null;
+    if (typeof viderApiCache === 'function') viderApiCache();
+}
 
 async function chargerVolsEleve(nomEleve) {
     const formula = encodeURIComponent(`{Pilote}='${formationEncodeNom(nomEleve)}'`);
@@ -435,7 +441,7 @@ async function signerSeance(seanceId) {
     const image = await ouvrirPadSignature('Signer la séance');
     if (!image) return;
     try {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}`, {
             method: 'PATCH', headers,
             body: JSON.stringify({ records: [{ id: seanceId, fields: { 'Signature élève': signatureObjet(image) } }] })
         });
@@ -451,7 +457,7 @@ async function signerSeance(seanceId) {
 // GESTION DU STATUT ET DE LA DOCUMENTATION D'UN SUIVI
 // ---------------------------------------------------------------------------
 async function patchSuivi(suiviId, fields) {
-    const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}`, {
+    const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}`, {
         method: 'PATCH', headers,
         body: JSON.stringify({ records: [{ id: suiviId, fields }] })
     });
@@ -580,7 +586,7 @@ async function enregistrerAttribution(e) {
         'Documentation': []
     };
     try {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}`, {
             method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] })
         });
         const data = await res.json();
@@ -676,7 +682,7 @@ async function enregistrerFormationEdit(e) {
         'Actif': true
     };
     try {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS)}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS)}`, {
             method: fid ? 'PATCH' : 'POST', headers,
             body: JSON.stringify(fid ? { records: [{ id: fid, fields }] } : { records: [{ fields }] })
         });
@@ -691,7 +697,7 @@ async function enregistrerFormationEdit(e) {
 async function supprimerFormation(fid) {
     if (!(await confirmerSuppression('Supprimer cette formation du catalogue ?\nLes suivis en cours conservent leur copie des leçons.'))) return;
     try {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS)}?records[]=${fid}`, { method: 'DELETE', headers });
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS)}?records[]=${fid}`, { method: 'DELETE', headers });
         if (!res.ok) throw new Error(await res.text());
         await chargerFormationsCatalogue(true);
         ouvrirGestionCatalogue();
@@ -797,7 +803,7 @@ async function enregistrerSeance(e) {
         'Signature instructeur': signatureObjet(image)
     };
     try {
-        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}`, {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}`, {
             method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] })
         });
         const data = await res.json();
