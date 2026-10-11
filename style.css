@@ -5349,12 +5349,6 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 /* ==========================================================================
    FORMATION - SUIVI PEDAGOGIQUE
    ========================================================================== */
-.formation-toolbar {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin: 10px 0 14px;
-}
 .formation-section-titre {
     margin: 18px 0 8px;
     color: #1e3d59;

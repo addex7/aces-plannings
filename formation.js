@@ -134,6 +134,13 @@ function libelleItem(suivi, x) {
     const lecon = formationJson(suivi.fields['Lecons'], []).find(l => String(l.id) === String(x.lecon));
     return lecon ? { leconTitre: lecon.titre, texte: (lecon.items || [])[x.item] || '?' } : { leconTitre: '?', texte: '?' };
 }
+// Boutons d'action dans l'en-tete de la page (a droite, comme les autres vues)
+function majActionsEntete(html) {
+    const zone = document.getElementById('formation-header-actions');
+    if (!zone) return;
+    zone.innerHTML = html || '';
+    zone.style.display = html ? 'flex' : 'none';
+}
 
 // ---------------------------------------------------------------------------
 // VUE PRINCIPALE
@@ -150,6 +157,9 @@ async function chargerFormation() {
             instructeur ? chargerFormationsCatalogue() : Promise.resolve([])
         ]);
         if (suiviOuvertId) { renderDetailSuivi(); return; }
+        majActionsEntete(instructeur ? `
+            <button class="btn-primary" data-formation-action="nouveau-suivi">＋ Attribuer une formation</button>
+            <button class="btn-secondary" data-formation-action="gerer-catalogue">📚 Formations</button>` : '');
         zone.innerHTML = instructeur ? renderVueInstructeur(suivis) : renderVueEleve(suivis);
     } catch (e) {
         console.error(e);
@@ -175,10 +185,6 @@ function renderVueInstructeur(suivis) {
         </div>`;
     };
     return `
-        <div class="formation-toolbar">
-            <button class="btn-primary" data-formation-action="nouveau-suivi">＋ Attribuer une formation</button>
-            <button class="btn-secondary" data-formation-action="gerer-catalogue">📚 Formations</button>
-        </div>
         <h3 class="formation-section-titre">Formations en cours (${ouverts.length})</h3>
         <div class="formation-grille">${ouverts.map(carte).join('') || '<div class="formation-vide">Aucune formation en cours — attribuez-en une.</div>'}</div>
         ${termines.length ? `<h3 class="formation-section-titre">Terminées</h3><div class="formation-grille">${termines.map(carte).join('')}</div>` : ''}
@@ -228,14 +234,13 @@ async function renderDetailSuivi() {
     // Comptage des vols depuis le debut de la formation (asynchrone, non bloquant)
     const statsVolsId = `formation-stats-${suivi.id}`;
 
-    const actionsInstructeur = instructeur ? `
-        <div class="formation-toolbar" style="margin-top:8px;">
-            <button class="btn-secondary" data-formation-action="seance" data-sid="${suivi.id}">✈️ Nouvelle séance</button>
-            <button class="btn-secondary" data-formation-action="minimas" data-sid="${suivi.id}">⏱ Minimas</button>
-            <button class="btn-secondary" data-formation-action="doc" data-sid="${suivi.id}">📄 Demander un document</button>
-            ${statut === 'Ouverte' ? `<button class="btn-secondary" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
-            ${statut !== 'Archivée' ? `<button class="btn-secondary" data-formation-action="archiver" data-sid="${suivi.id}">🗄 Archiver</button>` : `<button class="btn-secondary" data-formation-action="rouvrir" data-sid="${suivi.id}">↩️ Désarchiver</button>`}
-        </div>` : '';
+    const boutonsInstructeur = instructeur ? `
+        <button class="btn-primary" data-formation-action="seance" data-sid="${suivi.id}">✈️ Nouvelle séance</button>
+        <button class="btn-secondary" data-formation-action="minimas" data-sid="${suivi.id}">⏱ Minimas</button>
+        <button class="btn-secondary" data-formation-action="doc" data-sid="${suivi.id}">📄 Demander un document</button>
+        ${statut === 'Ouverte' ? `<button class="btn-secondary" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
+        ${statut !== 'Archivée' ? `<button class="btn-secondary" data-formation-action="archiver" data-sid="${suivi.id}">🗄 Archiver</button>` : `<button class="btn-secondary" data-formation-action="rouvrir" data-sid="${suivi.id}">↩️ Désarchiver</button>`}` : '';
+    majActionsEntete(`<button class="btn-secondary" data-formation-action="retour">← Retour</button>${boutonsInstructeur}`);
 
     const leconsHtml = p.lecons.map((l, idx) => renderLecon(suivi, l, idx, p, instructeur)).join('');
     const docsHtml = docs.length ? `
@@ -243,9 +248,6 @@ async function renderDetailSuivi() {
         <div class="formation-docs">${docs.map(d => renderDoc(suivi, d, instructeur)).join('')}</div>` : '';
 
     zone.innerHTML = `
-        <div class="formation-toolbar">
-            <button class="btn-secondary" data-formation-action="retour">← Retour</button>
-        </div>
         <div class="formation-entete">
             <div>
                 <h3 style="margin:0;">${escapeHtml(f['Formation titre'] || 'Formation')} ${statutBadge(statut)}</h3>
@@ -259,7 +261,6 @@ async function renderDetailSuivi() {
             <div style="min-width:220px;">${barreProgression(p.pct, 20)}<div class="formation-carte-sub" style="text-align:right;">${p.faits}/${p.total} items validés</div></div>
         </div>
         <div id="${statsVolsId}" class="formation-carte-sub" style="margin:6px 0 10px;">Comptage des vols…</div>
-        ${actionsInstructeur}
         ${docsHtml}
         <h4 class="formation-sub-titre">📚 Leçons</h4>
         ${leconsHtml || '<div class="formation-vide">Aucune leçon définie.</div>'}
