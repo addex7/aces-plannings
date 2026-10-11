@@ -910,6 +910,7 @@ function initNavigationTabs() {
     const tabAudit = document.getElementById('tab-audit');
     const tabMessagerie = document.getElementById('tab-messagerie');
     const tabAccueil = document.getElementById('tab-accueil');
+    const tabFormation = document.getElementById('tab-formation');
     const viewPlanning = document.getElementById('view-planning');
     const viewAeronefs = document.getElementById('view-aeronefs');
     const viewInitiation = document.getElementById('view-initiation');
@@ -923,10 +924,11 @@ function initNavigationTabs() {
     const viewAccueilMembre = document.getElementById('view-accueil-membre');
     const viewMessagerie = document.getElementById('view-messagerie');
     const viewAccueilPilote = document.getElementById('view-accueil-pilote');
+    const viewFormation = document.getElementById('view-formation');
 
     function activerTab(tab, vue) {
-        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabCarnetVol, tabMembres, tabDocuments, tabComptes, tabAudit, tabMessagerie, tabAccueil].forEach(t => { if (t) t.classList.remove('active'); });
-        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewCarnetVol, viewMembres, viewDocuments, viewComptes, viewAudit, viewAccueilMembre, viewMessagerie, viewAccueilPilote].forEach(v => { if (v) v.style.display = 'none'; });
+        [tabPlanning, tabAeronefs, tabInitiation, tabInstructeur, tabCarnet, tabCarnetVol, tabMembres, tabDocuments, tabComptes, tabAudit, tabMessagerie, tabAccueil, tabFormation].forEach(t => { if (t) t.classList.remove('active'); });
+        [viewPlanning, viewAeronefs, viewInitiation, viewInstructeur, viewCarnet, viewCarnetVol, viewMembres, viewDocuments, viewComptes, viewAudit, viewAccueilMembre, viewMessagerie, viewAccueilPilote, viewFormation].forEach(v => { if (v) v.style.display = 'none'; });
         if (tab) tab.classList.add('active');
         if (vue) vue.style.display = 'block';
         // Ouvrir le groupe contenant l'onglet actif, fermer les autres groupes déroulants
@@ -968,6 +970,13 @@ function initNavigationTabs() {
         tabInitiation.addEventListener('click', () => {
             activerTab(tabInitiation, viewInitiation);
             chargerVolsInitiation();
+        });
+    }
+
+    if (tabFormation) {
+        tabFormation.addEventListener('click', () => {
+            activerTab(tabFormation, viewFormation);
+            if (typeof chargerFormation === 'function') chargerFormation();
         });
     }
 

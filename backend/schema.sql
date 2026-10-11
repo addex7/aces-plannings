@@ -162,3 +162,20 @@ CREATE TABLE IF NOT EXISTS sessions (
     cree_le     TIMESTAMPTZ NOT NULL DEFAULT now(),
     expire_le   TIMESTAMPTZ NOT NULL
 );
+
+-- Module Formation : catalogue de programmes, suivis par eleve, seances de vol.
+CREATE TABLE IF NOT EXISTS formations (
+    id          TEXT PRIMARY KEY,
+    fields      JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS formations_suivis (
+    id          TEXT PRIMARY KEY,
+    fields      JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS formations_seances (
+    id          TEXT PRIMARY KEY,
+    fields      JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

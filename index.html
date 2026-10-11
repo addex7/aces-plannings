@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=1512f0a1a9">
+    <link rel="stylesheet" href="style.css?v=d5c3e206d9">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -146,6 +146,7 @@
                         <ul class="nav-sub">
                             <li id="tab-carnet">📖 Carnet de route</li>
                             <li id="tab-carnet-vol">🛫 Carnet de vol</li>
+                            <li id="tab-formation" style="display:none;">🎓 Formation</li>
                             <li id="tab-documents">📄 Bibliothèque</li>
                             <li id="tab-comptes" style="display:none;">💳 Compte pilote</li>
                             <li id="tab-audit" style="display:none;">📋 Journal d'audit</li>
@@ -884,6 +885,14 @@
                     </div>
                 </div>
             </section>
+            <section id="view-formation" class="view-section" style="display: none;">
+                <header class="header">
+                    <h2>🎓 Formation</h2>
+                </header>
+                <div id="formation-contenu" style="margin-top:10px;">
+                    <div class="loading" style="padding:30px;text-align:center;color:#94a3b8;">Chargement…</div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -1579,6 +1588,165 @@
         </div>
     </div>
 
+    <!-- Modale : Catalogue des formations -->
+    <div id="modale-formation-catalogue" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:560px; width:100%;">
+            <button type="button" id="btn-close-formation-catalogue" class="close-modal">&times;</button>
+            <h3>📚 Catalogue des formations</h3>
+            <div id="catalogue-liste" style="max-height:50vh; overflow-y:auto; margin:10px 0;"></div>
+            <div class="form-actions">
+                <button type="button" id="btn-formation-nouvelle" class="btn-submit">＋ Nouvelle formation</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale : Éditeur de formation (leçons + items + minimas) -->
+    <div id="modale-formation-editeur" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:640px; width:100%;">
+            <button type="button" id="btn-close-formation-editeur" class="close-modal">&times;</button>
+            <h3 id="titre-modale-formation">Nouvelle formation</h3>
+            <form id="form-formation-editeur">
+                <div class="form-group">
+                    <label for="edit-formation-titre">Titre *</label>
+                    <input type="text" id="edit-formation-titre" required>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="edit-formation-discipline">Discipline</label>
+                        <select id="edit-formation-discipline">
+                            <option value="Avion">Avion</option>
+                            <option value="ULM">ULM</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit-formation-description">Description</label>
+                    <textarea id="edit-formation-description" rows="2"></textarea>
+                </div>
+                <div class="nr-section" style="margin-top:10px;">
+                    <div class="nr-section-title">MINIMAS REQUIS</div>
+                    <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="edit-formation-heures">Heures de vol</label>
+                            <input type="number" id="edit-formation-heures" min="0" step="0.5" placeholder="ex : 30">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="edit-formation-vols">Nombre de vols</label>
+                            <input type="number" id="edit-formation-vols" min="0" step="1" placeholder="ex : 25">
+                        </div>
+                    </div>
+                    <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="edit-formation-heures-lic">Heures (déjà licencié)</label>
+                            <input type="number" id="edit-formation-heures-lic" min="0" step="0.5" placeholder="ex : 15">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="edit-formation-vols-lic">Vols (déjà licencié)</label>
+                            <input type="number" id="edit-formation-vols-lic" min="0" step="1" placeholder="ex : 10">
+                        </div>
+                    </div>
+                </div>
+                <div class="nr-section" style="margin-top:12px;">
+                    <div class="nr-section-title">LEÇONS</div>
+                    <div id="editeur-lecons"></div>
+                    <button type="button" id="btn-formation-lecon-add" class="btn-secondary" style="margin-top:8px;">＋ Ajouter une leçon</button>
+                </div>
+                <div class="form-actions" style="margin-top:15px;">
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale : Attribuer une formation à un élève -->
+    <div id="modale-formation-attribuer" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:440px; width:100%;">
+            <button type="button" id="btn-close-formation-attribuer" class="close-modal">&times;</button>
+            <h3>Attribuer une formation</h3>
+            <form id="form-formation-attribuer">
+                <div class="form-group">
+                    <label for="attribuer-eleve">Élève *</label>
+                    <select id="attribuer-eleve" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="attribuer-formation">Formation *</label>
+                    <select id="attribuer-formation" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="attribuer-date">Date de début *</label>
+                    <input type="date" id="attribuer-date" required>
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="attribuer-licencie" style="width:auto;">
+                    <label for="attribuer-licencie" style="margin:0;">L'élève détient déjà une licence de pilote (minimas réduits)</label>
+                </div>
+                <div class="form-actions" style="margin-top:15px;">
+                    <button type="submit" class="btn-submit">Attribuer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale : Nouvelle séance (débrief de vol) -->
+    <div id="modale-formation-seance" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:560px; width:100%;">
+            <button type="button" id="btn-close-formation-seance" class="close-modal">&times;</button>
+            <h3>✈️ Débrief de séance</h3>
+            <form id="form-formation-seance">
+                <div class="form-group">
+                    <label for="seance-vol">Vol associé</label>
+                    <select id="seance-vol"><option value="">—</option></select>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="seance-lecon">Leçon</label>
+                        <select id="seance-lecon"></select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="seance-date">Date</label>
+                        <input type="date" id="seance-date">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label>Items (cocher = validé, décoché = reporté)</label>
+                    <div id="seance-items" style="max-height:200px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; padding:8px;"></div>
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="seance-lecon-validee" style="width:auto;">
+                    <label for="seance-lecon-validee" style="margin:0;">✅ Valider la leçon</label>
+                </div>
+                <div class="form-group">
+                    <label for="seance-commentaire">Commentaire pour l'élève</label>
+                    <textarea id="seance-commentaire" rows="3" placeholder="Points forts, points à retravailler…"></textarea>
+                </div>
+                <div class="form-actions" style="margin-top:15px;">
+                    <button type="submit" class="btn-submit">✍️ Signer et enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale : Minimas du suivi -->
+    <div id="modale-formation-minimas" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:380px; width:100%;">
+            <button type="button" id="btn-close-formation-minimas" class="close-modal">&times;</button>
+            <h3>⏱ Minimas requis</h3>
+            <form id="form-formation-minimas">
+                <div class="form-group">
+                    <label for="minimas-heures">Heures de vol requises</label>
+                    <input type="number" id="minimas-heures" min="0" step="0.5">
+                </div>
+                <div class="form-group">
+                    <label for="minimas-vols">Nombre de vols requis</label>
+                    <input type="number" id="minimas-vols" min="0" step="1">
+                </div>
+                <div class="form-actions" style="margin-top:15px;">
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modale : Déclarer une disponibilité instructeur -->
     <div id="disponibilite-instructeur-modal" class="modal">
         <div class="modal-content">
@@ -1627,20 +1795,21 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
-    <script src="version.js?v=20261009144616"></script>
-    <script src="app.js?v=86dce8e92d"></script>
+    <script src="formation.js?v=f7f978e8a5"></script>
+    <script src="version.js?v=20261011104447"></script>
+    <script src="app.js?v=a87ff05606"></script>
     <script src="utils.js?v=34bd013fe7"></script>
     <script src="presences.js?v=5da5f247ed"></script>
     <script src="planning.js?v=d562eba3d5"></script>
     <script src="calendrier.js?v=0fcaca55bd"></script>
     <script src="comptes.js?v=da4f4a8fa1"></script>
-    <script src="aeronefs.js?v=cc39064019"></script>
+    <script src="aeronefs.js?v=2b400499d2"></script>
     <script src="carnet.js?v=6dc806ec1e"></script>
     <script src="carnet-vol.js?v=4f96e7d13f"></script>
     <script src="documents.js?v=248ade00c3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=bd107c7bdd"></script>
-    <script src="membres.js?v=4e98f85180"></script>
+    <script src="membres.js?v=2231e516f0"></script>
     <script src="instructeurs.js?v=d37eecb2da"></script>
     <script src="instructeur-planning.js?v=fe0732823d"></script>
     <script src="messagerie.js?v=bb1edc5b0a"></script>

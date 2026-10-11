@@ -53,7 +53,10 @@ const TABLES = {
     'Signalements': 'signalements',
     'Carnet de vol': 'carnet_vol',
     'Soldes GVV': 'gvv_soldes',
-    'Écritures GVV': 'gvv_ecritures'
+    'Écritures GVV': 'gvv_ecritures',
+    'Formations': 'formations',
+    'Formations Suivis': 'formations_suivis',
+    'Formations Séances': 'formations_seances'
 };
 
 const pool = new Pool({ connectionString: DATABASE_URL });
@@ -97,6 +100,15 @@ pool.query(`CREATE TABLE IF NOT EXISTS erreurs_client (
     url TEXT,
     navigateur TEXT
 )`).catch(e => console.error('Init table erreurs_client:', e.message));
+
+// Module Formation : catalogue de programmes, suivis eleves et seances de vol.
+for (const t of ['formations', 'formations_suivis', 'formations_seances']) {
+    pool.query(`CREATE TABLE IF NOT EXISTS ${t} (
+        id TEXT PRIMARY KEY,
+        fields JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`).catch(e => console.error(`Init table ${t}:`, e.message));
+}
 
 function hacherMdpServeur(mdp) {
     return crypto.createHash('sha256').update('aces-planning-salt-v1:' + mdp).digest('hex');
@@ -284,6 +296,9 @@ const DROITS_ECRITURE = {
     'Documents': ['Super admin', 'Documentaliste'],
     'Dossiers': ['Super admin', 'Documentaliste'],
     'Signalements': ['Super admin', 'Mécanicien', 'Instructeur avion', 'Instructeur ULM', 'Instructeur planeur'],
+    'Formations': ['Super admin', 'Instructeur avion', 'Instructeur ULM'],
+    'Formations Suivis': ['Super admin', 'Instructeur avion', 'Instructeur ULM'],
+    'Formations Séances': ['Super admin', 'Instructeur avion', 'Instructeur ULM'],
 };
 
 // Auto-edition : un membre peut modifier SA fiche, uniquement ces champs
@@ -355,6 +370,46 @@ async function droitEcritureEvenements(req, res, records) {
     return true;
 }
 
+// --- MODULE FORMATION : lecture restreinte a l'eleve + ecriture restreinte
+// aux instructeurs avion/ULM et Super admin, sauf deux auto-editions eleve.
+const ROLES_FORMATION = ['Super admin', 'Instructeur avion', 'Instructeur ULM'];
+const TABLES_FORMATION_PERSO = new Set(['formations_suivis', 'formations_seances']);
+function peutVoirToutesFormations(user) {
+    return user && (user.roles || []).some(r => ROLES_FORMATION.includes(r));
+}
+function estEleveDe(fields, user) {
+    if (!fields || !user) return false;
+    const ids = [].concat(fields['Élève'] || []);
+    if (user.id && ids.includes(user.id)) return true;
+    return memeNomCreateur(fields['Élève nom'], user.nom);
+}
+// Un eleve peut uniquement : signer SA seance (Signature eleve) ou renseigner
+// ses documents demandes (Documentation) sur SON suivi.
+async function autoEditionFormation(req, res, tableSqlNom, records, champAuto) {
+    if (req.method !== 'PATCH' && req.method !== 'PUT') return false;
+    if (!(records || []).length) return false;
+    if (!records.every(r => Object.keys(r.fields || {}).every(c => c.startsWith('_') || c === champAuto))) return false;
+    try {
+        const ids = records.map(r => r.id);
+        const { rows } = await pool.query(`SELECT id, fields FROM ${tableSqlNom} WHERE id = ANY($1)`, [ids]);
+        if (rows.length !== ids.length || !rows.every(r => estEleveDe(r.fields, req.user))) return false;
+        // Documentation : l'eleve ne fait que basculer statut/dateFourni —
+        // ni ajout, ni suppression, ni modification du titre.
+        if (champAuto === 'Documentation') {
+            const ancienMap = Object.fromEntries(rows.map(r => [r.id, r.fields]));
+            for (const rec of records) {
+                const avant = [].concat((ancienMap[rec.id] || {})[champAuto] || []);
+                const apres = [].concat((rec.fields || {})[champAuto] || []);
+                if (apres.length !== avant.length) return false;
+                const avantMap = new Map(avant.map(d => [d && d.id, d]));
+                if (!apres.every(d => { const a = avantMap.get(d && d.id); return a && a.titre === d.titre; })) return false;
+            }
+        }
+        return true;
+    } catch (e) { console.error('Auto-edition formation:', e.message); }
+    return false;
+}
+
 async function droitEcriture(req, res, tableNom, records) {
     const table = TABLES[tableNom];
     if (req.publicAccess) {
@@ -375,6 +430,8 @@ async function droitEcriture(req, res, tableNom, records) {
         if ((records || []).every(r => champsOk(r, CHAMPS_MEMBRE_AERONEF))) return true;
     }
     if (tableNom === 'Signalements' && req.method === 'POST') return true; // tout membre signale
+    if (tableNom === 'Formations Séances' && await autoEditionFormation(req, res, 'formations_seances', records, 'Signature élève')) return true;
+    if (tableNom === 'Formations Suivis' && await autoEditionFormation(req, res, 'formations_suivis', records, 'Documentation')) return true;
     erreur(res, 403, `Droits insuffisants pour écrire sur ${tableNom}`);
     return false;
 }
@@ -947,6 +1004,11 @@ app.get('/v0/:base/:table', async (req, res) => {
         const aPlus = records.length > pageSize;
         if (aPlus) records = records.slice(0, pageSize);
 
+        // Module Formation : un eleve ne voit que ses propres suivis/seances.
+        if (TABLES_FORMATION_PERSO.has(table) && !peutVoirToutesFormations(req.user)) {
+            records = records.filter(r => estEleveDe(r.fields, req.user));
+        }
+
         // Projection fields[]
         let champsDemandes = req.query['fields[]'] || req.query.fields;
         if (champsDemandes && !Array.isArray(champsDemandes)) champsDemandes = [champsDemandes];
@@ -982,6 +1044,9 @@ app.get('/v0/:base/:table/:id', async (req, res) => {
     try {
         const { rows } = await pool.query(`SELECT id, fields, created_at FROM ${table} WHERE id = $1`, [req.params.id]);
         if (!rows.length) return erreur(res, 404, 'Record introuvable');
+        if (TABLES_FORMATION_PERSO.has(table) && !peutVoirToutesFormations(req.user) && !estEleveDe(rows[0].fields, req.user)) {
+            return erreur(res, 403, 'Lecture réservée à l\'élève concerné');
+        }
         const rec = formatRecord(rows[0]);
         epurerRecordSensible(table, rec);
         res.json(rec);

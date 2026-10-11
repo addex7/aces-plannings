@@ -99,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSidebarToggle();
     initSidebarResize();
     initEvenements();
+    if (typeof initFormation === 'function') initFormation();
     initComptesPilotes();
     initNotifications();
     afficherAvertissementMobile();
@@ -372,6 +373,7 @@ function naviguerDepuisNotification(fields) {
             'membres': 'tab-membres',
             'messagerie': 'tab-messagerie',
             'audit': 'tab-audit',
+            'formation': 'tab-formation',
             'accueil': 'tab-accueil'
         };
         if (vues[cible]) allerVue(vues[cible]);
@@ -512,7 +514,8 @@ const RAFRAICHSSEURS_VUES = {
         (typeof membreSelectionne !== 'undefined' && membreSelectionne) ? membreSelectionne.id : (currentUser ? currentUser.id : null)),
     'view-comptes': () => typeof chargerComptesPilotes === 'function' && chargerComptesPilotes(),
     'view-audit': () => typeof chargerAudit === 'function' && chargerAudit(true),
-    'view-messagerie': () => typeof chargerMessagerie === 'function' && chargerMessagerie()
+    'view-messagerie': () => typeof chargerMessagerie === 'function' && chargerMessagerie(),
+    'view-formation': () => typeof chargerFormation === 'function' && chargerFormation()
 };
 
 function saisieEnCours(vue) {

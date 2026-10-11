@@ -5345,3 +5345,206 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     opacity: 0.9;
     line-height: 1.5;
 }
+
+/* ==========================================================================
+   FORMATION - SUIVI PEDAGOGIQUE
+   ========================================================================== */
+.formation-toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 10px 0 14px;
+}
+.formation-section-titre {
+    margin: 18px 0 8px;
+    color: #1e3d59;
+    font-size: 16px;
+}
+.formation-sub-titre {
+    margin: 16px 0 8px;
+    color: #1e3d59;
+    font-size: 14px;
+}
+.formation-grille {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+.formation-carte {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.15s;
+}
+.formation-carte:hover {
+    box-shadow: 0 4px 14px rgba(30, 61, 89, 0.12);
+    transform: translateY(-1px);
+}
+.formation-carte-tete {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.formation-carte-sub {
+    font-size: 12px;
+    color: #64748b;
+}
+.formation-vide {
+    padding: 24px;
+    text-align: center;
+    color: #94a3b8;
+    background: #fff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+}
+.formation-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.formation-progress {
+    position: relative;
+    background: #e2e8f0;
+    border-radius: 999px;
+    margin: 8px 0 4px;
+    overflow: hidden;
+}
+.formation-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s;
+}
+.formation-progress-txt {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #1e3d59;
+}
+.formation-entete {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+.formation-docs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.formation-doc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+.formation-lecon {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+}
+.formation-lecon-validee {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+.formation-lecon-tete {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+.formation-lecon-tete .formation-carte-sub {
+    flex-basis: 100%;
+}
+.formation-items {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: 6px 0;
+}
+.formation-item {
+    font-size: 13px;
+    color: #334155;
+    padding: 3px 6px;
+    border-radius: 6px;
+}
+.formation-item-ok {
+    color: #166534;
+}
+.formation-item-rep {
+    background: #fff7ed;
+    color: #9a3412;
+}
+.formation-item-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.formation-item-check:hover {
+    background: #f1f5f9;
+}
+.formation-item-check input {
+    width: auto;
+    flex-shrink: 0;
+}
+.formation-seance {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 10px;
+    padding-top: 8px;
+}
+.formation-seance-tete {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.formation-commentaire {
+    font-size: 13px;
+    color: #334155;
+    background: #f8fafc;
+    border-left: 3px solid #93c5fd;
+    border-radius: 0 8px 8px 0;
+    padding: 8px 10px;
+    margin: 6px 0;
+}
+.formation-signatures {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 6px;
+}
+.formation-lecon-edit {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #f8fafc;
+}
