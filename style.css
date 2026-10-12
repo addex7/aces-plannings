@@ -802,6 +802,9 @@ img, table, video, iframe, svg {
     width: 400px;
     position: relative;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 #modal-inscrire-autre .select-recherche {
     display: block;
