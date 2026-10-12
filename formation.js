@@ -244,8 +244,17 @@ async function renderDetailSuivi() {
     majActionsEntete(`<button class="btn-secondary" data-formation-action="retour">← Retour</button>${boutonsInstructeur}`);
 
     const leconsHtml = p.lecons.map((l, idx) => renderLecon(suivi, l, idx, p, instructeur)).join('');
+    const ressources = formationJson(f['Ressources'], []);
+    const ressourcesHtml = ressources.length ? `
+        <h4 class="formation-sub-titre">� Documentation de la formation</h4>
+        <div class="formation-docs">${ressources.map(r => {
+            const lien = urlSure(r.lien || '');
+            return `<div class="formation-doc">${lien
+                ? `<a href="${lien}" target="_blank" rel="noopener">🔗 ${escapeHtml(r.titre || r.lien)}</a>`
+                : `<span>🔗 ${escapeHtml(r.titre || '')}</span>`}</div>`;
+        }).join('')}</div>` : '';
     const docsHtml = docs.length ? `
-        <h4 class="formation-sub-titre">📄 Documentation demandée</h4>
+        <h4 class="formation-sub-titre">📋 Documents demandés / prérequis</h4>
         <div class="formation-docs">${docs.map(d => renderDoc(suivi, d, instructeur)).join('')}</div>` : '';
 
     zone.innerHTML = `
@@ -262,6 +271,7 @@ async function renderDetailSuivi() {
             <div style="min-width:220px;">${barreProgression(p.pct, 20)}<div class="formation-carte-sub" style="text-align:right;">${p.faits}/${p.total} items validés</div></div>
         </div>
         <div id="${statsVolsId}" class="formation-carte-sub" style="margin:6px 0 10px;">Comptage des vols…</div>
+        ${ressourcesHtml}
         ${docsHtml}
         <h4 class="formation-sub-titre">📚 Leçons</h4>
         ${leconsHtml || '<div class="formation-vide">Aucune leçon définie.</div>'}
@@ -289,19 +299,31 @@ async function chargerStatsVols(suivi, minimas) {
         const hTxt = `${h}h${String(m).padStart(2, '0')}`;
         const reqHTxt = reqH ? `${reqH}h` : '';
         return `⏱ <strong>${deduis.length}${reqV ? '/' + reqV : ''}</strong> vols · <strong>${hTxt}${reqHTxt ? '/' + reqHTxt : ''}</strong> de vol depuis le début de la formation` +
-            (reqH || reqV ? ' <span class="formation-carte-sub">(minimas requis)</span>' : '');
+            (reqH || reqV ? ' <span class="formation-carte-sub">(minimas requis)</span>' : '') +
+            (minimas.cas ? ` <span class="formation-carte-sub">· cas « ${escapeHtml(minimas.cas)} »</span>` : '');
     } catch (e) { return ''; }
 }
 
 function renderDoc(suivi, d, instructeur) {
     const fourni = d.statut === 'Fourni';
-    const bouton = (!instructeur && !fourni)
-        ? `<button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-fourni" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">Marquer fourni</button>`
-        : '';
-    return `<div class="formation-doc">
-        <span>${fourni ? '✅' : '📄'} ${escapeHtml(d.titre)}</span>
-        <span class="formation-carte-sub">${fourni ? `fourni le ${escapeHtml(d.dateFourni || '')}` : `demandé le ${escapeHtml(d.dateDemande || '')}`}</span>
-        ${bouton}
+    const today = new Date().toISOString().slice(0, 10);
+    const expire = fourni && d.dateValidite && d.dateValidite < today;
+    const lien = d.lien ? ` <a href="${urlSure(d.lien)}" target="_blank" rel="noopener" title="Voir le document">📎</a>` : '';
+    const infos = fourni
+        ? `fourni le ${escapeHtml(d.dateFourni || '')}` + (d.dateValidite
+            ? ` · <span style="color:${expire ? '#b91c1c' : '#166534'};">${expire ? 'expiré' : 'valable'} jusqu'au ${escapeHtml(d.dateValidite)}</span>` : '')
+        : `demandé le ${escapeHtml(d.dateDemande || '')}`;
+    // L'eleve depose le document (fichier facultatif) + sa date de validite.
+    const depot = (!instructeur && !fourni) ? `
+        <div class="formation-doc-depot">
+            <input type="file" id="doc-fichier-${escapeHtml(d.id)}" accept=".pdf,.jpg,.jpeg,.png" title="Joindre le document">
+            <input type="date" id="doc-validite-${escapeHtml(d.id)}" title="Date de validité (optionnel)">
+            <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-fourni" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">Envoyer</button>
+        </div>` : '';
+    return `<div class="formation-doc" style="flex-wrap:wrap;">
+        <span>${fourni ? '✅' : (d.prerequis ? '�' : '�📄')} ${escapeHtml(d.titre)}${lien}</span>
+        <span class="formation-carte-sub">${infos}</span>
+        ${depot}
     </div>`;
 }
 
@@ -383,6 +405,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'suppr-formation') supprimerFormation(el.dataset.fid);
     else if (a === 'suppr-suivi') supprimerSuivi(sid);
     else if (a === 'lecon-suppr') el.closest('.formation-lecon-edit').remove();
+    else if (a === 'mini-suppr') el.closest('.formation-mini-edit').remove();
     else if (a === 'lecon-add') ajouterBlocLecon();
 });
 
@@ -493,11 +516,27 @@ async function demanderDocument(suiviId) {
     } catch (e) { console.error(e); alert('Erreur lors de la demande.'); }
 }
 
+// L'eleve depose un document demande : fichier facultatif (upload /v0/upload)
+// + date de validite. Le serveur n'autorise l'eleve qu'a completer les items
+// existants (longueur et titres conserves — verifie cote backend).
 async function marquerDocumentFourni(suiviId, docId) {
     const suivi = suivisCache.find(s => s.id === suiviId);
     if (!suivi) return;
+    const inputFichier = document.getElementById(`doc-fichier-${docId}`);
+    const inputValidite = document.getElementById(`doc-validite-${docId}`);
+    let lien = '';
+    try {
+        if (inputFichier && inputFichier.files && inputFichier.files[0]) {
+            lien = await uploaderFichierDocument(inputFichier.files[0]);
+        }
+    } catch (e) { alert('Erreur lors de l\'upload : ' + e.message); return; }
     const docs = formationJson(suivi.fields['Documentation'], []).map(d =>
-        String(d.id) === String(docId) ? { ...d, statut: 'Fourni', dateFourni: new Date().toISOString().slice(0, 10) } : d);
+        String(d.id) === String(docId) ? {
+            ...d, statut: 'Fourni',
+            dateFourni: new Date().toISOString().slice(0, 10),
+            dateValidite: inputValidite ? inputValidite.value : '',
+            lien: lien || d.lien || ''
+        } : d);
     try {
         await patchSuivi(suiviId, { 'Documentation': docs });
         renderDetailSuivi();
@@ -553,8 +592,26 @@ async function ouvrirModaleAttribuer() {
     selForm.innerHTML = '<option value="">— Choisir une formation —</option>' +
         formations.map(f => `<option value="${f.id}">${escapeHtml(f.fields['Titre'] || 'Formation')}</option>`).join('');
     document.getElementById('attribuer-date').value = new Date().toISOString().slice(0, 10);
-    document.getElementById('attribuer-licencie').checked = false;
+    majCasAttribution();
     overlay.style.display = 'flex';
+}
+
+// Cas de figure d'une formation : nouveau format (cas[]) ou ancien licencie.
+function casDeFormation(formation) {
+    const m = formationJson(formation && formation.fields['Minimas'], {}) || {};
+    if (Array.isArray(m.cas)) return m.cas;
+    if (m.heuresLicencie || m.volsLicencie) return [{ nom: 'Déjà licencié', heures: m.heuresLicencie || 0, vols: m.volsLicencie || 0 }];
+    return [];
+}
+function majCasAttribution() {
+    const formId = document.getElementById('attribuer-formation').value;
+    const formation = formationsCache.find(f => f.id === formId);
+    const groupe = document.getElementById('attribuer-cas-groupe');
+    const sel = document.getElementById('attribuer-cas');
+    const cas = formation ? casDeFormation(formation) : [];
+    groupe.style.display = cas.length ? 'block' : 'none';
+    sel.innerHTML = '<option value="">Minimas standard</option>' +
+        cas.map((c, i) => `<option value="${i}">${escapeHtml(c.nom)} — ${c.heures || 0}h / ${c.vols || 0} vols</option>`).join('');
 }
 
 async function enregistrerAttribution(e) {
@@ -563,7 +620,7 @@ async function enregistrerAttribution(e) {
     const eleveId = document.getElementById('attribuer-eleve').value;
     const formId = document.getElementById('attribuer-formation').value;
     const dateDebut = document.getElementById('attribuer-date').value;
-    const licencie = document.getElementById('attribuer-licencie').checked;
+    const casIdx = document.getElementById('attribuer-cas').value;
     if (!eleveId || !formId || !dateDebut) { alert('Choisissez un élève, une formation et une date.'); return; }
     const membre = membresFormationCache.find(m => m.id === eleveId);
     const formation = formationsCache.find(f => f.id === formId);
@@ -571,10 +628,18 @@ async function enregistrerAttribution(e) {
     const ff = formation.fields;
     const nomEleve = membre ? `${membre.fields['Prénom'] || ''} ${membre.fields['Nom'] || ''}`.trim() : eleveId;
     const min = formationJson(ff['Minimas'], {}) || {};
+    const cas = casDeFormation(formation);
+    const choisi = casIdx !== '' ? cas[parseInt(casIdx, 10)] : null;
     const minimas = {
-        heures: licencie ? (min.heuresLicencie ?? min.heures ?? 0) : (min.heures ?? 0),
-        vols: licencie ? (min.volsLicencie ?? min.vols ?? 0) : (min.vols ?? 0)
+        heures: choisi ? (choisi.heures ?? 0) : (min.heures ?? 0),
+        vols: choisi ? (choisi.vols ?? 0) : (min.vols ?? 0)
     };
+    if (choisi) minimas.cas = choisi.nom;
+    // Les prerequis du catalogue deviennent les documents demandes a l'eleve.
+    const aujourdhui = new Date().toISOString().slice(0, 10);
+    const documentation = formationJson(ff['Prerequis'], []).map((p, i) => ({
+        id: `d${Date.now()}_${i}`, titre: p.titre, statut: 'Demandé', dateDemande: aujourdhui, prerequis: true
+    }));
     const fields = {
         'Élève': [eleveId],
         'Élève nom': nomEleve,
@@ -584,9 +649,10 @@ async function enregistrerAttribution(e) {
         'Discipline': ff['Discipline'] || '',
         'Lecons': formationJson(ff['Lecons'], []),
         'Minimas': minimas,
+        'Ressources': formationJson(ff['Ressources'], []),
         'Statut': 'Ouverte',
         'Date début': dateDebut,
-        'Documentation': []
+        'Documentation': documentation
     };
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}`, {
@@ -640,6 +706,35 @@ function ajouterBlocLecon() {
     zone.appendChild(div.firstElementChild);
 }
 
+// Cas de figure de minimas (ex : "deja licencié ULM") — nom libre, multiples.
+function blocCasHtml(cas) {
+    return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;">
+        <input type="text" class="cas-nom" placeholder="Nom du cas (ex : déjà licencié ULM)" value="${escapeHtml(cas.nom || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        <input type="number" class="cas-heures" min="0" step="0.5" placeholder="Heures" value="${cas.heures ?? ''}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        <input type="number" class="cas-vols" min="0" step="1" placeholder="Vols" value="${cas.vols ?? ''}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
+    </div>`;
+}
+function blocPrerequisHtml(p) {
+    return `<div class="formation-mini-edit" style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+        <input type="text" class="prerequis-titre" placeholder="Document à fournir (ex : certificat médical)" value="${escapeHtml(p.titre || '')}" style="flex:1;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
+    </div>`;
+}
+function blocRessourceHtml(r) {
+    return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:1fr 1.4fr auto;gap:6px;margin-bottom:6px;align-items:center;">
+        <input type="text" class="ressource-titre" placeholder="Titre du lien" value="${escapeHtml(r.titre || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        <input type="url" class="ressource-lien" placeholder="https://… ou /uploads/…" value="${escapeHtml(r.lien || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
+    </div>`;
+}
+function ajouterBlocMini(zoneId, html) {
+    const zone = document.getElementById(zoneId);
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    zone.appendChild(div.firstElementChild);
+}
+
 function ouvrirEditeurFormation(formationId) {
     const overlay = document.getElementById('modale-formation-editeur');
     const form = formationId ? formationsCache.find(f => f.id === formationId) : null;
@@ -650,8 +745,15 @@ function ouvrirEditeurFormation(formationId) {
     const m = form ? formationJson(form.fields['Minimas'], {}) : {};
     document.getElementById('edit-formation-heures').value = m.heures ?? '';
     document.getElementById('edit-formation-vols').value = m.vols ?? '';
-    document.getElementById('edit-formation-heures-lic').value = m.heuresLicencie ?? '';
-    document.getElementById('edit-formation-vols-lic').value = m.volsLicencie ?? '';
+    // Cas de figure : nouveau format (m.cas) ou migration de l'ancien
+    // (heuresLicencie/volsLicencie -> un cas "Deja licencié").
+    const cas = Array.isArray(m.cas) ? m.cas
+        : (m.heuresLicencie || m.volsLicencie ? [{ nom: 'Déjà licencié', heures: m.heuresLicencie || 0, vols: m.volsLicencie || 0 }] : []);
+    document.getElementById('editeur-cas').innerHTML = cas.map(blocCasHtml).join('');
+    const prerequis = form ? formationJson(form.fields['Prerequis'], []) : [];
+    document.getElementById('editeur-prerequis').innerHTML = prerequis.map(blocPrerequisHtml).join('');
+    const ressources = form ? formationJson(form.fields['Ressources'], []) : [];
+    document.getElementById('editeur-ressources').innerHTML = ressources.map(blocRessourceHtml).join('');
     const lecons = form ? formationJson(form.fields['Lecons'], []) : [{ id: 'l1', titre: '', objectif: '', items: [] }];
     document.getElementById('editeur-lecons').innerHTML = lecons.map((l, i) => blocLeconHtml(l, i)).join('');
     document.getElementById('titre-modale-formation').textContent = form ? 'Modifier la formation' : 'Nouvelle formation';
@@ -671,6 +773,17 @@ async function enregistrerFormationEdit(e) {
         objectif: b.querySelector('.lecon-objectif').value.trim(),
         items: b.querySelector('.lecon-items').value.split('\n').map(s => s.trim()).filter(Boolean)
     })).filter(l => l.titre || l.items.length);
+    const cas = [...document.querySelectorAll('#editeur-cas .formation-mini-edit')].map(b => ({
+        nom: b.querySelector('.cas-nom').value.trim(),
+        heures: parseFloat(b.querySelector('.cas-heures').value) || 0,
+        vols: parseInt(b.querySelector('.cas-vols').value, 10) || 0
+    })).filter(c => c.nom);
+    const prerequis = [...document.querySelectorAll('#editeur-prerequis .formation-mini-edit')]
+        .map(b => ({ titre: b.querySelector('.prerequis-titre').value.trim() }))
+        .filter(p => p.titre);
+    const ressources = [...document.querySelectorAll('#editeur-ressources .formation-mini-edit')]
+        .map(b => ({ titre: b.querySelector('.ressource-titre').value.trim(), lien: b.querySelector('.ressource-lien').value.trim() }))
+        .filter(r => r.titre || r.lien);
     const fields = {
         'Titre': titre,
         'Discipline': document.getElementById('edit-formation-discipline').value,
@@ -678,9 +791,10 @@ async function enregistrerFormationEdit(e) {
         'Minimas': {
             heures: parseFloat(document.getElementById('edit-formation-heures').value) || 0,
             vols: parseInt(document.getElementById('edit-formation-vols').value, 10) || 0,
-            heuresLicencie: parseFloat(document.getElementById('edit-formation-heures-lic').value) || 0,
-            volsLicencie: parseInt(document.getElementById('edit-formation-vols-lic').value, 10) || 0
+            cas
         },
+        'Prerequis': prerequis,
+        'Ressources': ressources,
         'Lecons': lecons,
         'Actif': true
     };
@@ -874,4 +988,12 @@ function initFormation() {
     if (btnCat) btnCat.addEventListener('click', () => ouvrirEditeurFormation(null));
     const btnLecon = document.getElementById('btn-formation-lecon-add');
     if (btnLecon) btnLecon.addEventListener('click', ajouterBlocLecon);
+    const btnCas = document.getElementById('btn-formation-cas-add');
+    if (btnCas) btnCas.addEventListener('click', () => ajouterBlocMini('editeur-cas', blocCasHtml({})));
+    const btnPre = document.getElementById('btn-formation-prerequis-add');
+    if (btnPre) btnPre.addEventListener('click', () => ajouterBlocMini('editeur-prerequis', blocPrerequisHtml({})));
+    const btnRes = document.getElementById('btn-formation-ressource-add');
+    if (btnRes) btnRes.addEventListener('click', () => ajouterBlocMini('editeur-ressources', blocRessourceHtml({})));
+    const selForm = document.getElementById('attribuer-formation');
+    if (selForm) selForm.addEventListener('change', majCasAttribution);
 }

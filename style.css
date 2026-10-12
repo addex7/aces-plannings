@@ -5451,6 +5451,25 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     border-radius: 8px;
     padding: 8px 12px;
 }
+.formation-doc-depot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+.formation-doc-depot input[type="file"] {
+    flex: 1;
+    min-width: 160px;
+    font-size: 12px;
+}
+.formation-doc-depot input[type="date"] {
+    padding: 4px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 12px;
+}
 .formation-lecon {
     background: #fff;
     border: 1px solid #e2e8f0;
