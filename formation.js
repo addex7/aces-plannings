@@ -239,7 +239,8 @@ async function renderDetailSuivi() {
         <button class="btn-secondary" data-formation-action="minimas" data-sid="${suivi.id}">⏱ Minimas</button>
         <button class="btn-secondary" data-formation-action="doc" data-sid="${suivi.id}">📄 Demander un document</button>
         ${statut === 'Ouverte' ? `<button class="btn-secondary" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
-        ${statut !== 'Archivée' ? `<button class="btn-secondary" data-formation-action="archiver" data-sid="${suivi.id}">🗄 Archiver</button>` : `<button class="btn-secondary" data-formation-action="rouvrir" data-sid="${suivi.id}">↩️ Désarchiver</button>`}` : '';
+        ${statut !== 'Archivée' ? `<button class="btn-secondary" data-formation-action="archiver" data-sid="${suivi.id}">🗄 Archiver</button>` : `<button class="btn-secondary" data-formation-action="rouvrir" data-sid="${suivi.id}">↩️ Désarchiver</button>`}
+        <button class="btn-secondary" style="color:#b91c1c;" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : '';
     majActionsEntete(`<button class="btn-secondary" data-formation-action="retour">← Retour</button>${boutonsInstructeur}`);
 
     const leconsHtml = p.lecons.map((l, idx) => renderLecon(suivi, l, idx, p, instructeur)).join('');
@@ -380,6 +381,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'signer') signerSeance(sid);
     else if (a === 'editer-formation') ouvrirEditeurFormation(el.dataset.fid || null);
     else if (a === 'suppr-formation') supprimerFormation(el.dataset.fid);
+    else if (a === 'suppr-suivi') supprimerSuivi(sid);
     else if (a === 'lecon-suppr') el.closest('.formation-lecon-edit').remove();
     else if (a === 'lecon-add') ajouterBlocLecon();
 });
@@ -693,6 +695,30 @@ async function enregistrerFormationEdit(e) {
         await chargerFormationsCatalogue(true);
         ouvrirGestionCatalogue();
     } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement.'); }
+}
+
+// Suppression d'un suivi : efface aussi ses seances (par lots de 10).
+async function supprimerSuivi(sid) {
+    const suivi = (suivisCache || []).find(s => s.id === sid);
+    const seances = seancesDuSuivi(sid);
+    const f = suivi ? suivi.fields : {};
+    if (!(await confirmerSuppression(
+        `Supprimer définitivement la formation « ${f['Formation titre'] || ''} » de ${f['Élève nom'] || 'cet élève'} ?` +
+        (seances.length ? `\nLes ${seances.length} séance(s) associée(s) seront aussi supprimées.` : '') +
+        `\nPréférez l'archivage pour conserver l'historique.`
+    ))) return;
+    try {
+        for (let i = 0; i < seances.length; i += 10) {
+            const q = seances.slice(i, i + 10).map(s => `records[]=${encodeURIComponent(s.id)}`).join('&');
+            const r = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}?${q}`, { method: 'DELETE', headers });
+            if (!r.ok) throw new Error(await r.text());
+        }
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}?records[]=${encodeURIComponent(sid)}`, { method: 'DELETE', headers });
+        if (!res.ok) throw new Error(await res.text());
+        invaliderFormationCache();
+        suiviOuvertId = null;
+        chargerFormation();
+    } catch (e) { console.error(e); alert('Erreur lors de la suppression.'); }
 }
 
 async function supprimerFormation(fid) {
