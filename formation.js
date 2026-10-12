@@ -241,9 +241,32 @@ async function renderDetailSuivi() {
         ${statut === 'Ouverte' ? `<button class="btn-secondary" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
         ${statut !== 'Archivée' ? `<button class="btn-secondary" data-formation-action="archiver" data-sid="${suivi.id}">🗄 Archiver</button>` : `<button class="btn-secondary" data-formation-action="rouvrir" data-sid="${suivi.id}">↩️ Désarchiver</button>`}
         <button class="btn-secondary" style="color:#b91c1c;" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : '';
-    majActionsEntete(`<button class="btn-secondary" data-formation-action="retour">← Retour</button>${boutonsInstructeur}`);
+    majActionsEntete(`
+        <button class="btn-secondary" data-formation-action="retour">← Retour</button>
+        <button class="btn-secondary" data-formation-action="fiche" data-sid="${suivi.id}">👤 Fiche élève</button>
+        ${boutonsInstructeur}`);
 
-    const leconsHtml = p.lecons.map((l, idx) => renderLecon(suivi, l, idx, p, instructeur)).join('');
+    // Regroupement des lecons par phase (groupe), comme le livret BLN.
+    let dernierGroupe = '';
+    const leconsHtml = p.lecons.map((l, idx) => {
+        const g = l.groupe || '';
+        const entete = g !== dernierGroupe && g ? `<h5 class="formation-phase-titre">${escapeHtml(g)}</h5>` : '';
+        dernierGroupe = g;
+        return entete + renderLecon(suivi, l, idx, p, instructeur);
+    }).join('');
+
+    // Modules theoriques du suivi (valides un par un avec date).
+    const modules = formationJson(f['Modules'], []);
+    const modulesHtml = modules.length ? `
+        <h4 class="formation-sub-titre">📖 Formation théorique</h4>
+        <div class="formation-docs">${modules.map(mo => {
+            const fait = !!mo.statut;
+            const zone = (instructeur && !fait) ? `
+                <input type="date" id="module-date-${escapeHtml(mo.id)}" value="${new Date().toISOString().slice(0, 10)}" title="Date de validation" style="padding:3px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;">
+                <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="module-valide" data-sid="${suivi.id}" data-mid="${escapeHtml(mo.id)}">Valider</button>` : '';
+            return `<div class="formation-doc"><span>${fait ? '✅' : '⬜'} ${escapeHtml(mo.titre)}</span>
+                <span class="formation-carte-sub">${fait ? `validé le ${escapeHtml(mo.date || '')}` : 'en attente'}</span>${zone}</div>`;
+        }).join('')}</div>` : '';
     const ressources = formationJson(f['Ressources'], []);
     const ressourcesHtml = ressources.length ? `
         <h4 class="formation-sub-titre">� Documentation de la formation</h4>
@@ -272,6 +295,7 @@ async function renderDetailSuivi() {
         </div>
         <div id="${statsVolsId}" class="formation-carte-sub" style="margin:6px 0 10px;">Comptage des vols…</div>
         ${ressourcesHtml}
+        ${modulesHtml}
         ${docsHtml}
         <h4 class="formation-sub-titre">📚 Leçons</h4>
         ${leconsHtml || '<div class="formation-vide">Aucune leçon définie.</div>'}
@@ -284,22 +308,43 @@ async function renderDetailSuivi() {
     });
 }
 
+// Bilan style livret : HDV par type (DC / solo / simu) depuis les seances,
+// plus le total carnet de route en complement, le tout compare aux minimas.
 async function chargerStatsVols(suivi, minimas) {
     try {
+        const seances = seancesDuSuivi(suivi.id);
+        let dc = 0, solo = 0, simu = 0, att = 0;
+        seances.forEach(s => {
+            dc += parseFloat(s.fields['HDV DC']) || 0;
+            solo += parseFloat(s.fields['HDV solo']) || 0;
+            simu += parseFloat(s.fields['HDV simu']) || 0;
+            att += parseInt(s.fields['Atterrissages'], 10) || 0;
+        });
         const nomEleve = suivi.fields['Élève nom'] || '';
-        if (!nomEleve) return '';
-        const vols = await chargerVolsEleve(nomEleve);
-        const debut = suivi.fields['Date début'] || '1900-01-01';
-        const deduis = vols.filter(v => String(v.fields['Date'] || '') >= String(debut));
-        let minutes = 0;
-        deduis.forEach(v => { minutes += (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0); });
-        const h = Math.floor(minutes / 60), m = minutes % 60;
+        let nbVols = 0, minutes = 0;
+        if (nomEleve) {
+            const vols = await chargerVolsEleve(nomEleve);
+            const debut = suivi.fields['Date début'] || '1900-01-01';
+            const deduis = vols.filter(v => String(v.fields['Date'] || '') >= String(debut));
+            nbVols = deduis.length;
+            deduis.forEach(v => { minutes += (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0); });
+        }
+        const hTxt = v => { const h = Math.floor(v), m = Math.round((v - h) * 60); return `${h}h${String(m).padStart(2, '0')}`; };
+        const seg = (label, val, req, u) => `${label} <strong>${u ? hTxt(val) : val}${req ? '/' + req + (u || '') : ''}</strong>`;
         const reqH = Number(minimas.heures || 0), reqV = Number(minimas.vols || 0);
-        const fmt = (x, req, u) => req ? `${x}/${req}${u}` : `${x}${u}`;
-        const hTxt = `${h}h${String(m).padStart(2, '0')}`;
-        const reqHTxt = reqH ? `${reqH}h` : '';
-        return `⏱ <strong>${deduis.length}${reqV ? '/' + reqV : ''}</strong> vols · <strong>${hTxt}${reqHTxt ? '/' + reqHTxt : ''}</strong> de vol depuis le début de la formation` +
-            (reqH || reqV ? ' <span class="formation-carte-sub">(minimas requis)</span>' : '') +
+        const reqDC = Number(minimas.heuresDC || 0), reqSolo = Number(minimas.heuresSolo || 0), reqAtt = Number(minimas.atterrissages || 0);
+        const blocs = [
+            seg('Total', minutes / 60, reqH, 'h'),
+            `Vols <strong>${nbVols}${reqV ? '/' + reqV : ''}</strong>`,
+            seg('DC', dc, reqDC, 'h'),
+            seg('Solo', solo, reqSolo, 'h'),
+            simu ? seg('Simu', simu, 0, 'h') : '',
+            (att || reqAtt) ? `Att <strong>${att}${reqAtt ? '/' + reqAtt : ''}</strong>` : ''
+        ].filter(Boolean);
+        const aDesHdv = dc || solo || simu || att;
+        return `⏱ ${blocs.join(' · ')}` +
+            (aDesHdv ? '' : ' <span class="formation-carte-sub">(détail DC/solo compté depuis les séances)</span>') +
+            (reqH || reqV || reqDC || reqSolo || reqAtt ? ' <span class="formation-carte-sub">(minimas requis)</span>' : '') +
             (minimas.cas ? ` <span class="formation-carte-sub">· cas « ${escapeHtml(minimas.cas)} »</span>` : '');
     } catch (e) { return ''; }
 }
@@ -360,6 +405,16 @@ function renderSeance(s, instructeur) {
     const itemsOk = formationJson(f['Items validés'], []).length;
     const itemsRep = formationJson(f['Items reportés'], []).length;
     const vol = f['Vol libellé'] || '';
+    // Numero de seance dans le suivi (ordre chronologique = "cours n°")
+    const numero = seancesDuSuivi(f['Suivi']).findIndex(x => x.id === s.id) + 1;
+    const iconesType = { 'Vol': '✈️', 'Simulateur': '🖥️', 'Théorique': '📖' };
+    const typeSeance = f['Type'] || 'Vol';
+    const hdv = [
+        parseFloat(f['HDV DC']) ? `DC ${f['HDV DC']}h` : '',
+        parseFloat(f['HDV solo']) ? `Solo ${f['HDV solo']}h` : '',
+        parseFloat(f['HDV simu']) ? `Simu ${f['HDV simu']}h` : '',
+        parseInt(f['Atterrissages'], 10) ? `${f['Atterrissages']} att.` : ''
+    ].filter(Boolean).join(' · ');
     const signer = (!instructeur && !sigE)
         ? `<button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="signer" data-sid="${s.id}">✍️ Signer</button>`
         : '';
@@ -371,10 +426,14 @@ function renderSeance(s, instructeur) {
     return `
         <div class="formation-seance">
             <div class="formation-seance-tete">
-                <strong>${escapeHtml(f['Date'] || '')}</strong>
-                ${vol ? `<span class="formation-carte-sub">— ${escapeHtml(vol)}</span>` : ''}
+                <strong>Séance n°${numero || '?'}</strong>
+                <span class="formation-badge" style="background:#eff6ff;color:#1e40af;">${iconesType[typeSeance] || '✈️'} ${escapeHtml(typeSeance)}</span>
+                <span class="formation-carte-sub">${escapeHtml(f['Date'] || '')}${f['Machine'] ? ` · ${escapeHtml(f['Machine'])}` : ''}</span>
                 ${f['Leçon validée'] ? '<span class="formation-badge" style="background:#dcfce7;color:#166534;">Leçon validée</span>' : ''}
             </div>
+            ${vol ? `<div class="formation-carte-sub">Vol : ${escapeHtml(vol)}</div>` : ''}
+            ${hdv ? `<div class="formation-carte-sub">⏱ ${escapeHtml(hdv)}</div>` : ''}
+            ${f['Météo'] ? `<div class="formation-carte-sub">🌦 ${escapeHtml(f['Météo'])}</div>` : ''}
             <div class="formation-carte-sub">${itemsOk} item(s) validé(s)${itemsRep ? ` · ${itemsRep} reporté(s)` : ''}</div>
             ${f['Commentaire'] ? `<div class="formation-commentaire">${escapeHtml(f['Commentaire']).replace(/\n/g, '<br>')}</div>` : ''}
             ${sigs}
@@ -397,6 +456,8 @@ document.addEventListener('click', (e) => {
     else if (a === 'minimas') ouvrirModaleMinimas(sid);
     else if (a === 'doc') demanderDocument(sid);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
+    else if (a === 'module-valide') validerModule(sid, el.dataset.mid);
+    else if (a === 'fiche') ouvrirFicheEleve(sid);
     else if (a === 'terminer') changerStatutSuivi(sid, 'Terminée');
     else if (a === 'archiver') changerStatutSuivi(sid, 'Archivée');
     else if (a === 'rouvrir') changerStatutSuivi(sid, 'Ouverte');
@@ -543,6 +604,54 @@ async function marquerDocumentFourni(suiviId, docId) {
     } catch (e) { console.error(e); alert('Erreur lors de la mise à jour.'); }
 }
 
+// Validation d'un module theorique par l'instructeur (date de la séance/emargement).
+async function validerModule(suiviId, moduleId) {
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const input = document.getElementById(`module-date-${moduleId}`);
+    const date = (input && input.value) || new Date().toISOString().slice(0, 10);
+    const modules = formationJson(suivi.fields['Modules'], []).map(mo =>
+        String(mo.id) === String(moduleId) ? { ...mo, statut: true, date } : mo);
+    try {
+        await patchSuivi(suiviId, { 'Modules': modules });
+        renderDetailSuivi();
+    } catch (e) { console.error(e); alert('Erreur lors de la validation.'); }
+}
+
+// ---------------------------------------------------------------------------
+// FICHE ELEVE (etat civil + contact d'urgence — livret GEN 1)
+// L'eleve peut completer sa propre fiche (auto-edition verifiee cote serveur).
+// ---------------------------------------------------------------------------
+function ouvrirFicheEleve(suiviId) {
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const ec = formationJson(suivi.fields['Etat civil'], {}) || {};
+    const set = (id, v) => { document.getElementById(id).value = v || ''; };
+    set('fiche-naissance', ec.naissance); set('fiche-lieu-naissance', ec.lieuNaissance);
+    set('fiche-nationalite', ec.nationalite); set('fiche-telephone', ec.telephone);
+    set('fiche-email', ec.email); set('fiche-adresse', ec.adresse);
+    set('fiche-urgence-nom', ec.urgenceNom); set('fiche-urgence-tel', ec.urgenceTel);
+    const overlay = document.getElementById('modale-formation-fiche');
+    overlay.dataset.sid = suiviId;
+    overlay.style.display = 'flex';
+}
+
+async function enregistrerFiche(e) {
+    e.preventDefault();
+    const overlay = document.getElementById('modale-formation-fiche');
+    const val = id => document.getElementById(id).value.trim();
+    const ec = {
+        naissance: document.getElementById('fiche-naissance').value,
+        lieuNaissance: val('fiche-lieu-naissance'), nationalite: val('fiche-nationalite'),
+        telephone: val('fiche-telephone'), email: val('fiche-email'), adresse: val('fiche-adresse'),
+        urgenceNom: val('fiche-urgence-nom'), urgenceTel: val('fiche-urgence-tel')
+    };
+    try {
+        await patchSuivi(overlay.dataset.sid, { 'Etat civil': ec });
+        overlay.style.display = 'none';
+    } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement de la fiche.'); }
+}
+
 // ---------------------------------------------------------------------------
 // MODALE MINIMAS
 // ---------------------------------------------------------------------------
@@ -553,6 +662,9 @@ function ouvrirModaleMinimas(suiviId) {
     const overlay = document.getElementById('modale-formation-minimas');
     document.getElementById('minimas-heures').value = m.heures ?? '';
     document.getElementById('minimas-vols').value = m.vols ?? '';
+    document.getElementById('minimas-hdc').value = m.heuresDC ?? '';
+    document.getElementById('minimas-hsolo').value = m.heuresSolo ?? '';
+    document.getElementById('minimas-att').value = m.atterrissages ?? '';
     overlay.style.display = 'flex';
     overlay.dataset.sid = suiviId;
 }
@@ -561,10 +673,18 @@ async function enregistrerMinimas(e) {
     e.preventDefault();
     const overlay = document.getElementById('modale-formation-minimas');
     const suiviId = overlay.dataset.sid;
-    const h = parseFloat(document.getElementById('minimas-heures').value) || 0;
-    const v = parseInt(document.getElementById('minimas-vols').value, 10) || 0;
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    const actuel = suivi ? (formationJson(suivi.fields['Minimas'], {}) || {}) : {};
+    const minimas = {
+        heures: parseFloat(document.getElementById('minimas-heures').value) || 0,
+        vols: parseInt(document.getElementById('minimas-vols').value, 10) || 0,
+        heuresDC: parseFloat(document.getElementById('minimas-hdc').value) || 0,
+        heuresSolo: parseFloat(document.getElementById('minimas-hsolo').value) || 0,
+        atterrissages: parseInt(document.getElementById('minimas-att').value, 10) || 0
+    };
+    if (actuel.cas) minimas.cas = actuel.cas; // conserve le cas applique
     try {
-        await patchSuivi(suiviId, { 'Minimas': { heures: h, vols: v } });
+        await patchSuivi(suiviId, { 'Minimas': minimas });
         overlay.style.display = 'none';
         renderDetailSuivi();
     } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement des minimas.'); }
@@ -632,7 +752,10 @@ async function enregistrerAttribution(e) {
     const choisi = casIdx !== '' ? cas[parseInt(casIdx, 10)] : null;
     const minimas = {
         heures: choisi ? (choisi.heures ?? 0) : (min.heures ?? 0),
-        vols: choisi ? (choisi.vols ?? 0) : (min.vols ?? 0)
+        vols: choisi ? (choisi.vols ?? 0) : (min.vols ?? 0),
+        heuresDC: choisi ? (choisi.heuresDC ?? 0) : (min.heuresDC ?? 0),
+        heuresSolo: choisi ? (choisi.heuresSolo ?? 0) : (min.heuresSolo ?? 0),
+        atterrissages: choisi ? (choisi.atterrissages ?? 0) : (min.atterrissages ?? 0)
     };
     if (choisi) minimas.cas = choisi.nom;
     // Les prerequis du catalogue deviennent les documents demandes a l'eleve.
@@ -650,6 +773,8 @@ async function enregistrerAttribution(e) {
         'Lecons': formationJson(ff['Lecons'], []),
         'Minimas': minimas,
         'Ressources': formationJson(ff['Ressources'], []),
+        'Modules': formationJson(ff['Modules'], []).map((m, i) => ({ id: `m${Date.now()}_${i}`, titre: m.titre, statut: false, date: '' })),
+        'Etat civil': { telephone: (membre && membre.fields['Téléphone']) || '', email: (membre && membre.fields['Mail']) || '' },
         'Statut': 'Ouverte',
         'Date début': dateDebut,
         'Documentation': documentation
@@ -694,7 +819,10 @@ function blocLeconHtml(lecon, idx) {
             <input type="text" class="lecon-titre" placeholder="Titre de la leçon *" value="${escapeHtml(lecon.titre || '')}" style="flex:1;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
             <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="lecon-suppr">✕</button>
         </div>
-        <input type="text" class="lecon-objectif" placeholder="Objectif (optionnel)" value="${escapeHtml(lecon.objectif || '')}" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;margin-bottom:6px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+            <input type="text" class="lecon-objectif" placeholder="Objectif (optionnel)" value="${escapeHtml(lecon.objectif || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+            <input type="text" class="lecon-groupe" placeholder="Phase (optionnel, ex : Phase 1 — Maniabilité)" value="${escapeHtml(lecon.groupe || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        </div>
         <textarea class="lecon-items" rows="3" placeholder="Un item par ligne : ex. « Tenir le cap ±10° »" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-family:inherit;">${escapeHtml(itemsTxt)}</textarea>
     </div>`;
 }
@@ -708,10 +836,16 @@ function ajouterBlocLecon() {
 
 // Cas de figure de minimas (ex : "deja licencié ULM") — nom libre, multiples.
 function blocCasHtml(cas) {
-    return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;">
-        <input type="text" class="cas-nom" placeholder="Nom du cas (ex : déjà licencié ULM)" value="${escapeHtml(cas.nom || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
-        <input type="number" class="cas-heures" min="0" step="0.5" placeholder="Heures" value="${cas.heures ?? ''}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
-        <input type="number" class="cas-vols" min="0" step="1" placeholder="Vols" value="${cas.vols ?? ''}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+    const inp = (cls, ph, v) => `<input type="number" class="${cls}" min="0" step="0.5" placeholder="${ph}" title="${ph}" value="${v ?? ''}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;min-width:0;">`;
+    return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:1.6fr repeat(5,0.7fr) auto;gap:6px;margin-bottom:6px;align-items:center;">
+        <input type="text" class="cas-nom" placeholder="Nom du cas (ex : déjà licencié ULM)" value="${escapeHtml(cas.nom || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;min-width:0;">
+        ${inp('cas-heures', 'Heures', cas.heures)}${inp('cas-vols', 'Vols', cas.vols)}${inp('cas-hdc', 'h double cmd', cas.heuresDC)}${inp('cas-hsolo', 'h solo', cas.heuresSolo)}${inp('cas-att', 'Atterrissages', cas.atterrissages)}
+        <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
+    </div>`;
+}
+function blocModuleHtml(m) {
+    return `<div class="formation-mini-edit" style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+        <input type="text" class="module-titre" placeholder="Module théorique (ex : Réglementation)" value="${escapeHtml(m.titre || '')}" style="flex:1;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
         <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
     </div>`;
 }
@@ -735,6 +869,45 @@ function ajouterBlocMini(zoneId, html) {
     zone.appendChild(div.firstElementChild);
 }
 
+// Canevas officiel du livret de progression PPL(A) (phases, exercices,
+// modules theoriques, prerequis, minimas 45h/25DC/10 solo).
+const CANEVAS_PPL = {
+    titre: 'PPL(A)',
+    discipline: 'Avion',
+    description: 'Livret de progression PPL(A) — formation théorique et pratique.',
+    minimas: { heures: 45, vols: 0, heuresDC: 25, heuresSolo: 10, atterrissages: 0 },
+    modules: ['Réglementation', 'Performance humaine', 'Météorologie', 'Communication', 'Connaissance générale de l’aéronef', 'Principes du vol', 'Navigation', 'Performances et préparation du vol', 'Procédures opérationnelles'].map(titre => ({ titre })),
+    prerequis: ['Copie d’une pièce d’identité (carte d’identité ou passeport valide)', 'Attestation parentale signée (si mineur)', 'Copie du certificat médical (requis avant tout vol solo supervisé)', 'Copie de licences éventuellement détenues', 'Attestation de réussite aux examens théoriques PPL(A)'].map(titre => ({ titre })),
+    lecons: [
+        { id: '1A', titre: 'Maniabilité (bases)', groupe: 'Phase 1 — Maniabilité', objectif: 'Acquis avant autorisation solo', items: ['1a Familiarisation avec l’avion', '1b Exercices de secours et d’urgence', '2 Préparation pour le vol et actions après vol', '3 Familiarisation au vol : exercices en vol', '4 Effets des gouvernes', '5a Roulage au sol', '5b Urgences : panne de freins et de direction', '6 Vol horizontal rectiligne', '7 Vol en montée', '8 Vol en descente', '9 Virages'] },
+        { id: '1B', titre: 'Maniabilité (avancée)', groupe: 'Phase 1 — Maniabilité', objectif: '', items: ['10a Vol lent', '10b Décrochage (2 h min sur les décrochages et l’autorotation)', '11 Évitement de l’autorotation'] },
+        { id: '1C', titre: 'Tours de piste', groupe: 'Phase 1 — Maniabilité', objectif: 'Acquis avant autorisation solo', items: ['12 Décollage et montée vers la branche vent arrière', '13 Circuit, approche et atterrissage', '12/13 Urgences'] },
+        { id: '1D', titre: 'Premier solo', groupe: 'Phase 1 — Maniabilité', objectif: '', items: ['14a Premier solo — tour de piste', '14b Solo — local'] },
+        { id: '2A', titre: 'Perfectionnement', groupe: 'Phase 2 — Perfectionnement & navigation', objectif: '', items: ['15 Perfectionnement du virage', '16 Atterrissage forcé moteur réduit', '17 Atterrissage de précaution'] },
+        { id: '2B', titre: 'Navigation', groupe: 'Phase 2 — Perfectionnement & navigation', objectif: 'Acquis avant navigation solo', items: ['18a Navigation', '18b Problèmes de navigation à basse altitude et par visibilité réduite', '18c Radionavigation'] },
+        { id: '2C', titre: 'Pilotage sans visibilité (VSV)', groupe: 'Phase 2 — Perfectionnement & navigation', objectif: '', items: ['19 Pilotage de base aux instruments'] },
+        { id: '2D', titre: 'Navigation solo supervisé', groupe: 'Phase 2 — Perfectionnement & navigation', objectif: 'Min 5 h dont une nav de 150 NM avec arrêts complets sur 2 aérodromes différents du départ', items: ['Navigation en vol solo supervisé — 5 h min dont 150 NM'] },
+        { id: '3A', titre: 'Révisions PPL', groupe: 'Phase 3 — Révisions PPL', objectif: '', items: ['Révision « PPL(A) »'] },
+        { id: '3B', titre: 'Présentation à l’examen pratique', groupe: 'Phase 3 — Révisions PPL', objectif: 'Certificat théorique de moins de 2 ans requis', items: ['Présentation à l’examen pratique « PPL(A) »'] }
+    ],
+    ressources: []
+};
+
+function appliquerCanevasPpl() {
+    document.getElementById('edit-formation-titre').value = CANEVAS_PPL.titre;
+    document.getElementById('edit-formation-discipline').value = CANEVAS_PPL.discipline;
+    document.getElementById('edit-formation-description').value = CANEVAS_PPL.description;
+    document.getElementById('edit-formation-heures').value = CANEVAS_PPL.minimas.heures;
+    document.getElementById('edit-formation-vols').value = CANEVAS_PPL.minimas.vols || '';
+    document.getElementById('edit-formation-hdc').value = CANEVAS_PPL.minimas.heuresDC;
+    document.getElementById('edit-formation-hsolo').value = CANEVAS_PPL.minimas.heuresSolo;
+    document.getElementById('edit-formation-att').value = CANEVAS_PPL.minimas.atterrissages || '';
+    document.getElementById('editeur-modules').innerHTML = CANEVAS_PPL.modules.map(blocModuleHtml).join('');
+    document.getElementById('editeur-prerequis').innerHTML = CANEVAS_PPL.prerequis.map(blocPrerequisHtml).join('');
+    document.getElementById('editeur-ressources').innerHTML = CANEVAS_PPL.ressources.map(blocRessourceHtml).join('');
+    document.getElementById('editeur-lecons').innerHTML = CANEVAS_PPL.lecons.map(blocLeconHtml).join('');
+}
+
 function ouvrirEditeurFormation(formationId) {
     const overlay = document.getElementById('modale-formation-editeur');
     const form = formationId ? formationsCache.find(f => f.id === formationId) : null;
@@ -745,11 +918,16 @@ function ouvrirEditeurFormation(formationId) {
     const m = form ? formationJson(form.fields['Minimas'], {}) : {};
     document.getElementById('edit-formation-heures').value = m.heures ?? '';
     document.getElementById('edit-formation-vols').value = m.vols ?? '';
+    document.getElementById('edit-formation-hdc').value = m.heuresDC ?? '';
+    document.getElementById('edit-formation-hsolo').value = m.heuresSolo ?? '';
+    document.getElementById('edit-formation-att').value = m.atterrissages ?? '';
     // Cas de figure : nouveau format (m.cas) ou migration de l'ancien
     // (heuresLicencie/volsLicencie -> un cas "Deja licencié").
     const cas = Array.isArray(m.cas) ? m.cas
         : (m.heuresLicencie || m.volsLicencie ? [{ nom: 'Déjà licencié', heures: m.heuresLicencie || 0, vols: m.volsLicencie || 0 }] : []);
     document.getElementById('editeur-cas').innerHTML = cas.map(blocCasHtml).join('');
+    const modules = form ? formationJson(form.fields['Modules'], []) : [];
+    document.getElementById('editeur-modules').innerHTML = modules.map(blocModuleHtml).join('');
     const prerequis = form ? formationJson(form.fields['Prerequis'], []) : [];
     document.getElementById('editeur-prerequis').innerHTML = prerequis.map(blocPrerequisHtml).join('');
     const ressources = form ? formationJson(form.fields['Ressources'], []) : [];
@@ -771,13 +949,18 @@ async function enregistrerFormationEdit(e) {
         id: b.dataset.leconId || `l${Date.now()}_${i}`,
         titre: b.querySelector('.lecon-titre').value.trim(),
         objectif: b.querySelector('.lecon-objectif').value.trim(),
+        groupe: b.querySelector('.lecon-groupe').value.trim(),
         items: b.querySelector('.lecon-items').value.split('\n').map(s => s.trim()).filter(Boolean)
     })).filter(l => l.titre || l.items.length);
+    const num = (b, c, entier) => { const v = entier ? parseInt(b.querySelector(c).value, 10) : parseFloat(b.querySelector(c).value); return v || 0; };
     const cas = [...document.querySelectorAll('#editeur-cas .formation-mini-edit')].map(b => ({
         nom: b.querySelector('.cas-nom').value.trim(),
-        heures: parseFloat(b.querySelector('.cas-heures').value) || 0,
-        vols: parseInt(b.querySelector('.cas-vols').value, 10) || 0
+        heures: num(b, '.cas-heures'), vols: num(b, '.cas-vols', true),
+        heuresDC: num(b, '.cas-hdc'), heuresSolo: num(b, '.cas-hsolo'), atterrissages: num(b, '.cas-att', true)
     })).filter(c => c.nom);
+    const modules = [...document.querySelectorAll('#editeur-modules .formation-mini-edit')]
+        .map(b => ({ titre: b.querySelector('.module-titre').value.trim() }))
+        .filter(m => m.titre);
     const prerequis = [...document.querySelectorAll('#editeur-prerequis .formation-mini-edit')]
         .map(b => ({ titre: b.querySelector('.prerequis-titre').value.trim() }))
         .filter(p => p.titre);
@@ -791,8 +974,12 @@ async function enregistrerFormationEdit(e) {
         'Minimas': {
             heures: parseFloat(document.getElementById('edit-formation-heures').value) || 0,
             vols: parseInt(document.getElementById('edit-formation-vols').value, 10) || 0,
+            heuresDC: parseFloat(document.getElementById('edit-formation-hdc').value) || 0,
+            heuresSolo: parseFloat(document.getElementById('edit-formation-hsolo').value) || 0,
+            atterrissages: parseInt(document.getElementById('edit-formation-att').value, 10) || 0,
             cas
         },
+        'Modules': modules,
         'Prerequis': prerequis,
         'Ressources': ressources,
         'Lecons': lecons,
@@ -864,6 +1051,10 @@ async function ouvrirModaleSeance(suiviId, leconPreChoisie) {
     document.getElementById('seance-date').value = new Date().toISOString().slice(0, 10);
     document.getElementById('seance-commentaire').value = '';
     document.getElementById('seance-lecon-validee').checked = false;
+    document.getElementById('seance-type').value = 'Vol';
+    document.getElementById('seance-machine').value = '';
+    document.getElementById('seance-meteo').value = '';
+    ['seance-hdc', 'seance-hsolo', 'seance-hsimu', 'seance-att'].forEach(id => { document.getElementById(id).value = ''; });
     overlay.dataset.sid = suiviId;
     overlay.style.display = 'flex';
     renderItemsSeance();
@@ -878,6 +1069,29 @@ async function ouvrirModaleSeance(suiviId, leconPreChoisie) {
             return `<option value="${v.id}">${escapeHtml(lbl)}</option>`;
         }).join('');
     } catch (e) { selVol.innerHTML = '<option value="">— Sans vol associé —</option>'; }
+}
+
+// Pre-remplit la fiche seance depuis le vol choisi : HDV reparties selon la
+// fonction (EP* = double commande, P = solo), atterrissages, machine, date.
+function prefillSeanceDepuisVol() {
+    if (!seanceEnCours) return;
+    const volId = document.getElementById('seance-vol').value;
+    const vol = volId ? seanceEnCours.vols.find(v => v.id === volId) : null;
+    if (!vol) return;
+    const f = vol.fields;
+    const minutes = typeof dureeVolMinutes === 'function' ? dureeVolMinutes(f) : 0;
+    const heures = Math.round(minutes / 60 * 10) / 10;
+    const fonction = String(f['Fonction'] || '').toUpperCase();
+    if (fonction.startsWith('EP')) {
+        document.getElementById('seance-hdc').value = heures || '';
+        document.getElementById('seance-hsolo').value = '';
+    } else if (fonction === 'P' || fonction.startsWith('P/')) {
+        document.getElementById('seance-hsolo').value = heures || '';
+        document.getElementById('seance-hdc').value = '';
+    }
+    if (f['Atterrissages']) document.getElementById('seance-att').value = f['Atterrissages'];
+    if (f['Machine']) document.getElementById('seance-machine').value = f['Machine'];
+    if (f['Date']) document.getElementById('seance-date').value = f['Date'];
 }
 
 // Liste des items a cocher : items de la lecon choisie + items reportes d'avant.
@@ -928,6 +1142,7 @@ async function enregistrerSeance(e) {
     const image = await ouvrirPadSignature('Signature de l\'instructeur');
     if (!image) return;
 
+    const hdv = id => parseFloat(document.getElementById(id).value) || 0;
     const fields = {
         'Suivi': String(suivi.id),
         'Élève': suivi.fields['Élève'] || [],
@@ -937,6 +1152,13 @@ async function enregistrerSeance(e) {
         'Vol': volId || '',
         'Vol libellé': volLibelle,
         'Date': date,
+        'Type': document.getElementById('seance-type').value,
+        'Machine': document.getElementById('seance-machine').value.trim(),
+        'Météo': document.getElementById('seance-meteo').value.trim(),
+        'HDV DC': hdv('seance-hdc'),
+        'HDV solo': hdv('seance-hsolo'),
+        'HDV simu': hdv('seance-hsimu'),
+        'Atterrissages': parseInt(document.getElementById('seance-att').value, 10) || 0,
         'Commentaire': commentaire,
         'Items validés': valides,
         'Items reportés': reportes,
@@ -962,19 +1184,22 @@ async function enregistrerSeance(e) {
 function initFormation() {
     const change = document.getElementById('seance-lecon');
     if (change) change.addEventListener('change', renderItemsSeance);
+    const selVol = document.getElementById('seance-vol');
+    if (selVol) selVol.addEventListener('change', prefillSeanceDepuisVol);
     const fermer = (id) => { const o = document.getElementById(id); if (o) o.style.display = 'none'; };
     const liaisons = [
         ['btn-close-formation-editeur', 'modale-formation-editeur'],
         ['btn-close-formation-attribuer', 'modale-formation-attribuer'],
         ['btn-close-formation-seance', 'modale-formation-seance'],
         ['btn-close-formation-minimas', 'modale-formation-minimas'],
-        ['btn-close-formation-catalogue', 'modale-formation-catalogue']
+        ['btn-close-formation-catalogue', 'modale-formation-catalogue'],
+        ['btn-close-formation-fiche', 'modale-formation-fiche']
     ];
     liaisons.forEach(([btn, mod]) => {
         const b = document.getElementById(btn);
         if (b) b.addEventListener('click', () => fermer(mod));
     });
-    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-seance, #modale-formation-minimas, #modale-formation-catalogue')
+    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-seance, #modale-formation-minimas, #modale-formation-catalogue, #modale-formation-fiche')
         .forEach(o => o.addEventListener('click', (e) => { if (e.target === o) o.style.display = 'none'; }));
     const f1 = document.getElementById('form-formation-editeur');
     if (f1) f1.addEventListener('submit', enregistrerFormationEdit);
@@ -984,6 +1209,8 @@ function initFormation() {
     if (f3) f3.addEventListener('submit', enregistrerSeance);
     const f4 = document.getElementById('form-formation-minimas');
     if (f4) f4.addEventListener('submit', enregistrerMinimas);
+    const f5 = document.getElementById('form-formation-fiche');
+    if (f5) f5.addEventListener('submit', enregistrerFiche);
     const btnCat = document.getElementById('btn-formation-nouvelle');
     if (btnCat) btnCat.addEventListener('click', () => ouvrirEditeurFormation(null));
     const btnLecon = document.getElementById('btn-formation-lecon-add');
@@ -994,6 +1221,10 @@ function initFormation() {
     if (btnPre) btnPre.addEventListener('click', () => ajouterBlocMini('editeur-prerequis', blocPrerequisHtml({})));
     const btnRes = document.getElementById('btn-formation-ressource-add');
     if (btnRes) btnRes.addEventListener('click', () => ajouterBlocMini('editeur-ressources', blocRessourceHtml({})));
+    const btnMod = document.getElementById('btn-formation-module-add');
+    if (btnMod) btnMod.addEventListener('click', () => ajouterBlocMini('editeur-modules', blocModuleHtml({})));
+    const btnCan = document.getElementById('btn-formation-canevas-ppl');
+    if (btnCan) btnCan.addEventListener('click', appliquerCanevasPpl);
     const selForm = document.getElementById('attribuer-formation');
     if (selForm) selForm.addEventListener('change', majCasAttribution);
 }

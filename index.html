@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=e3a2a01645">
+    <link rel="stylesheet" href="style.css?v=ceb8fed83b">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -1605,7 +1605,9 @@
     <div id="modale-formation-editeur" class="modal" style="display:none;">
         <div class="modal-content" style="max-width:640px; width:100%;">
             <button type="button" id="btn-close-formation-editeur" class="close-modal">&times;</button>
-            <h3 id="titre-modale-formation">Nouvelle formation</h3>
+            <h3 id="titre-modale-formation">Nouvelle formation
+                <button type="button" id="btn-formation-canevas-ppl" class="btn-secondary" style="font-size:12px;padding:4px 10px;" title="Pré-remplir avec le livret de progression PPL(A) (phases, exercices, minimas, modules)">📋 Canevas PPL(A)</button>
+            </h3>
             <form id="form-formation-editeur">
                 <div class="form-group">
                     <label for="edit-formation-titre">Titre *</label>
@@ -1626,18 +1628,35 @@
                 </div>
                 <div class="nr-section" style="margin-top:10px;">
                     <div class="nr-section-title">MINIMAS REQUIS</div>
-                    <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-row" style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px;">
                         <div class="form-group" style="margin-bottom:0;">
-                            <label for="edit-formation-heures">Heures de vol</label>
-                            <input type="number" id="edit-formation-heures" min="0" step="0.5" placeholder="ex : 30">
+                            <label for="edit-formation-heures">Heures</label>
+                            <input type="number" id="edit-formation-heures" min="0" step="0.5" placeholder="45">
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
-                            <label for="edit-formation-vols">Nombre de vols</label>
-                            <input type="number" id="edit-formation-vols" min="0" step="1" placeholder="ex : 25">
+                            <label for="edit-formation-vols">Vols</label>
+                            <input type="number" id="edit-formation-vols" min="0" step="1" placeholder="—">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="edit-formation-hdc">h double cmd</label>
+                            <input type="number" id="edit-formation-hdc" min="0" step="0.5" placeholder="25">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="edit-formation-hsolo">h solo</label>
+                            <input type="number" id="edit-formation-hsolo" min="0" step="0.5" placeholder="10">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="edit-formation-att">Atterrissages</label>
+                            <input type="number" id="edit-formation-att" min="0" step="1" placeholder="—">
                         </div>
                     </div>
                     <div id="editeur-cas" style="margin-top:8px;"></div>
                     <button type="button" id="btn-formation-cas-add" class="btn-secondary" style="margin-top:8px;font-size:13px;">＋ Ajouter un cas de figure (ex : déjà licencié)</button>
+                </div>
+                <div class="nr-section" style="margin-top:12px;">
+                    <div class="nr-section-title">MODULES THÉORIQUES</div>
+                    <div id="editeur-modules"></div>
+                    <button type="button" id="btn-formation-module-add" class="btn-secondary" style="margin-top:8px;font-size:13px;">＋ Ajouter un module</button>
                 </div>
                 <div class="nr-section" style="margin-top:12px;">
                     <div class="nr-section-title">PRÉREQUIS — DOCUMENTS À FOURNIR PAR L'ÉLÈVE</div>
@@ -1696,18 +1715,54 @@
             <button type="button" id="btn-close-formation-seance" class="close-modal">&times;</button>
             <h3>✈️ Débrief de séance</h3>
             <form id="form-formation-seance">
-                <div class="form-group">
-                    <label for="seance-vol">Vol associé</label>
-                    <select id="seance-vol"><option value="">—</option></select>
-                </div>
-                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
                     <div class="form-group" style="margin-bottom:0;">
-                        <label for="seance-lecon">Leçon</label>
-                        <select id="seance-lecon"></select>
+                        <label for="seance-type">Type de séance</label>
+                        <select id="seance-type">
+                            <option value="Vol">Avion (vol)</option>
+                            <option value="Simulateur">Simulateur</option>
+                            <option value="Théorique">Formation théorique</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="seance-machine">Machine / Simu</label>
+                        <input type="text" id="seance-machine" placeholder="ex : C172, FNPT II">
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
                         <label for="seance-date">Date</label>
                         <input type="date" id="seance-date">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label for="seance-vol">Vol associé</label>
+                    <select id="seance-vol"><option value="">—</option></select>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="seance-hdc">HDV double cmd</label>
+                        <input type="number" id="seance-hdc" min="0" step="0.1" placeholder="h">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="seance-hsolo">HDV solo</label>
+                        <input type="number" id="seance-hsolo" min="0" step="0.1" placeholder="h">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="seance-hsimu">HDV simulateur</label>
+                        <input type="number" id="seance-hsimu" min="0" step="0.1" placeholder="h">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="seance-att">Atterrissages</label>
+                        <input type="number" id="seance-att" min="0" step="1">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label for="seance-meteo">Météo & infos opérationnelles</label>
+                    <input type="text" id="seance-meteo" placeholder="ex : BKN014 9999, vent N/NE 5-10 kt">
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="seance-lecon">Leçon</label>
+                        <select id="seance-lecon"></select>
                     </div>
                 </div>
                 <div class="form-group" style="margin-top:10px;">
@@ -1742,6 +1797,74 @@
                 <div class="form-group">
                     <label for="minimas-vols">Nombre de vols requis</label>
                     <input type="number" id="minimas-vols" min="0" step="1">
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="minimas-hdc">h double cmd</label>
+                        <input type="number" id="minimas-hdc" min="0" step="0.5">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="minimas-hsolo">h solo</label>
+                        <input type="number" id="minimas-hsolo" min="0" step="0.5">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="minimas-att">Atterrissages</label>
+                        <input type="number" id="minimas-att" min="0" step="1">
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top:15px;">
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale : Fiche élève (état civil, livret GEN 1) -->
+    <div id="modale-formation-fiche" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:480px; width:100%;">
+            <button type="button" id="btn-close-formation-fiche" class="close-modal">&times;</button>
+            <h3>👤 Fiche élève</h3>
+            <form id="form-formation-fiche">
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="fiche-naissance">Date de naissance</label>
+                        <input type="date" id="fiche-naissance">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="fiche-lieu-naissance">Lieu de naissance</label>
+                        <input type="text" id="fiche-lieu-naissance">
+                    </div>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="fiche-nationalite">Nationalité</label>
+                        <input type="text" id="fiche-nationalite">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="fiche-telephone">Téléphone</label>
+                        <input type="text" id="fiche-telephone">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label for="fiche-email">Email</label>
+                    <input type="email" id="fiche-email">
+                </div>
+                <div class="form-group">
+                    <label for="fiche-adresse">Adresse</label>
+                    <input type="text" id="fiche-adresse">
+                </div>
+                <div class="nr-section" style="margin-top:8px;">
+                    <div class="nr-section-title">PERSONNE À CONTACTER EN CAS D'ACCIDENT</div>
+                    <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="fiche-urgence-nom">Nom &amp; prénom</label>
+                            <input type="text" id="fiche-urgence-nom">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="fiche-urgence-tel">Téléphone</label>
+                            <input type="text" id="fiche-urgence-tel">
+                        </div>
+                    </div>
                 </div>
                 <div class="form-actions" style="margin-top:15px;">
                     <button type="submit" class="btn-submit">Enregistrer</button>
@@ -1798,8 +1921,8 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
-    <script src="formation.js?v=61023e04ec"></script>
-    <script src="version.js?v=20261012185425"></script>
+    <script src="formation.js?v=619e3f3a1e"></script>
+    <script src="version.js?v=20261012191747"></script>
     <script src="app.js?v=a87ff05606"></script>
     <script src="utils.js?v=34bd013fe7"></script>
     <script src="presences.js?v=5da5f247ed"></script>
