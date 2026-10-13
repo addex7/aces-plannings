@@ -5707,6 +5707,61 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #fefce8;
     color: #854d0e;
 }
+
+/* Detail d'un suivi : 3 colonnes (theorique / documents / minimas) */
+.formation-trio {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 10px 0 16px;
+    align-items: start;
+}
+.formation-col {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    padding: 12px 14px;
+    min-width: 0;
+}
+.formation-col-titre {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #1e3d59;
+}
+.formation-minimas .mini-ligne {
+    margin-bottom: 10px;
+}
+.mini-tete {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    color: #334155;
+    margin-bottom: 3px;
+}
+.mini-tete strong {
+    font-variant-numeric: tabular-nums;
+    color: #1e3d59;
+}
+.mini-bar {
+    height: 8px;
+    border-radius: 99px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+.mini-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.3s;
+}
+@media (max-width: 1000px) {
+    .formation-trio {
+        grid-template-columns: 1fr;
+    }
+}
 @media (max-width: 900px) {
     .seance-page {
         grid-template-columns: 1fr;

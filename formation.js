@@ -277,27 +277,45 @@ async function renderDetailSuivi() {
     // Modules theoriques du suivi (valides un par un avec date).
     const modules = formationJson(f['Modules'], []);
     const modulesHtml = modules.length ? `
-        <h4 class="formation-sub-titre">📖 Formation théorique</h4>
         <div class="formation-docs">${modules.map(mo => {
+
             const fait = !!mo.statut;
             const zone = (instructeur && !fait) ? `
                 <input type="date" id="module-date-${escapeHtml(mo.id)}" value="${new Date().toISOString().slice(0, 10)}" title="Date de validation" style="padding:3px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;">
                 <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="module-valide" data-sid="${suivi.id}" data-mid="${escapeHtml(mo.id)}">Valider</button>` : '';
             return `<div class="formation-doc"><span>${fait ? '✅' : '⬜'} ${escapeHtml(mo.titre)}</span>
                 <span class="formation-carte-sub">${fait ? `validé le ${escapeHtml(mo.date || '')}` : 'en attente'}</span>${zone}</div>`;
-        }).join('')}</div>` : '';
+        }).join('')}</div>` : '<div class="formation-vide">Aucun module.</div>';
     const ressources = formationJson(f['Ressources'], []);
     const ressourcesHtml = ressources.length ? `
-        <h4 class="formation-sub-titre">📚 Documentation de la formation</h4>
+        <h5 class="formation-phase-titre">📚 Documentation de la formation</h5>
         <div class="formation-docs">${ressources.map(r => {
             const lien = urlSure(r.lien || '');
             return `<div class="formation-doc">${lien
                 ? `<a href="${lien}" target="_blank" rel="noopener">🔗 ${escapeHtml(r.titre || r.lien)}</a>`
                 : `<span>🔗 ${escapeHtml(r.titre || '')}</span>`}</div>`;
         }).join('')}</div>` : '';
-    const docsHtml = docs.length ? `
-        <h4 class="formation-sub-titre">📋 Documents demandés / prérequis</h4>
-        <div class="formation-docs">${docs.map(d => renderDoc(suivi, d, instructeur)).join('')}</div>` : '';
+    const docsHtml = docs.length
+        ? `<div class="formation-docs">${docs.map(d => renderDoc(suivi, d, instructeur)).join('')}</div>`
+        : '<div class="formation-vide">Aucun document demandé.</div>';
+
+    // Colonnes : theorique | documents | minimas (progression auto sur les seances)
+    const trioHtml = `
+        <div class="formation-trio">
+            <div class="formation-col">
+                <h4 class="formation-col-titre">📖 Formation théorique</h4>
+                ${modulesHtml}
+            </div>
+            <div class="formation-col">
+                <h4 class="formation-col-titre">📋 Documents demandés</h4>
+                ${docsHtml}
+                ${ressourcesHtml}
+            </div>
+            <div class="formation-col">
+                <h4 class="formation-col-titre">⏱ Minimas requis</h4>
+                <div id="${statsVolsId}" class="formation-minimas">Comptage des vols…</div>
+            </div>
+        </div>`;
 
     zone.innerHTML = `
         <div class="formation-entete">
@@ -312,10 +330,7 @@ async function renderDetailSuivi() {
             </div>
             <div style="min-width:220px;">${barreProgression(p.pct, 20)}<div class="formation-carte-sub" style="text-align:right;">${p.faits}/${p.total} items validés</div></div>
         </div>
-        <div id="${statsVolsId}" class="formation-carte-sub" style="margin:6px 0 10px;">Comptage des vols…</div>
-        ${ressourcesHtml}
-        ${modulesHtml}
-        ${docsHtml}
+        ${trioHtml}
         <h4 class="formation-sub-titre">📚 Formation pratique</h4>
         ${leconsHtml || '<div class="formation-vide">Aucune leçon définie.</div>'}
         <h4 class="formation-sub-titre">✈️ Journal des séances</h4>
@@ -329,8 +344,8 @@ async function renderDetailSuivi() {
     });
 }
 
-// Bilan style livret : HDV par type (DC / solo / simu) depuis les seances,
-// plus le total carnet de route en complement, le tout compare aux minimas.
+// Panneau des minimas : chaque exigence avec sa progression, calculee
+// automatiquement depuis les seances (HDV) et le carnet de l'eleve.
 async function chargerStatsVols(suivi, minimas) {
     try {
         const seances = seancesDuSuivi(suivi.id);
@@ -351,23 +366,31 @@ async function chargerStatsVols(suivi, minimas) {
             deduis.forEach(v => { minutes += (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0); });
         }
         const hTxt = v => { const h = Math.floor(v), m = Math.round((v - h) * 60); return `${h}h${String(m).padStart(2, '0')}`; };
-        const seg = (label, val, req, u) => `${label} <strong>${u ? hTxt(val) : val}${req ? '/' + req + (u || '') : ''}</strong>`;
+        const ligne = (label, val, req, enHeures) => {
+            const vTxt = enHeures ? hTxt(val) : val;
+            const rTxt = req ? (enHeures ? hTxt(req) : req) : null;
+            const pct = req ? Math.min(100, Math.round(val * 100 / req)) : null;
+            const c = pct === null ? '' : couleurProgression(pct);
+            return `<div class="mini-ligne">
+                <div class="mini-tete"><span>${label}</span><strong>${vTxt}${rTxt ? ` / ${rTxt}` : ''}</strong></div>
+                ${pct !== null ? `<div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%;background:${c};"></div></div>` : ''}
+            </div>`;
+        };
         const reqH = Number(minimas.heures || 0), reqV = Number(minimas.vols || 0);
         const reqDC = Number(minimas.heuresDC || 0), reqSolo = Number(minimas.heuresSolo || 0), reqAtt = Number(minimas.atterrissages || 0);
-        const blocs = [
-            seg('Total', minutes / 60, reqH, 'h'),
-            `Vols <strong>${nbVols}${reqV ? '/' + reqV : ''}</strong>`,
-            seg('DC', dc, reqDC, 'h'),
-            seg('Solo', solo, reqSolo, 'h'),
-            simu ? seg('Simu', simu, 0, 'h') : '',
-            (att || reqAtt) ? `Att <strong>${att}${reqAtt ? '/' + reqAtt : ''}</strong>` : ''
+        const lignes = [
+            ligne('Heures totales', minutes / 60, reqH, true),
+            ligne('Vols', nbVols, reqV, false),
+            ligne('Double commande', dc, reqDC, true),
+            ligne('Solo', solo, reqSolo, true),
+            simu ? ligne('Simulateur', simu, 0, true) : '',
+            (att || reqAtt) ? ligne('Atterrissages', att, reqAtt, false) : ''
         ].filter(Boolean);
         const aDesHdv = dc || solo || simu || att;
-        return `⏱ ${blocs.join(' · ')}` +
-            (aDesHdv ? '' : ' <span class="formation-carte-sub">(détail DC/solo compté depuis les séances)</span>') +
-            (reqH || reqV || reqDC || reqSolo || reqAtt ? ' <span class="formation-carte-sub">(minimas requis)</span>' : '') +
-            (minimas.cas ? ` <span class="formation-carte-sub">· cas « ${escapeHtml(minimas.cas)} »</span>` : '');
-    } catch (e) { return ''; }
+        return lignes.join('') +
+            (aDesHdv ? '' : '<div class="formation-carte-sub">DC/solo/simu comptés depuis les séances.</div>') +
+            (minimas.cas ? `<div class="formation-carte-sub" style="margin-top:6px;">Cas appliqué : « ${escapeHtml(minimas.cas)} »</div>` : '');
+    } catch (e) { return '<div class="formation-carte-sub">Erreur de comptage.</div>'; }
 }
 
 function renderDoc(suivi, d, instructeur) {
