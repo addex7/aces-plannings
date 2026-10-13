@@ -1107,8 +1107,8 @@ async function ouvrirPageSeance(suiviId) {
             ${arbre || '<div class="formation-vide">Aucune leçon définie.</div>'}
         </div>
         <div class="seance-formulaire">
-            <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-                <div class="form-group" style="margin-bottom:0;">
+            <div class="seance-grid3">
+                <div class="form-group">
                     <label for="seance-type">Type de séance</label>
                     <select id="seance-type">
                         <option value="Vol">Avion (vol)</option>
@@ -1116,38 +1116,39 @@ async function ouvrirPageSeance(suiviId) {
                         <option value="Théorique">Formation théorique</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
+                <div class="form-group">
                     <label for="seance-machine">Machine / Simu</label>
                     <input type="text" id="seance-machine" placeholder="ex : C172, FNPT II">
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
+                <div class="form-group">
                     <label for="seance-date">Date</label>
                     <input type="date" id="seance-date" value="${new Date().toISOString().slice(0, 10)}">
                 </div>
             </div>
-            <div class="form-group" style="margin-top:10px;">
+            <div class="form-group">
                 <label for="seance-vol">Vol associé</label>
                 <select id="seance-vol"><option value="">Chargement des vols…</option></select>
             </div>
-            <div class="form-row" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
-                <div class="form-group" style="margin-bottom:0;">
-                    <label for="seance-hdc">HDV double cmd</label>
+            <div class="seance-form-sous-titre">Heures de vol & atterrissages</div>
+            <div class="seance-grid4">
+                <div class="form-group">
+                    <label for="seance-hdc">Double cmd</label>
                     <input type="number" id="seance-hdc" min="0" step="0.1" placeholder="h">
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label for="seance-hsolo">HDV solo</label>
+                <div class="form-group">
+                    <label for="seance-hsolo">Solo</label>
                     <input type="number" id="seance-hsolo" min="0" step="0.1" placeholder="h">
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label for="seance-hsimu">HDV simulateur</label>
+                <div class="form-group">
+                    <label for="seance-hsimu">Simulateur</label>
                     <input type="number" id="seance-hsimu" min="0" step="0.1" placeholder="h">
                 </div>
-                <div class="form-group" style="margin-bottom:0;">
+                <div class="form-group">
                     <label for="seance-att">Atterrissages</label>
                     <input type="number" id="seance-att" min="0" step="1">
                 </div>
             </div>
-            <div class="form-group" style="margin-top:10px;">
+            <div class="form-group">
                 <label for="seance-meteo">Météo & infos opérationnelles</label>
                 <input type="text" id="seance-meteo" placeholder="ex : BKN014 9999, vent N/NE 5-10 kt">
             </div>

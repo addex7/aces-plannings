@@ -5621,6 +5621,78 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #f8fafc;
     padding: 14px;
 }
+.seance-grid3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+}
+.seance-grid4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+.seance-form-sous-titre {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+/* Libelles courts sur une ligne + champs de taille uniforme */
+.seance-formulaire .form-group {
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.seance-grid3 .form-group,
+.seance-grid4 .form-group {
+    margin-bottom: 0;
+}
+.seance-formulaire label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.seance-formulaire input,
+.seance-formulaire select,
+.seance-formulaire textarea {
+    width: 100%;
+    box-sizing: border-box;
+    height: 38px;
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+}
+.seance-formulaire textarea {
+    height: auto;
+    min-height: 110px;
+    resize: vertical;
+}
+.seance-grid3 + .form-group,
+.seance-grid4 + .form-group,
+.seance-grid3,
+.seance-grid4,
+.seance-formulaire .form-group + .seance-form-sous-titre {
+    margin-bottom: 12px;
+}
+@media (max-width: 1100px) {
+    .seance-grid4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 600px) {
+    .seance-grid3 {
+        grid-template-columns: 1fr;
+    }
+}
 .formation-item-encours {
     background: #fefce8;
     color: #854d0e;
