@@ -5537,6 +5537,105 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     width: auto;
     flex-shrink: 0;
 }
+
+/* Page séance plein écran : arbre complet à gauche, formulaire à droite */
+.seance-page {
+    display: grid;
+    grid-template-columns: minmax(340px, 1.2fr) minmax(300px, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+.seance-arbre {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    padding: 12px 14px;
+}
+.seance-arbre-titre {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+.seance-lecon-bloc {
+    margin-bottom: 10px;
+}
+.seance-lecon-bloc > strong {
+    font-size: 13px;
+    color: #1e3d59;
+}
+.seance-lecon-items {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.seance-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+.seance-item-row:hover {
+    background: #f1f5f9;
+}
+.seance-item-libelle {
+    flex: 1;
+    min-width: 0;
+    color: #334155;
+}
+.seance-tristate {
+    display: inline-flex;
+    flex-shrink: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.ts-btn {
+    border: none;
+    background: #fff;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    cursor: pointer;
+}
+.ts-btn + .ts-btn {
+    border-left: 1px solid #e2e8f0;
+}
+.ts-btn.ts-on.ts-arefaire { background: #fee2e2; color: #b91c1c; }
+.ts-btn.ts-on.ts-encours  { background: #fef3c7; color: #92400e; }
+.ts-btn.ts-on.ts-acquis   { background: #dcfce7; color: #166534; }
+.seance-formulaire {
+    position: sticky;
+    top: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 14px;
+}
+.formation-item-encours {
+    background: #fefce8;
+    color: #854d0e;
+}
+@media (max-width: 900px) {
+    .seance-page {
+        grid-template-columns: 1fr;
+    }
+    .seance-arbre {
+        max-height: none;
+    }
+    .seance-formulaire {
+        position: static;
+    }
+}
 .formation-seance {
     border-top: 1px solid #e2e8f0;
     margin-top: 10px;

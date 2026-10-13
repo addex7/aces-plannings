@@ -84,33 +84,51 @@ async function chargerVolsEleve(nomEleve) {
 // PROGRESSION
 // ---------------------------------------------------------------------------
 function seancesDuSuivi(suiviId) {
-    return (seancesCache || []).filter(s => String(s.fields['Suivi']) === String(suiviId));
+    return (seancesCache || [])
+        .filter(s => String(s.fields['Suivi']) === String(suiviId))
+        .sort((a, b) => String(a.fields['Date'] || '').localeCompare(String(b.fields['Date'] || '')) || String(a.id).localeCompare(String(b.id)));
+}
+// Dernier etat connu de chaque item : 'acquis' | 'encours' | 'arefaire'.
+// Compat : anciens champs 'Items validés' -> acquis, 'Items reportés' -> arefaire.
+const ETATS_ITEM = { acquis: '✅', encours: '🟡', arefaire: '🔄' };
+function etatsItemsSuivi(suiviId) {
+    const etats = new Map();
+    seancesDuSuivi(suiviId).forEach(s => {
+        formationJson(s.fields['Items reportés'], []).forEach(x => etats.set(`${x.lecon}:${x.item}`, 'arefaire'));
+        formationJson(s.fields['Items validés'], []).forEach(x => etats.set(`${x.lecon}:${x.item}`, 'acquis'));
+        formationJson(s.fields['Items'], []).forEach(x => etats.set(`${x.lecon}:${x.item}`, x.etat));
+    });
+    return etats;
 }
 function itemsValidesSuivi(suiviId) {
+    const etats = etatsItemsSuivi(suiviId);
     const ok = new Set();
     const leconsValidees = new Set();
+    etats.forEach((v, k) => { if (v === 'acquis') ok.add(k); });
     seancesDuSuivi(suiviId).forEach(s => {
-        formationJson(s.fields['Items validés'], []).forEach(x => ok.add(`${x.lecon}:${x.item}`));
         if (s.fields['Leçon validée']) leconsValidees.add(String(s.fields['Leçon']));
     });
-    return { ok, leconsValidees };
+    return { ok, leconsValidees, etats };
 }
-// Items marques "reporte" lors d'une seance precedente et toujours non valides.
+// Items actuellement "a refaire" (dernier etat connu).
 function itemsReportesEnAttente(suiviId) {
-    const { ok } = itemsValidesSuivi(suiviId);
-    const rep = new Map();
-    seancesDuSuivi(suiviId).forEach(s => {
-        formationJson(s.fields['Items reportés'], []).forEach(x => rep.set(`${x.lecon}:${x.item}`, x));
+    const res = [];
+    etatsItemsSuivi(suiviId).forEach((etat, cle) => {
+        if (etat === 'arefaire') { const [lecon, item] = cle.split(':'); res.push({ lecon, item: parseInt(item, 10), etat }); }
     });
-    for (const k of [...rep.keys()]) if (ok.has(k)) rep.delete(k);
-    return [...rep.values()];
+    return res;
 }
 function progressionSuivi(suivi) {
     const lecons = formationJson(suivi.fields['Lecons'], []);
-    const { ok, leconsValidees } = itemsValidesSuivi(suivi.id);
+    const { ok, leconsValidees, etats } = itemsValidesSuivi(suivi.id);
     let total = 0, faits = 0;
-    lecons.forEach(l => (l.items || []).forEach((_, i) => { total++; if (ok.has(`${l.id}:${i}`)) faits++; }));
-    return { total, faits, pct: total ? Math.round(faits * 100 / total) : 0, ok, leconsValidees, lecons };
+    lecons.forEach(l => {
+        const items = l.items || [];
+        items.forEach((_, i) => { total++; if (ok.has(`${l.id}:${i}`)) faits++; });
+        // Une lecon est validee quand tous ses items sont acquis (auto)
+        if (items.length && items.every((_, i) => ok.has(`${l.id}:${i}`))) leconsValidees.add(String(l.id));
+    });
+    return { total, faits, pct: total ? Math.round(faits * 100 / total) : 0, ok, leconsValidees, etats, lecons };
 }
 function couleurProgression(pct) {
     if (pct >= 100) return '#16a34a';
@@ -156,7 +174,7 @@ async function chargerFormation() {
             chargerToutesSeances(),
             instructeur ? chargerFormationsCatalogue() : Promise.resolve([])
         ]);
-        if (suiviOuvertId) { renderDetailSuivi(); return; }
+        if (suiviOuvertId) { if (!enEditionSeance) renderDetailSuivi(); return; }
         majActionsEntete(instructeur ? `
             <button class="btn-primary" data-formation-action="nouveau-suivi">＋ Attribuer une formation</button>
             <button class="btn-secondary" data-formation-action="gerer-catalogue">📚 Formations</button>` : '');
@@ -216,6 +234,7 @@ function renderVueEleve(suivis) {
 // ---------------------------------------------------------------------------
 function ouvrirSuivi(suiviId) {
     suiviOuvertId = suiviId;
+    enEditionSeance = false;
     renderDetailSuivi();
 }
 
@@ -269,7 +288,7 @@ async function renderDetailSuivi() {
         }).join('')}</div>` : '';
     const ressources = formationJson(f['Ressources'], []);
     const ressourcesHtml = ressources.length ? `
-        <h4 class="formation-sub-titre">� Documentation de la formation</h4>
+        <h4 class="formation-sub-titre">📚 Documentation de la formation</h4>
         <div class="formation-docs">${ressources.map(r => {
             const lien = urlSure(r.lien || '');
             return `<div class="formation-doc">${lien
@@ -297,8 +316,10 @@ async function renderDetailSuivi() {
         ${ressourcesHtml}
         ${modulesHtml}
         ${docsHtml}
-        <h4 class="formation-sub-titre">📚 Leçons</h4>
+        <h4 class="formation-sub-titre">📚 Formation pratique</h4>
         ${leconsHtml || '<div class="formation-vide">Aucune leçon définie.</div>'}
+        <h4 class="formation-sub-titre">✈️ Journal des séances</h4>
+        ${seancesDuSuivi(suivi.id).map(s => renderSeance(s, instructeur)).join('') || '<div class="formation-vide">Aucune séance enregistrée.</div>'}
     `;
 
     // Statistiques vols vs minimas (charge en arriere-plan)
@@ -366,7 +387,7 @@ function renderDoc(suivi, d, instructeur) {
             <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-fourni" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">Envoyer</button>
         </div>` : '';
     return `<div class="formation-doc" style="flex-wrap:wrap;">
-        <span>${fourni ? '✅' : (d.prerequis ? '�' : '�📄')} ${escapeHtml(d.titre)}${lien}</span>
+        <span>${fourni ? '✅' : (d.prerequis ? '📋' : '📄')} ${escapeHtml(d.titre)}${lien}</span>
         <span class="formation-carte-sub">${infos}</span>
         ${depot}
     </div>`;
@@ -374,27 +395,23 @@ function renderDoc(suivi, d, instructeur) {
 
 function renderLecon(suivi, lecon, idx, p, instructeur) {
     const items = lecon.items || [];
-    const seances = seancesDuSuivi(suivi.id).filter(s => String(s.fields['Leçon']) === String(lecon.id));
     const validee = p.leconsValidees.has(String(lecon.id));
     const itemsHtml = items.map((it, i) => {
         const cle = `${lecon.id}:${i}`;
-        const fait = p.ok.has(cle);
-        const rep = !fait && itemsReportesEnAttente(suivi.id).some(x => `${x.lecon}:${x.item}` === cle);
-        const icone = fait ? '✅' : (rep ? '🔄' : '⬜');
-        const cls = fait ? 'formation-item-ok' : (rep ? 'formation-item-rep' : '');
+        const etat = p.etats ? p.etats.get(cle) : null;
+        const icone = ETATS_ITEM[etat] || '⬜';
+        const cls = etat === 'acquis' ? 'formation-item-ok' : (etat === 'arefaire' ? 'formation-item-rep' : (etat === 'encours' ? 'formation-item-encours' : ''));
         return `<div class="formation-item ${cls}">${icone} ${escapeHtml(it)}</div>`;
     }).join('');
-    const seancesHtml = seances.map(s => renderSeance(s, instructeur)).join('');
     const peutSeance = instructeur && (suivi.fields['Statut'] || 'Ouverte') === 'Ouverte';
     return `
         <div class="formation-lecon ${validee ? 'formation-lecon-validee' : ''}">
             <div class="formation-lecon-tete">
                 <strong>${validee ? '✅ ' : ''}Leçon ${idx + 1} — ${escapeHtml(lecon.titre || '')}</strong>
                 ${lecon.objectif ? `<div class="formation-carte-sub">${escapeHtml(lecon.objectif)}</div>` : ''}
-                ${peutSeance ? `<button class="btn-secondary" style="padding:4px 10px;font-size:12px;margin-left:auto;" data-formation-action="seance" data-sid="${suivi.id}" data-lecon="${escapeHtml(lecon.id)}">✈️ Séance</button>` : ''}
+                ${peutSeance ? `<button class="btn-secondary" style="padding:4px 10px;font-size:12px;margin-left:auto;" data-formation-action="seance" data-sid="${suivi.id}">✈️ Séance</button>` : ''}
             </div>
             <div class="formation-items">${itemsHtml || '<div class="formation-carte-sub">Aucun item.</div>'}</div>
-            ${seancesHtml}
         </div>`;
 }
 
@@ -402,8 +419,11 @@ function renderSeance(s, instructeur) {
     const f = s.fields;
     const sigI = formationJson(f['Signature instructeur'], null);
     const sigE = formationJson(f['Signature élève'], null);
-    const itemsOk = formationJson(f['Items validés'], []).length;
-    const itemsRep = formationJson(f['Items reportés'], []).length;
+    const itemsNouveau = formationJson(f['Items'], []);
+    const itemsOk = formationJson(f['Items validés'], []).length + itemsNouveau.filter(x => x.etat === 'acquis').length;
+    const itemsEnCours = itemsNouveau.filter(x => x.etat === 'encours').length;
+    const itemsRep = formationJson(f['Items reportés'], []).length + itemsNouveau.filter(x => x.etat === 'arefaire').length;
+    const comptes = [`${itemsOk} acquis`, itemsEnCours ? `${itemsEnCours} en cours` : '', itemsRep ? `${itemsRep} à refaire` : ''].filter(Boolean).join(' · ');
     const vol = f['Vol libellé'] || '';
     // Numero de seance dans le suivi (ordre chronologique = "cours n°")
     const numero = seancesDuSuivi(f['Suivi']).findIndex(x => x.id === s.id) + 1;
@@ -434,7 +454,7 @@ function renderSeance(s, instructeur) {
             ${vol ? `<div class="formation-carte-sub">Vol : ${escapeHtml(vol)}</div>` : ''}
             ${hdv ? `<div class="formation-carte-sub">⏱ ${escapeHtml(hdv)}</div>` : ''}
             ${f['Météo'] ? `<div class="formation-carte-sub">🌦 ${escapeHtml(f['Météo'])}</div>` : ''}
-            <div class="formation-carte-sub">${itemsOk} item(s) validé(s)${itemsRep ? ` · ${itemsRep} reporté(s)` : ''}</div>
+            ${comptes ? `<div class="formation-carte-sub">${escapeHtml(comptes)}</div>` : ''}
             ${f['Commentaire'] ? `<div class="formation-commentaire">${escapeHtml(f['Commentaire']).replace(/\n/g, '<br>')}</div>` : ''}
             ${sigs}
         </div>`;
@@ -449,10 +469,16 @@ document.addEventListener('click', (e) => {
     const a = el.dataset.formationAction;
     const sid = el.dataset.sid;
     if (a === 'ouvrir') ouvrirSuivi(sid);
-    else if (a === 'retour') { suiviOuvertId = null; chargerFormation(); }
+    else if (a === 'retour') {
+        if (enEditionSeance) { enEditionSeance = false; renderDetailSuivi(); return; }
+        suiviOuvertId = null;
+        chargerFormation();
+    }
     else if (a === 'nouveau-suivi') ouvrirModaleAttribuer();
     else if (a === 'gerer-catalogue') ouvrirGestionCatalogue();
-    else if (a === 'seance') ouvrirModaleSeance(sid, el.dataset.lecon || null);
+    else if (a === 'seance') ouvrirPageSeance(sid);
+    else if (a === 'item-etat') basculerEtatItem(el);
+    else if (a === 'seance-save') enregistrerPageSeance();
     else if (a === 'minimas') ouvrirModaleMinimas(sid);
     else if (a === 'doc') demanderDocument(sid);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
@@ -468,6 +494,10 @@ document.addEventListener('click', (e) => {
     else if (a === 'lecon-suppr') el.closest('.formation-lecon-edit').remove();
     else if (a === 'mini-suppr') el.closest('.formation-mini-edit').remove();
     else if (a === 'lecon-add') ajouterBlocLecon();
+});
+// Le select vol de la page seance est cree dynamiquement : delegation change.
+document.addEventListener('change', (e) => {
+    if (e.target && e.target.id === 'seance-vol') prefillSeanceDepuisVol();
 });
 
 // ---------------------------------------------------------------------------
@@ -1033,50 +1063,136 @@ async function supprimerFormation(fid) {
 }
 
 // ---------------------------------------------------------------------------
-// MODALE SEANCE (debrief d'un vol, items valides/reportes, signature)
+// PAGE SEANCE (debrief plein ecran : arbre complet a gauche, formulaire a droite)
+// Chaque item est marque d'un etat : acquis / en cours / a refaire.
 // ---------------------------------------------------------------------------
 let seanceEnCours = null; // { suiviId, vols }
+let seanceEtats = new Map(); // 'lecon:item' -> 'acquis'|'encours'|'arefaire'
+let enEditionSeance = false; // empeche l'auto-refresh de re-rendre le detail
 
-async function ouvrirModaleSeance(suiviId, leconPreChoisie) {
-    const suivi = suivisCache.find(s => s.id === suiviId);
-    if (!suivi) return;
-    const overlay = document.getElementById('modale-formation-seance');
-    const selVol = document.getElementById('seance-vol');
-    const selLecon = document.getElementById('seance-lecon');
-    selVol.innerHTML = '<option value="">Chargement des vols…</option>';
-    const lecons = formationJson(suivi.fields['Lecons'], []);
-    const { leconsValidees } = itemsValidesSuivi(suiviId);
-    const cible = leconPreChoisie || ((lecons.find(l => !leconsValidees.has(String(l.id)))) || {}).id || '';
-    selLecon.innerHTML = lecons.map((l, i) => `<option value="${escapeHtml(l.id)}" ${String(l.id) === String(cible) ? 'selected' : ''}>Leçon ${i + 1} — ${escapeHtml(l.titre || '')}</option>`).join('');
-    document.getElementById('seance-date').value = new Date().toISOString().slice(0, 10);
-    document.getElementById('seance-commentaire').value = '';
-    document.getElementById('seance-lecon-validee').checked = false;
-    document.getElementById('seance-type').value = 'Vol';
-    document.getElementById('seance-machine').value = '';
-    document.getElementById('seance-meteo').value = '';
-    ['seance-hdc', 'seance-hsolo', 'seance-hsimu', 'seance-att'].forEach(id => { document.getElementById(id).value = ''; });
-    overlay.dataset.sid = suiviId;
-    overlay.style.display = 'flex';
-    renderItemsSeance();
+async function ouvrirPageSeance(suiviId) {
+    const zone = document.getElementById('formation-contenu');
+    const suivi = (suivisCache || []).find(s => s.id === suiviId);
+    if (!zone || !suivi) return;
+    suiviOuvertId = suiviId;
+    seanceEtats = new Map();
+    enEditionSeance = true;
+    majActionsEntete(`<button class="btn-secondary" data-formation-action="retour">← Annuler</button>`);
+
+    const p = progressionSuivi(suivi);
+    let dernierGroupe = '';
+    const arbre = p.lecons.map((l, idx) => {
+        const g = l.groupe || '';
+        const entete = g !== dernierGroupe && g ? `<h5 class="formation-phase-titre">${escapeHtml(g)}</h5>` : '';
+        dernierGroupe = g;
+        const items = (l.items || []).map((it, i) => {
+            const cle = `${l.id}:${i}`;
+            const icone = ETATS_ITEM[p.etats.get(cle)] || '⬜';
+            return `<div class="seance-item-row" data-cle="${escapeHtml(cle)}">
+                <span class="seance-item-libelle">${icone} ${escapeHtml(it)}</span>
+                <span class="seance-tristate">
+                    <button type="button" class="ts-btn ts-arefaire" data-formation-action="item-etat" data-etat="arefaire">À refaire</button>
+                    <button type="button" class="ts-btn ts-encours" data-formation-action="item-etat" data-etat="encours">En cours</button>
+                    <button type="button" class="ts-btn ts-acquis" data-formation-action="item-etat" data-etat="acquis">Acquis</button>
+                </span>
+            </div>`;
+        }).join('');
+        return `${entete}<div class="seance-lecon-bloc"><strong>Leçon ${idx + 1} — ${escapeHtml(l.titre || '')}</strong><div class="seance-lecon-items">${items}</div></div>`;
+    }).join('');
+
+    zone.innerHTML = `
+    <div class="seance-page">
+        <div class="seance-arbre">
+            <div class="seance-arbre-titre">Items de la formation — état constaté lors de la séance</div>
+            ${arbre || '<div class="formation-vide">Aucune leçon définie.</div>'}
+        </div>
+        <div class="seance-formulaire">
+            <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="seance-type">Type de séance</label>
+                    <select id="seance-type">
+                        <option value="Vol">Avion (vol)</option>
+                        <option value="Simulateur">Simulateur</option>
+                        <option value="Théorique">Formation théorique</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="seance-machine">Machine / Simu</label>
+                    <input type="text" id="seance-machine" placeholder="ex : C172, FNPT II">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="seance-date">Date</label>
+                    <input type="date" id="seance-date" value="${new Date().toISOString().slice(0, 10)}">
+                </div>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+                <label for="seance-vol">Vol associé</label>
+                <select id="seance-vol"><option value="">Chargement des vols…</option></select>
+            </div>
+            <div class="form-row" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="seance-hdc">HDV double cmd</label>
+                    <input type="number" id="seance-hdc" min="0" step="0.1" placeholder="h">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="seance-hsolo">HDV solo</label>
+                    <input type="number" id="seance-hsolo" min="0" step="0.1" placeholder="h">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="seance-hsimu">HDV simulateur</label>
+                    <input type="number" id="seance-hsimu" min="0" step="0.1" placeholder="h">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="seance-att">Atterrissages</label>
+                    <input type="number" id="seance-att" min="0" step="1">
+                </div>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+                <label for="seance-meteo">Météo & infos opérationnelles</label>
+                <input type="text" id="seance-meteo" placeholder="ex : BKN014 9999, vent N/NE 5-10 kt">
+            </div>
+            <div class="form-group">
+                <label for="seance-commentaire">Contenu de la séance & remarques pour l'élève</label>
+                <textarea id="seance-commentaire" rows="5" placeholder="Points forts, points à retravailler…"></textarea>
+            </div>
+            <button type="button" class="btn-submit" style="width:100%;" data-formation-action="seance-save">✍️ Signer et enregistrer</button>
+        </div>
+    </div>`;
 
     // Vols de l'eleve en arriere-plan
     try {
         const vols = await chargerVolsEleve(suivi.fields['Élève nom'] || '');
         seanceEnCours = { suiviId, vols };
-        selVol.innerHTML = '<option value="">— Sans vol associé —</option>' + vols.slice(0, 40).map(v => {
+        const selVol = document.getElementById('seance-vol');
+        if (selVol) selVol.innerHTML = '<option value="">— Sans vol associé —</option>' + vols.slice(0, 40).map(v => {
             const f = v.fields;
             const lbl = `${f['Date'] || ''} · ${f['Départ'] || '?'}→${f['Arrivée'] || '?'} · ${f['Temps de vol'] || ''} · ${f['Machine'] || ''}`;
             return `<option value="${v.id}">${escapeHtml(lbl)}</option>`;
         }).join('');
-    } catch (e) { selVol.innerHTML = '<option value="">— Sans vol associé —</option>'; }
+    } catch (e) {
+        seanceEnCours = { suiviId, vols: [] };
+        const selVol = document.getElementById('seance-vol');
+        if (selVol) selVol.innerHTML = '<option value="">— Sans vol associé —</option>';
+    }
+}
+
+// Bascule l'etat d'un item dans la page seance (reclic = deselection).
+function basculerEtatItem(btn) {
+    const row = btn.closest('.seance-item-row');
+    if (!row) return;
+    const cle = row.dataset.cle, etat = btn.dataset.etat;
+    if (seanceEtats.get(cle) === etat) seanceEtats.delete(cle);
+    else seanceEtats.set(cle, etat);
+    row.querySelectorAll('.ts-btn').forEach(b => b.classList.toggle('ts-on', seanceEtats.get(cle) === b.dataset.etat));
 }
 
 // Pre-remplit la fiche seance depuis le vol choisi : HDV reparties selon la
 // fonction (EP* = double commande, P = solo), atterrissages, machine, date.
 function prefillSeanceDepuisVol() {
     if (!seanceEnCours) return;
-    const volId = document.getElementById('seance-vol').value;
-    const vol = volId ? seanceEnCours.vols.find(v => v.id === volId) : null;
+    const selVol = document.getElementById('seance-vol');
+    if (!selVol) return;
+    const vol = selVol.value ? seanceEnCours.vols.find(v => v.id === selVol.value) : null;
     if (!vol) return;
     const f = vol.fields;
     const minutes = typeof dureeVolMinutes === 'function' ? dureeVolMinutes(f) : 0;
@@ -1094,50 +1210,20 @@ function prefillSeanceDepuisVol() {
     if (f['Date']) document.getElementById('seance-date').value = f['Date'];
 }
 
-// Liste des items a cocher : items de la lecon choisie + items reportes d'avant.
-function renderItemsSeance() {
-    const overlay = document.getElementById('modale-formation-seance');
-    const suivi = suivisCache.find(s => s.id === overlay.dataset.sid);
-    const leconId = document.getElementById('seance-lecon').value;
-    const zone = document.getElementById('seance-items');
-    if (!suivi) { zone.innerHTML = ''; return; }
-    const lecons = formationJson(suivi.fields['Lecons'], []);
-    const lecon = lecons.find(l => String(l.id) === String(leconId));
-    const { ok } = itemsValidesSuivi(suivi.id);
-    const reportes = itemsReportesEnAttente(suivi.id).filter(x => String(x.lecon) !== String(leconId));
-    const lignes = [];
-    (lecon ? lecon.items : []).forEach((it, i) => {
-        if (ok.has(`${lecon.id}:${i}`)) return; // deja valide
-        lignes.push(`<label class="formation-item-check"><input type="checkbox" class="seance-item" data-lecon="${escapeHtml(lecon.id)}" data-item="${i}"> <span>${escapeHtml(it)}</span></label>`);
-    });
-    if (reportes.length) {
-        lignes.push('<div class="formation-carte-sub" style="margin:8px 0 2px;">🔄 Reportés des leçons précédentes :</div>');
-        reportes.forEach(x => {
-            const lib = libelleItem(suivi, x);
-            lignes.push(`<label class="formation-item-check formation-item-rep"><input type="checkbox" class="seance-item" data-lecon="${escapeHtml(x.lecon)}" data-item="${x.item}"> <span>${escapeHtml(lib.texte)} <em>(${escapeHtml(lib.leconTitre)})</em></span></label>`);
-        });
-    }
-    zone.innerHTML = lignes.join('') || '<div class="formation-carte-sub">Tous les items de cette leçon sont déjà validés.</div>';
-    zone.dataset.tous = (lecon ? lecon.items.length : 0);
-}
-
-async function enregistrerSeance(e) {
-    e.preventDefault();
-    const overlay = document.getElementById('modale-formation-seance');
-    const suivi = suivisCache.find(s => s.id === overlay.dataset.sid);
+async function enregistrerPageSeance() {
+    const suivi = (suivisCache || []).find(s => s.id === suiviOuvertId);
     if (!suivi) return;
-    const leconId = document.getElementById('seance-lecon').value;
-    const lecons = formationJson(suivi.fields['Lecons'], []);
-    const lecon = lecons.find(l => String(l.id) === String(leconId));
-    const cases = [...document.querySelectorAll('#seance-items .seance-item')];
-    const valides = cases.filter(c => c.checked).map(c => ({ lecon: c.dataset.lecon, item: parseInt(c.dataset.item, 10) }));
-    const reportes = cases.filter(c => !c.checked).map(c => ({ lecon: c.dataset.lecon, item: parseInt(c.dataset.item, 10) }));
-    const volId = document.getElementById('seance-vol').value;
+    const items = [...seanceEtats.entries()].map(([cle, etat]) => {
+        const [lecon, item] = cle.split(':');
+        return { lecon, item: parseInt(item, 10), etat };
+    });
+    const selVol = document.getElementById('seance-vol');
+    const volId = selVol ? selVol.value : '';
     const vol = volId && seanceEnCours ? seanceEnCours.vols.find(v => v.id === volId) : null;
     const volLibelle = vol ? `${vol.fields['Date'] || ''} · ${vol.fields['Départ'] || '?'}→${vol.fields['Arrivée'] || '?'} · ${vol.fields['Temps de vol'] || ''} · ${vol.fields['Machine'] || ''}` : '';
-    const leconValidee = document.getElementById('seance-lecon-validee').checked;
     const commentaire = document.getElementById('seance-commentaire').value.trim();
     const date = document.getElementById('seance-date').value || new Date().toISOString().slice(0, 10);
+    if (!items.length && !(await confirmerAction('Aucun item coché — enregistrer la séance quand même ?', { okLabel: 'Enregistrer', icone: '✈️' }))) return;
 
     const image = await ouvrirPadSignature('Signature de l\'instructeur');
     if (!image) return;
@@ -1147,8 +1233,7 @@ async function enregistrerSeance(e) {
         'Suivi': String(suivi.id),
         'Élève': suivi.fields['Élève'] || [],
         'Élève nom': suivi.fields['Élève nom'] || '',
-        'Leçon': String(leconId),
-        'Leçon titre': lecon ? lecon.titre : '',
+        'Leçon': '',
         'Vol': volId || '',
         'Vol libellé': volLibelle,
         'Date': date,
@@ -1160,9 +1245,7 @@ async function enregistrerSeance(e) {
         'HDV simu': hdv('seance-hsimu'),
         'Atterrissages': parseInt(document.getElementById('seance-att').value, 10) || 0,
         'Commentaire': commentaire,
-        'Items validés': valides,
-        'Items reportés': reportes,
-        'Leçon validée': leconValidee,
+        'Items': items,
         'Signature instructeur': signatureObjet(image)
     };
     try {
@@ -1171,7 +1254,8 @@ async function enregistrerSeance(e) {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ? data.error.message : 'Erreur');
-        overlay.style.display = 'none';
+        seanceEtats = new Map();
+        enEditionSeance = false;
         invaliderFormationCache();
         await chargerToutesSeances(true);
         renderDetailSuivi();
@@ -1182,15 +1266,10 @@ async function enregistrerSeance(e) {
 // INIT
 // ---------------------------------------------------------------------------
 function initFormation() {
-    const change = document.getElementById('seance-lecon');
-    if (change) change.addEventListener('change', renderItemsSeance);
-    const selVol = document.getElementById('seance-vol');
-    if (selVol) selVol.addEventListener('change', prefillSeanceDepuisVol);
     const fermer = (id) => { const o = document.getElementById(id); if (o) o.style.display = 'none'; };
     const liaisons = [
         ['btn-close-formation-editeur', 'modale-formation-editeur'],
         ['btn-close-formation-attribuer', 'modale-formation-attribuer'],
-        ['btn-close-formation-seance', 'modale-formation-seance'],
         ['btn-close-formation-minimas', 'modale-formation-minimas'],
         ['btn-close-formation-catalogue', 'modale-formation-catalogue'],
         ['btn-close-formation-fiche', 'modale-formation-fiche']
@@ -1199,14 +1278,12 @@ function initFormation() {
         const b = document.getElementById(btn);
         if (b) b.addEventListener('click', () => fermer(mod));
     });
-    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-seance, #modale-formation-minimas, #modale-formation-catalogue, #modale-formation-fiche')
+    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-minimas, #modale-formation-catalogue, #modale-formation-fiche')
         .forEach(o => o.addEventListener('click', (e) => { if (e.target === o) o.style.display = 'none'; }));
     const f1 = document.getElementById('form-formation-editeur');
     if (f1) f1.addEventListener('submit', enregistrerFormationEdit);
     const f2 = document.getElementById('form-formation-attribuer');
     if (f2) f2.addEventListener('submit', enregistrerAttribution);
-    const f3 = document.getElementById('form-formation-seance');
-    if (f3) f3.addEventListener('submit', enregistrerSeance);
     const f4 = document.getElementById('form-formation-minimas');
     if (f4) f4.addEventListener('submit', enregistrerMinimas);
     const f5 = document.getElementById('form-formation-fiche');

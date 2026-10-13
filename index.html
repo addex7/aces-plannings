@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=95453eff7b">
+    <link rel="stylesheet" href="style.css?v=e18d19ee1b">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -1709,81 +1709,6 @@
         </div>
     </div>
 
-    <!-- Modale : Nouvelle séance (débrief de vol) -->
-    <div id="modale-formation-seance" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width:560px; width:100%;">
-            <button type="button" id="btn-close-formation-seance" class="close-modal">&times;</button>
-            <h3>✈️ Débrief de séance</h3>
-            <form id="form-formation-seance">
-                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="seance-type">Type de séance</label>
-                        <select id="seance-type">
-                            <option value="Vol">Avion (vol)</option>
-                            <option value="Simulateur">Simulateur</option>
-                            <option value="Théorique">Formation théorique</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="seance-machine">Machine / Simu</label>
-                        <input type="text" id="seance-machine" placeholder="ex : C172, FNPT II">
-                    </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="seance-date">Date</label>
-                        <input type="date" id="seance-date">
-                    </div>
-                </div>
-                <div class="form-group" style="margin-top:10px;">
-                    <label for="seance-vol">Vol associé</label>
-                    <select id="seance-vol"><option value="">—</option></select>
-                </div>
-                <div class="form-row" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="seance-hdc">HDV double cmd</label>
-                        <input type="number" id="seance-hdc" min="0" step="0.1" placeholder="h">
-                    </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="seance-hsolo">HDV solo</label>
-                        <input type="number" id="seance-hsolo" min="0" step="0.1" placeholder="h">
-                    </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="seance-hsimu">HDV simulateur</label>
-                        <input type="number" id="seance-hsimu" min="0" step="0.1" placeholder="h">
-                    </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="seance-att">Atterrissages</label>
-                        <input type="number" id="seance-att" min="0" step="1">
-                    </div>
-                </div>
-                <div class="form-group" style="margin-top:10px;">
-                    <label for="seance-meteo">Météo & infos opérationnelles</label>
-                    <input type="text" id="seance-meteo" placeholder="ex : BKN014 9999, vent N/NE 5-10 kt">
-                </div>
-                <div class="form-row" style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px;">
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="seance-lecon">Leçon</label>
-                        <select id="seance-lecon"></select>
-                    </div>
-                </div>
-                <div class="form-group" style="margin-top:10px;">
-                    <label>Items (cocher = validé, décoché = reporté)</label>
-                    <div id="seance-items" style="max-height:200px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; padding:8px;"></div>
-                </div>
-                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
-                    <input type="checkbox" id="seance-lecon-validee" style="width:auto;">
-                    <label for="seance-lecon-validee" style="margin:0;">✅ Valider la leçon</label>
-                </div>
-                <div class="form-group">
-                    <label for="seance-commentaire">Commentaire pour l'élève</label>
-                    <textarea id="seance-commentaire" rows="3" placeholder="Points forts, points à retravailler…"></textarea>
-                </div>
-                <div class="form-actions" style="margin-top:15px;">
-                    <button type="submit" class="btn-submit">✍️ Signer et enregistrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Modale : Minimas du suivi -->
     <div id="modale-formation-minimas" class="modal" style="display:none;">
         <div class="modal-content" style="max-width:380px; width:100%;">
@@ -1921,8 +1846,8 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
-    <script src="formation.js?v=619e3f3a1e"></script>
-    <script src="version.js?v=20261012194345"></script>
+    <script src="formation.js?v=226ec37bd9"></script>
+    <script src="version.js?v=20261013114958"></script>
     <script src="app.js?v=a87ff05606"></script>
     <script src="utils.js?v=34bd013fe7"></script>
     <script src="presences.js?v=5da5f247ed"></script>
