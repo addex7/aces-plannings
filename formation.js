@@ -438,6 +438,9 @@ function renderSeance(s, instructeur) {
     const signer = (!instructeur && !sigE)
         ? `<button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="signer" data-sid="${s.id}">✍️ Signer</button>`
         : '';
+    const outils = instructeur ? `
+        <button class="btn-secondary" style="padding:2px 8px;font-size:12px;margin-left:auto;" title="Modifier la séance (signatures à refaire)" data-formation-action="seance-edit" data-sid="${escapeHtml(f['Suivi'])}" data-seid="${s.id}">✏️</button>
+        <button class="btn-secondary" style="padding:2px 8px;font-size:12px;color:#b91c1c;" title="Supprimer la séance" data-formation-action="seance-del" data-seid="${s.id}">🗑</button>` : '';
     const sigs = `<div class="formation-signatures">
         <span title="${sigI ? `Signé par ${escapeHtml(sigI.par)} le ${escapeHtml(sigI.date)}` : 'Non signé'}">${sigI ? '✍️ Instructeur' : '⬜ Instructeur'}</span>
         <span title="${sigE ? `Signé par ${escapeHtml(sigE.par)} le ${escapeHtml(sigE.date)}` : 'Non signé'}">${sigE ? '✍️ Élève' : '⬜ Élève'}</span>
@@ -450,6 +453,7 @@ function renderSeance(s, instructeur) {
                 <span class="formation-badge" style="background:#eff6ff;color:#1e40af;">${iconesType[typeSeance] || '✈️'} ${escapeHtml(typeSeance)}</span>
                 <span class="formation-carte-sub">${escapeHtml(f['Date'] || '')}${f['Machine'] ? ` · ${escapeHtml(f['Machine'])}` : ''}</span>
                 ${f['Leçon validée'] ? '<span class="formation-badge" style="background:#dcfce7;color:#166534;">Leçon validée</span>' : ''}
+                ${outils}
             </div>
             ${vol ? `<div class="formation-carte-sub">Vol : ${escapeHtml(vol)}</div>` : ''}
             ${hdv ? `<div class="formation-carte-sub">⏱ ${escapeHtml(hdv)}</div>` : ''}
@@ -479,6 +483,8 @@ document.addEventListener('click', (e) => {
     else if (a === 'seance') ouvrirPageSeance(sid);
     else if (a === 'item-etat') basculerEtatItem(el);
     else if (a === 'seance-save') enregistrerPageSeance();
+    else if (a === 'seance-edit') ouvrirPageSeance(sid, el.dataset.seid);
+    else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
     else if (a === 'minimas') ouvrirModaleMinimas(sid);
     else if (a === 'doc') demanderDocument(sid);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
@@ -1069,14 +1075,30 @@ async function supprimerFormation(fid) {
 let seanceEnCours = null; // { suiviId, vols }
 let seanceEtats = new Map(); // 'lecon:item' -> 'acquis'|'encours'|'arefaire'
 let enEditionSeance = false; // empeche l'auto-refresh de re-rendre le detail
+let seanceEditionId = null; // null = creation, sinon id de la seance modifiee
 
-async function ouvrirPageSeance(suiviId) {
+async function ouvrirPageSeance(suiviId, seanceId) {
     const zone = document.getElementById('formation-contenu');
     const suivi = (suivisCache || []).find(s => s.id === suiviId);
     if (!zone || !suivi) return;
     suiviOuvertId = suiviId;
-    seanceEtats = new Map();
     enEditionSeance = true;
+    seanceEditionId = seanceId || null;
+    const edition = seanceId ? (seancesCache || []).find(s => s.id === seanceId) : null;
+    const fe = edition ? edition.fields : {};
+
+    // Etats pre-selectionnes en modification (nouveau champ Items,
+    // sinon conversion des anciens valides/reportes).
+    seanceEtats = new Map();
+    if (edition) {
+        const itemsN = formationJson(fe['Items'], []);
+        if (itemsN.length) itemsN.forEach(x => seanceEtats.set(`${x.lecon}:${x.item}`, x.etat));
+        else {
+            formationJson(fe['Items validés'], []).forEach(x => seanceEtats.set(`${x.lecon}:${x.item}`, 'acquis'));
+            formationJson(fe['Items reportés'], []).forEach(x => seanceEtats.set(`${x.lecon}:${x.item}`, 'arefaire'));
+        }
+    }
+
     majActionsEntete(`<button class="btn-secondary" data-formation-action="retour">← Annuler</button>`);
 
     const p = progressionSuivi(suivi);
@@ -1088,12 +1110,14 @@ async function ouvrirPageSeance(suiviId) {
         const items = (l.items || []).map((it, i) => {
             const cle = `${l.id}:${i}`;
             const icone = ETATS_ITEM[p.etats.get(cle)] || '⬜';
+            const sel = seanceEtats.get(cle);
+            const on = e => sel === e ? ' ts-on' : '';
             return `<div class="seance-item-row" data-cle="${escapeHtml(cle)}">
                 <span class="seance-item-libelle">${icone} ${escapeHtml(it)}</span>
                 <span class="seance-tristate">
-                    <button type="button" class="ts-btn ts-arefaire" data-formation-action="item-etat" data-etat="arefaire">À refaire</button>
-                    <button type="button" class="ts-btn ts-encours" data-formation-action="item-etat" data-etat="encours">En cours</button>
-                    <button type="button" class="ts-btn ts-acquis" data-formation-action="item-etat" data-etat="acquis">Acquis</button>
+                    <button type="button" class="ts-btn ts-arefaire${on('arefaire')}" data-formation-action="item-etat" data-etat="arefaire">À refaire</button>
+                    <button type="button" class="ts-btn ts-encours${on('encours')}" data-formation-action="item-etat" data-etat="encours">En cours</button>
+                    <button type="button" class="ts-btn ts-acquis${on('acquis')}" data-formation-action="item-etat" data-etat="acquis">Acquis</button>
                 </span>
             </div>`;
         }).join('');
@@ -1107,22 +1131,23 @@ async function ouvrirPageSeance(suiviId) {
             ${arbre || '<div class="formation-vide">Aucune leçon définie.</div>'}
         </div>
         <div class="seance-formulaire">
+            ${edition ? `<div class="seance-edition-note">✏️ Modification — les signatures devront être refaites après enregistrement.</div>` : ''}
             <div class="seance-grid3">
                 <div class="form-group">
                     <label for="seance-type">Type de séance</label>
                     <select id="seance-type">
-                        <option value="Vol">Avion (vol)</option>
-                        <option value="Simulateur">Simulateur</option>
-                        <option value="Théorique">Formation théorique</option>
+                        <option value="Vol" ${fe['Type'] === 'Vol' ? 'selected' : ''}>Avion (vol)</option>
+                        <option value="Simulateur" ${fe['Type'] === 'Simulateur' ? 'selected' : ''}>Simulateur</option>
+                        <option value="Théorique" ${fe['Type'] === 'Théorique' ? 'selected' : ''}>Formation théorique</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="seance-machine">Machine / Simu</label>
-                    <input type="text" id="seance-machine" placeholder="ex : C172, FNPT II">
+                    <input type="text" id="seance-machine" placeholder="ex : C172, FNPT II" value="${escapeHtml(fe['Machine'] || '')}">
                 </div>
                 <div class="form-group">
                     <label for="seance-date">Date</label>
-                    <input type="date" id="seance-date" value="${new Date().toISOString().slice(0, 10)}">
+                    <input type="date" id="seance-date" value="${escapeHtml(fe['Date'] || new Date().toISOString().slice(0, 10))}">
                 </div>
             </div>
             <div class="form-group">
@@ -1133,30 +1158,30 @@ async function ouvrirPageSeance(suiviId) {
             <div class="seance-grid4">
                 <div class="form-group">
                     <label for="seance-hdc">Double cmd</label>
-                    <input type="number" id="seance-hdc" min="0" step="0.1" placeholder="h">
+                    <input type="number" id="seance-hdc" min="0" step="0.1" placeholder="h" value="${fe['HDV DC'] || ''}">
                 </div>
                 <div class="form-group">
                     <label for="seance-hsolo">Solo</label>
-                    <input type="number" id="seance-hsolo" min="0" step="0.1" placeholder="h">
+                    <input type="number" id="seance-hsolo" min="0" step="0.1" placeholder="h" value="${fe['HDV solo'] || ''}">
                 </div>
                 <div class="form-group">
                     <label for="seance-hsimu">Simulateur</label>
-                    <input type="number" id="seance-hsimu" min="0" step="0.1" placeholder="h">
+                    <input type="number" id="seance-hsimu" min="0" step="0.1" placeholder="h" value="${fe['HDV simu'] || ''}">
                 </div>
                 <div class="form-group">
                     <label for="seance-att">Atterrissages</label>
-                    <input type="number" id="seance-att" min="0" step="1">
+                    <input type="number" id="seance-att" min="0" step="1" value="${fe['Atterrissages'] || ''}">
                 </div>
             </div>
             <div class="form-group">
                 <label for="seance-meteo">Météo & infos opérationnelles</label>
-                <input type="text" id="seance-meteo" placeholder="ex : BKN014 9999, vent N/NE 5-10 kt">
+                <input type="text" id="seance-meteo" placeholder="ex : BKN014 9999, vent N/NE 5-10 kt" value="${escapeHtml(fe['Météo'] || '')}">
             </div>
             <div class="form-group">
                 <label for="seance-commentaire">Contenu de la séance & remarques pour l'élève</label>
-                <textarea id="seance-commentaire" rows="5" placeholder="Points forts, points à retravailler…"></textarea>
+                <textarea id="seance-commentaire" rows="5" placeholder="Points forts, points à retravailler…">${escapeHtml(fe['Commentaire'] || '')}</textarea>
             </div>
-            <button type="button" class="btn-submit" style="width:100%;" data-formation-action="seance-save">✍️ Signer et enregistrer</button>
+            <button type="button" class="btn-submit" style="width:100%;" data-formation-action="seance-save">${edition ? '✍️ Re-signer et enregistrer' : '✍️ Signer et enregistrer'}</button>
         </div>
     </div>`;
 
@@ -1165,11 +1190,14 @@ async function ouvrirPageSeance(suiviId) {
         const vols = await chargerVolsEleve(suivi.fields['Élève nom'] || '');
         seanceEnCours = { suiviId, vols };
         const selVol = document.getElementById('seance-vol');
-        if (selVol) selVol.innerHTML = '<option value="">— Sans vol associé —</option>' + vols.slice(0, 40).map(v => {
-            const f = v.fields;
-            const lbl = `${f['Date'] || ''} · ${f['Départ'] || '?'}→${f['Arrivée'] || '?'} · ${f['Temps de vol'] || ''} · ${f['Machine'] || ''}`;
-            return `<option value="${v.id}">${escapeHtml(lbl)}</option>`;
-        }).join('');
+        if (selVol) {
+            selVol.innerHTML = '<option value="">— Sans vol associé —</option>' + vols.slice(0, 40).map(v => {
+                const f = v.fields;
+                const lbl = `${f['Date'] || ''} · ${f['Départ'] || '?'}→${f['Arrivée'] || '?'} · ${f['Temps de vol'] || ''} · ${f['Machine'] || ''}`;
+                return `<option value="${v.id}">${escapeHtml(lbl)}</option>`;
+            }).join('');
+            if (fe['Vol']) selVol.value = fe['Vol'];
+        }
     } catch (e) {
         seanceEnCours = { suiviId, vols: [] };
         const selVol = document.getElementById('seance-vol');
@@ -1249,18 +1277,35 @@ async function enregistrerPageSeance() {
         'Items': items,
         'Signature instructeur': signatureObjet(image)
     };
+    // En modification, la signature eleve est invalidee : l'eleve devra re-signer.
+    if (seanceEditionId) fields['Signature élève'] = null;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}`, {
-            method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] })
+            method: seanceEditionId ? 'PATCH' : 'POST', headers,
+            body: JSON.stringify(seanceEditionId
+                ? { records: [{ id: seanceEditionId, fields }] }
+                : { records: [{ fields }] })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ? data.error.message : 'Erreur');
         seanceEtats = new Map();
         enEditionSeance = false;
+        seanceEditionId = null;
         invaliderFormationCache();
         await chargerToutesSeances(true);
         renderDetailSuivi();
     } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement de la séance.'); }
+}
+
+async function supprimerSeance(seanceId) {
+    if (!(await confirmerSuppression('Supprimer cette séance ?\nLes items qu\'elle validait seront recalculés sur les autres séances.'))) return;
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}?records[]=${encodeURIComponent(seanceId)}`, { method: 'DELETE', headers });
+        if (!res.ok) throw new Error(await res.text());
+        invaliderFormationCache();
+        await chargerToutesSeances(true);
+        renderDetailSuivi();
+    } catch (e) { console.error(e); alert('Erreur lors de la suppression.'); }
 }
 
 // ---------------------------------------------------------------------------

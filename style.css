@@ -5631,6 +5631,16 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
 }
+.seance-edition-note {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    color: #92400e;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
 .seance-form-sous-titre {
     font-size: 12px;
     font-weight: 700;
