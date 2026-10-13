@@ -403,13 +403,11 @@ function renderLecon(suivi, lecon, idx, p, instructeur) {
         const cls = etat === 'acquis' ? 'formation-item-ok' : (etat === 'arefaire' ? 'formation-item-rep' : (etat === 'encours' ? 'formation-item-encours' : ''));
         return `<div class="formation-item ${cls}">${icone} ${escapeHtml(it)}</div>`;
     }).join('');
-    const peutSeance = instructeur && (suivi.fields['Statut'] || 'Ouverte') === 'Ouverte';
     return `
         <div class="formation-lecon ${validee ? 'formation-lecon-validee' : ''}">
             <div class="formation-lecon-tete">
                 <strong>${validee ? '✅ ' : ''}Leçon ${idx + 1} — ${escapeHtml(lecon.titre || '')}</strong>
                 ${lecon.objectif ? `<div class="formation-carte-sub">${escapeHtml(lecon.objectif)}</div>` : ''}
-                ${peutSeance ? `<button class="btn-secondary" style="padding:4px 10px;font-size:12px;margin-left:auto;" data-formation-action="seance" data-sid="${suivi.id}">✈️ Séance</button>` : ''}
             </div>
             <div class="formation-items">${itemsHtml || '<div class="formation-carte-sub">Aucun item.</div>'}</div>
         </div>`;
