@@ -1081,19 +1081,82 @@ const CANEVAS_PPL = {
     ressources: []
 };
 
-function appliquerCanevasPpl() {
-    document.getElementById('edit-formation-titre').value = CANEVAS_PPL.titre;
-    document.getElementById('edit-formation-discipline').value = CANEVAS_PPL.discipline;
-    document.getElementById('edit-formation-description').value = CANEVAS_PPL.description;
-    document.getElementById('edit-formation-heures').value = CANEVAS_PPL.minimas.heures;
-    document.getElementById('edit-formation-vols').value = CANEVAS_PPL.minimas.vols || '';
-    document.getElementById('edit-formation-hdc').value = CANEVAS_PPL.minimas.heuresDC;
-    document.getElementById('edit-formation-hsolo').value = CANEVAS_PPL.minimas.heuresSolo;
-    document.getElementById('edit-formation-att').value = CANEVAS_PPL.minimas.atterrissages || '';
-    document.getElementById('editeur-modules').innerHTML = CANEVAS_PPL.modules.map(blocModuleHtml).join('');
-    document.getElementById('editeur-prerequis').innerHTML = CANEVAS_PPL.prerequis.map(blocPrerequisHtml).join('');
-    document.getElementById('editeur-ressources').innerHTML = CANEVAS_PPL.ressources.map(blocRessourceHtml).join('');
-    document.getElementById('editeur-lecons').innerHTML = CANEVAS_PPL.lecons.map(blocLeconHtml).join('');
+// Canevas officiel du livret de progression LAPL(A) (REV 1 V2,
+// 13/03/2023 — canevas ANPI accepte DSAC).
+const CANEVAS_LAPL = {
+    titre: 'LAPL(A)',
+    discipline: 'Avion',
+    description: 'Livret de progression LAPL(A) — formation théorique et pratique (canevas ANPI, REV 1 V2 du 13/03/2023). Conditions d’expérience minimales : 30 h de vol totales dont 15 h en double commande et 6 h en solo supervisé (dont 3 h en navigation et une navigation de 80 NM min comprenant un arrêt complet sur un aérodrome différent du départ). Aucune heure de simulateur n’est prise en compte.',
+    minimas: { heures: 30, vols: 0, heuresDC: 15, heuresSolo: 6, atterrissages: 0 },
+    modules: ['Réglementation', 'Performance humaine', 'Météorologie', 'Communication', 'Connaissance générale de l’aéronef', 'Principes du vol', 'Navigation', 'Performances et préparation du vol', 'Procédures opérationnelles'].map(titre => ({ titre })),
+    prerequis: ['Copie d’une pièce d’identité (carte d’identité ou passeport valide)', 'Attestation parentale signée des représentants légaux (si mineur)', 'Copie du certificat médical (requis avant tout vol solo supervisé)', 'Copie de licences éventuellement détenues sur d’autres catégories d’aéronefs', 'Attestation de réussite aux examens théoriques LAPL(A)'].map(titre => ({ titre })),
+    lecons: [
+        { id: '1A', titre: 'Maniabilité (bases)', groupe: 'Phase 1 — Maniabilité', objectif: 'Acquis avant autorisation solo', items: ['1a Familiarisation avec l’avion', '1b Exercices de secours et d’urgence', '2 Préparation pour le vol et actions après vol', '3 Familiarisation au vol : exercices en vol', '4 Effets des gouvernes', '5a Roulage au sol', '5b Urgences : panne de freins et de direction', '6 Vol horizontal rectiligne', '7 Vol en montée', '8 Vol en descente', '9 Virages'] },
+        { id: '1B', titre: 'Maniabilité (avancée)', groupe: 'Phase 1 — Maniabilité', objectif: 'Acquis avant autorisation solo', items: ['10a Vol lent', '10b Décrochage', '11 Évitement de l’autorotation'] },
+        { id: '1C', titre: 'Tours de piste', groupe: 'Phase 1 — Maniabilité', objectif: 'Acquis avant autorisation solo', items: ['12 Décollage et montée vers la branche vent arrière', '13 Circuit, approche et atterrissage', '12/13 Urgences'] },
+        { id: '1D', titre: 'Premier solo', groupe: 'Phase 1 — Maniabilité', objectif: 'Phases 1A, 1B et 1C acquises au préalable', items: ['14a Premier solo — tour de piste', '14b Solo — local'] },
+        { id: '2A', titre: 'Perfectionnement', groupe: 'Phase 2 — Perfectionnement & navigation', objectif: 'Phases 1A–1D et 2A terminées avant éventuelle ABL', items: ['15 Perfectionnement du virage', '16 Atterrissage forcé moteur réduit', '17 Atterrissage de précaution'] },
+        { id: '2B', titre: 'Navigation', groupe: 'Phase 2 — Perfectionnement & navigation', objectif: 'Acquis avant navigation solo', items: ['18a Navigation', '18b Problèmes de navigation à basse altitude et par visibilité réduite', '18c Radionavigation'] },
+        { id: '2C', titre: 'Navigation solo supervisé', groupe: 'Phase 2 — Perfectionnement & navigation', objectif: 'Min 3 h dont une navigation de 80 NM min comprenant 2 étapes avec arrêts complets', items: ['Navigation en vol solo supervisé — 3 h min dont 80 NM'] },
+        { id: '3A', titre: 'Révisions LAPL', groupe: 'Phase 3 — Révisions LAPL', objectif: '', items: ['Révision « LAPL(A) »'] },
+        { id: '3B', titre: 'Présentation à l’examen pratique', groupe: 'Phase 3 — Révisions LAPL', objectif: 'Certificat théorique LAPL(A) de moins de 2 ans + expérience minimale requis', items: ['Présentation à l’examen pratique « LAPL(A) »'] }
+    ],
+    ressources: []
+};
+
+// Livret stagiaire « lâché machine » (v1) — standardisation du suivi
+// avant lâché sur un nouveau type d'avion.
+const CANEVAS_LACHE = {
+    titre: 'Lâché machine',
+    discipline: 'Avion',
+    description: 'Livret stagiaire lâché machine — standardise et suit l’avancement de chaque stagiaire en vue d’un lâché machine (inspiré des livrets de progression SNPI, non approuvé). Le jour du lâché machine, l’indiquer clairement dans le contenu de la séance.',
+    minimas: { heures: 0, vols: 0, heuresDC: 0, heuresSolo: 0, atterrissages: 0 },
+    modules: [],
+    prerequis: ['Licence en cours de validité', 'Certificat médical en cours de validité'].map(titre => ({ titre })),
+    lecons: [
+        { id: 'T', titre: 'Briefing avant vol', groupe: 'Briefing avant vol', objectif: 'T1, T2 et T6 uniquement si le pilote est un nouveau membre de l’association', items: ['T1 Accès aux hangars, aux papiers, etc. (*)', 'T2 Utilisation du logiciel de réservation de l’avion (*)', 'T3 Sortie, entrée dans le hangar et nettoyage de l’avion', 'T4 Mise en route sur le tarmac', 'T5 Limitations (charge, centrage, distance décollage/atterrissage, carte carburant)', 'T6 Présentation du secteur et des particularités de la plateforme (*)'] },
+        { id: 'S', titre: 'En secteur', groupe: 'Exercices de maniabilité', objectif: '', items: ['1 Familiarisation avec l’avion', '2 Virages (30 et 45 degrés)', '3 Vol lent', '4 Décrochage', '5 Virage engagé'] },
+        { id: 'TdP', titre: 'Tour de piste', groupe: 'Exercices de maniabilité', objectif: '', items: ['6 2 TDP dont 1 basse hauteur', '7 Pannes de volets', '8 Panne moteur en montée initiale', '9 PTE', '10 Remise de gaz (plancher de stabilisation 100 ft AGL)'] },
+        { id: 'L', titre: 'Lâché machine', groupe: 'Lâché', objectif: 'Indiquer clairement le lâché dans le contenu de la séance', items: ['Lâché machine'] }
+    ],
+    ressources: []
+};
+
+// Formulaire de prorogation SEP(T)/TMG par expérience — maintien de
+// compétence (ANPI, conforme guide DSAC/PN/LIC 120169, V1.2 30/10/2015).
+const CANEVAS_SEP = {
+    titre: 'Prorogation SEP(T) / TMG',
+    discipline: 'Avion',
+    description: 'Formation de maintien de compétence pour la prorogation des qualifications de classe SEP(T) et TMG (formulaire ANPI V1.2, conforme au guide DSAC/PN/LIC 120169). Formation minimale : 1 h de vol, 1 vol — la DGAC préconise un vol unique d’au moins 1 h. Critères de performance (niveau PPL) : altitude ±150 ft, cap ±10°, vitesse décollage/approche +15/−5 kt, autres phases ±15 kt. Une fois terminé : renseigner SIGEBEL, imprimer l’extrait nominatif, mettre à jour le triptyque.',
+    minimas: { heures: 1, vols: 1, heuresDC: 0, heuresSolo: 0, atterrissages: 0 },
+    modules: ['TEM (gestion des menaces et des erreurs)', 'Prise de décision face à des conditions météorologiques dégradées', 'Vol non intentionnel en conditions IMC', 'Capacités de navigation'].map(titre => ({ titre })),
+    prerequis: ['Licence avec qualification SEP(T)/TMG en cours de validité', 'Certificat médical en cours de validité'].map(titre => ({ titre })),
+    lecons: [
+        { id: 'DEP', titre: 'Départ', groupe: 'Maintien de compétence', objectif: '', items: ['Vérifications avant le démarrage (internes)', 'Démarrage du moteur normal, défaillances', 'Roulage', 'Vérification avant le départ : point fixe moteur', 'Montée : pente max / vario max, virages sur cap, mise en palier'] },
+        { id: 'MAN', titre: 'Maniabilité', groupe: 'Maintien de compétence', objectif: '', items: ['Virages serrés (360° gauche/droite à 45° d’inclinaison)', 'Décrochages / approches du décrochage et récupération', 'Maniement du pilote automatique / directeur de vol (si applicable)'] },
+        { id: 'NAV', titre: 'Navigation VFR en route', groupe: 'Maintien de compétence', objectif: 'Recommandée si expérience < 10 étapes dans les 24 derniers mois', items: ['Plan de vol, navigation à l’estime (DR) et lecture de cartes', 'Maintien de l’altitude, du cap et de la vitesse', 'Orientation, planification et revue des ETA', 'Utilisation du radioguidage (si applicable)', 'Gestion du vol (journal de bord, vérifications de routine)'] },
+        { id: 'APP', titre: 'Approche et atterrissage', groupe: 'Maintien de compétence', objectif: '', items: ['Procédure d’arrivée sur aérodrome', 'Atterrissage normal', 'Atterrissage sans volets', 'Manœuvre de remise des gaz'] },
+        { id: 'URG', titre: 'Procédures inhabituelles et d’urgence', groupe: 'Maintien de compétence', objectif: '', items: ['Décollage interrompu à une vitesse raisonnable', 'Panne moteur simulée après le décollage', 'Atterrissage forcé simulé sans puissance'] }
+    ],
+    ressources: []
+};
+
+function appliquerCanevas(c) {
+    const deja = document.getElementById('edit-formation-titre').value.trim();
+    if (deja && !confirm(`Remplacer le contenu actuel par le canevas « ${c.titre} » ?`)) return;
+    document.getElementById('edit-formation-titre').value = c.titre;
+    document.getElementById('edit-formation-discipline').value = c.discipline;
+    document.getElementById('edit-formation-description').value = c.description;
+    document.getElementById('edit-formation-heures').value = c.minimas.heures;
+    document.getElementById('edit-formation-vols').value = c.minimas.vols || '';
+    document.getElementById('edit-formation-hdc').value = c.minimas.heuresDC;
+    document.getElementById('edit-formation-hsolo').value = c.minimas.heuresSolo;
+    document.getElementById('edit-formation-att').value = c.minimas.atterrissages || '';
+    document.getElementById('editeur-cas').innerHTML = (c.cas || []).map(blocCasHtml).join('');
+    document.getElementById('editeur-modules').innerHTML = c.modules.map(blocModuleHtml).join('');
+    document.getElementById('editeur-prerequis').innerHTML = c.prerequis.map(blocPrerequisHtml).join('');
+    document.getElementById('editeur-ressources').innerHTML = c.ressources.map(blocRessourceHtml).join('');
+    document.getElementById('editeur-lecons').innerHTML = c.lecons.map(blocLeconHtml).join('');
 }
 
 function ouvrirEditeurFormation(formationId) {
@@ -1498,8 +1561,12 @@ function initFormation() {
     if (btnRes) btnRes.addEventListener('click', () => ajouterBlocMini('editeur-ressources', blocRessourceHtml({})));
     const btnMod = document.getElementById('btn-formation-module-add');
     if (btnMod) btnMod.addEventListener('click', () => ajouterBlocMini('editeur-modules', blocModuleHtml({})));
-    const btnCan = document.getElementById('btn-formation-canevas-ppl');
-    if (btnCan) btnCan.addEventListener('click', appliquerCanevasPpl);
+    [['btn-formation-canevas-ppl', CANEVAS_PPL], ['btn-formation-canevas-lapl', CANEVAS_LAPL],
+     ['btn-formation-canevas-lache', CANEVAS_LACHE], ['btn-formation-canevas-sep', CANEVAS_SEP]]
+        .forEach(([id, c]) => {
+            const b = document.getElementById(id);
+            if (b) b.addEventListener('click', () => appliquerCanevas(c));
+        });
     const selForm = document.getElementById('attribuer-formation');
     if (selForm) selForm.addEventListener('change', majCasAttribution);
 }
