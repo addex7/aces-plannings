@@ -329,14 +329,16 @@ async function renderDetailSuivi() {
                 ${modulesHtml}
             </div>
             <div class="formation-col">
-                <h4 class="formation-col-titre">📋 Documents demandés</h4>
+                <h4 class="formation-col-titre" style="display:flex;align-items:center;justify-content:space-between;">📋 Documents demandés
+                    ${instructeur ? `<button class="btn-secondary" style="padding:2px 8px;font-size:11px;" title="Demander un document supplémentaire" data-formation-action="doc-add" data-sid="${suivi.id}">＋</button>` : ''}
+                </h4>
                 ${docsHtml}
-                ${ressourcesHtml}
             </div>
             <div class="formation-col">
                 <h4 class="formation-col-titre">⏱ Minimas requis</h4>
                 <div id="${statsVolsId}" class="formation-minimas">Comptage des vols…</div>
                 ${instructeur ? `<button class="btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:11px;" data-formation-action="credit-add" data-sid="${suivi.id}">＋ Ajouter un vol / des heures</button>` : ''}
+                ${ressourcesHtml}
             </div>
         </div>`;
 
@@ -603,6 +605,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'seance-edit') ouvrirPageSeance(sid, el.dataset.seid);
     else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
+    else if (a === 'doc-add') ajouterDocumentDemande(sid);
     else if (a === 'credit-add') ouvrirModaleCredit(sid);
     else if (a === 'credit-del') supprimerCredit(sid, el.dataset.cid);
     else if (a === 'module-valide') validerModule(sid, el.dataset.mid);
@@ -760,6 +763,21 @@ async function marquerDocumentFourni(suiviId, docId) {
         await patchSuivi(suiviId, { 'Documentation': docs });
         renderDetailSuivi();
     } catch (e) { console.error(e); alert('Erreur lors de la mise à jour.'); }
+}
+
+// L'instructeur peut demander un document supplementaire en cours de
+// formation : ajoute a la liste Documentation du suivi.
+async function ajouterDocumentDemande(suiviId) {
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const titre = await demanderSaisie('Document à demander à l\'élève', '', { placeholder: 'Ex : copie de la licence', okLabel: 'Demander' });
+    if (!titre || !titre.trim()) return;
+    const docs = formationJson(suivi.fields['Documentation'], []);
+    docs.push({ id: `d${Date.now()}`, titre: titre.trim(), statut: 'Demandé', dateDemande: new Date().toISOString().slice(0, 10) });
+    try {
+        await patchSuivi(suiviId, { 'Documentation': docs });
+        renderDetailSuivi();
+    } catch (e) { console.error(e); alert('Erreur lors de l\'ajout.'); }
 }
 
 // Validation d'un module theorique par l'instructeur (date de la séance/emargement).
