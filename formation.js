@@ -622,6 +622,14 @@ document.addEventListener('click', (e) => {
 // Le select vol de la page seance est cree dynamiquement : delegation change.
 document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'seance-vol') prefillSeanceDepuisVol();
+    // Fichier choisi pour une ressource : titre auto + icone coloree.
+    if (e.target && e.target.classList.contains('ressource-fichier') && e.target.files[0]) {
+        const bloc = e.target.closest('.formation-mini-edit');
+        const titre = bloc && bloc.querySelector('.ressource-titre');
+        if (titre && !titre.value.trim()) titre.value = e.target.files[0].name;
+        e.target.parentElement.style.color = '#166534';
+        e.target.parentElement.title = e.target.files[0].name;
+    }
 });
 
 // Recherche pilote : on ne rerend que la liste pour conserver le focus.
@@ -1079,9 +1087,11 @@ function blocPrerequisHtml(p) {
     </div>`;
 }
 function blocRessourceHtml(r) {
-    return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:1fr 1.4fr auto;gap:6px;margin-bottom:6px;align-items:center;">
+    const nomFichier = (r.lien || '').startsWith('/uploads/') ? r.lien.split('/').pop() : '';
+    return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:1fr 1.4fr auto auto;gap:6px;margin-bottom:6px;align-items:center;">
         <input type="text" class="ressource-titre" placeholder="Titre du lien" value="${escapeHtml(r.titre || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
         <input type="url" class="ressource-lien" placeholder="https://… ou /uploads/…" value="${escapeHtml(r.lien || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        <label class="btn-secondary" style="padding:4px 8px;font-size:12px;cursor:pointer;white-space:nowrap;" title="${escapeHtml(nomFichier || 'Joindre un fichier (uploadé au moment de l’enregistrement)')}">📎<input type="file" class="ressource-fichier" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.odt,.txt" style="display:none;"></label>
         <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
     </div>`;
 }
@@ -1250,9 +1260,18 @@ async function enregistrerFormationEdit(e) {
     const prerequis = [...document.querySelectorAll('#editeur-prerequis .formation-mini-edit')]
         .map(b => ({ titre: b.querySelector('.prerequis-titre').value.trim() }))
         .filter(p => p.titre);
-    const ressources = [...document.querySelectorAll('#editeur-ressources .formation-mini-edit')]
-        .map(b => ({ titre: b.querySelector('.ressource-titre').value.trim(), lien: b.querySelector('.ressource-lien').value.trim() }))
-        .filter(r => r.titre || r.lien);
+    const ressources = [];
+    for (const b of document.querySelectorAll('#editeur-ressources .formation-mini-edit')) {
+        const fichier = b.querySelector('.ressource-fichier').files[0];
+        let lien = b.querySelector('.ressource-lien').value.trim();
+        let titre = b.querySelector('.ressource-titre').value.trim();
+        if (fichier) {
+            try { lien = await uploaderFichierDocument(fichier); }
+            catch (err) { alert(`Échec de l'envoi de « ${fichier.name} » : ${err.message}`); return; }
+            if (!titre) titre = fichier.name;
+        }
+        if (titre || lien) ressources.push({ titre, lien });
+    }
     const fields = {
         'Titre': titre,
         'Discipline': document.getElementById('edit-formation-discipline').value,
