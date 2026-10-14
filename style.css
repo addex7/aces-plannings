@@ -5774,6 +5774,20 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .formation-col .formation-carte-sub {
     font-size: 11px;
 }
+/* Champ de recherche pilote dans l'en-tete Formation */
+.formation-recherche {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    width: 220px;
+    background: #fff;
+}
+/* Champ date des modules theoriques : largeur juste suffisante */
+.module-date-input {
+    width: 128px;
+    flex: none;
+}
 /* Ligne module : titre a gauche, statut + controle a droite alignes */
 .module-ligne {
     gap: 8px;
@@ -5852,9 +5866,11 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     }
 }
 .formation-seance {
-    border-top: 1px solid #e2e8f0;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
     margin-top: 10px;
-    padding-top: 8px;
 }
 .formation-seance-tete {
     display: flex;

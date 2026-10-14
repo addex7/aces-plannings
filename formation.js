@@ -19,6 +19,14 @@ let eleveAFormation = null; // null = inconnu
 let membresFormationCache = [];
 let recherchePilote = '';
 
+// Heures decimales (centiemes) -> affichage h:mm (ex. 0.6 -> "0h36").
+function hdvVersHmin(v) {
+    const n = parseFloat(v) || 0;
+    const h = Math.floor(n);
+    const m = Math.round((n - h) * 60);
+    return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h00`;
+}
+
 function formationJson(v, def) {
     if (v === undefined || v === null || v === '') return def;
     if (typeof v !== 'string') return v;
@@ -177,8 +185,9 @@ async function chargerFormation() {
         ]);
         if (suiviOuvertId) { if (!enEditionSeance) renderDetailSuivi(); return; }
         majActionsEntete(instructeur ? `
-            <button class="btn-primary" data-formation-action="nouveau-suivi">＋ Attribuer une formation</button>
-            <button class="btn-secondary" data-formation-action="gerer-catalogue">📚 Formations</button>` : '');
+            <input type="search" id="formation-recherche-pilote" class="formation-recherche" placeholder="🔍 Rechercher un pilote…" value="${escapeHtml(recherchePilote)}">
+            <button class="btn-primary" data-formation-action="nouveau-suivi">Attribuer une formation</button>
+            <button class="btn-primary" data-formation-action="gerer-catalogue">📚 Formations</button>` : '');
         zone.innerHTML = instructeur ? renderVueInstructeur(suivis) : renderVueEleve(suivis);
     } catch (e) {
         console.error(e);
@@ -187,13 +196,7 @@ async function chargerFormation() {
 }
 
 function renderVueInstructeur(suivis) {
-    return `
-        <div style="margin-bottom:14px;">
-            <input type="search" id="formation-recherche-pilote" placeholder="🔍 Rechercher un pilote ou une formation…"
-                value="${escapeHtml(recherchePilote)}"
-                style="width:100%;max-width:420px;padding:9px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff;">
-        </div>
-        <div id="formation-liste-suivis">${renderListeSuivis(filtrerSuivis(suivis))}</div>`;
+    return `<div id="formation-liste-suivis">${renderListeSuivis(filtrerSuivis(suivis))}</div>`;
 }
 
 function filtrerSuivis(suivis) {
@@ -535,14 +538,18 @@ function renderSeance(s, instructeur) {
     const itemsRep = formationJson(f['Items reportés'], []).length + itemsNouveau.filter(x => x.etat === 'arefaire').length;
     const comptes = [`${itemsOk} acquis`, itemsEnCours ? `${itemsEnCours} en cours` : '', itemsRep ? `${itemsRep} à refaire` : ''].filter(Boolean).join(' · ');
     const vol = f['Vol libellé'] || '';
+    // Date et immatriculation sont deja dans l'en-tete : on n'affiche
+    // que le trajet (nouveau format "DEP→ARR", extraction pour l'ancien).
+    const trajet = (vol.match(/\S+\s*→\s*\S+/) || [''])[0];
+    const volAffiche = trajet || vol;
     // Numero de seance dans le suivi (ordre chronologique = "cours n°")
     const numero = seancesDuSuivi(f['Suivi']).findIndex(x => x.id === s.id) + 1;
     const iconesType = { 'Vol': '✈️', 'Simulateur': '🖥️', 'Théorique': '📖' };
     const typeSeance = f['Type'] || 'Vol';
     const hdv = [
-        parseFloat(f['HDV DC']) ? `DC ${f['HDV DC']}h` : '',
-        parseFloat(f['HDV solo']) ? `Solo ${f['HDV solo']}h` : '',
-        parseFloat(f['HDV simu']) ? `Simu ${f['HDV simu']}h` : '',
+        parseFloat(f['HDV DC']) ? `DC ${hdvVersHmin(f['HDV DC'])}` : '',
+        parseFloat(f['HDV solo']) ? `Solo ${hdvVersHmin(f['HDV solo'])}` : '',
+        parseFloat(f['HDV simu']) ? `Simu ${hdvVersHmin(f['HDV simu'])}` : '',
         parseInt(f['Atterrissages'], 10) ? `${f['Atterrissages']} att.` : ''
     ].filter(Boolean).join(' · ');
     const signer = (!instructeur && !sigE)
@@ -565,7 +572,7 @@ function renderSeance(s, instructeur) {
                 ${f['Leçon validée'] ? '<span class="formation-badge" style="background:#dcfce7;color:#166534;">Leçon validée</span>' : ''}
                 ${outils}
             </div>
-            ${vol ? `<div class="formation-carte-sub">Vol : ${escapeHtml(vol)}</div>` : ''}
+            ${volAffiche ? `<div class="formation-carte-sub">Vol : ${escapeHtml(volAffiche)}</div>` : ''}
             ${hdv ? `<div class="formation-carte-sub">⏱ ${escapeHtml(hdv)}</div>` : ''}
             ${f['Météo'] ? `<div class="formation-carte-sub">🌦 ${escapeHtml(f['Météo'])}</div>` : ''}
             ${comptes ? `<div class="formation-carte-sub">${escapeHtml(comptes)}</div>` : ''}
@@ -1492,7 +1499,7 @@ async function enregistrerPageSeance() {
     const selVol = document.getElementById('seance-vol');
     const volId = selVol ? selVol.value : '';
     const vol = volId && seanceEnCours ? seanceEnCours.vols.find(v => v.id === volId) : null;
-    const volLibelle = vol ? `${vol.fields['Date'] || ''} · ${vol.fields['Départ'] || '?'}→${vol.fields['Arrivée'] || '?'} · ${vol.fields['Temps de vol'] || ''} · ${vol.fields['Machine'] || ''}` : '';
+    const volLibelle = vol ? `${vol.fields['Départ'] || '?'}→${vol.fields['Arrivée'] || '?'}` : '';
     const commentaire = document.getElementById('seance-commentaire').value.trim();
     const date = document.getElementById('seance-date').value || new Date().toISOString().slice(0, 10);
     if (!items.length && !(await confirmerAction('Aucun item coché — enregistrer la séance quand même ?', { okLabel: 'Enregistrer', icone: '✈️' }))) return;
@@ -1537,6 +1544,13 @@ async function enregistrerPageSeance() {
         invaliderFormationCache();
         await chargerToutesSeances(true);
         renderDetailSuivi();
+        // L'eleve doit signer (nouvelle seance ou seance modifiee) : notification.
+        try {
+            await creerNotification(
+                suivi.fields['Élève nom'] || '',
+                `Une séance de formation « ${suivi.fields['Formation titre'] || ''} » du ${date} attend votre signature.`,
+                'formation', 'formation');
+        } catch (e) { console.warn('Notification élève:', e); }
     } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement de la séance.'); }
 }
 
