@@ -17,6 +17,7 @@ let seancesCache = null;
 let suiviOuvertId = null;
 let eleveAFormation = null; // null = inconnu
 let membresFormationCache = [];
+let recherchePilote = '';
 
 function formationJson(v, def) {
     if (v === undefined || v === null || v === '') return def;
@@ -186,6 +187,24 @@ async function chargerFormation() {
 }
 
 function renderVueInstructeur(suivis) {
+    return `
+        <div style="margin-bottom:14px;">
+            <input type="search" id="formation-recherche-pilote" placeholder="🔍 Rechercher un pilote ou une formation…"
+                value="${escapeHtml(recherchePilote)}"
+                style="width:100%;max-width:420px;padding:9px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff;">
+        </div>
+        <div id="formation-liste-suivis">${renderListeSuivis(filtrerSuivis(suivis))}</div>`;
+}
+
+function filtrerSuivis(suivis) {
+    const q = recherchePilote.trim().toLowerCase();
+    if (!q) return suivis;
+    return suivis.filter(s =>
+        String(s.fields['Élève nom'] || '').toLowerCase().includes(q) ||
+        String(s.fields['Formation titre'] || '').toLowerCase().includes(q));
+}
+
+function renderListeSuivis(suivis) {
     const ouverts = suivis.filter(s => (s.fields['Statut'] || 'Ouverte') === 'Ouverte');
     const termines = suivis.filter(s => s.fields['Statut'] === 'Terminée');
     const archives = suivis.filter(s => s.fields['Statut'] === 'Archivée');
@@ -202,9 +221,10 @@ function renderVueInstructeur(suivis) {
             <div class="formation-carte-sub">${p.faits}/${p.total} items</div>
         </div>`;
     };
+    if (!suivis.length) return `<div class="formation-vide">${recherchePilote.trim() ? 'Aucun résultat pour cette recherche.' : 'Aucune formation en cours — attribuez-en une.'}</div>`;
     return `
         <h3 class="formation-section-titre">Formations en cours (${ouverts.length})</h3>
-        <div class="formation-grille">${ouverts.map(carte).join('') || '<div class="formation-vide">Aucune formation en cours — attribuez-en une.</div>'}</div>
+        <div class="formation-grille">${ouverts.map(carte).join('') || '<div class="formation-vide">Aucune formation en cours correspondante.</div>'}</div>
         ${termines.length ? `<h3 class="formation-section-titre">Terminées</h3><div class="formation-grille">${termines.map(carte).join('')}</div>` : ''}
         ${archives.length ? `<h3 class="formation-section-titre">Archivées</h3><div class="formation-grille">${archives.map(carte).join('')}</div>` : ''}
     `;
@@ -595,6 +615,14 @@ document.addEventListener('click', (e) => {
 // Le select vol de la page seance est cree dynamiquement : delegation change.
 document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'seance-vol') prefillSeanceDepuisVol();
+});
+
+// Recherche pilote : on ne rerend que la liste pour conserver le focus.
+document.addEventListener('input', (e) => {
+    if (!e.target || e.target.id !== 'formation-recherche-pilote') return;
+    recherchePilote = e.target.value;
+    const liste = document.getElementById('formation-liste-suivis');
+    if (liste) liste.innerHTML = renderListeSuivis(filtrerSuivis(suivisCache || []));
 });
 
 // ---------------------------------------------------------------------------
