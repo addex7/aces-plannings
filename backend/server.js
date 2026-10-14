@@ -306,6 +306,7 @@ const DROITS_ECRITURE = {
 const CHAMPS_SELF_UTILISATEUR = new Set([
     'Mail', 'Identifiant', 'Mot de passe', 'Téléphone', 'Date de naissance',
     'Lieu de naissance', 'Adresse', 'Trigramme', 'Photo', 'Fiche vérifiée',
+    'Contact urgence nom', 'Contact urgence téléphone', 'Contact urgence email',
     'Numéro licence FFA', 'Numéro licence FFVP', 'Numéro licence FFPLUM',
     'Autorisation parentale', 'Suivis actifs',
     'Prénom', 'Nom', 'Compte GVV'

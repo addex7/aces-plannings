@@ -508,7 +508,8 @@ async function verifierFicheMembre() {
         if (!res.ok) return;
         const f = record.fields || {};
         // La modale se reaffiche a chaque connexion tant qu'un champ demande est vide
-        const manquants = ['Mail', 'Téléphone', 'Date de naissance', 'Lieu de naissance', 'Adresse']
+        const manquants = ['Mail', 'Téléphone', 'Date de naissance', 'Lieu de naissance', 'Adresse',
+            'Contact urgence nom', 'Contact urgence téléphone']
             .filter(c => !(f[c] || '').toString().trim());
         if (!manquants.length && f['Fiche vérifiée']) return;
         afficherModaleVerificationFiche(f, manquants);
@@ -554,6 +555,10 @@ function afficherModaleVerificationFiche(f, manquants = []) {
                 ${champ('verif-naissance', 'Date de naissance', iso, 'date')}
                 ${champ('verif-lieu', 'Lieu de naissance', f['Lieu de naissance'])}
                 ${champ('verif-adresse', 'Adresse', f['Adresse'])}
+                <div style="margin-top:6px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:13px; font-weight:600; color:#1e3d59;">🆘 Personne à contacter en cas d'accident</div>
+                ${champ('verif-urgence-nom', 'Contact urgence nom', f['Contact urgence nom'], 'text', 'Nom et prénom')}
+                ${champ('verif-urgence-tel', 'Contact urgence téléphone', f['Contact urgence téléphone'], 'tel')}
+                ${champ('verif-urgence-mail', 'Contact urgence email', f['Contact urgence email'], 'email')}
             </div>
             <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
                 <button type="button" class="nr-btn-cancel" id="verif-later">Plus tard</button>
@@ -572,6 +577,9 @@ function afficherModaleVerificationFiche(f, manquants = []) {
             'Date de naissance': overlay.querySelector('#verif-naissance').value || null,
             'Lieu de naissance': overlay.querySelector('#verif-lieu').value.trim() || null,
             'Adresse': overlay.querySelector('#verif-adresse').value.trim() || null,
+            'Contact urgence nom': overlay.querySelector('#verif-urgence-nom').value.trim() || null,
+            'Contact urgence téléphone': overlay.querySelector('#verif-urgence-tel').value.trim() || null,
+            'Contact urgence email': overlay.querySelector('#verif-urgence-mail').value.trim() || null,
             'Fiche vérifiée': true
         };
         const btnOk = overlay.querySelector('#verif-ok');

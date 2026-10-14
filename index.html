@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=4846783806">
+    <link rel="stylesheet" href="style.css?v=6f4f6a44a1">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -1540,6 +1540,18 @@
                         <label for="edit-membre-compte-gvv">Compte GVV</label>
                         <input type="text" id="edit-membre-compte-gvv" placeholder="ex : NOM Prénom (si différent)">
                     </div>
+                    <div class="form-group">
+                        <label for="edit-membre-urgence-nom">Contact d'urgence — nom</label>
+                        <input type="text" id="edit-membre-urgence-nom" placeholder="Personne à prévenir">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-membre-urgence-tel">Contact d'urgence — téléphone</label>
+                        <input type="text" id="edit-membre-urgence-tel">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-membre-urgence-email">Contact d'urgence — email</label>
+                        <input type="email" id="edit-membre-urgence-email">
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-secondary" onclick="document.getElementById('membre-modal').style.display='none'">Annuler</button>
@@ -1726,15 +1738,9 @@
                         <input type="text" id="fiche-lieu-naissance">
                     </div>
                 </div>
-                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="fiche-nationalite">Nationalité</label>
-                        <input type="text" id="fiche-nationalite">
-                    </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label for="fiche-telephone">Téléphone</label>
-                        <input type="text" id="fiche-telephone">
-                    </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label for="fiche-telephone">Téléphone</label>
+                    <input type="text" id="fiche-telephone">
                 </div>
                 <div class="form-group" style="margin-top:10px;">
                     <label for="fiche-email">Email</label>
@@ -1858,8 +1864,8 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
-    <script src="formation.js?v=def53b6758"></script>
-    <script src="version.js?v=20261014121642"></script>
+    <script src="formation.js?v=c640478f90"></script>
+    <script src="version.js?v=20261014175240"></script>
     <script src="app.js?v=a87ff05606"></script>
     <script src="utils.js?v=34bd013fe7"></script>
     <script src="presences.js?v=5da5f247ed"></script>
@@ -1872,11 +1878,11 @@
     <script src="documents.js?v=248ade00c3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="audit.js?v=bd107c7bdd"></script>
-    <script src="membres.js?v=2231e516f0"></script>
+    <script src="membres.js?v=0a91181957"></script>
     <script src="instructeurs.js?v=d37eecb2da"></script>
     <script src="instructeur-planning.js?v=fe0732823d"></script>
     <script src="messagerie.js?v=bb1edc5b0a"></script>
-    <script src="membre-home.js?v=27701f113a"></script>
+    <script src="membre-home.js?v=3a3316e683"></script>
     <script src="accueil-pilote.js?v=42895d2047"></script>
     <script src="notifications-metier.js?v=5fec77660e"></script>
     <!-- Modal Inscrire quelqu'un d'autre -->

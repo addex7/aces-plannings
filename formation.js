@@ -279,10 +279,11 @@ async function renderDetailSuivi() {
 
             const fait = !!mo.statut;
             const zone = (instructeur && !fait) ? `
-                <input type="date" id="module-date-${escapeHtml(mo.id)}" value="${new Date().toISOString().slice(0, 10)}" title="Date de validation" style="padding:3px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;">
+                <input type="date" id="module-date-${escapeHtml(mo.id)}" value="${new Date().toISOString().slice(0, 10)}" title="Date de validation" class="module-date-input">
                 <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="module-valide" data-sid="${suivi.id}" data-mid="${escapeHtml(mo.id)}">Valider</button>` : '';
-            return `<div class="formation-doc"><span>${fait ? '✅' : '⬜'} ${escapeHtml(mo.titre)}</span>
-                <span class="formation-carte-sub">${fait ? `validé le ${escapeHtml(mo.date || '')}` : 'en attente'}</span>${zone}</div>`;
+            return `<div class="formation-doc module-ligne">
+                <span class="module-titre">${fait ? '✅' : '⬜'} ${escapeHtml(mo.titre)}</span>
+                <span class="module-actions"><span class="formation-carte-sub" style="white-space:nowrap;">${fait ? `validé le ${escapeHtml(mo.date || '')}` : 'en attente'}</span>${zone}</span></div>`;
         }).join('')}</div>` : '<div class="formation-vide">Aucun module.</div>';
     const ressources = formationJson(f['Ressources'], []);
     const ressourcesHtml = ressources.length ? `
@@ -330,10 +331,16 @@ async function renderDetailSuivi() {
             <div style="min-width:220px;">${barreProgression(p.pct, 20)}<div class="formation-carte-sub" style="text-align:right;">${p.faits}/${p.total} items validés</div></div>
         </div>
         ${trioHtml}
-        <h4 class="formation-sub-titre">📚 Formation pratique</h4>
-        ${leconsHtml || '<div class="formation-vide">Aucune leçon définie.</div>'}
-        <h4 class="formation-sub-titre">✈️ Journal des séances</h4>
-        ${seancesDuSuivi(suivi.id).map(s => renderSeance(s, instructeur)).join('') || '<div class="formation-vide">Aucune séance enregistrée.</div>'}
+        <div class="formation-duo">
+            <div>
+                <h4 class="formation-sub-titre">📚 Formation pratique</h4>
+                ${leconsHtml || '<div class="formation-vide">Aucune leçon définie.</div>'}
+            </div>
+            <div>
+                <h4 class="formation-sub-titre">✈️ Journal des séances</h4>
+                ${seancesDuSuivi(suivi.id).map(s => renderSeance(s, instructeur)).join('') || '<div class="formation-vide">Aucune séance enregistrée.</div>'}
+            </div>
+        </div>
     `;
 
     // Statistiques vols vs minimas + verrouillage du bouton Terminer
@@ -457,20 +464,22 @@ function renderDoc(suivi, d, instructeur) {
     const fourni = d.statut === 'Fourni';
     const today = new Date().toISOString().slice(0, 10);
     const expire = fourni && d.dateValidite && d.dateValidite < today;
-    const lien = d.lien ? ` <a href="${urlSure(d.lien)}" target="_blank" rel="noopener" title="Voir le document">📎</a>` : '';
     const infos = fourni
         ? `fourni le ${escapeHtml(d.dateFourni || '')}` + (d.dateValidite
             ? ` · <span style="color:${expire ? '#b91c1c' : '#166534'};">${expire ? 'expiré' : 'valable'} jusqu'au ${escapeHtml(d.dateValidite)}</span>` : '')
         : `demandé le ${escapeHtml(d.dateDemande || '')}`;
-    // L'eleve depose le document (fichier facultatif) + sa date de validite.
-    const depot = (!instructeur && !fourni) ? `
+    // Depot possible par l'eleve ET l'instructeur (remise en main propre).
+    const depot = (!fourni) ? `
         <div class="formation-doc-depot">
             <input type="file" id="doc-fichier-${escapeHtml(d.id)}" accept=".pdf,.jpg,.jpeg,.png" title="Joindre le document">
             <input type="date" id="doc-validite-${escapeHtml(d.id)}" title="Date de validité (optionnel)">
             <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-fourni" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">Envoyer</button>
         </div>` : '';
+    const titre = d.lien
+        ? `<a href="${urlSure(d.lien)}" target="_blank" rel="noopener" title="Ouvrir la pièce jointe">${escapeHtml(d.titre)}</a>`
+        : escapeHtml(d.titre);
     return `<div class="formation-doc" style="flex-wrap:wrap;">
-        <span>${fourni ? '✅' : (d.prerequis ? '📋' : '📄')} ${escapeHtml(d.titre)}${lien}</span>
+        <span>${fourni ? '✅' : (d.prerequis ? '📋' : '📄')} ${titre}</span>
         <span class="formation-carte-sub">${infos}</span>
         ${depot}
     </div>`;
@@ -741,7 +750,8 @@ async function membreDuSuivi(suivi) {
 // Champs partages entre la fiche eleve (Etat civil) et la fiche membre.
 const CHAMPS_FICHE_MEMBRE = [
     ['naissance', 'Date de naissance'], ['lieuNaissance', 'Lieu de naissance'],
-    ['telephone', 'Téléphone'], ['email', 'Mail'], ['adresse', 'Adresse']
+    ['telephone', 'Téléphone'], ['email', 'Mail'], ['adresse', 'Adresse'],
+    ['urgenceNom', 'Contact urgence nom'], ['urgenceTel', 'Contact urgence téléphone']
 ];
 
 async function ouvrirFicheEleve(suiviId) {
@@ -759,7 +769,7 @@ async function ouvrirFicheEleve(suiviId) {
     };
     const set = (id, v) => { document.getElementById(id).value = v || ''; };
     set('fiche-naissance', pick('naissance')); set('fiche-lieu-naissance', pick('lieuNaissance'));
-    set('fiche-nationalite', pick('nationalite')); set('fiche-telephone', pick('telephone'));
+    set('fiche-telephone', pick('telephone'));
     set('fiche-email', pick('email')); set('fiche-adresse', pick('adresse'));
     set('fiche-urgence-nom', pick('urgenceNom')); set('fiche-urgence-tel', pick('urgenceTel'));
     const overlay = document.getElementById('modale-formation-fiche');
@@ -773,7 +783,7 @@ async function enregistrerFiche(e) {
     const val = id => document.getElementById(id).value.trim();
     const ec = {
         naissance: document.getElementById('fiche-naissance').value,
-        lieuNaissance: val('fiche-lieu-naissance'), nationalite: val('fiche-nationalite'),
+        lieuNaissance: val('fiche-lieu-naissance'),
         telephone: val('fiche-telephone'), email: val('fiche-email'), adresse: val('fiche-adresse'),
         urgenceNom: val('fiche-urgence-nom'), urgenceTel: val('fiche-urgence-tel')
     };

@@ -759,6 +759,12 @@ function ouvrirModaleMembre(record) {
     const dateNaissance = f['Date de naissance'];
     const dateInput = document.getElementById('edit-membre-date-naissance');
     if (dateInput) dateInput.value = dateNaissance ? new Date(dateNaissance).toISOString().split('T')[0] : '';
+    const urgNom = document.getElementById('edit-membre-urgence-nom');
+    const urgTel = document.getElementById('edit-membre-urgence-tel');
+    const urgMail = document.getElementById('edit-membre-urgence-email');
+    if (urgNom) urgNom.value = f['Contact urgence nom'] || '';
+    if (urgTel) urgTel.value = f['Contact urgence téléphone'] || '';
+    if (urgMail) urgMail.value = f['Contact urgence email'] || '';
     modal.style.display = 'flex';
 }
 
@@ -795,6 +801,12 @@ async function sauvegarderMembre(event) {
     if (inputCompteGvv) fields['Compte GVV'] = inputCompteGvv.value.trim() || null;
     if (motDePasse) fields['Mot de passe'] = await hacherMotDePasse(motDePasse);
     if (dateNaissance) fields['Date de naissance'] = dateNaissance;
+    const urgNom = document.getElementById('edit-membre-urgence-nom');
+    const urgTel = document.getElementById('edit-membre-urgence-tel');
+    const urgMail = document.getElementById('edit-membre-urgence-email');
+    if (urgNom) fields['Contact urgence nom'] = urgNom.value.trim() || null;
+    if (urgTel) fields['Contact urgence téléphone'] = urgTel.value.trim() || null;
+    if (urgMail) fields['Contact urgence email'] = urgMail.value.trim() || null;
     fields['Autorisation parentale'] = age !== null && age < 18;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${idMembreEnEdition}`, {
