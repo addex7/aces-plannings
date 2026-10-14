@@ -85,7 +85,7 @@ async function afficherErreursClient() {
     if (typeof afficherModaleAlerte !== 'function') return;
     afficherModaleAlerte('Erreurs JavaScript', '<p>Chargement…</p>', '🐛');
     try {
-        const res = await apiFetch(`${API_BASE}/erreurs-js`);
+        const res = await apiFetch(`${API_BASE}/erreurs-js`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur ' + res.status);
         const records = data.records || [];
