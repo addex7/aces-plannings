@@ -1002,7 +1002,8 @@ img, table, video, iframe, svg {
     background: #f1f5f9;
     border-color: #94a3b8;
 }
-.btn-secondary:disabled {
+.btn-secondary:disabled,
+.btn-primary:disabled {
     opacity: 0.5;
     cursor: default;
 }

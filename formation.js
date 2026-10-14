@@ -278,12 +278,12 @@ async function renderDetailSuivi() {
 
     const boutonsInstructeur = instructeur ? `
         <button class="btn-primary" data-formation-action="seance" data-sid="${suivi.id}">✈️ Nouvelle séance</button>
-        ${statut === 'Ouverte' ? `<button class="btn-secondary" id="btn-terminer-suivi" disabled title="Vérification des prérequis…" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
-        ${statut !== 'Archivée' ? `<button class="btn-secondary" data-formation-action="archiver" data-sid="${suivi.id}">🗄 Archiver</button>` : `<button class="btn-secondary" data-formation-action="rouvrir" data-sid="${suivi.id}">↩️ Désarchiver</button>`}
-        <button class="btn-secondary" style="color:#b91c1c;" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : '';
+        ${statut === 'Ouverte' ? `<button class="btn-primary" id="btn-terminer-suivi" disabled title="Vérification des prérequis…" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
+        ${statut !== 'Archivée' ? `<button class="btn-primary" data-formation-action="archiver" data-sid="${suivi.id}">🗄 Archiver</button>` : `<button class="btn-primary" data-formation-action="rouvrir" data-sid="${suivi.id}">↩️ Désarchiver</button>`}
+        <button class="btn-primary" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : '';
     majActionsEntete(`
-        <button class="btn-secondary" data-formation-action="retour">← Retour</button>
-        <button class="btn-secondary" data-formation-action="fiche" data-sid="${suivi.id}">👤 Fiche élève</button>
+        <button class="btn-primary" data-formation-action="retour">← Retour</button>
+        <button class="btn-primary" data-formation-action="fiche" data-sid="${suivi.id}">👤 Fiche élève</button>
         ${boutonsInstructeur}`);
 
     // Regroupement des lecons par phase (groupe), comme le livret BLN.
@@ -492,7 +492,7 @@ function renderDoc(suivi, d, instructeur) {
     const infos = fourni
         ? `fourni le ${escapeHtml(d.dateFourni || '')}` + (d.dateValidite
             ? ` · <span style="color:${expire ? '#b91c1c' : '#166534'};">${expire ? 'expiré' : 'valable'} jusqu'au ${escapeHtml(d.dateValidite)}</span>` : '')
-        : `demandé le ${escapeHtml(d.dateDemande || '')}`;
+        : '';
     // Depot possible par l'eleve ET l'instructeur (remise en main propre).
     const depot = (!fourni) ? `
         <div class="formation-doc-depot">
