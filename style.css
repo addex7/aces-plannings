@@ -5462,6 +5462,31 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     border-radius: 8px;
     padding: 8px 12px;
 }
+/* Groupe de canevas dans le titre de l'editeur : se deplace en bloc
+   sur la ligne suivante si la modale est trop etroite. */
+.canevas-groupe {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    flex-wrap: nowrap;
+}
+/* Ligne du catalogue : titre a gauche (peut passer a la ligne),
+   boutons toujours groupes a droite sur une seule ligne. */
+.catalogue-ligne {
+    flex-wrap: nowrap;
+}
+.catalogue-ligne-titre {
+    flex: 1;
+    min-width: 0;
+}
+.catalogue-ligne-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
 .formation-doc-depot {
     display: flex;
     align-items: center;
