@@ -312,6 +312,7 @@ async function renderDetailSuivi() {
             <div class="formation-col">
                 <h4 class="formation-col-titre">⏱ Minimas requis</h4>
                 <div id="${statsVolsId}" class="formation-minimas">Comptage des vols…</div>
+                ${instructeur ? `<button class="btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:11px;" data-formation-action="credit-add" data-sid="${suivi.id}">＋ Ajouter un vol / des heures</button>` : ''}
             </div>
         </div>`;
 
@@ -338,7 +339,7 @@ async function renderDetailSuivi() {
     // Statistiques vols vs minimas + verrouillage du bouton Terminer
     calculerStatsSuivi(suivi).then(stats => {
         const el = document.getElementById(statsVolsId);
-        if (el) el.innerHTML = renderMinimasHtml(stats, minimas);
+        if (el) el.innerHTML = renderMinimasHtml(stats, minimas, suivi, instructeur);
         const btn = document.getElementById('btn-terminer-suivi');
         if (btn) {
             const manques = manquesTerminaison(suivi, minimas, p, stats);
@@ -372,11 +373,23 @@ async function calculerStatsSuivi(suivi) {
             deduis.forEach(v => { heures += (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0) / 60; });
         } catch (e) { console.error('Stats suivi:', e); }
     }
-    return { dc, solo, simu, att, nbVols, heures };
+    // Credits manuels : heures/vols saisis a la main (vols hors carnet,
+    // experience anterieure) — comptent dans les minimas.
+    const credits = formationJson(suivi.fields['Crédits'], []);
+    credits.forEach(c => {
+        dc += parseFloat(c.dc) || 0;
+        solo += parseFloat(c.solo) || 0;
+        simu += parseFloat(c.simu) || 0;
+        att += parseInt(c.att, 10) || 0;
+        nbVols += parseInt(c.vols, 10) || 0;
+        heures += parseFloat(c.heures) || 0;
+    });
+    return { dc, solo, simu, att, nbVols, heures, credits };
 }
 
-// Panneau des minimas : chaque exigence avec sa barre de progression.
-function renderMinimasHtml(stats, minimas) {
+// Panneau des minimas : chaque exigence avec sa barre de progression,
+// suivi des credits manuels (supprimables par l'instructeur).
+function renderMinimasHtml(stats, minimas, suivi, instructeur) {
     const hTxt = v => { const h = Math.floor(v), m = Math.round((v - h) * 60); return `${h}h${String(m).padStart(2, '0')}`; };
     const ligne = (label, val, req, enHeures) => {
         const vTxt = enHeures ? hTxt(val) : val;
@@ -397,7 +410,23 @@ function renderMinimasHtml(stats, minimas) {
         (stats.att || minimas.atterrissages) ? ligne('Atterrissages', stats.att, Number(minimas.atterrissages || 0), false) : ''
     ].filter(Boolean);
     const aDesHdv = stats.dc || stats.solo || stats.simu || stats.att;
+    const hT = v => { const h = Math.floor(v), m = Math.round((v - h) * 60); return `${h}h${String(m).padStart(2, '0')}`; };
+    const creditsHtml = (stats.credits || []).map(c => {
+        const parts = [
+            parseFloat(c.heures) ? hT(c.heures) : '',
+            parseInt(c.vols, 10) ? `${c.vols} vol(s)` : '',
+            parseFloat(c.dc) ? `DC ${hT(c.dc)}` : '',
+            parseFloat(c.solo) ? `solo ${hT(c.solo)}` : '',
+            parseFloat(c.simu) ? `simu ${hT(c.simu)}` : '',
+            parseInt(c.att, 10) ? `${c.att} att.` : ''
+        ].filter(Boolean).join(' · ');
+        const del = instructeur
+            ? `<button class="btn-secondary" style="padding:2px 7px;font-size:11px;color:#b91c1c;" title="Supprimer ce crédit" data-formation-action="credit-del" data-sid="${suivi.id}" data-cid="${escapeHtml(c.id)}">✕</button>`
+            : '';
+        return `<div class="formation-doc mini-credit"><span>✋ ${escapeHtml(c.libelle || 'Crédit manuel')}</span><span class="formation-carte-sub">${escapeHtml(parts)}</span>${del}</div>`;
+    }).join('');
     return lignes.join('') +
+        creditsHtml +
         (aDesHdv ? '' : '<div class="formation-carte-sub">DC/solo/simu comptés depuis les séances.</div>') +
         (minimas.cas ? `<div class="formation-carte-sub" style="margin-top:6px;">Cas appliqué : « ${escapeHtml(minimas.cas)} »</div>` : '');
 }
@@ -538,6 +567,8 @@ document.addEventListener('click', (e) => {
     else if (a === 'seance-edit') ouvrirPageSeance(sid, el.dataset.seid);
     else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
+    else if (a === 'credit-add') ouvrirModaleCredit(sid);
+    else if (a === 'credit-del') supprimerCredit(sid, el.dataset.cid);
     else if (a === 'module-valide') validerModule(sid, el.dataset.mid);
     else if (a === 'fiche') ouvrirFicheEleve(sid);
     else if (a === 'terminer') changerStatutSuivi(sid, 'Terminée');
@@ -762,6 +793,49 @@ async function enregistrerFiche(e) {
         }
         overlay.style.display = 'none';
     } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement de la fiche.'); }
+}
+
+// ---------------------------------------------------------------------------
+// CREDITS MANUELS (heures/vols ajoutes a la main dans les minimas)
+// ---------------------------------------------------------------------------
+function ouvrirModaleCredit(suiviId) {
+    const overlay = document.getElementById('modale-formation-credit');
+    if (!overlay) return;
+    overlay.dataset.sid = suiviId;
+    document.getElementById('form-formation-credit').reset();
+    overlay.style.display = 'flex';
+}
+
+async function enregistrerCredit(e) {
+    e.preventDefault();
+    const overlay = document.getElementById('modale-formation-credit');
+    const suiviId = overlay.dataset.sid;
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const num = id => parseFloat(document.getElementById(id).value) || 0;
+    const credits = formationJson(suivi.fields['Crédits'], []).slice();
+    credits.push({
+        id: `c${Date.now()}`,
+        libelle: document.getElementById('credit-libelle').value.trim(),
+        heures: num('credit-heures'), vols: num('credit-vols'),
+        dc: num('credit-dc'), solo: num('credit-solo'), simu: num('credit-simu'),
+        att: num('credit-att')
+    });
+    try {
+        await patchSuivi(suiviId, { 'Crédits': credits });
+        overlay.style.display = 'none';
+        renderDetailSuivi();
+    } catch (err) { console.error(err); alert('Erreur lors de l\'ajout.'); }
+}
+
+async function supprimerCredit(suiviId, creditId) {
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const credits = formationJson(suivi.fields['Crédits'], []).filter(c => String(c.id) !== String(creditId));
+    try {
+        await patchSuivi(suiviId, { 'Crédits': credits });
+        renderDetailSuivi();
+    } catch (e) { console.error(e); alert('Erreur lors de la suppression.'); }
 }
 
 // ---------------------------------------------------------------------------
@@ -1385,13 +1459,14 @@ function initFormation() {
         ['btn-close-formation-editeur', 'modale-formation-editeur'],
         ['btn-close-formation-attribuer', 'modale-formation-attribuer'],
         ['btn-close-formation-catalogue', 'modale-formation-catalogue'],
-        ['btn-close-formation-fiche', 'modale-formation-fiche']
+        ['btn-close-formation-fiche', 'modale-formation-fiche'],
+        ['btn-close-formation-credit', 'modale-formation-credit']
     ];
     liaisons.forEach(([btn, mod]) => {
         const b = document.getElementById(btn);
         if (b) b.addEventListener('click', () => fermer(mod));
     });
-    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-catalogue, #modale-formation-fiche')
+    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-catalogue, #modale-formation-fiche, #modale-formation-credit')
         .forEach(o => o.addEventListener('click', (e) => { if (e.target === o) o.style.display = 'none'; }));
     const f1 = document.getElementById('form-formation-editeur');
     if (f1) f1.addEventListener('submit', enregistrerFormationEdit);
@@ -1399,6 +1474,8 @@ function initFormation() {
     if (f2) f2.addEventListener('submit', enregistrerAttribution);
     const f5 = document.getElementById('form-formation-fiche');
     if (f5) f5.addEventListener('submit', enregistrerFiche);
+    const f6 = document.getElementById('form-formation-credit');
+    if (f6) f6.addEventListener('submit', enregistrerCredit);
     const btnCat = document.getElementById('btn-formation-nouvelle');
     if (btnCat) btnCat.addEventListener('click', () => ouvrirEditeurFormation(null));
     const btnLecon = document.getElementById('btn-formation-lecon-add');

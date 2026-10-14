@@ -1764,6 +1764,52 @@
         </div>
     </div>
 
+    <!-- Modale : Crédit manuel (heures/vols hors carnet) -->
+    <div id="modale-formation-credit" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:420px; width:100%;">
+            <button type="button" id="btn-close-formation-credit" class="close-modal">&times;</button>
+            <h3>✋ Ajouter un vol / des heures</h3>
+            <p class="header-sub" style="margin:0 0 10px;">Heures ou vols non présents dans le carnet (expérience antérieure, autre club…). Ils comptent dans les minimas.</p>
+            <form id="form-formation-credit">
+                <div class="form-group">
+                    <label for="credit-libelle">Libellé *</label>
+                    <input type="text" id="credit-libelle" placeholder="Ex : vols antérieurs club X" required>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="credit-heures">Heures totales</label>
+                        <input type="number" id="credit-heures" min="0" step="0.1" placeholder="h">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="credit-vols">Vols</label>
+                        <input type="number" id="credit-vols" min="0" step="1">
+                    </div>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="credit-dc">DC</label>
+                        <input type="number" id="credit-dc" min="0" step="0.1" placeholder="h">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="credit-solo">Solo</label>
+                        <input type="number" id="credit-solo" min="0" step="0.1" placeholder="h">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="credit-simu">Simu</label>
+                        <input type="number" id="credit-simu" min="0" step="0.1" placeholder="h">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="credit-att">Att.</label>
+                        <input type="number" id="credit-att" min="0" step="1">
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top:15px;">
+                    <button type="submit" class="btn-submit">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modale : Déclarer une disponibilité instructeur -->
     <div id="disponibilite-instructeur-modal" class="modal">
         <div class="modal-content">
@@ -1812,8 +1858,8 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
-    <script src="formation.js?v=5c6a3b7bef"></script>
-    <script src="version.js?v=20261014121157"></script>
+    <script src="formation.js?v=def53b6758"></script>
+    <script src="version.js?v=20261014121642"></script>
     <script src="app.js?v=a87ff05606"></script>
     <script src="utils.js?v=34bd013fe7"></script>
     <script src="presences.js?v=5da5f247ed"></script>
