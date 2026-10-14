@@ -283,7 +283,7 @@ async function renderDetailSuivi() {
                 <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="module-valide" data-sid="${suivi.id}" data-mid="${escapeHtml(mo.id)}">Valider</button>` : '';
             return `<div class="formation-doc module-ligne">
                 <span class="module-titre">${fait ? '✅' : '⬜'} ${escapeHtml(mo.titre)}</span>
-                <span class="module-actions"><span class="formation-carte-sub" style="white-space:nowrap;">${fait ? `validé le ${escapeHtml(mo.date || '')}` : 'en attente'}</span>${zone}</span></div>`;
+                <span class="module-actions">${fait ? `<span class="formation-carte-sub" style="white-space:nowrap;">validé le ${escapeHtml(mo.date || '')}</span>` : ''}${zone}</span></div>`;
         }).join('')}</div>` : '<div class="formation-vide">Aucun module.</div>';
     const ressources = formationJson(f['Ressources'], []);
     const ressourcesHtml = ressources.length ? `
