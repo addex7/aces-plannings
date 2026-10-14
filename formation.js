@@ -255,9 +255,7 @@ async function renderDetailSuivi() {
 
     const boutonsInstructeur = instructeur ? `
         <button class="btn-primary" data-formation-action="seance" data-sid="${suivi.id}">✈️ Nouvelle séance</button>
-        <button class="btn-secondary" data-formation-action="minimas" data-sid="${suivi.id}">⏱ Minimas</button>
-        <button class="btn-secondary" data-formation-action="doc" data-sid="${suivi.id}">📄 Demander un document</button>
-        ${statut === 'Ouverte' ? `<button class="btn-secondary" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
+        ${statut === 'Ouverte' ? `<button class="btn-secondary" id="btn-terminer-suivi" disabled title="Vérification des prérequis…" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
         ${statut !== 'Archivée' ? `<button class="btn-secondary" data-formation-action="archiver" data-sid="${suivi.id}">🗄 Archiver</button>` : `<button class="btn-secondary" data-formation-action="rouvrir" data-sid="${suivi.id}">↩️ Désarchiver</button>`}
         <button class="btn-secondary" style="color:#b91c1c;" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : '';
     majActionsEntete(`
@@ -337,60 +335,93 @@ async function renderDetailSuivi() {
         ${seancesDuSuivi(suivi.id).map(s => renderSeance(s, instructeur)).join('') || '<div class="formation-vide">Aucune séance enregistrée.</div>'}
     `;
 
-    // Statistiques vols vs minimas (charge en arriere-plan)
-    chargerStatsVols(suivi, minimas).then(html => {
+    // Statistiques vols vs minimas + verrouillage du bouton Terminer
+    calculerStatsSuivi(suivi).then(stats => {
         const el = document.getElementById(statsVolsId);
-        if (el) el.innerHTML = html;
+        if (el) el.innerHTML = renderMinimasHtml(stats, minimas);
+        const btn = document.getElementById('btn-terminer-suivi');
+        if (btn) {
+            const manques = manquesTerminaison(suivi, minimas, p, stats);
+            btn.disabled = manques.length > 0;
+            btn.title = manques.length
+                ? `Prérequis restants :\n• ${manques.join('\n• ')}`
+                : 'Tous les prérequis sont validés';
+        }
     });
 }
 
-// Panneau des minimas : chaque exigence avec sa progression, calculee
-// automatiquement depuis les seances (HDV) et le carnet de l'eleve.
-async function chargerStatsVols(suivi, minimas) {
-    try {
-        const seances = seancesDuSuivi(suivi.id);
-        let dc = 0, solo = 0, simu = 0, att = 0;
-        seances.forEach(s => {
-            dc += parseFloat(s.fields['HDV DC']) || 0;
-            solo += parseFloat(s.fields['HDV solo']) || 0;
-            simu += parseFloat(s.fields['HDV simu']) || 0;
-            att += parseInt(s.fields['Atterrissages'], 10) || 0;
-        });
-        const nomEleve = suivi.fields['Élève nom'] || '';
-        let nbVols = 0, minutes = 0;
-        if (nomEleve) {
+// Compteurs du suivi : HDV par type + atterrissages depuis les seances,
+// total heures/vols depuis le carnet de l'eleve depuis la date de debut.
+async function calculerStatsSuivi(suivi) {
+    const seances = seancesDuSuivi(suivi.id);
+    let dc = 0, solo = 0, simu = 0, att = 0;
+    seances.forEach(s => {
+        dc += parseFloat(s.fields['HDV DC']) || 0;
+        solo += parseFloat(s.fields['HDV solo']) || 0;
+        simu += parseFloat(s.fields['HDV simu']) || 0;
+        att += parseInt(s.fields['Atterrissages'], 10) || 0;
+    });
+    let nbVols = 0, heures = 0;
+    const nomEleve = suivi.fields['Élève nom'] || '';
+    if (nomEleve) {
+        try {
             const vols = await chargerVolsEleve(nomEleve);
             const debut = suivi.fields['Date début'] || '1900-01-01';
             const deduis = vols.filter(v => String(v.fields['Date'] || '') >= String(debut));
             nbVols = deduis.length;
-            deduis.forEach(v => { minutes += (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0); });
-        }
-        const hTxt = v => { const h = Math.floor(v), m = Math.round((v - h) * 60); return `${h}h${String(m).padStart(2, '0')}`; };
-        const ligne = (label, val, req, enHeures) => {
-            const vTxt = enHeures ? hTxt(val) : val;
-            const rTxt = req ? (enHeures ? hTxt(req) : req) : null;
-            const pct = req ? Math.min(100, Math.round(val * 100 / req)) : null;
-            const c = pct === null ? '' : couleurProgression(pct);
-            return `<div class="mini-ligne">
-                <div class="mini-tete"><span>${label}</span><strong>${vTxt}${rTxt ? ` / ${rTxt}` : ''}</strong></div>
-                ${pct !== null ? `<div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%;background:${c};"></div></div>` : ''}
-            </div>`;
-        };
-        const reqH = Number(minimas.heures || 0), reqV = Number(minimas.vols || 0);
-        const reqDC = Number(minimas.heuresDC || 0), reqSolo = Number(minimas.heuresSolo || 0), reqAtt = Number(minimas.atterrissages || 0);
-        const lignes = [
-            ligne('Heures totales', minutes / 60, reqH, true),
-            ligne('Vols', nbVols, reqV, false),
-            ligne('Double commande', dc, reqDC, true),
-            ligne('Solo', solo, reqSolo, true),
-            simu ? ligne('Simulateur', simu, 0, true) : '',
-            (att || reqAtt) ? ligne('Atterrissages', att, reqAtt, false) : ''
-        ].filter(Boolean);
-        const aDesHdv = dc || solo || simu || att;
-        return lignes.join('') +
-            (aDesHdv ? '' : '<div class="formation-carte-sub">DC/solo/simu comptés depuis les séances.</div>') +
-            (minimas.cas ? `<div class="formation-carte-sub" style="margin-top:6px;">Cas appliqué : « ${escapeHtml(minimas.cas)} »</div>` : '');
-    } catch (e) { return '<div class="formation-carte-sub">Erreur de comptage.</div>'; }
+            deduis.forEach(v => { heures += (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0) / 60; });
+        } catch (e) { console.error('Stats suivi:', e); }
+    }
+    return { dc, solo, simu, att, nbVols, heures };
+}
+
+// Panneau des minimas : chaque exigence avec sa barre de progression.
+function renderMinimasHtml(stats, minimas) {
+    const hTxt = v => { const h = Math.floor(v), m = Math.round((v - h) * 60); return `${h}h${String(m).padStart(2, '0')}`; };
+    const ligne = (label, val, req, enHeures) => {
+        const vTxt = enHeures ? hTxt(val) : val;
+        const rTxt = req ? (enHeures ? hTxt(req) : req) : null;
+        const pct = req ? Math.min(100, Math.round(val * 100 / req)) : null;
+        const c = pct === null ? '' : couleurProgression(pct);
+        return `<div class="mini-ligne">
+            <div class="mini-tete"><span>${label}</span><strong>${vTxt}${rTxt ? ` / ${rTxt}` : ''}</strong></div>
+            ${pct !== null ? `<div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%;background:${c};"></div></div>` : ''}
+        </div>`;
+    };
+    const lignes = [
+        ligne('Heures totales', stats.heures, Number(minimas.heures || 0), true),
+        ligne('Vols', stats.nbVols, Number(minimas.vols || 0), false),
+        ligne('Double commande', stats.dc, Number(minimas.heuresDC || 0), true),
+        ligne('Solo', stats.solo, Number(minimas.heuresSolo || 0), true),
+        stats.simu ? ligne('Simulateur', stats.simu, 0, true) : '',
+        (stats.att || minimas.atterrissages) ? ligne('Atterrissages', stats.att, Number(minimas.atterrissages || 0), false) : ''
+    ].filter(Boolean);
+    const aDesHdv = stats.dc || stats.solo || stats.simu || stats.att;
+    return lignes.join('') +
+        (aDesHdv ? '' : '<div class="formation-carte-sub">DC/solo/simu comptés depuis les séances.</div>') +
+        (minimas.cas ? `<div class="formation-carte-sub" style="margin-top:6px;">Cas appliqué : « ${escapeHtml(minimas.cas)} »</div>` : '');
+}
+
+// Ce qui manque encore avant de pouvoir terminer le suivi :
+// items pratiques, modules theoriques, documents et minimas.
+function manquesTerminaison(suivi, minimas, p, stats) {
+    const manques = [];
+    const f = suivi.fields;
+    if (p.total && p.faits < p.total) manques.push(`${p.total - p.faits} item(s) pratique(s) non acquis`);
+    const modules = formationJson(f['Modules'], []);
+    const restM = modules.filter(m => !m.statut).length;
+    if (restM) manques.push(`${restM} module(s) théorique(s) à valider`);
+    const today = new Date().toISOString().slice(0, 10);
+    const docs = formationJson(f['Documentation'], []);
+    const restD = docs.filter(d => d.statut !== 'Fourni' || (d.dateValidite && d.dateValidite < today)).length;
+    if (restD) manques.push(`${restD} document(s) manquant(s) ou expiré(s)`);
+    const req = (cle) => Number(minimas[cle] || 0);
+    if (req('heures') && stats.heures < req('heures')) manques.push(`heures totales insuffisantes`);
+    if (req('vols') && stats.nbVols < req('vols')) manques.push(`vols insuffisants`);
+    if (req('heuresDC') && stats.dc < req('heuresDC')) manques.push(`heures en double commande insuffisantes`);
+    if (req('heuresSolo') && stats.solo < req('heuresSolo')) manques.push(`heures solo insuffisantes`);
+    if (req('atterrissages') && stats.att < req('atterrissages')) manques.push(`atterrissages insuffisants`);
+    return manques;
 }
 
 function renderDoc(suivi, d, instructeur) {
@@ -506,8 +537,6 @@ document.addEventListener('click', (e) => {
     else if (a === 'seance-save') enregistrerPageSeance();
     else if (a === 'seance-edit') ouvrirPageSeance(sid, el.dataset.seid);
     else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
-    else if (a === 'minimas') ouvrirModaleMinimas(sid);
-    else if (a === 'doc') demanderDocument(sid);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'module-valide') validerModule(sid, el.dataset.mid);
     else if (a === 'fiche') ouvrirFicheEleve(sid);
@@ -517,6 +546,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'signer') signerSeance(sid);
     else if (a === 'editer-formation') ouvrirEditeurFormation(el.dataset.fid || null);
     else if (a === 'suppr-formation') supprimerFormation(el.dataset.fid);
+    else if (a === 'masquer-formation') basculerMasqueeFormation(el.dataset.fid);
     else if (a === 'suppr-suivi') supprimerSuivi(sid);
     else if (a === 'lecon-suppr') el.closest('.formation-lecon-edit').remove();
     else if (a === 'mini-suppr') el.closest('.formation-mini-edit').remove();
@@ -622,18 +652,6 @@ async function changerStatutSuivi(suiviId, statut) {
     } catch (e) { console.error(e); alert('Erreur lors du changement de statut.'); }
 }
 
-async function demanderDocument(suiviId) {
-    const titre = await demanderSaisie('Document à demander à l\'élève', '', { placeholder: 'Ex : copie de la licence, certificat médical…' });
-    if (titre === null || !titre.trim()) return;
-    const suivi = suivisCache.find(s => s.id === suiviId);
-    const docs = formationJson(suivi.fields['Documentation'], []).slice();
-    docs.push({ id: `d${Date.now()}`, titre: titre.trim(), statut: 'Demandé', dateDemande: new Date().toISOString().slice(0, 10) });
-    try {
-        await patchSuivi(suiviId, { 'Documentation': docs });
-        if (suiviOuvertId) renderDetailSuivi();
-    } catch (e) { console.error(e); alert('Erreur lors de la demande.'); }
-}
-
 // L'eleve depose un document demande : fichier facultatif (upload /v0/upload)
 // + date de validite. Le serveur n'autorise l'eleve qu'a completer les items
 // existants (longueur et titres conserves — verifie cote backend).
@@ -679,15 +697,40 @@ async function validerModule(suiviId, moduleId) {
 // FICHE ELEVE (etat civil + contact d'urgence — livret GEN 1)
 // L'eleve peut completer sa propre fiche (auto-edition verifiee cote serveur).
 // ---------------------------------------------------------------------------
-function ouvrirFicheEleve(suiviId) {
+// Recupere la fiche membre (Utilisateurs) de l'eleve du suivi, pour
+// synchroniser les infos communes : naissance, lieu, telephone, mail, adresse.
+async function membreDuSuivi(suivi) {
+    const eleveId = (suivi.fields['Élève'] || [])[0];
+    if (!eleveId) return null;
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Utilisateurs')}/${eleveId}`, { headers });
+        return res.ok ? await res.json() : null;
+    } catch (e) { return null; }
+}
+// Champs partages entre la fiche eleve (Etat civil) et la fiche membre.
+const CHAMPS_FICHE_MEMBRE = [
+    ['naissance', 'Date de naissance'], ['lieuNaissance', 'Lieu de naissance'],
+    ['telephone', 'Téléphone'], ['email', 'Mail'], ['adresse', 'Adresse']
+];
+
+async function ouvrirFicheEleve(suiviId) {
     const suivi = suivisCache.find(s => s.id === suiviId);
     if (!suivi) return;
     const ec = formationJson(suivi.fields['Etat civil'], {}) || {};
+    const membre = await membreDuSuivi(suivi);
+    const mf = (membre && membre.fields) || {};
+    // La valeur du suivi prime si remplie ; sinon on prend la fiche membre.
+    const pick = (cle) => {
+        const e = ec[cle];
+        if (e !== undefined && e !== null && String(e).trim() !== '') return e;
+        const m = CHAMPS_FICHE_MEMBRE.find(([c]) => c === cle);
+        return m ? (mf[m[1]] || '') : '';
+    };
     const set = (id, v) => { document.getElementById(id).value = v || ''; };
-    set('fiche-naissance', ec.naissance); set('fiche-lieu-naissance', ec.lieuNaissance);
-    set('fiche-nationalite', ec.nationalite); set('fiche-telephone', ec.telephone);
-    set('fiche-email', ec.email); set('fiche-adresse', ec.adresse);
-    set('fiche-urgence-nom', ec.urgenceNom); set('fiche-urgence-tel', ec.urgenceTel);
+    set('fiche-naissance', pick('naissance')); set('fiche-lieu-naissance', pick('lieuNaissance'));
+    set('fiche-nationalite', pick('nationalite')); set('fiche-telephone', pick('telephone'));
+    set('fiche-email', pick('email')); set('fiche-adresse', pick('adresse'));
+    set('fiche-urgence-nom', pick('urgenceNom')); set('fiche-urgence-tel', pick('urgenceTel'));
     const overlay = document.getElementById('modale-formation-fiche');
     overlay.dataset.sid = suiviId;
     overlay.style.display = 'flex';
@@ -703,48 +746,22 @@ async function enregistrerFiche(e) {
         telephone: val('fiche-telephone'), email: val('fiche-email'), adresse: val('fiche-adresse'),
         urgenceNom: val('fiche-urgence-nom'), urgenceTel: val('fiche-urgence-tel')
     };
+    const suiviId = overlay.dataset.sid;
     try {
-        await patchSuivi(overlay.dataset.sid, { 'Etat civil': ec });
+        await patchSuivi(suiviId, { 'Etat civil': ec });
+        // Retour de la sync : les champs communs sont aussi reportes sur la
+        // fiche membre (possible pour l'eleve lui-meme et le Super admin).
+        const suivi = suivisCache.find(s => s.id === suiviId);
+        const eleveId = suivi ? (suivi.fields['Élève'] || [])[0] : null;
+        if (eleveId && (eleveId === (currentUser && currentUser.id) || isSuperAdmin())) {
+            const fields = {};
+            CHAMPS_FICHE_MEMBRE.forEach(([cle, champ]) => { fields[champ] = ec[cle] || null; });
+            await cachedFetch(`${API_BASE}/${encodeURIComponent('Utilisateurs')}/${eleveId}`, {
+                method: 'PATCH', headers, body: JSON.stringify({ fields })
+            }).catch(() => {});
+        }
         overlay.style.display = 'none';
     } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement de la fiche.'); }
-}
-
-// ---------------------------------------------------------------------------
-// MODALE MINIMAS
-// ---------------------------------------------------------------------------
-function ouvrirModaleMinimas(suiviId) {
-    const suivi = suivisCache.find(s => s.id === suiviId);
-    if (!suivi) return;
-    const m = formationJson(suivi.fields['Minimas'], {});
-    const overlay = document.getElementById('modale-formation-minimas');
-    document.getElementById('minimas-heures').value = m.heures ?? '';
-    document.getElementById('minimas-vols').value = m.vols ?? '';
-    document.getElementById('minimas-hdc').value = m.heuresDC ?? '';
-    document.getElementById('minimas-hsolo').value = m.heuresSolo ?? '';
-    document.getElementById('minimas-att').value = m.atterrissages ?? '';
-    overlay.style.display = 'flex';
-    overlay.dataset.sid = suiviId;
-}
-
-async function enregistrerMinimas(e) {
-    e.preventDefault();
-    const overlay = document.getElementById('modale-formation-minimas');
-    const suiviId = overlay.dataset.sid;
-    const suivi = suivisCache.find(s => s.id === suiviId);
-    const actuel = suivi ? (formationJson(suivi.fields['Minimas'], {}) || {}) : {};
-    const minimas = {
-        heures: parseFloat(document.getElementById('minimas-heures').value) || 0,
-        vols: parseInt(document.getElementById('minimas-vols').value, 10) || 0,
-        heuresDC: parseFloat(document.getElementById('minimas-hdc').value) || 0,
-        heuresSolo: parseFloat(document.getElementById('minimas-hsolo').value) || 0,
-        atterrissages: parseInt(document.getElementById('minimas-att').value, 10) || 0
-    };
-    if (actuel.cas) minimas.cas = actuel.cas; // conserve le cas applique
-    try {
-        await patchSuivi(suiviId, { 'Minimas': minimas });
-        overlay.style.display = 'none';
-        renderDetailSuivi();
-    } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement des minimas.'); }
 }
 
 // ---------------------------------------------------------------------------
@@ -765,7 +782,7 @@ async function ouvrirModaleAttribuer() {
     actifs.sort((a, b) => `${a.fields['Prénom']} ${a.fields['Nom']}`.localeCompare(`${b.fields['Prénom']} ${b.fields['Nom']}`));
     selEleve.innerHTML = '<option value="">— Choisir un élève —</option>' +
         actifs.map(m => `<option value="${m.id}">${escapeHtml(`${m.fields['Prénom'] || ''} ${m.fields['Nom'] || ''}`.trim())}</option>`).join('');
-    const formations = formationsCache.filter(f => f.fields['Actif'] !== false);
+    const formations = formationsTriees().filter(f => f.fields['Actif'] !== false && !f.fields['Masquée']);
     selForm.innerHTML = '<option value="">— Choisir une formation —</option>' +
         formations.map(f => `<option value="${f.id}">${escapeHtml(f.fields['Titre'] || 'Formation')}</option>`).join('');
     document.getElementById('attribuer-date').value = new Date().toISOString().slice(0, 10);
@@ -852,20 +869,50 @@ async function enregistrerAttribution(e) {
 // ---------------------------------------------------------------------------
 // CATALOGUE DES FORMATIONS (creation / edition lecons + items)
 // ---------------------------------------------------------------------------
+// Catalogue trie par titre ; les formations masquees passent en fin de liste.
+function formationsTriees() {
+    return (formationsCache || []).slice().sort((a, b) =>
+        String(a.fields['Titre'] || '').localeCompare(String(b.fields['Titre'] || ''), 'fr', { sensitivity: 'base' }) ||
+        String(a.id).localeCompare(String(b.id)));
+}
+
 function ouvrirGestionCatalogue() {
     const overlay = document.getElementById('modale-formation-catalogue');
     const liste = document.getElementById('catalogue-liste');
-    liste.innerHTML = formationsCache.map(f => {
+    const visibles = formationsTriees().filter(f => !f.fields['Masquée']);
+    const masquees = formationsTriees().filter(f => f.fields['Masquée']);
+    const ligne = (f, masquee) => {
         const lecons = formationJson(f.fields['Lecons'], []);
-        return `<div class="formation-doc">
-            <span><strong>${escapeHtml(f.fields['Titre'] || '')}</strong> <span class="formation-carte-sub">${escapeHtml(f.fields['Discipline'] || '')} · ${lecons.length} leçon(s)</span></span>
+        return `<div class="formation-doc" ${masquee ? 'style="opacity:0.55;"' : ''}>
+            <span><strong>${escapeHtml(f.fields['Titre'] || '')}</strong> <span class="formation-carte-sub">${escapeHtml(f.fields['Discipline'] || '')} · ${lecons.length} leçon(s)${masquee ? ' · masquée' : ''}</span></span>
             <span>
                 <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="editer-formation" data-fid="${f.id}">✏️ Modifier</button>
+                <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" title="${masquee ? 'Réafficher' : 'Masquer'}" data-formation-action="masquer-formation" data-fid="${f.id}">${masquee ? '👁' : '🚫'}</button>
                 <button class="btn-secondary" style="padding:4px 10px;font-size:12px;color:#b91c1c;" data-formation-action="suppr-formation" data-fid="${f.id}">🗑</button>
             </span>
         </div>`;
-    }).join('') || '<div class="formation-vide">Aucune formation au catalogue.</div>';
+    };
+    liste.innerHTML =
+        visibles.map(f => ligne(f, false)).join('') +
+        (masquees.length ? `<h5 class="formation-phase-titre">Masquées</h5>` + masquees.map(f => ligne(f, true)).join('') : '')
+        || '<div class="formation-vide">Aucune formation au catalogue.</div>';
     overlay.style.display = 'flex';
+}
+
+// Masquer/reafficher une formation du catalogue (elle reste utilisable
+// dans les suivis existants mais disparait de la liste d'attribution).
+async function basculerMasqueeFormation(fid) {
+    const f = formationsCache.find(x => x.id === fid);
+    if (!f) return;
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS)}/${fid}`, {
+            method: 'PATCH', headers, body: JSON.stringify({ fields: { 'Masquée': !f.fields['Masquée'] } })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        invaliderFormationCache();
+        await chargerFormationsCatalogue(true);
+        ouvrirGestionCatalogue();
+    } catch (e) { console.error(e); alert('Erreur lors de la mise à jour.'); }
 }
 
 function blocLeconHtml(lecon, idx) {
@@ -1337,7 +1384,6 @@ function initFormation() {
     const liaisons = [
         ['btn-close-formation-editeur', 'modale-formation-editeur'],
         ['btn-close-formation-attribuer', 'modale-formation-attribuer'],
-        ['btn-close-formation-minimas', 'modale-formation-minimas'],
         ['btn-close-formation-catalogue', 'modale-formation-catalogue'],
         ['btn-close-formation-fiche', 'modale-formation-fiche']
     ];
@@ -1345,14 +1391,12 @@ function initFormation() {
         const b = document.getElementById(btn);
         if (b) b.addEventListener('click', () => fermer(mod));
     });
-    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-minimas, #modale-formation-catalogue, #modale-formation-fiche')
+    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-catalogue, #modale-formation-fiche')
         .forEach(o => o.addEventListener('click', (e) => { if (e.target === o) o.style.display = 'none'; }));
     const f1 = document.getElementById('form-formation-editeur');
     if (f1) f1.addEventListener('submit', enregistrerFormationEdit);
     const f2 = document.getElementById('form-formation-attribuer');
     if (f2) f2.addEventListener('submit', enregistrerAttribution);
-    const f4 = document.getElementById('form-formation-minimas');
-    if (f4) f4.addEventListener('submit', enregistrerMinimas);
     const f5 = document.getElementById('form-formation-fiche');
     if (f5) f5.addEventListener('submit', enregistrerFiche);
     const btnCat = document.getElementById('btn-formation-nouvelle');
