@@ -461,6 +461,9 @@ function apiFetch(url, options = {}, maxEssais = 3) {
     if (typeof nomPiloteCourant === 'function' && !opts.headers['X-User-Name']) {
         opts.headers['X-User-Name'] = nomPiloteCourant();
     }
+    // Une ecriture invalide les GET deja en vol : ils repondraient avec
+    // des donnees d'avant l'ecriture.
+    if (method !== 'GET') _apiEnVol.clear();
     // Dedoublonne les GET identiques deja en vol (clone pour ne pas consommer le body partage).
     if (method === 'GET' && _apiEnVol.has(cle)) return _apiEnVol.get(cle).then(r => r.clone());
     const promesse = _apiExecuterAvecRetry(url, opts, maxEssais);
@@ -516,6 +519,9 @@ async function fetchTousRecordsCache(url, options = {}, ttl = API_CACHE_TTL, for
 
 function viderApiCache() {
     Object.keys(API_CACHE).forEach(k => delete API_CACHE[k]);
+    // Les GET deja en vol ont demarre avant l'ecriture : leurs reponses
+    // sont potentiellement perimees — on ne doit plus les reutiliser.
+    if (typeof _apiEnVol !== 'undefined') _apiEnVol.clear();
 }
 
 async function cachedFetch(url, options = {}, ttl = API_CACHE_TTL, force = false) {

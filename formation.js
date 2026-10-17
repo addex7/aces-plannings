@@ -18,6 +18,7 @@ let suiviOuvertId = null;
 let eleveAFormation = null; // null = inconnu
 let membresFormationCache = [];
 let recherchePilote = '';
+let statsRenderSeq = 0;
 
 // Heures decimales (centiemes) -> affichage h:mm (ex. 0.6 -> "0h36").
 function hdvVersHmin(v) {
@@ -368,8 +369,12 @@ async function renderDetailSuivi() {
         </div>
     `;
 
-    // Statistiques vols vs minimas + verrouillage du bouton Terminer
+    // Statistiques vols vs minimas + verrouillage du bouton Terminer.
+    // Si un autre render a eu lieu entre-temps, on ignore cette reponse
+    // (elle repose sur un suivi potentiellement perime).
+    const seq = ++statsRenderSeq;
     calculerStatsSuivi(suivi).then(stats => {
+        if (seq !== statsRenderSeq) return;
         const el = document.getElementById(statsVolsId);
         if (el) el.innerHTML = renderMinimasHtml(stats, minimas, suivi, instructeur);
         const btn = document.getElementById('btn-terminer-suivi');
