@@ -5902,6 +5902,22 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     text-decoration: underline;
     text-decoration-style: dotted;
 }
+.seance-detail-btn {
+    margin-top: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+}
+.seance-items {
+    margin-top: 6px;
+    padding: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
 .formation-lecon-edit {
     border: 1px solid #e2e8f0;
     border-radius: 10px;

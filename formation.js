@@ -617,8 +617,37 @@ function renderSeance(s, instructeur, gele) {
             ${f['Météo'] ? `<div class="formation-carte-sub">🌦 ${escapeHtml(f['Météo'])}</div>` : ''}
             ${comptes ? `<div class="formation-carte-sub">${escapeHtml(comptes)}</div>` : ''}
             ${f['Commentaire'] ? `<div class="formation-commentaire">${escapeHtml(f['Commentaire']).replace(/\n/g, '<br>')}</div>` : ''}
+            <button type="button" class="btn-secondary seance-detail-btn" data-formation-action="seance-items" data-seid="${s.id}">▸ Détail des items</button>
+            <div class="seance-items" id="seance-items-${s.id}" style="display:none;"></div>
             ${sigs}
         </div>`;
+}
+
+// Deplie le detail des items d'une seance (acquis / en cours / a refaire).
+function basculerDetailSeance(seanceId, btn) {
+    const el = document.getElementById(`seance-items-${seanceId}`);
+    const s = (seancesCache || []).find(x => x.id === seanceId);
+    if (!el || !s) return;
+    if (el.dataset.rempli !== '1') {
+        const suivi = (suivisCache || []).find(x => x.id === String(s.fields['Suivi'] || ''));
+        const lecons = formationJson(suivi ? suivi.fields['Lecons'] : null, []);
+        const parLecon = new Map(lecons.map(l => [String(l.id), l]));
+        const ligne = x => {
+            const l = parLecon.get(String(x.lecon));
+            const libelle = (l && l.items && l.items[x.item]) || `item ${x.item}`;
+            const titre = l ? (l.titre || l.nom || '') : '';
+            return `<div class="formation-item">${ETATS_ITEM[x.etat] || '⬜'} ${escapeHtml(titre ? titre + ' — ' : '')}${escapeHtml(libelle)}</div>`;
+        };
+        // Nouveau format (Items avec etat) + ancien (Items validés/reportés).
+        const lignes = formationJson(s.fields['Items'], []).map(ligne);
+        formationJson(s.fields['Items validés'], []).forEach(x => lignes.push(ligne({ ...x, etat: 'acquis' })));
+        formationJson(s.fields['Items reportés'], []).forEach(x => lignes.push(ligne({ ...x, etat: 'arefaire' })));
+        el.innerHTML = lignes.length ? lignes.join('') : '<div class="formation-carte-sub">Aucun item noté sur cette séance.</div>';
+        el.dataset.rempli = '1';
+    }
+    const ouvert = el.style.display === 'none';
+    el.style.display = ouvert ? 'flex' : 'none';
+    if (btn) btn.textContent = ouvert ? '▾ Détail des items' : '▸ Détail des items';
 }
 
 // ---------------------------------------------------------------------------
@@ -669,6 +698,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'seance-edit') ouvrirPageSeance(sid, el.dataset.seid);
     else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
     else if (a === 'sig-voir') voirSignatureSeance(el.dataset.seid, el.dataset.qui);
+    else if (a === 'seance-items') basculerDetailSeance(el.dataset.seid, el);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'doc-add') ajouterDocumentDemande(sid);
     else if (a === 'doc-pick-membre') choisirDocumentMembre(sid, el.dataset.doc);

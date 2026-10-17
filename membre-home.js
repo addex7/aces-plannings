@@ -836,7 +836,8 @@ async function chargerDocumentsMembre() {
         });
         const ligneDocForm = d => {
             let actions = `<a href="${urlSure(d.lien)}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir ↗</a>`;
-            if (isSuperAdmin()) {
+            // Suivi fige (terminee/archivee) : consultation uniquement.
+            if (isSuperAdmin() && !d.gele) {
                 actions += `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="gererDocFormationMembre('rename','${d.suiviId}','${d.id}')">Renommer</button>`;
                 actions += d.archive
                     ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="gererDocFormationMembre('archive','${d.suiviId}','${d.id}')">Restaurer</button>`
@@ -877,8 +878,9 @@ async function chargerDocumentsFormationMembre() {
         const suivis = await fetchTousRecordsCache(url, { headers });
         const docsForm = [];
         suivis.forEach(s => {
+            const gele = (((s.fields || {})['Statut']) || 'Ouverte') !== 'Ouverte';
             formationJson((s.fields || {})['Documentation'], []).forEach(d => {
-                if (d.statut === 'Fourni' && d.lien) docsForm.push({ ...d, suiviId: s.id });
+                if (d.statut === 'Fourni' && d.lien) docsForm.push({ ...d, suiviId: s.id, gele });
             });
         });
         return docsForm;
@@ -896,6 +898,10 @@ async function gererDocFormationMembre(action, suiviId, docId) {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}/${encodeURIComponent(suiviId)}`, { headers });
         const data = await res.json();
         if (!res.ok) { alert('Erreur de lecture du suivi.'); return; }
+        if (((data.fields || {})['Statut'] || 'Ouverte') !== 'Ouverte') {
+            alert('Cette formation est figée : le document reste consultable mais non modifiable.');
+            return;
+        }
         const docs = formationJson((data.fields || {})['Documentation'], []);
         const doc = docs.find(d => String(d.id) === String(docId));
         if (!doc) { alert('Document introuvable dans le suivi.'); return; }
