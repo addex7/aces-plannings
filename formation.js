@@ -275,6 +275,8 @@ async function renderDetailSuivi() {
     const instructeur = estInstructeurFormation();
     const p = progressionSuivi(suivi);
     const statut = f['Statut'] || 'Ouverte';
+    // Formation terminee ou archivee : figee, consultation uniquement.
+    const gele = statut !== 'Ouverte';
     const minimas = formationJson(f['Minimas'], {});
     const docs = formationJson(f['Documentation'], []);
 
@@ -282,10 +284,10 @@ async function renderDetailSuivi() {
     const statsVolsId = `formation-stats-${suivi.id}`;
 
     const boutonsInstructeur = instructeur ? `
-        <button class="btn-primary" data-formation-action="seance" data-sid="${suivi.id}">✈️ Nouvelle séance</button>
-        ${statut === 'Ouverte' ? `<button class="btn-primary" id="btn-terminer-suivi" disabled title="Vérification des prérequis…" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
+        ${!gele ? `<button class="btn-primary" data-formation-action="seance" data-sid="${suivi.id}">✈️ Nouvelle séance</button>
+        <button class="btn-primary" id="btn-terminer-suivi" disabled title="Vérification des prérequis…" data-formation-action="terminer" data-sid="${suivi.id}">🏁 Terminer</button>` : ''}
         ${statut !== 'Archivée' ? `<button class="btn-primary" data-formation-action="archiver" data-sid="${suivi.id}">🗄 Archiver</button>` : `<button class="btn-primary" data-formation-action="rouvrir" data-sid="${suivi.id}">↩️ Désarchiver</button>`}
-        <button class="btn-primary" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : '';
+        ${!gele ? `<button class="btn-primary" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : ''}` : '';
     majActionsEntete(`
         <button class="btn-primary" data-formation-action="retour">← Retour</button>
         <button class="btn-primary" data-formation-action="fiche" data-sid="${suivi.id}">👤 Fiche élève</button>
@@ -306,7 +308,7 @@ async function renderDetailSuivi() {
         <div class="formation-docs">${modules.map(mo => {
 
             const fait = !!mo.statut;
-            const zone = (instructeur && !fait) ? `
+            const zone = (instructeur && !fait && !gele) ? `
                 <input type="date" id="module-date-${escapeHtml(mo.id)}" value="${new Date().toISOString().slice(0, 10)}" title="Date de validation" class="module-date-input">
                 <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="module-valide" data-sid="${suivi.id}" data-mid="${escapeHtml(mo.id)}">Valider</button>` : '';
             return `<div class="formation-doc module-ligne">
@@ -323,7 +325,7 @@ async function renderDetailSuivi() {
                 : `<span>🔗 ${escapeHtml(r.titre || '')}</span>`}</div>`;
         }).join('')}</div>` : '';
     const docsHtml = docs.length
-        ? `<div class="formation-docs">${docs.map(d => renderDoc(suivi, d, instructeur)).join('')}</div>`
+        ? `<div class="formation-docs">${docs.map(d => renderDoc(suivi, d, instructeur, gele)).join('')}</div>`
         : '<div class="formation-vide">Aucun document demandé.</div>';
 
     // Colonnes : theorique | documents | minimas (progression auto sur les seances)
@@ -335,14 +337,14 @@ async function renderDetailSuivi() {
             </div>
             <div class="formation-col">
                 <h4 class="formation-col-titre" style="display:flex;align-items:center;justify-content:space-between;">📋 Documents demandés
-                    ${instructeur ? `<button class="btn-secondary" style="padding:2px 8px;font-size:11px;" title="Demander un document supplémentaire" data-formation-action="doc-add" data-sid="${suivi.id}">＋</button>` : ''}
+                    ${instructeur && !gele ? `<button class="btn-secondary" style="padding:2px 8px;font-size:11px;" title="Demander un document supplémentaire" data-formation-action="doc-add" data-sid="${suivi.id}">＋</button>` : ''}
                 </h4>
                 ${docsHtml}
             </div>
             <div class="formation-col">
                 <h4 class="formation-col-titre">⏱ Minimas requis</h4>
                 <div id="${statsVolsId}" class="formation-minimas">Comptage des vols…</div>
-                ${instructeur ? `<button class="btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:11px;" data-formation-action="credit-add" data-sid="${suivi.id}">＋ Ajouter un vol / des heures</button>` : ''}
+                ${instructeur && !gele ? `<button class="btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:11px;" data-formation-action="credit-add" data-sid="${suivi.id}">＋ Ajouter un vol / des heures</button>` : ''}
                 ${ressourcesHtml}
             </div>
         </div>`;
@@ -368,7 +370,7 @@ async function renderDetailSuivi() {
             </div>
             <div>
                 <h4 class="formation-sub-titre">✈️ Journal des séances</h4>
-                ${seancesDuSuivi(suivi.id).map(s => renderSeance(s, instructeur)).join('') || '<div class="formation-vide">Aucune séance enregistrée.</div>'}
+                ${seancesDuSuivi(suivi.id).map(s => renderSeance(s, instructeur, gele)).join('') || '<div class="formation-vide">Aucune séance enregistrée.</div>'}
             </div>
         </div>
     `;
@@ -380,7 +382,7 @@ async function renderDetailSuivi() {
     calculerStatsSuivi(suivi).then(stats => {
         if (seq !== statsRenderSeq) return;
         const el = document.getElementById(statsVolsId);
-        if (el) el.innerHTML = renderMinimasHtml(stats, minimas, suivi, instructeur);
+        if (el) el.innerHTML = renderMinimasHtml(stats, minimas, suivi, instructeur && !gele);
         const btn = document.getElementById('btn-terminer-suivi');
         if (btn) {
             const manques = manquesTerminaison(suivi, minimas, p, stats);
@@ -512,7 +514,7 @@ function manquesTerminaison(suivi, minimas, p, stats) {
     return manques;
 }
 
-function renderDoc(suivi, d, instructeur) {
+function renderDoc(suivi, d, instructeur, gele) {
     const fourni = d.statut === 'Fourni';
     const today = new Date().toISOString().slice(0, 10);
     const expire = fourni && d.dateValidite && d.dateValidite < today;
@@ -522,7 +524,8 @@ function renderDoc(suivi, d, instructeur) {
         : '';
     // Depot possible par l'eleve ET l'instructeur (remise en main propre),
     // ou choix d'un document deja present dans l'espace membre.
-    const depot = (!fourni) ? `
+    // Suivi gele : consultation uniquement.
+    const depot = (!fourni && !gele) ? `
         <div class="formation-doc-depot">
             <input type="file" id="doc-fichier-${escapeHtml(d.id)}" accept=".pdf,.jpg,.jpeg,.png" title="Joindre le document">
             <input type="date" id="doc-validite-${escapeHtml(d.id)}" title="Date de validité (optionnel)">
@@ -532,7 +535,7 @@ function renderDoc(suivi, d, instructeur) {
     const titre = d.lien
         ? `<a href="${urlSure(d.lien)}" target="_blank" rel="noopener" title="Ouvrir la pièce jointe">${escapeHtml(d.titre)}</a>`
         : escapeHtml(d.titre);
-    const actions = instructeur ? `
+    const actions = (instructeur && !gele) ? `
         <span style="display:flex; gap:4px;">
             <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-rename" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Remplacer le document fourni par un autre">✏️</button>
             <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-del" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="${fourni ? 'Retirer la pièce jointe (la demande reste en attente)' : 'Supprimer cette demande de document'}">✕</button>
@@ -565,7 +568,7 @@ function renderLecon(suivi, lecon, idx, p, instructeur) {
         </div>`;
 }
 
-function renderSeance(s, instructeur) {
+function renderSeance(s, instructeur, gele) {
     const f = s.fields;
     const sigI = formationJson(f['Signature instructeur'], null);
     const sigE = formationJson(f['Signature élève'], null);
@@ -589,10 +592,10 @@ function renderSeance(s, instructeur) {
         parseFloat(f['HDV simu']) ? `Simu ${hdvVersHmin(f['HDV simu'])}` : '',
         parseInt(f['Atterrissages'], 10) ? `${f['Atterrissages']} att.` : ''
     ].filter(Boolean).join(' · ');
-    const signer = (!instructeur && !sigE)
+    const signer = (!gele && !instructeur && !sigE)
         ? `<button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="signer" data-sid="${s.id}">✍️ Signer</button>`
         : '';
-    const outils = instructeur ? `
+    const outils = (instructeur && !gele) ? `
         <button class="btn-secondary" style="padding:2px 8px;font-size:12px;margin-left:auto;" title="Modifier la séance (signatures à refaire)" data-formation-action="seance-edit" data-sid="${escapeHtml(f['Suivi'])}" data-seid="${s.id}">✏️</button>
         <button class="btn-secondary" style="padding:2px 8px;font-size:12px;color:#b91c1c;" title="Supprimer la séance" data-formation-action="seance-del" data-seid="${s.id}">🗑</button>` : '';
     const sigs = `<div class="formation-signatures">
@@ -621,11 +624,37 @@ function renderSeance(s, instructeur) {
 // ---------------------------------------------------------------------------
 // ACTIONS COMMUNES (delegation)
 // ---------------------------------------------------------------------------
+// Suivi gele : terminee ou archivee -> consultation uniquement.
+function suiviFige(suivi) {
+    return suivi && (suivi.fields['Statut'] || 'Ouverte') !== 'Ouverte';
+}
+// Actions interdites sur un suivi gele (modifications et suppressions).
+const ACTIONS_FIGEES = new Set([
+    'seance', 'item-etat', 'seance-save', 'seance-edit', 'seance-del',
+    'doc-fourni', 'doc-add', 'doc-pick-membre', 'doc-rename', 'doc-del',
+    'module-valide', 'credit-add', 'credit-edit', 'credit-del',
+    'suppr-suivi', 'signer'
+]);
+
 document.addEventListener('click', (e) => {
     const el = e.target.closest('[data-formation-action]');
     if (!el) return;
     const a = el.dataset.formationAction;
     const sid = el.dataset.sid;
+    // Rien de modifiable sur un suivi gele : le suivi est retrouve par
+    // son id ou via la seance concernee.
+    if (ACTIONS_FIGEES.has(a)) {
+        let sv = (suivisCache || []).find(x => x.id === sid);
+        if (!sv) {
+            const se = (seancesCache || []).find(x => x.id === sid || x.id === el.dataset.seid);
+            const p2 = se && se.fields ? se.fields['Suivi'] : '';
+            sv = (suivisCache || []).find(x => x.id === p2);
+        }
+        if (suiviFige(sv)) {
+            alert('Cette formation est figée (terminée ou archivée) : consultation uniquement.');
+            return;
+        }
+    }
     if (a === 'ouvrir') ouvrirSuivi(sid);
     else if (a === 'retour') {
         if (enEditionSeance) { enEditionSeance = false; renderDetailSuivi(); return; }
@@ -1095,12 +1124,21 @@ async function ouvrirFicheEleve(suiviId) {
     set('fiche-urgence-nom', pick('urgenceNom')); set('fiche-urgence-tel', pick('urgenceTel'));
     const overlay = document.getElementById('modale-formation-fiche');
     overlay.dataset.sid = suiviId;
+    // Suivi gele : la fiche reste consultable mais non modifiable.
+    const gele = suiviFige(suivi);
+    overlay.querySelectorAll('#form-formation-fiche input').forEach(i => { i.disabled = gele; });
+    const submit = overlay.querySelector('#form-formation-fiche button[type="submit"]');
+    if (submit) submit.style.display = gele ? 'none' : '';
     overlay.style.display = 'flex';
 }
 
 async function enregistrerFiche(e) {
     e.preventDefault();
     const overlay = document.getElementById('modale-formation-fiche');
+    if (suiviFige((suivisCache || []).find(s => s.id === overlay.dataset.sid))) {
+        alert('Cette formation est figée : la fiche n\'est plus modifiable.');
+        return;
+    }
     const val = id => document.getElementById(id).value.trim();
     const ec = {
         naissance: document.getElementById('fiche-naissance').value,

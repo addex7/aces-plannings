@@ -443,6 +443,21 @@ async function autoEditionFormation(req, res, tableSqlNom, records, champAuto) {
     return false;
 }
 
+// Un suivi « Terminee » ou « Archivee » est fige : lecture seule pour
+// tous, instructeurs compris. Seule la transition de statut reste
+// autorisee (archiver / desarchiver / rouvrir).
+async function statutDuSuivi(suiviId) {
+    try {
+        const { rows } = await pool.query(
+            `SELECT fields->>'Statut' AS st FROM formations_suivis WHERE id = $1`, [suiviId]);
+        return rows[0] ? (rows[0].st || 'Ouverte') : null;
+    } catch (e) { return null; }
+}
+async function suiviFigeServeur(suiviId) {
+    const st = await statutDuSuivi(suiviId);
+    return st !== null && st !== 'Ouverte';
+}
+
 async function droitEcriture(req, res, tableNom, records) {
     const table = TABLES[tableNom];
     if (req.publicAccess) {
@@ -451,6 +466,36 @@ async function droitEcriture(req, res, tableNom, records) {
         return false;
     }
     if (tableNom === 'Événements') return droitEcritureEvenements(req, res, records);
+    // Suivi fige : seul un changement de statut (avec sa date de fin)
+    // passe encore. POST = creation, toujours permise (import terminee).
+    if (tableNom === 'Formations Suivis' && req.method !== 'POST') {
+        for (const r of records || []) {
+            const st = await statutDuSuivi(r.id);
+            if (!st || st === 'Ouverte') continue;
+            const transitionSeule = (req.method === 'PATCH' || req.method === 'PUT') &&
+                Object.keys(r.fields || {}).every(c => c === 'Statut' || c === 'Date fin');
+            if (!transitionSeule) {
+                erreur(res, 409, 'Cette formation est figée : seul son statut peut encore changer');
+                return false;
+            }
+        }
+    }
+    // Seance rattachee a un suivi fige : non modifiable / supprimable.
+    // Le parent vient de fields['Suivi'] (creation) ou du record existant.
+    if (tableNom === 'Formations Séances') {
+        for (const r of records || []) {
+            let sid = (r.fields || {})['Suivi'];
+            if (!sid && r.id) {
+                const { rows } = await pool.query(
+                    `SELECT fields->>'Suivi' AS sid FROM formations_seances WHERE id = $1`, [r.id]);
+                sid = rows[0] && rows[0].sid;
+            }
+            if (sid && await suiviFigeServeur(sid)) {
+                erreur(res, 409, 'La formation liée est figée : séance non modifiable');
+                return false;
+            }
+        }
+    }
     const regles = DROITS_ECRITURE[tableNom];
     if (!regles) return true;
     if ((req.user.roles || []).some(r => regles.includes(r))) return true;
