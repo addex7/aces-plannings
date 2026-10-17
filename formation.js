@@ -208,6 +208,20 @@ function filtrerSuivis(suivis) {
         String(s.fields['Formation titre'] || '').toLowerCase().includes(q));
 }
 
+// Sections repliables de la liste (choix conserve entre les visites).
+let sectionsPliees = new Set();
+try { sectionsPliees = new Set(JSON.parse(localStorage.getItem('formation-sections-pliees') || '[]')); } catch (e) {}
+function basculerSectionSuivis(sec) {
+    sectionsPliees.has(sec) ? sectionsPliees.delete(sec) : sectionsPliees.add(sec);
+    try { localStorage.setItem('formation-sections-pliees', JSON.stringify([...sectionsPliees])); } catch (e) {}
+    chargerFormation();
+}
+function titreSection(sec, libelle) {
+    const plie = sectionsPliees.has(sec);
+    return `<h3 class="formation-section-titre formation-section-pli" data-formation-action="toggle-section" data-sec="${sec}">
+        <span class="formation-section-chevron">${plie ? '▸' : '▾'}</span> ${libelle}</h3>`;
+}
+
 function renderListeSuivis(suivis) {
     const ouverts = suivis.filter(s => (s.fields['Statut'] || 'Ouverte') === 'Ouverte');
     const termines = suivis.filter(s => s.fields['Statut'] === 'Terminée');
@@ -227,10 +241,10 @@ function renderListeSuivis(suivis) {
     };
     if (!suivis.length) return `<div class="formation-vide">${recherchePilote.trim() ? 'Aucun résultat pour cette recherche.' : 'Aucune formation en cours — attribuez-en une.'}</div>`;
     return `
-        <h3 class="formation-section-titre">Formations en cours (${ouverts.length})</h3>
-        <div class="formation-grille">${ouverts.map(carte).join('') || '<div class="formation-vide">Aucune formation en cours correspondante.</div>'}</div>
-        ${termines.length ? `<h3 class="formation-section-titre">Terminées</h3><div class="formation-grille">${termines.map(carte).join('')}</div>` : ''}
-        ${archives.length ? `<h3 class="formation-section-titre">Archivées</h3><div class="formation-grille">${archives.map(carte).join('')}</div>` : ''}
+        ${titreSection('ouvertes', `Formations en cours (${ouverts.length})`)}
+        ${sectionsPliees.has('ouvertes') ? '' : `<div class="formation-grille">${ouverts.map(carte).join('') || '<div class="formation-vide">Aucune formation en cours correspondante.</div>'}</div>`}
+        ${termines.length ? `${titreSection('terminees', 'Terminées')}${sectionsPliees.has('terminees') ? '' : `<div class="formation-grille">${termines.map(carte).join('')}</div>`}` : ''}
+        ${archives.length ? `${titreSection('archivees', 'Archivées')}${sectionsPliees.has('archivees') ? '' : `<div class="formation-grille">${archives.map(carte).join('')}</div>`}` : ''}
     `;
 }
 
@@ -690,6 +704,7 @@ document.addEventListener('click', (e) => {
         suiviOuvertId = null;
         chargerFormation();
     }
+    else if (a === 'toggle-section') basculerSectionSuivis(el.dataset.sec);
     else if (a === 'nouveau-suivi') ouvrirModaleAttribuer();
     else if (a === 'gerer-catalogue') ouvrirGestionCatalogue();
     else if (a === 'seance') ouvrirPageSeance(sid);
