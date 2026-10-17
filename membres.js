@@ -379,14 +379,37 @@ function initialiserCheckboxesRoles() {
     rendre('membre-roles-container', 'membre-roles');
 }
 
+let membresListeCache = [];
+
 async function chargerUtilisateurs() {
     const tbody = document.getElementById('membres-list');
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Chargement...</td></tr>';
     try {
-        const records = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
-        if (records.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Aucun utilisateur.</td></tr>'; return; }
-        tbody.innerHTML = '';
+        membresListeCache = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}?sort[0][field]=Nom&sort[0][direction]=asc`, { headers });
+        renderListeMembres();
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Erreur de chargement.</td></tr>';
+    }
+}
+
+function renderListeMembres() {
+    const tbody = document.getElementById('membres-list');
+    if (!tbody) return;
+    const recherche = (document.getElementById('membres-recherche')?.value || '').trim().toLowerCase();
+    const records = !recherche ? membresListeCache : membresListeCache.filter(r => {
+        const f = r.fields || {};
+        const roles = Array.isArray(f['Rôles']) ? f['Rôles'].join(' ') : (f['Rôles'] || '');
+        const blob = `${f['Prénom'] || ''} ${f['Nom'] || ''} ${f['Mail'] || ''} ${f['Téléphone'] || ''} ${f['Identifiant'] || ''} ${roles}`.toLowerCase();
+        return blob.includes(recherche);
+    });
+    if (records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="carnet-empty">${recherche ? 'Aucun membre ne correspond à la recherche.' : 'Aucun utilisateur.'}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = '';
+    try {
         records.forEach(r => {
             const f = r.fields || {};
             const prenom = f['Prénom'] || '';
@@ -416,7 +439,7 @@ async function chargerUtilisateurs() {
         });
     } catch (err) {
         console.error(err);
-        tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Erreur de chargement.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="carnet-empty">Erreur d\'affichage.</td></tr>';
     }
 }
 
@@ -878,6 +901,8 @@ function initMembres() {
     if (forgotLink) forgotLink.addEventListener('click', (e) => { e.preventDefault(); showForgot(); });
     const backLogin = document.getElementById('link-back-login');
     if (backLogin) backLogin.addEventListener('click', (e) => { e.preventDefault(); showLogin(); });
+    const rechercheMembres = document.getElementById('membres-recherche');
+    if (rechercheMembres) rechercheMembres.addEventListener('input', renderListeMembres);
     const btnBilan = document.getElementById('btn-bilan-membres');
     if (btnBilan) btnBilan.addEventListener('click', ouvrirBilanMembres);
     const btnLegendeM = document.getElementById('btn-legende-membres');
