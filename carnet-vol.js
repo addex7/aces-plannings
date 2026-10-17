@@ -100,10 +100,18 @@ function cvDeriveVolClub(r, piloteNomComplet) {
         fonctions.some(x => ['EP', 'EX', 'FE'].includes(x));
     const cdb = estInstruction ? (instructeur || pilote) : pilote;
 
+    // Le champ Fonction decrit l'equipage entier : le temps est attribue
+    // selon le role du pilote consulte dans ce vol precis.
+    const moi = (piloteNomComplet || '').toString();
+    const jeSuisInstructeur = instructeur && (
+        (typeof correspondanceNom === 'function' && correspondanceNom(instructeur, moi))
+        || instructeur.toLowerCase() === moi.toLowerCase());
+
     let cdbMin = 0, dcMin = 0, instrMin = 0;
-    if (fonctions.some(x => ['I', 'ICDB', 'FI'].includes(x))) instrMin = duree;
+    if (jeSuisInstructeur) instrMin = duree;
     else if (fonctions.some(x => ['EP', 'EX', 'FE'].includes(x))) dcMin = duree;
     else if (fonctions.some(x => x === 'PAX')) { /* passager : rien */ }
+    else if (fonctions.some(x => ['I', 'ICDB', 'FI'].includes(x)) && !instructeur) instrMin = duree;
     else cdbMin = duree;
 
     const aero = (cvAeronefsMap || {})[machine.toUpperCase()] || {};
@@ -220,7 +228,12 @@ async function cvPeuplerSelectPilotes() {
 async function cvChargerVolsClub(pilote) {
     const pre = (pilote.prenom || '').replace(/"/g, '\\"');
     const nom = (pilote.nom || '').replace(/"/g, '\\"');
-    const formula = `AND({Pilote} != '', FIND(UPPER("${pre}"), UPPER({Pilote})) > 0, FIND(UPPER("${nom}"), UPPER({Pilote})) > 0)`;
+    // Le pilote consulte ses vols comme pilote ET comme instructeur
+    // (un vol en instruction ou il encadre un eleve doit apparaitre
+    // dans son carnet, en temps instructeur).
+    const critere = (champ) =>
+        `AND({${champ}} != '', FIND(UPPER("${pre}"), UPPER({${champ}})) > 0, FIND(UPPER("${nom}"), UPPER({${champ}})) > 0)`;
+    const formula = `OR(${critere('Pilote')}, ${critere('Instructeur')})`;
     const tous = [];
     for (const table of TABLES_CARNETS_CLUB) {
         try {
