@@ -532,9 +532,15 @@ function renderDoc(suivi, d, instructeur) {
     const titre = d.lien
         ? `<a href="${urlSure(d.lien)}" target="_blank" rel="noopener" title="Ouvrir la pièce jointe">${escapeHtml(d.titre)}</a>`
         : escapeHtml(d.titre);
+    const actions = instructeur ? `
+        <span style="display:flex; gap:4px;">
+            <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-rename" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Renommer le document demandé">✏️</button>
+            <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-del" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Supprimer ce document demandé">✕</button>
+        </span>` : '';
     return `<div class="formation-doc" style="flex-wrap:wrap;">
         <span>${fourni ? '✅' : (d.prerequis ? '📋' : '📄')} ${titre}</span>
         <span class="formation-carte-sub">${infos}</span>
+        ${actions}
         ${depot}
     </div>`;
 }
@@ -636,6 +642,8 @@ document.addEventListener('click', (e) => {
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'doc-add') ajouterDocumentDemande(sid);
     else if (a === 'doc-pick-membre') choisirDocumentMembre(sid, el.dataset.doc);
+    else if (a === 'doc-rename') renommerDocumentDemande(sid, el.dataset.doc);
+    else if (a === 'doc-del') supprimerDocumentDemande(sid, el.dataset.doc);
     else if (a === 'credit-add') ouvrirModaleCredit(sid);
     else if (a === 'credit-edit') ouvrirModaleCredit(sid, el.dataset.cid);
     else if (a === 'credit-del') supprimerCredit(sid, el.dataset.cid);
@@ -876,6 +884,37 @@ async function ajouterDocumentDemande(suiviId) {
         await patchSuivi(suiviId, { 'Documentation': docs });
         renderDetailSuivi();
     } catch (e) { console.error(e); alert('Erreur lors de l\'ajout.'); }
+}
+
+// Renomme un document demande (titre seul, le fichier fourni est conserve).
+async function renommerDocumentDemande(suiviId, docId) {
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const doc = formationJson(suivi.fields['Documentation'], []).find(d => String(d.id) === String(docId));
+    if (!doc) return;
+    const titre = await demanderSaisie('Nouveau titre du document', doc.titre || '', { okLabel: 'Renommer' });
+    if (titre === null || !titre.trim()) return;
+    const docs = formationJson(suivi.fields['Documentation'], []).map(d =>
+        String(d.id) === String(docId) ? { ...d, titre: titre.trim() } : d);
+    try {
+        await patchSuivi(suiviId, { 'Documentation': docs });
+        renderDetailSuivi();
+    } catch (e) { console.error(e); alert('Erreur lors du renommage.'); }
+}
+
+// Supprime un document demande du suivi (fichier eventuel perdu avec).
+async function supprimerDocumentDemande(suiviId, docId) {
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const doc = formationJson(suivi.fields['Documentation'], []).find(d => String(d.id) === String(docId));
+    if (!doc) return;
+    const ok = await confirmerAction(`Supprimer le document demandé « ${doc.titre || ''} » ?`, { okLabel: 'Supprimer' });
+    if (!ok) return;
+    const docs = formationJson(suivi.fields['Documentation'], []).filter(d => String(d.id) !== String(docId));
+    try {
+        await patchSuivi(suiviId, { 'Documentation': docs });
+        renderDetailSuivi();
+    } catch (e) { console.error(e); alert('Erreur lors de la suppression.'); }
 }
 
 // Validation d'un module theorique par l'instructeur (date de la séance/emargement).
