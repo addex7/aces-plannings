@@ -320,7 +320,6 @@ async function renderDetailSuivi() {
         ${!gele ? `<button class="btn-primary" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : ''}` : '';
     majActionsEntete(`
         <button class="btn-primary" data-formation-action="retour">← Retour</button>
-        <button class="btn-primary" data-formation-action="fiche" data-sid="${suivi.id}">👤 Fiche élève</button>
         ${boutonsInstructeur}`);
 
     // Regroupement des lecons par phase (groupe), comme le livret BLN.
@@ -756,7 +755,6 @@ document.addEventListener('click', (e) => {
     else if (a === 'credit-edit') ouvrirModaleCredit(sid, el.dataset.cid);
     else if (a === 'credit-del') supprimerCredit(sid, el.dataset.cid);
     else if (a === 'module-valide') validerModule(sid, el.dataset.mid);
-    else if (a === 'fiche') ouvrirFicheEleve(sid);
     else if (a === 'terminer') changerStatutSuivi(sid, 'Terminée');
     else if (a === 'archiver') changerStatutSuivi(sid, 'Archivée');
     else if (a === 'rouvrir') changerStatutSuivi(sid, 'Ouverte');
@@ -1238,87 +1236,6 @@ async function validerModule(suiviId, moduleId) {
 }
 
 // ---------------------------------------------------------------------------
-// FICHE ELEVE (etat civil + contact d'urgence — livret GEN 1)
-// L'eleve peut completer sa propre fiche (auto-edition verifiee cote serveur).
-// ---------------------------------------------------------------------------
-// Recupere la fiche membre (Utilisateurs) de l'eleve du suivi, pour
-// synchroniser les infos communes : naissance, lieu, telephone, mail, adresse.
-async function membreDuSuivi(suivi) {
-    const eleveId = (suivi.fields['Élève'] || [])[0];
-    if (!eleveId) return null;
-    try {
-        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Utilisateurs')}/${eleveId}`, { headers });
-        return res.ok ? await res.json() : null;
-    } catch (e) { return null; }
-}
-// Champs partages entre la fiche eleve (Etat civil) et la fiche membre.
-const CHAMPS_FICHE_MEMBRE = [
-    ['naissance', 'Date de naissance'], ['lieuNaissance', 'Lieu de naissance'],
-    ['telephone', 'Téléphone'], ['email', 'Mail'], ['adresse', 'Adresse'],
-    ['urgenceNom', 'Contact urgence nom'], ['urgenceTel', 'Contact urgence téléphone']
-];
-
-async function ouvrirFicheEleve(suiviId) {
-    const suivi = suivisCache.find(s => s.id === suiviId);
-    if (!suivi) return;
-    const ec = formationJson(suivi.fields['Etat civil'], {}) || {};
-    const membre = await membreDuSuivi(suivi);
-    const mf = (membre && membre.fields) || {};
-    // La valeur du suivi prime si remplie ; sinon on prend la fiche membre.
-    const pick = (cle) => {
-        const e = ec[cle];
-        if (e !== undefined && e !== null && String(e).trim() !== '') return e;
-        const m = CHAMPS_FICHE_MEMBRE.find(([c]) => c === cle);
-        return m ? (mf[m[1]] || '') : '';
-    };
-    const set = (id, v) => { document.getElementById(id).value = v || ''; };
-    set('fiche-naissance', pick('naissance')); set('fiche-lieu-naissance', pick('lieuNaissance'));
-    set('fiche-telephone', pick('telephone'));
-    set('fiche-email', pick('email')); set('fiche-adresse', pick('adresse'));
-    set('fiche-urgence-nom', pick('urgenceNom')); set('fiche-urgence-tel', pick('urgenceTel'));
-    const overlay = document.getElementById('modale-formation-fiche');
-    overlay.dataset.sid = suiviId;
-    // Suivi gele : la fiche reste consultable mais non modifiable.
-    const gele = suiviFige(suivi);
-    overlay.querySelectorAll('#form-formation-fiche input').forEach(i => { i.disabled = gele; });
-    const submit = overlay.querySelector('#form-formation-fiche button[type="submit"]');
-    if (submit) submit.style.display = gele ? 'none' : '';
-    overlay.style.display = 'flex';
-}
-
-async function enregistrerFiche(e) {
-    e.preventDefault();
-    const overlay = document.getElementById('modale-formation-fiche');
-    if (suiviFige((suivisCache || []).find(s => s.id === overlay.dataset.sid))) {
-        alert('Cette formation est figée : la fiche n\'est plus modifiable.');
-        return;
-    }
-    const val = id => document.getElementById(id).value.trim();
-    const ec = {
-        naissance: document.getElementById('fiche-naissance').value,
-        lieuNaissance: val('fiche-lieu-naissance'),
-        telephone: val('fiche-telephone'), email: val('fiche-email'), adresse: val('fiche-adresse'),
-        urgenceNom: val('fiche-urgence-nom'), urgenceTel: val('fiche-urgence-tel')
-    };
-    const suiviId = overlay.dataset.sid;
-    try {
-        await patchSuivi(suiviId, { 'Etat civil': ec });
-        // Retour de la sync : les champs communs sont aussi reportes sur la
-        // fiche membre (possible pour l'eleve lui-meme et le Super admin).
-        const suivi = suivisCache.find(s => s.id === suiviId);
-        const eleveId = suivi ? (suivi.fields['Élève'] || [])[0] : null;
-        if (eleveId && (eleveId === (currentUser && currentUser.id) || isSuperAdmin())) {
-            const fields = {};
-            CHAMPS_FICHE_MEMBRE.forEach(([cle, champ]) => { fields[champ] = ec[cle] || null; });
-            await cachedFetch(`${API_BASE}/${encodeURIComponent('Utilisateurs')}/${eleveId}`, {
-                method: 'PATCH', headers, body: JSON.stringify({ fields })
-            }).catch(() => {});
-        }
-        overlay.style.display = 'none';
-    } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement de la fiche.'); }
-}
-
-// ---------------------------------------------------------------------------
 // CREDITS MANUELS (heures/vols ajoutes a la main dans les minimas)
 // ---------------------------------------------------------------------------
 function ouvrirModaleCredit(suiviId, creditId) {
@@ -1483,7 +1400,7 @@ async function enregistrerAttribution(e) {
         'Minimas': minimas,
         'Ressources': formationJson(ff['Ressources'], []),
         'Modules': formationJson(ff['Modules'], []).map((m, i) => ({ id: `m${Date.now()}_${i}`, titre: m.titre, statut: !!importTerminee, date: importTerminee ? aujourdhui : '' })),
-        'Etat civil': { telephone: (membre && membre.fields['Téléphone']) || '', email: (membre && membre.fields['Mail']) || '' },
+        'Etat civil': {},
         // L'import cree d'abord le suivi « Ouverte » : une fois « Terminee »
         // le serveur fige tout (seules Statut/Date fin passent encore), ce
         // qui empecherait d'ecrire la seance d'import juste apres.
@@ -2159,21 +2076,18 @@ function initFormation() {
         ['btn-close-formation-editeur', 'modale-formation-editeur'],
         ['btn-close-formation-attribuer', 'modale-formation-attribuer'],
         ['btn-close-formation-catalogue', 'modale-formation-catalogue'],
-        ['btn-close-formation-fiche', 'modale-formation-fiche'],
         ['btn-close-formation-credit', 'modale-formation-credit']
     ];
     liaisons.forEach(([btn, mod]) => {
         const b = document.getElementById(btn);
         if (b) b.addEventListener('click', () => fermer(mod));
     });
-    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-catalogue, #modale-formation-fiche, #modale-formation-credit')
+    document.querySelectorAll('#modale-formation-editeur, #modale-formation-attribuer, #modale-formation-catalogue, #modale-formation-credit')
         .forEach(o => o.addEventListener('click', (e) => { if (e.target === o) o.style.display = 'none'; }));
     const f1 = document.getElementById('form-formation-editeur');
     if (f1) f1.addEventListener('submit', enregistrerFormationEdit);
     const f2 = document.getElementById('form-formation-attribuer');
     if (f2) f2.addEventListener('submit', enregistrerAttribution);
-    const f5 = document.getElementById('form-formation-fiche');
-    if (f5) f5.addEventListener('submit', enregistrerFiche);
     const f6 = document.getElementById('form-formation-credit');
     if (f6) f6.addEventListener('submit', enregistrerCredit);
     const btnCat = document.getElementById('btn-formation-nouvelle');
