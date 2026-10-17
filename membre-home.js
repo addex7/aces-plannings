@@ -810,7 +810,14 @@ async function chargerDocumentsMembre() {
         // Les documents marques « Fourni » dans les formations du membre
         // sont rapatries dans la meme liste (table Documents en ecriture
         // restreinte : on affiche plutot que de dupliquer).
-        const docsForm = await chargerDocumentsFormationMembre();
+        const docsForm = (await chargerDocumentsFormationMembre()).filter(d => {
+            // Un doc de formation qui pointe vers une fiche Documents de
+            // l'espace (choix « Espace membre ») n'est pas re-affiche :
+            // la fiche existe deja dans la liste.
+            if (d.srcDocId && records.some(r => r.id === d.srcDocId)) return false;
+            if (d.lien && records.some(r => (r.fields || {})['Lien'] === d.lien)) return false;
+            return true;
+        });
         const ligneDocForm = d => {
             let actions = `<a href="${urlSure(d.lien)}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir ↗</a>`;
             if (isSuperAdmin()) {
