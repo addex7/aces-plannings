@@ -1469,9 +1469,8 @@ function ouvrirGestionCatalogue() {
     const visibles = formationsTriees().filter(f => !f.fields['Masquée']);
     const masquees = formationsTriees().filter(f => f.fields['Masquée']);
     const ligne = (f, masquee) => {
-        const lecons = formationJson(f.fields['Lecons'], []);
         return `<div class="formation-doc catalogue-ligne" ${masquee ? 'style="opacity:0.55;"' : ''}>
-            <span class="catalogue-ligne-titre"><strong>${escapeHtml(f.fields['Titre'] || '')}</strong> <span class="formation-carte-sub">${escapeHtml(f.fields['Discipline'] || '')} · ${lecons.length} leçon(s)${masquee ? ' · masquée' : ''}</span></span>
+            <span class="catalogue-ligne-titre"><strong>${escapeHtml(f.fields['Titre'] || '')}</strong>${masquee ? ' <span class="formation-carte-sub">masquée</span>' : ''}</span>
             <span class="catalogue-ligne-actions">
                 <button class="btn-secondary catalogue-btn" data-formation-action="editer-formation" data-fid="${f.id}">✏️ Modifier</button>
                 <button class="catalogue-icon-btn" title="${masquee ? 'Réafficher' : 'Masquer'}" data-formation-action="masquer-formation" data-fid="${f.id}">${masquee ? '👁' : '🚫'}</button>
