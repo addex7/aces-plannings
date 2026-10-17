@@ -811,18 +811,31 @@ async function chargerDocumentsMembre() {
         // sont rapatries dans la meme liste (table Documents en ecriture
         // restreinte : on affiche plutot que de dupliquer).
         const docsForm = await chargerDocumentsFormationMembre();
-        let html = (actifs.length || docsForm.length)
-            ? actifs.map(r => ligneDoc(r, false)).join('') + docsForm.map(d => `
-                <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+        const ligneDocForm = d => {
+            let actions = `<a href="${urlSure(d.lien)}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir ↗</a>`;
+            if (isSuperAdmin()) {
+                actions += `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="gererDocFormationMembre('rename','${d.suiviId}','${d.id}')">Renommer</button>`;
+                actions += d.archive
+                    ? `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="gererDocFormationMembre('archive','${d.suiviId}','${d.id}')">Restaurer</button>`
+                    : `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="gererDocFormationMembre('archive','${d.suiviId}','${d.id}')">Archiver</button>`;
+                actions += `<button type="button" class="doc-suppr-btn" title="Retirer de la formation" onclick="gererDocFormationMembre('delete','${d.suiviId}','${d.id}')">✕</button>`;
+            }
+            return `
+                <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;${d.archive ? ' opacity:0.75;' : ''}">
                     <span>${escapeHtml(d.titre || 'Document')}</span>
-                    <a href="${urlSure(d.lien)}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir ↗</a>
-                </div>`).join('')
+                    <div style="display:flex; align-items:center; gap:8px;">${actions}</div>
+                </div>`;
+        };
+        const docsFormActifs = docsForm.filter(d => !d.archive);
+        const docsFormArch = docsForm.filter(d => d.archive);
+        let html = (actifs.length || docsFormActifs.length)
+            ? actifs.map(r => ligneDoc(r, false)).join('') + docsFormActifs.map(ligneDocForm).join('')
             : '<p>Aucun document actif pour ce membre.</p>';
-        if (archives.length) {
+        if (archives.length || docsFormArch.length) {
             html += `
                 <details style="margin-top:12px;">
-                    <summary style="cursor:pointer; color:#64748b; font-size:13px; font-weight:600;">📦 Documents archivés (${archives.length})</summary>
-                    <div style="margin-top:8px;">${archives.map(r => ligneDoc(r, true)).join('')}</div>
+                    <summary style="cursor:pointer; color:#64748b; font-size:13px; font-weight:600;">📦 Documents archivés (${archives.length + docsFormArch.length})</summary>
+                    <div style="margin-top:8px;">${archives.map(r => ligneDoc(r, true)).join('') + docsFormArch.map(ligneDocForm).join('')}</div>
                 </details>`;
         }
         list.innerHTML = html;
@@ -842,13 +855,57 @@ async function chargerDocumentsFormationMembre() {
         const docsForm = [];
         suivis.forEach(s => {
             formationJson((s.fields || {})['Documentation'], []).forEach(d => {
-                if (d.statut === 'Fourni' && d.lien) docsForm.push(d);
+                if (d.statut === 'Fourni' && d.lien) docsForm.push({ ...d, suiviId: s.id });
             });
         });
         return docsForm;
     } catch (err) {
         console.warn('Documents de formation du membre:', err);
         return [];
+    }
+}
+
+// Renommer / archiver / retirer un document fourni en formation,
+// directement depuis l'espace membre (memes gestes que les autres docs).
+async function gererDocFormationMembre(action, suiviId, docId) {
+    if (!isSuperAdmin()) { alert('Action réservée au super admin.'); return; }
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}/${encodeURIComponent(suiviId)}`, { headers });
+        const data = await res.json();
+        if (!res.ok) { alert('Erreur de lecture du suivi.'); return; }
+        const docs = formationJson((data.fields || {})['Documentation'], []);
+        const doc = docs.find(d => String(d.id) === String(docId));
+        if (!doc) { alert('Document introuvable dans le suivi.'); return; }
+        let maj;
+        if (action === 'rename') {
+            const titre = await demanderSaisie('Nouveau nom du document', doc.titre || '');
+            if (titre === null || !titre.trim()) return;
+            maj = docs.map(d => d === doc ? { ...d, titre: titre.trim() } : d);
+        } else if (action === 'archive') {
+            maj = docs.map(d => d === doc ? { ...d, archive: !d.archive } : d);
+        } else if (action === 'delete') {
+            const ok = await confirmerSuppression(`Retirer « ${doc.titre || 'ce document'} » de la formation ?\nLa demande repassera en attente.`);
+            if (!ok) return;
+            maj = docs.map(d => d === doc ? {
+                ...d, statut: 'Demandé',
+                dateFourni: undefined, dateValidite: undefined,
+                lien: undefined, srcDocId: undefined, archive: undefined
+            } : d);
+        } else return;
+        const resP = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}/${encodeURIComponent(suiviId)}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ fields: { 'Documentation': maj } })
+        });
+        if (!resP.ok) throw new Error((await resP.json()).error?.message || 'Erreur');
+        if (typeof invaliderFormationCache === 'function') {
+            invaliderFormationCache();
+            if (typeof suiviOuvertId !== 'undefined' && suiviOuvertId === suiviId && typeof renderDetailSuivi === 'function') renderDetailSuivi();
+        }
+        await chargerDocumentsMembre();
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la mise à jour : ' + (err.message || ''));
     }
 }
 
