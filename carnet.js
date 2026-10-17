@@ -563,28 +563,32 @@ async function peuplerCarnetInstructeurs(instructeur = '', machine = '') {
     }
 }
 
-function mettreAJourDonneesDepartDefaut(machine) {
+// Pré-remplit horamètre départ / terrain de départ avec le vol
+// chronologiquement precedent la date (et heure) saisies — pas forcement
+// le dernier vol du carnet pour une saisie passee. Les champs marques
+// "auto" sont remis a jour tant que l'utilisateur ne les a pas modifies.
+function mettreAJourDonneesDepartDefaut(machine, forcer = false) {
     const hInput = document.getElementById('carnet-horametre-depart');
     const tInput = document.getElementById('carnet-depart');
-    const volsMachine = listeVolsCarnetCache
-        .filter(r => (r.fields || {})['Machine'] === machine)
-        .sort((a, b) => {
-            const dateA = new Date(a.fields['Date'] || 0);
-            const dateB = new Date(b.fields['Date'] || 0);
-            if (dateB - dateA !== 0) return dateB - dateA;
-            const timeA = new Date(a.createdTime || 0);
-            const timeB = new Date(b.createdTime || 0);
-            return timeB - timeA;
-        });
-    if (volsMachine.length > 0) {
-        const dernier = volsMachine[0].fields || {};
-        const arr = dernier['Horamètre arrivée'];
-        if (hInput && arr !== undefined && arr !== null && arr !== '') {
-            hInput.value = arr;
-        }
-        if (tInput && dernier['Arrivée']) {
-            tInput.value = dernier['Arrivée'];
-        }
+    const jour = (document.getElementById('carnet-date')?.value || '').slice(0, 10);
+    const heureVal = document.getElementById('carnet-heure-depart')?.value || '';
+    const heure = /^\d{1,2}:\d{2}/.test(heureVal) ? heureVal.slice(0, 5) : '00:00';
+    const cleRef = jour ? new Date(`${jour}T${heure}`).getTime() : Infinity;
+    const precedent = (listeVolsCarnetCache || [])
+        .filter(r => (r.fields || {})['Machine'] === machine && !r._estMaintenance)
+        .filter(r => cleDateHeureCarnet(r) < (isNaN(cleRef) ? Infinity : cleRef))
+        .sort((a, b) => cleDateHeureCarnet(a) - cleDateHeureCarnet(b))
+        .pop();
+    if (!precedent) return;
+    const dernier = precedent.fields || {};
+    const arr = dernier['Horamètre arrivée'];
+    if (hInput && (forcer || hInput.dataset.auto === '1' || !hInput.value) && arr !== undefined && arr !== null && arr !== '') {
+        hInput.value = arr;
+        hInput.dataset.auto = '1';
+    }
+    if (tInput && (forcer || tInput.dataset.auto === '1' || !tInput.value) && dernier['Arrivée']) {
+        tInput.value = dernier['Arrivée'];
+        tInput.dataset.auto = '1';
     }
 }
 
@@ -2009,6 +2013,21 @@ function initCarnetRoute() {
     });
     const elHeureArrivee = document.getElementById('carnet-heure-arrivee');
     if (elHeureArrivee) elHeureArrivee.addEventListener('input', mettreAJourPrixDuVol);
+    // Saisie d'un vol dans le passe : l'horametre/terrain de depart se
+    // raffinent sur le vol precedent la date+heure choisies (creation
+    // seulement, et tant que l'utilisateur n'a pas retouche les champs).
+    const raffinerDepart = () => {
+        if (document.getElementById('carnet-id')?.value) return;
+        mettreAJourDonneesDepartDefaut(document.getElementById('carnet-machine')?.value || '');
+    };
+    ['carnet-date', 'carnet-heure-depart'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', raffinerDepart);
+    });
+    ['carnet-horametre-depart', 'carnet-depart'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => { delete el.dataset.auto; });
+    });
     ['carnet-depart', 'carnet-arrivee'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', suggererNatureParTrajet);
@@ -2053,6 +2072,7 @@ function initCarnetRoute() {
             adapterFormulaireCarnet(selectMachine.value);
             const instSel = document.getElementById('carnet-instructeur');
             await peuplerCarnetInstructeurs(instSel ? instSel.value : '', selectMachine.value);
+            if (!document.getElementById('carnet-id')?.value) mettreAJourDonneesDepartDefaut(selectMachine.value, true);
             mettreAJourStyleChampsAuto(selectMachine.value);
             mettreAJourHeureArrivee();
             mettreAJourActiviteParticuliere();
