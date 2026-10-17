@@ -1597,7 +1597,7 @@ function blocRessourceHtml(r) {
     const nomFichier = (r.lien || '').startsWith('/uploads/') ? r.lien.split('/').pop() : '';
     return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:1fr 1.4fr auto auto;gap:6px;margin-bottom:6px;align-items:center;">
         <input type="text" class="ressource-titre" placeholder="Titre du lien" value="${escapeHtml(r.titre || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
-        <input type="url" class="ressource-lien" placeholder="https://… ou /uploads/…" value="${escapeHtml(r.lien || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        <input type="text" class="ressource-lien" placeholder="https://… ou /uploads/…" value="${escapeHtml(r.lien || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
         <label class="btn-secondary" style="padding:4px 8px;font-size:12px;cursor:pointer;white-space:nowrap;" title="${escapeHtml(nomFichier || 'Joindre un fichier (uploadé au moment de l’enregistrement)')}">📎<input type="file" class="ressource-fichier" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.odt,.txt" style="display:none;"></label>
         <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
     </div>`;
