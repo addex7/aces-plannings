@@ -217,6 +217,19 @@ function renderAccueilMembre(fields) {
     const rolesEl = document.getElementById('accueil-roles');
     const titre = document.getElementById('accueil-titre');
     if (nomEl) nomEl.textContent = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
+    const urgEl = document.getElementById('accueil-urgence');
+    if (urgEl) {
+        const uNom = (fields['Contact urgence nom'] || '').trim();
+        const uTel = (fields['Contact urgence téléphone'] || '').trim();
+        if (uNom || uTel) {
+            urgEl.innerHTML = `<span class="accueil-urgence-titre">Contact d'urgence :</span>` +
+                `<span class="accueil-urgence-nom">${escapeHtml(uNom || '—')}</span>` +
+                (uTel ? `<span class="accueil-urgence-tel">☎ ${escapeHtml(uTel)}</span>` : '');
+            urgEl.style.display = 'flex';
+        } else {
+            urgEl.style.display = 'none';
+        }
+    }
     if (rolesEl) {
         rolesEl.innerHTML = `<button type="button" class="btn-legende-couleurs" title="Rôles du membre">i</button>`;
         const btnRoles = rolesEl.querySelector('button');
@@ -246,9 +259,6 @@ function renderAccueilMembre(fields) {
         const dn = editable ? toISO(fields['Date de naissance']) : (fields['Date de naissance'] ? new Date(fields['Date de naissance']).toLocaleDateString('fr-FR') : '');
         infosEl.innerHTML =
             ligne('Mail', 'Mail', fields['Mail'], 'email') +
-            ligne('Contact urgence — nom', 'Contact urgence nom', fields['Contact urgence nom'], 'text') +
-            ligne('Contact urgence — téléphone', 'Contact urgence téléphone', fields['Contact urgence téléphone'], 'tel') +
-            ligne('Contact urgence — email', 'Contact urgence email', fields['Contact urgence email'], 'email') +
             ligne('Identifiant', 'Identifiant', fields['Identifiant'], 'text') +
             (editable
                 ? `<div class="accueil-info"><span class="accueil-info-label">Mot de passe</span><input type="password" class="accueil-info-input" data-field="Mot de passe" value="" placeholder="••••••••" autocomplete="new-password"></div>`

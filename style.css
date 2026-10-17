@@ -2373,6 +2373,32 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-size: 13px;
     color: #64748b;
 }
+/* Contact d'urgence affiche a droite du nom dans l'en-tete de fiche */
+.accueil-urgence {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    padding: 6px 12px;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    font-size: 13px;
+}
+.accueil-urgence-titre {
+    font-weight: 600;
+    color: #92400e;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.accueil-urgence-nom {
+    font-weight: 600;
+    color: #1e293b;
+}
+.accueil-urgence-tel {
+    color: #1e293b;
+}
 .validite-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
