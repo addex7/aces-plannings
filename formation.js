@@ -253,6 +253,7 @@ function renderListeSuivis(suivis) {
             <div class="formation-carte-sub">${escapeHtml(f['Formation titre'] || '')} — depuis le ${escapeHtml(f['Date début'] || '?')}</div>
             <div class="formation-carte-pied">${barreProgression(p.pct)}
             <div class="formation-carte-sub">${p.faits}/${p.total} items</div></div>
+            ${isSuperAdmin() && suiviFige(s) ? `<button class="formation-carte-suppr" title="Supprimer cette formation" data-formation-action="suppr-suivi" data-sid="${s.id}">✕</button>` : ''}
         </div>`;
     };
     if (!suivis.length) return `<div class="formation-vide">${recherchePilote.trim() ? 'Aucun résultat pour cette recherche.' : 'Aucune formation en cours — attribuez-en une.'}</div>`;
@@ -722,7 +723,7 @@ document.addEventListener('click', (e) => {
             const p2 = se && se.fields ? se.fields['Suivi'] : '';
             sv = (suivisCache || []).find(x => x.id === p2);
         }
-        if (suiviFige(sv)) {
+        if (suiviFige(sv) && !(a === 'suppr-suivi' && isSuperAdmin())) {
             alert('Cette formation est figée (terminée ou archivée) : consultation uniquement.');
             return;
         }

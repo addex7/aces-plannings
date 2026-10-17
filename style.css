@@ -5429,7 +5429,30 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     cursor: pointer;
     display: flex;
     flex-direction: column;
+    position: relative;
     transition: box-shadow 0.15s, transform 0.15s;
+}
+/* Petite croix de suppression en bas a droite des cartes figees
+   (nettoyage Super admin des formations de test). */
+.formation-carte-suppr {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    color: #94a3b8;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+}
+.formation-carte-suppr:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
 }
 .formation-carte-pied {
     margin-top: auto;

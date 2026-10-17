@@ -474,7 +474,9 @@ async function droitEcriture(req, res, tableNom, records) {
             if (!st || st === 'Ouverte') continue;
             const transitionSeule = (req.method === 'PATCH' || req.method === 'PUT') &&
                 Object.keys(r.fields || {}).every(c => c === 'Statut' || c === 'Date fin');
-            if (!transitionSeule) {
+            // Suppression d un suivi fige : reservee au Super admin (nettoyage).
+            const suppressionAdmin = req.method === 'DELETE' && (req.user.roles || []).includes('Super admin');
+            if (!transitionSeule && !suppressionAdmin) {
                 erreur(res, 409, 'Cette formation est figée : seul son statut peut encore changer');
                 return false;
             }
@@ -491,8 +493,11 @@ async function droitEcriture(req, res, tableNom, records) {
                 sid = rows[0] && rows[0].sid;
             }
             if (sid && await suiviFigeServeur(sid)) {
-                erreur(res, 409, 'La formation liée est figée : séance non modifiable');
-                return false;
+                // DELETE reste permis au Super admin pour nettoyer un suivi.
+                if (!(req.method === 'DELETE' && (req.user.roles || []).includes('Super admin'))) {
+                    erreur(res, 409, 'La formation liée est figée : séance non modifiable');
+                    return false;
+                }
             }
         }
     }
