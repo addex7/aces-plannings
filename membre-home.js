@@ -973,6 +973,7 @@ async function retirerDocMembreDesFormations(docId, lienDoc) {
         const formula = `FIND(UPPER("${nomComplet}"), UPPER({Élève nom})) > 0`;
         const url = `${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}?filterByFormula=${encodeURIComponent(formula)}`;
         const suivis = await fetchTousRecordsCache(url, { headers });
+        let suiviTouche = false;
         for (const s of suivis) {
             const docs = formationJson((s.fields || {})['Documentation'], []);
             if (!docs.some(d => d.srcDocId === docId || (lienDoc && d.lien === lienDoc))) continue;
@@ -981,11 +982,18 @@ async function retirerDocMembreDesFormations(docId, lienDoc) {
                 dateFourni: undefined, dateValidite: undefined,
                 lien: undefined, srcDocId: undefined
             } : d);
-            await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}/${encodeURIComponent(s.id)}`, {
+            const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}/${encodeURIComponent(s.id)}`, {
                 method: 'PATCH',
                 headers,
                 body: JSON.stringify({ fields: { 'Documentation': maj } })
             });
+            if (res.ok) suiviTouche = true;
+        }
+        // Si un suivi a ete modifie, le cache formation est perime : le
+        // re-rendre directement si la page concernee est ouverte.
+        if (suiviTouche && typeof invaliderFormationCache === 'function') {
+            invaliderFormationCache();
+            if (typeof suiviOuvertId !== 'undefined' && suiviOuvertId && typeof renderDetailSuivi === 'function') renderDetailSuivi();
         }
     } catch (err) {
         console.warn('Retrait du document des formations:', err);
