@@ -190,6 +190,39 @@ function ouvrirModaleRolesMembre() {
     }
 }
 
+// Edition du contact d'urgence : le membre edite le sien, le Super
+// admin celui du membre affiche (memes droits que la fiche).
+function ouvrirModaleUrgence() {
+    if (!membreSelectionne || typeof afficherModaleAlerte !== 'function') return;
+    const f = membreSelectionne.fields || {};
+    const nom = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim() || 'Membre';
+    const esc = v => String(v ?? '').replace(/"/g, '&quot;');
+    const champU = (id, label, val, type) =>
+        `<label style="display:block; margin-bottom:10px; font-size:13px; color:#64748b;">${label}
+            <input type="${type}" id="${id}" class="accueil-info-input" style="width:100%; margin-top:3px;" value="${esc(val)}">
+        </label>`;
+    afficherModaleAlerte(`Contact d'urgence — ${nom}`,
+        champU('urgence-nom', 'Nom et prénom', f['Contact urgence nom'], 'text') +
+        champU('urgence-tel', 'Téléphone', f['Contact urgence téléphone'], 'tel') +
+        champU('urgence-mail', 'Email (optionnel)', f['Contact urgence email'], 'email') +
+        `<div style="text-align:right;"><button type="button" class="btn-primary" id="urgence-save">💾 Enregistrer</button></div>`, '📞');
+    const modal = document.getElementById('planning-alert-modal');
+    if (!modal) return;
+    modal.querySelector('#urgence-save').addEventListener('click', async () => {
+        const fieldsToSend = {
+            'Contact urgence nom': modal.querySelector('#urgence-nom').value.trim() || null,
+            'Contact urgence téléphone': modal.querySelector('#urgence-tel').value.trim() || null,
+            'Contact urgence email': modal.querySelector('#urgence-mail').value.trim() || null
+        };
+        try {
+            await patchMembre(membreSelectionne.id, fieldsToSend);
+            Object.assign(membreSelectionne.fields, fieldsToSend);
+            modal.remove();
+            renderAccueilMembre(membreSelectionne.fields);
+        } catch (e) { alert('Erreur lors de l\'enregistrement : ' + (e.message || '')); }
+    });
+}
+
 function renderPhoto(fields) {
     const img = document.getElementById('accueil-photo');
     if (!img) return;
@@ -219,13 +252,17 @@ function renderAccueilMembre(fields) {
     if (nomEl) nomEl.textContent = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
     const urgEl = document.getElementById('accueil-urgence');
     if (urgEl) {
+        const editableUrgence = isSuperAdmin() || (currentUser && membreSelectionne.id === currentUser.id);
         const uNom = (fields['Contact urgence nom'] || '').trim();
         const uTel = (fields['Contact urgence téléphone'] || '').trim();
-        if (uNom || uTel) {
+        if (uNom || uTel || editableUrgence) {
             urgEl.innerHTML = `<span class="accueil-urgence-titre">Contact d'urgence :</span>` +
-                `<span class="accueil-urgence-nom">${escapeHtml(uNom || '—')}</span>` +
-                (uTel ? `<span class="accueil-urgence-tel">☎ ${escapeHtml(uTel)}</span>` : '');
+                `<span class="accueil-urgence-nom">${escapeHtml(uNom || (editableUrgence ? 'non renseigné' : '—'))}</span>` +
+                (uTel ? `<span class="accueil-urgence-tel">☎ ${escapeHtml(uTel)}</span>` : '') +
+                (editableUrgence ? `<button type="button" id="urgence-edit" class="urgence-edit" title="Modifier le contact d'urgence">✏️</button>` : '');
             urgEl.style.display = 'flex';
+            const btnEdit = urgEl.querySelector('#urgence-edit');
+            if (btnEdit) btnEdit.addEventListener('click', (e) => { e.stopPropagation(); ouvrirModaleUrgence(); });
         } else {
             urgEl.style.display = 'none';
         }

@@ -2399,6 +2399,18 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .accueil-urgence-tel {
     color: #1e293b;
 }
+.urgence-edit {
+    background: none;
+    border: none;
+    padding: 0 2px;
+    font-size: 12px;
+    cursor: pointer;
+    align-self: center;
+    opacity: 0.75;
+}
+.urgence-edit:hover {
+    opacity: 1;
+}
 .validite-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
