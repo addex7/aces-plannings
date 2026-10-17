@@ -822,6 +822,40 @@ async function chargerDocumentsMembre() {
         console.error('Erreur chargement documents membre:', err);
         list.innerHTML = '<p>Erreur de chargement.</p>';
     }
+    await chargerDocumentsFormationMembre();
+}
+
+// Les documents marques « Fourni » dans les formations du membre sont
+// rapatries en lecture dans son espace (table Documents en ecriture
+// restreinte : on affiche plutot que de dupliquer).
+async function chargerDocumentsFormationMembre() {
+    const list = document.getElementById('accueil-doc-list');
+    if (!list || !membreSelectionne) return;
+    try {
+        const nomComplet = `${(membreSelectionne.prenom || '').replace(/"/g, '\\"')} ${(membreSelectionne.nom || '').replace(/"/g, '\\"')}`.trim();
+        const formula = `FIND(UPPER("${nomComplet}"), UPPER({Élève nom})) > 0`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}?filterByFormula=${encodeURIComponent(formula)}`;
+        const suivis = await fetchTousRecordsCache(url, { headers });
+        const docsForm = [];
+        suivis.forEach(s => {
+            const formation = (s.fields || {})['Formation titre'] || 'Formation';
+            formationJson((s.fields || {})['Documentation'], []).forEach(d => {
+                if (d.statut === 'Fourni' && d.lien) docsForm.push({ ...d, formation });
+            });
+        });
+        if (!docsForm.length) return;
+        list.innerHTML += `
+            <div style="margin-top:14px;">
+                <div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:6px;">🎓 Documents fournis en formation</div>
+                ${docsForm.map(d => `
+                    <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+                        <span>${escapeHtml(d.titre || 'Document')} <span style="color:#64748b; font-size:12px;">· ${escapeHtml(d.formation)}</span></span>
+                        <a href="${urlSure(d.lien)}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px;">Ouvrir ↗</a>
+                    </div>`).join('')}
+            </div>`;
+    } catch (err) {
+        console.warn('Documents de formation du membre:', err);
+    }
 }
 
 async function uploaderDocumentMembre(e) {

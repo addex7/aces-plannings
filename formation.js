@@ -520,12 +520,14 @@ function renderDoc(suivi, d, instructeur) {
         ? `fourni le ${escapeHtml(d.dateFourni || '')}` + (d.dateValidite
             ? ` · <span style="color:${expire ? '#b91c1c' : '#166534'};">${expire ? 'expiré' : 'valable'} jusqu'au ${escapeHtml(d.dateValidite)}</span>` : '')
         : '';
-    // Depot possible par l'eleve ET l'instructeur (remise en main propre).
+    // Depot possible par l'eleve ET l'instructeur (remise en main propre),
+    // ou choix d'un document deja present dans l'espace membre.
     const depot = (!fourni) ? `
         <div class="formation-doc-depot">
             <input type="file" id="doc-fichier-${escapeHtml(d.id)}" accept=".pdf,.jpg,.jpeg,.png" title="Joindre le document">
             <input type="date" id="doc-validite-${escapeHtml(d.id)}" title="Date de validité (optionnel)">
             <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-fourni" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">Envoyer</button>
+            <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-pick-membre" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Choisir un document déjà présent dans l'espace membre">📁 Espace membre</button>
         </div>` : '';
     const titre = d.lien
         ? `<a href="${urlSure(d.lien)}" target="_blank" rel="noopener" title="Ouvrir la pièce jointe">${escapeHtml(d.titre)}</a>`
@@ -633,6 +635,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'doc-add') ajouterDocumentDemande(sid);
+    else if (a === 'doc-pick-membre') choisirDocumentMembre(sid, el.dataset.doc);
     else if (a === 'credit-add') ouvrirModaleCredit(sid);
     else if (a === 'credit-edit') ouvrirModaleCredit(sid, el.dataset.cid);
     else if (a === 'credit-del') supprimerCredit(sid, el.dataset.cid);
@@ -786,6 +789,73 @@ async function marquerDocumentFourni(suiviId, docId) {
             dateFourni: new Date().toISOString().slice(0, 10),
             dateValidite: inputValidite ? inputValidite.value : '',
             lien: lien || d.lien || ''
+        } : d);
+    try {
+        await patchSuivi(suiviId, { 'Documentation': docs });
+        renderDetailSuivi();
+    } catch (e) { console.error(e); alert('Erreur lors de la mise à jour.'); }
+}
+
+// Documents deja deposes dans l'espace membre (table Documents,
+// sous-dossier = nom complet du membre), hors archives.
+async function chargerDocsEspaceMembre(nomComplet) {
+    const n = (nomComplet || '').replace(/"/g, '\\"');
+    const formula = `FIND(UPPER("${n}"), UPPER({Sous-dossier})) > 0`;
+    const url = `${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}?filterByFormula=${encodeURIComponent(formula)}`;
+    const records = await fetchTousRecordsCache(url, { headers });
+    return records.filter(r => !(r.fields || {})['Archivé']).map(r => ({
+        id: r.id,
+        titre: (r.fields || {})['Titre'] || 'Document',
+        lien: (r.fields || {})['Lien'] || ''
+    }));
+}
+
+// Modale de choix dans une liste : resolve l'id choisi ou null.
+function choisirDansListe(titre, items) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal';
+        overlay.style.display = 'flex';
+        overlay.style.zIndex = '20000';
+        overlay.innerHTML = `
+            <div class="modal-content" style="max-width:480px;">
+                <h3 style="margin-top:0; color:#1e3d59;">${escapeHtml(titre)}</h3>
+                <div style="display:flex; flex-direction:column; gap:8px; max-height:320px; overflow-y:auto;">
+                    ${items.map(it => `<button type="button" class="btn-secondary" style="text-align:left;" data-choix="${it.id}">📄 ${escapeHtml(it.label)}</button>`).join('')}
+                </div>
+                <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+                    <button type="button" class="nr-btn-cancel" id="choix-liste-cancel">Annuler</button>
+                </div>
+            </div>`;
+        const fermer = v => { overlay.remove(); resolve(v); };
+        overlay.querySelectorAll('[data-choix]').forEach(b => b.addEventListener('click', () => fermer(b.dataset.choix)));
+        overlay.querySelector('#choix-liste-cancel').addEventListener('click', () => fermer(null));
+        overlay.addEventListener('click', e => { if (e.target === overlay) fermer(null); });
+        document.body.appendChild(overlay);
+    });
+}
+
+// Complete un document demande en piochant un fichier deja present
+// dans l'espace membre de l'eleve (pas de re-upload).
+async function choisirDocumentMembre(suiviId, docId) {
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const nomEleve = suivi.fields['Élève nom'] || '';
+    let docsMembre = [];
+    try { docsMembre = await chargerDocsEspaceMembre(nomEleve); }
+    catch (e) { console.error(e); }
+    if (!docsMembre.length) { alert(`Aucun document dans l'espace membre de ${nomEleve}.`); return; }
+    const choix = await choisirDansListe(`Documents de l'espace membre — ${nomEleve}`, docsMembre.map(d => ({ id: d.id, label: d.titre })));
+    if (!choix) return;
+    const doc = docsMembre.find(d => d.id === choix);
+    if (!doc || !doc.lien) { alert('Ce document n\'a pas de fichier joint.'); return; }
+    const inputValidite = document.getElementById(`doc-validite-${docId}`);
+    const docs = formationJson(suivi.fields['Documentation'], []).map(d =>
+        String(d.id) === String(docId) ? {
+            ...d, statut: 'Fourni',
+            dateFourni: new Date().toISOString().slice(0, 10),
+            dateValidite: inputValidite ? inputValidite.value : '',
+            lien: doc.lien
         } : d);
     try {
         await patchSuivi(suiviId, { 'Documentation': docs });
