@@ -128,6 +128,22 @@ function itemsReportesEnAttente(suiviId) {
     });
     return res;
 }
+// Dates saisies au format francais JJ/MM/AAAA <-> ISO AAAA-MM-JJ.
+// (les <input type="date"> natifs ont une largeur minimale imposee par
+// le navigateur : un champ texte compact evite l'espace blanc).
+function dateFRversISO(v) {
+    const m = String(v || '').trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+    if (!m) return '';
+    const [_, j, mo, a] = m;
+    const iso = `${a}-${mo.padStart(2, '0')}-${j.padStart(2, '0')}`;
+    const d = new Date(`${iso}T00:00:00`);
+    return isNaN(d) || d.getDate() !== +j || d.getMonth() !== +mo - 1 ? '' : iso;
+}
+function dateISOversFR(iso) {
+    const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+}
+
 function progressionSuivi(suivi) {
     const lecons = formationJson(suivi.fields['Lecons'], []);
     const { ok, leconsValidees, etats } = itemsValidesSuivi(suivi.id);
@@ -323,7 +339,7 @@ async function renderDetailSuivi() {
 
             const fait = !!mo.statut;
             const zone = (instructeur && !fait && !gele) ? `
-                <input type="date" id="module-date-${escapeHtml(mo.id)}" value="${new Date().toISOString().slice(0, 10)}" title="Date de validation" class="module-date-input">
+                <input type="text" id="module-date-${escapeHtml(mo.id)}" value="${dateISOversFR(new Date().toISOString().slice(0, 10))}" placeholder="JJ/MM/AAAA" title="Date de validation" class="module-date-input">
                 <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="module-valide" data-sid="${suivi.id}" data-mid="${escapeHtml(mo.id)}">Valider</button>` : '';
             return `<div class="formation-doc module-ligne">
                 <span class="module-titre">${fait ? '✅' : '⬜'} ${escapeHtml(mo.titre)}</span>
@@ -549,7 +565,7 @@ function renderDoc(suivi, d, instructeur, gele) {
             <input type="file" id="doc-fichier-${escapeHtml(d.id)}" accept=".pdf,.jpg,.jpeg,.png" class="doc-fichier-hidden" data-fnom="doc-fnom-${escapeHtml(d.id)}" style="display:none">
             <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-choisir" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">📎 Fichier</button>
             <span class="doc-fnom" id="doc-fnom-${escapeHtml(d.id)}"></span>
-            <input type="date" id="doc-validite-${escapeHtml(d.id)}" title="Date de validité (optionnel)">
+            <input type="text" id="doc-validite-${escapeHtml(d.id)}" class="doc-date-input" placeholder="JJ/MM/AAAA" title="Date de validité (optionnel)">
             <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-fourni" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">Envoyer</button>
         </div>` : '';
     const titre = d.lien
@@ -920,7 +936,9 @@ async function marquerDocumentFourni(suiviId, docId) {
     const inputFichier = document.getElementById(`doc-fichier-${docId}`);
     const inputValidite = document.getElementById(`doc-validite-${docId}`);
     const docTitre = (formationJson(suivi.fields['Documentation'], []).find(d => String(d.id) === String(docId)) || {}).titre || '';
-    const dv = inputValidite ? inputValidite.value : '';
+    const brutValidite = inputValidite ? inputValidite.value : '';
+    const dv = dateFRversISO(brutValidite);
+    if (brutValidite.trim() && !dv) { alert('Date de validité attendue au format JJ/MM/AAAA.'); return; }
     // Pour les documents a echeance (medical, SEP, instructeur...), la
     // date de fin de validite est requise et reportee sur la fiche membre.
     if (champValiditePourTitre(docTitre) && !dv) {
@@ -1002,11 +1020,13 @@ async function choisirDocumentMembre(suiviId, docId) {
     const doc = docsMembre.find(d => d.id === choix);
     if (!doc || !doc.lien) { alert('Ce document n\'a pas de fichier joint.'); return; }
     const inputValidite = document.getElementById(`doc-validite-${docId}`);
+    const brutValidite = inputValidite ? inputValidite.value : '';
+    if (brutValidite.trim() && !dateFRversISO(brutValidite)) { alert('Date de validité attendue au format JJ/MM/AAAA.'); return; }
     let dvReporte = '';
     const titreDemande = (formationJson(suivi.fields['Documentation'], []).find(d => String(d.id) === String(docId)) || {}).titre || doc.titre || '';
     const docs = formationJson(suivi.fields['Documentation'], []).map(d => {
         if (String(d.id) !== String(docId)) return d;
-        const dv = (inputValidite && inputValidite.value) || doc.dateValidite || d.dateValidite || '';
+        const dv = dateFRversISO(brutValidite) || doc.dateValidite || d.dateValidite || '';
         dvReporte = dv;
         return {
             ...d, statut: 'Fourni',
@@ -1148,7 +1168,9 @@ async function validerModule(suiviId, moduleId) {
     const suivi = suivisCache.find(s => s.id === suiviId);
     if (!suivi) return;
     const input = document.getElementById(`module-date-${moduleId}`);
-    const date = (input && input.value) || new Date().toISOString().slice(0, 10);
+    const brut = input ? input.value : '';
+    const date = dateFRversISO(brut) || new Date().toISOString().slice(0, 10);
+    if (brut.trim() && !dateFRversISO(brut)) { alert('Date attendue au format JJ/MM/AAAA.'); return; }
     const modules = formationJson(suivi.fields['Modules'], []).map(mo =>
         String(mo.id) === String(moduleId) ? { ...mo, statut: true, date } : mo);
     try {

@@ -5554,14 +5554,15 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-size: 11px;
     color: #64748b;
 }
-.formation-doc-depot input[type="date"] {
-    width: 96px;
+.formation-doc-depot .doc-date-input {
+    width: 74px;
     min-width: 0;
     flex-shrink: 0;
-    padding: 4px 4px 4px 6px;
+    padding: 4px 4px;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
     font-size: 12px;
+    text-align: center;
 }
 .formation-doc-depot .btn-primary,
 .formation-doc-depot .btn-secondary {
@@ -5822,7 +5823,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-size: 12px;
     padding: 4px 6px;
 }
-.formation-col .formation-doc input[type="date"],
+.formation-col .formation-doc .doc-date-input,
 .formation-col .formation-doc input[type="file"] {
     font-size: 11px;
     padding: 2px 5px;
@@ -5846,7 +5847,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 /* Champ date des modules theoriques : largeur juste suffisante */
 .module-date-input {
-    width: 96px;
+    width: 74px;
     min-width: 0;
     flex: none;
 }
@@ -5866,13 +5867,14 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     margin-left: auto;
 }
 .module-date-input {
-    width: 96px;
+    width: 74px;
     min-width: 0;
     flex-shrink: 0;
-    padding: 3px 4px 3px 6px;
+    padding: 3px 4px;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
     font-size: 11px;
+    text-align: center;
 }
 /* Detail suivi : pratique a gauche, journal des seances a droite */
 .formation-duo {
