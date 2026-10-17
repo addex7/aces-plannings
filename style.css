@@ -5535,6 +5535,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
    boutons toujours groupes a droite sur une seule ligne. */
 .catalogue-ligne {
     flex-wrap: nowrap;
+    transition: background 0.12s;
+}
+.catalogue-ligne:hover {
+    background: #f8fafc;
 }
 .catalogue-ligne-titre {
     flex: 1;
@@ -5546,6 +5550,38 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     gap: 6px;
     flex-shrink: 0;
     white-space: nowrap;
+}
+/* Boutons du catalogue : Modifier en secondaire + icones carrees
+   uniformes avec survol colore. */
+.catalogue-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+.catalogue-icon-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+}
+.catalogue-icon-btn:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+}
+.catalogue-icon-danger {
+    color: #b91c1c;
+}
+.catalogue-icon-danger:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
 }
 /* Cellule document : ligne titre+actions en haut, infos/depot dessous —
    structure fixe pour que toutes les cellules soient alignees pareil. */

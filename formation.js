@@ -1473,9 +1473,9 @@ function ouvrirGestionCatalogue() {
         return `<div class="formation-doc catalogue-ligne" ${masquee ? 'style="opacity:0.55;"' : ''}>
             <span class="catalogue-ligne-titre"><strong>${escapeHtml(f.fields['Titre'] || '')}</strong> <span class="formation-carte-sub">${escapeHtml(f.fields['Discipline'] || '')} · ${lecons.length} leçon(s)${masquee ? ' · masquée' : ''}</span></span>
             <span class="catalogue-ligne-actions">
-                <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="editer-formation" data-fid="${f.id}">✏️ Modifier</button>
-                <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" title="${masquee ? 'Réafficher' : 'Masquer'}" data-formation-action="masquer-formation" data-fid="${f.id}">${masquee ? '👁' : '🚫'}</button>
-                <button class="btn-secondary" style="padding:4px 10px;font-size:12px;color:#b91c1c;" data-formation-action="suppr-formation" data-fid="${f.id}">🗑</button>
+                <button class="btn-secondary catalogue-btn" data-formation-action="editer-formation" data-fid="${f.id}">✏️ Modifier</button>
+                <button class="catalogue-icon-btn" title="${masquee ? 'Réafficher' : 'Masquer'}" data-formation-action="masquer-formation" data-fid="${f.id}">${masquee ? '👁' : '🚫'}</button>
+                <button class="catalogue-icon-btn catalogue-icon-danger" title="Supprimer la formation" data-formation-action="suppr-formation" data-fid="${f.id}">🗑</button>
             </span>
         </div>`;
     };
