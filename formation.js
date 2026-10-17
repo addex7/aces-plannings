@@ -384,7 +384,8 @@ async function renderDetailSuivi() {
 }
 
 // Compteurs du suivi : HDV par type + atterrissages depuis les seances,
-// total heures/vols depuis le carnet de l'eleve depuis la date de debut.
+// total heures/vols depuis les seances + le carnet de l'eleve depuis la
+// date de debut (un vol lie a une seance n'est compte qu'une fois).
 async function calculerStatsSuivi(suivi) {
     const seances = seancesDuSuivi(suivi.id);
     let dc = 0, solo = 0, simu = 0, att = 0;
@@ -395,6 +396,7 @@ async function calculerStatsSuivi(suivi) {
         att += parseInt(s.fields['Atterrissages'], 10) || 0;
     });
     let nbVols = 0, heures = 0;
+    const volsComptesIds = new Set();
     const nomEleve = suivi.fields['Élève nom'] || '';
     if (nomEleve) {
         try {
@@ -402,9 +404,22 @@ async function calculerStatsSuivi(suivi) {
             const debut = suivi.fields['Date début'] || '1900-01-01';
             const deduis = vols.filter(v => String(v.fields['Date'] || '') >= String(debut));
             nbVols = deduis.length;
-            deduis.forEach(v => { heures += (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0) / 60; });
+            deduis.forEach(v => {
+                volsComptesIds.add(String(v.id));
+                heures += (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0) / 60;
+            });
         } catch (e) { console.error('Stats suivi:', e); }
     }
+    // Les heures saisies dans les seances comptent dans le total — sauf
+    // quand le vol lie est deja deduit du carnet (pas de double compte).
+    seances.forEach(s => {
+        const vid = String(s.fields['Vol'] || '');
+        const h = (parseFloat(s.fields['HDV DC']) || 0) + (parseFloat(s.fields['HDV solo']) || 0) + (parseFloat(s.fields['HDV simu']) || 0);
+        const natt = parseInt(s.fields['Atterrissages'], 10) || 0;
+        if (vid && volsComptesIds.has(vid)) return;
+        heures += h;
+        if (!vid && (s.fields['Type'] || 'Vol') === 'Vol' && (h > 0 || natt > 0)) nbVols++;
+    });
     // Credits manuels : heures/vols saisis a la main (vols hors carnet,
     // experience anterieure) — comptent dans les minimas.
     const credits = formationJson(suivi.fields['Crédits'], []);
