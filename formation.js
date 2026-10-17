@@ -534,8 +534,8 @@ function renderDoc(suivi, d, instructeur) {
         : escapeHtml(d.titre);
     const actions = instructeur ? `
         <span style="display:flex; gap:4px;">
-            <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-rename" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Renommer le document demandé">✏️</button>
-            <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-del" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Supprimer ce document demandé">✕</button>
+            <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-rename" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Remplacer le document fourni par un autre">✏️</button>
+            <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-del" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="${fourni ? 'Retirer la pièce jointe (la demande reste en attente)' : 'Supprimer cette demande de document'}">✕</button>
         </span>` : '';
     return `<div class="formation-doc" style="flex-wrap:wrap;">
         <span>${fourni ? '✅' : (d.prerequis ? '📋' : '📄')} ${titre}</span>
@@ -642,7 +642,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'doc-add') ajouterDocumentDemande(sid);
     else if (a === 'doc-pick-membre') choisirDocumentMembre(sid, el.dataset.doc);
-    else if (a === 'doc-rename') renommerDocumentDemande(sid, el.dataset.doc);
+    else if (a === 'doc-rename') remplacerDocumentDemande(sid, el.dataset.doc);
     else if (a === 'doc-del') supprimerDocumentDemande(sid, el.dataset.doc);
     else if (a === 'credit-add') ouvrirModaleCredit(sid);
     else if (a === 'credit-edit') ouvrirModaleCredit(sid, el.dataset.cid);
@@ -862,7 +862,7 @@ async function choisirDocumentMembre(suiviId, docId) {
         String(d.id) === String(docId) ? {
             ...d, statut: 'Fourni',
             dateFourni: new Date().toISOString().slice(0, 10),
-            dateValidite: inputValidite ? inputValidite.value : '',
+            dateValidite: inputValidite ? inputValidite.value : (d.dateValidite || ''),
             lien: doc.lien,
             srcDocId: doc.id
         } : d);
@@ -887,31 +887,61 @@ async function ajouterDocumentDemande(suiviId) {
     } catch (e) { console.error(e); alert('Erreur lors de l\'ajout.'); }
 }
 
-// Renomme un document demande (titre seul, le fichier fourni est conserve).
-async function renommerDocumentDemande(suiviId, docId) {
+// Remplace le document fourni : nouveau fichier uploade ou choix d'un
+// document deja present dans l'espace membre de l'eleve.
+async function remplacerDocumentDemande(suiviId, docId) {
     const suivi = suivisCache.find(s => s.id === suiviId);
     if (!suivi) return;
     const doc = formationJson(suivi.fields['Documentation'], []).find(d => String(d.id) === String(docId));
     if (!doc) return;
-    const titre = await demanderSaisie('Nouveau titre du document', doc.titre || '', { okLabel: 'Renommer' });
-    if (titre === null || !titre.trim()) return;
-    const docs = formationJson(suivi.fields['Documentation'], []).map(d =>
-        String(d.id) === String(docId) ? { ...d, titre: titre.trim() } : d);
-    try {
-        await patchSuivi(suiviId, { 'Documentation': docs });
-        renderDetailSuivi();
-    } catch (e) { console.error(e); alert('Erreur lors du renommage.'); }
+    const mode = await choisirDansListe(`Document « ${doc.titre || ''} »`, [
+        { id: 'upload', label: '📎 Envoyer un nouveau fichier' },
+        { id: 'membre', label: '📁 Choisir dans l\'espace membre de l\'élève' }
+    ]);
+    if (!mode) return;
+    if (mode === 'membre') { await choisirDocumentMembre(suiviId, docId); return; }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.jpg,.jpeg,.png';
+    input.addEventListener('change', async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        try {
+            const lien = await uploaderFichierDocument(file);
+            const docs = formationJson(suivi.fields['Documentation'], []).map(d =>
+                String(d.id) === String(docId) ? {
+                    ...d, statut: 'Fourni',
+                    dateFourni: new Date().toISOString().slice(0, 10),
+                    lien, srcDocId: undefined
+                } : d);
+            await patchSuivi(suiviId, { 'Documentation': docs });
+            renderDetailSuivi();
+        } catch (e) { console.error(e); alert('Erreur lors de l\'upload : ' + (e.message || '')); }
+    });
+    input.click();
 }
 
-// Supprime un document demande du suivi (fichier eventuel perdu avec).
+// Sur un document fourni, retire la piece jointe et repasse la demande
+// en attente ; sur une demande sans piece, supprime la demande.
 async function supprimerDocumentDemande(suiviId, docId) {
     const suivi = suivisCache.find(s => s.id === suiviId);
     if (!suivi) return;
     const doc = formationJson(suivi.fields['Documentation'], []).find(d => String(d.id) === String(docId));
     if (!doc) return;
-    const ok = await confirmerAction(`Supprimer le document demandé « ${doc.titre || ''} » ?`, { okLabel: 'Supprimer' });
+    const fourni = doc.statut === 'Fourni';
+    const ok = await confirmerAction(fourni
+        ? `Retirer la pièce jointe de « ${doc.titre || ''} » ? La demande repassera en attente.`
+        : `Supprimer la demande de document « ${doc.titre || ''} » ?`,
+        { okLabel: fourni ? 'Retirer' : 'Supprimer' });
     if (!ok) return;
-    const docs = formationJson(suivi.fields['Documentation'], []).filter(d => String(d.id) !== String(docId));
+    const docs = fourni
+        ? formationJson(suivi.fields['Documentation'], []).map(d =>
+            String(d.id) === String(docId) ? {
+                ...d, statut: 'Demandé',
+                dateFourni: undefined, dateValidite: undefined,
+                lien: undefined, srcDocId: undefined, archive: undefined
+            } : d)
+        : formationJson(suivi.fields['Documentation'], []).filter(d => String(d.id) !== String(docId));
     try {
         await patchSuivi(suiviId, { 'Documentation': docs });
         renderDetailSuivi();
