@@ -453,7 +453,10 @@ function renderMinimasHtml(stats, minimas, suivi, instructeur) {
             parseInt(c.att, 10) ? `${c.att} att.` : ''
         ].filter(Boolean).join(' · ');
         const del = instructeur
-            ? `<button class="btn-secondary" style="padding:2px 7px;font-size:11px;color:#b91c1c;" title="Supprimer ce crédit" data-formation-action="credit-del" data-sid="${suivi.id}" data-cid="${escapeHtml(c.id)}">✕</button>`
+            ? `<span style="display:flex;gap:4px;flex-shrink:0;">
+                <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" title="Modifier ce crédit" data-formation-action="credit-edit" data-sid="${suivi.id}" data-cid="${escapeHtml(c.id)}">✏️</button>
+                <button class="btn-secondary" style="padding:2px 7px;font-size:11px;color:#b91c1c;" title="Supprimer ce crédit" data-formation-action="credit-del" data-sid="${suivi.id}" data-cid="${escapeHtml(c.id)}">✕</button>
+            </span>`
             : '';
         return `<div class="formation-doc mini-credit"><span>✋ ${escapeHtml(c.libelle || 'Crédit manuel')}</span><span class="formation-carte-sub">${escapeHtml(parts)}</span>${del}</div>`;
     }).join('');
@@ -607,6 +610,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'doc-add') ajouterDocumentDemande(sid);
     else if (a === 'credit-add') ouvrirModaleCredit(sid);
+    else if (a === 'credit-edit') ouvrirModaleCredit(sid, el.dataset.cid);
     else if (a === 'credit-del') supprimerCredit(sid, el.dataset.cid);
     else if (a === 'module-valide') validerModule(sid, el.dataset.mid);
     else if (a === 'fiche') ouvrirFicheEleve(sid);
@@ -869,11 +873,27 @@ async function enregistrerFiche(e) {
 // ---------------------------------------------------------------------------
 // CREDITS MANUELS (heures/vols ajoutes a la main dans les minimas)
 // ---------------------------------------------------------------------------
-function ouvrirModaleCredit(suiviId) {
+function ouvrirModaleCredit(suiviId, creditId) {
     const overlay = document.getElementById('modale-formation-credit');
     if (!overlay) return;
     overlay.dataset.sid = suiviId;
+    overlay.dataset.cid = creditId || '';
     document.getElementById('form-formation-credit').reset();
+    const edition = !!creditId;
+    document.getElementById('credit-modal-titre').textContent = edition ? '✋ Modifier le vol / les heures' : '✋ Ajouter un vol / des heures';
+    document.getElementById('credit-submit').textContent = edition ? 'Enregistrer' : 'Ajouter';
+    if (edition) {
+        const suivi = suivisCache.find(s => s.id === suiviId);
+        const c = suivi && formationJson(suivi.fields['Crédits'], []).find(x => String(x.id) === String(creditId));
+        if (!c) return;
+        document.getElementById('credit-libelle').value = c.libelle || '';
+        document.getElementById('credit-heures').value = c.heures || '';
+        document.getElementById('credit-vols').value = c.vols || '';
+        document.getElementById('credit-dc').value = c.dc || '';
+        document.getElementById('credit-solo').value = c.solo || '';
+        document.getElementById('credit-simu').value = c.simu || '';
+        document.getElementById('credit-att').value = c.att || '';
+    }
     overlay.style.display = 'flex';
 }
 
@@ -881,22 +901,27 @@ async function enregistrerCredit(e) {
     e.preventDefault();
     const overlay = document.getElementById('modale-formation-credit');
     const suiviId = overlay.dataset.sid;
+    const creditId = overlay.dataset.cid || '';
     const suivi = suivisCache.find(s => s.id === suiviId);
     if (!suivi) return;
     const num = id => parseFloat(document.getElementById(id).value) || 0;
-    const credits = formationJson(suivi.fields['Crédits'], []).slice();
-    credits.push({
-        id: `c${Date.now()}`,
+    const saisie = {
         libelle: document.getElementById('credit-libelle').value.trim(),
         heures: num('credit-heures'), vols: num('credit-vols'),
         dc: num('credit-dc'), solo: num('credit-solo'), simu: num('credit-simu'),
         att: num('credit-att')
-    });
+    };
+    let credits = formationJson(suivi.fields['Crédits'], []).slice();
+    if (creditId) {
+        credits = credits.map(c => String(c.id) === String(creditId) ? { ...c, ...saisie } : c);
+    } else {
+        credits.push({ id: `c${Date.now()}`, ...saisie });
+    }
     try {
         await patchSuivi(suiviId, { 'Crédits': credits });
         overlay.style.display = 'none';
         renderDetailSuivi();
-    } catch (err) { console.error(err); alert('Erreur lors de l\'ajout.'); }
+    } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement.'); }
 }
 
 async function supprimerCredit(suiviId, creditId) {
