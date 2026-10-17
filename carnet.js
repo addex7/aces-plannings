@@ -1153,24 +1153,43 @@ function afficherCarnet(records) {
         return { record, f, temps, dateStr };
     });
 
-    // Détection des ruptures de continuité horamètre (en ordre chronologique)
+    // Détection des ruptures de continuité horamètre (en ordre chronologique).
+    // F-JVIO : horamètre au format H.MM converti en minutes ; les lignes de
+    // maintenance n'interrompent pas la chaîne.
     const idsEcartHorametre = new Set();
-    if (!isJVIO) {
-        const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? null : n; };
-        const chrono = [...recordsData].sort((a, b) => {
-            const da = a.f['Date'] || '', db = b.f['Date'] || '';
-            if (da !== db) return da < db ? -1 : 1;
-            const ha = a.f['Heure départ'] || '', hb = b.f['Heure départ'] || '';
-            if (ha !== hb) return ha < hb ? -1 : 1;
-            return (num(a.f['Horamètre départ']) || 0) - (num(b.f['Horamètre départ']) || 0);
-        });
+    const detailEcartJVIO = new Map();
+    {
+        const num = isJVIO
+            ? v => horametreVersMinutes(v)
+            : v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? null : n; };
+        const chrono = [...recordsData]
+            .filter(d => !d.record._estMaintenance)
+            .sort((a, b) => {
+                if (isJVIO) {
+                    const c = cleDateHeureCarnet(a.record) - cleDateHeureCarnet(b.record);
+                    if (c) return c;
+                } else {
+                    const da = a.f['Date'] || '', db = b.f['Date'] || '';
+                    if (da !== db) return da < db ? -1 : 1;
+                    const ha = a.f['Heure départ'] || '', hb = b.f['Heure départ'] || '';
+                    if (ha !== hb) return ha < hb ? -1 : 1;
+                }
+                return (num(a.f['Horamètre départ']) || 0) - (num(b.f['Horamètre départ']) || 0);
+            });
         for (let i = 1; i < chrono.length; i++) {
             const prevArr = num(chrono[i - 1].f['Horamètre arrivée']);
             const curDep = num(chrono[i].f['Horamètre départ']);
             if (prevArr === null || curDep === null) continue;
-            if (Math.abs(prevArr - curDep) > 0.005) {
+            const seuil = isJVIO ? 0.5 : 0.005;
+            if (Math.abs(prevArr - curDep) > seuil) {
                 idsEcartHorametre.add(chrono[i - 1].record.id);
                 idsEcartHorametre.add(chrono[i].record.id);
+                if (isJVIO) {
+                    detailEcartJVIO.set(chrono[i - 1].record.id,
+                        `Horamètre arrivée ${formaterNombre(chrono[i - 1].f['Horamètre arrivée'])} ≠ départ du vol suivant (${formaterNombre(chrono[i].f['Horamètre départ'])})`);
+                    detailEcartJVIO.set(chrono[i].record.id,
+                        `Horamètre départ ${formaterNombre(chrono[i].f['Horamètre départ'])} ≠ arrivée du vol précédent (${formaterNombre(chrono[i - 1].f['Horamètre arrivée'])})`);
+                }
             }
         }
     }
@@ -1224,7 +1243,7 @@ function afficherCarnet(records) {
                 <td>${escHtml(f['Arrivée']) || '-'}</td>
                 <td>${escHtml(f['Heure départ'])}</td>
                 <td>${escHtml(f['Heure arrivée'])}</td>
-                <td>${formaterNombre(f['Horamètre arrivée']) || '-'}</td>
+                <td${idsEcartHorametre.has(record.id) ? ` class="horametre-ecart" title="${escHtml(detailEcartJVIO.get(record.id) || 'Rupture de continuité horamètre')}"` : ''}>${formaterNombre(f['Horamètre arrivée']) || '-'}${idsEcartHorametre.has(record.id) ? ' ⚠️' : ''}</td>
                 <td>${escHtml(afficherCarburant(f['Carburant départ']))}</td>
                 <td>${escHtml(afficherCarburant(f['Carburant arrivée']))}</td>
                 <td>${escHtml((f['Maintenance'] || '').toString().trim()) || '-'}</td>
