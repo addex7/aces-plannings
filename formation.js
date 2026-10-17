@@ -863,7 +863,8 @@ async function choisirDocumentMembre(suiviId, docId) {
             ...d, statut: 'Fourni',
             dateFourni: new Date().toISOString().slice(0, 10),
             dateValidite: inputValidite ? inputValidite.value : '',
-            lien: doc.lien
+            lien: doc.lien,
+            srcDocId: doc.id
         } : d);
     try {
         await patchSuivi(suiviId, { 'Documentation': docs });

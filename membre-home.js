@@ -948,15 +948,47 @@ async function supprimerDocumentMembre(id, titre) {
         : await confirmerSuppression('Supprimer définitivement ce document ?');
     if (!okSuppr) return;
     try {
+        const recRes = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, { headers });
+        const lienDoc = recRes.ok ? ((await recRes.json()).fields || {})['Lien'] || '' : '';
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}/${encodeURIComponent(id)}`, {
             method: 'DELETE',
             headers
         });
         if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur Airtable');
+        await retirerDocMembreDesFormations(id, lienDoc);
         await chargerDocumentsMembre();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la suppression : ' + (err.message || ''));
+    }
+}
+
+// Un document de l'espace membre supprime ne doit plus figurer comme
+// fourni dans les formations : les items qui l'utilisaient repassent
+// en « Demande » (la demande reste, la piece jointe est retiree).
+async function retirerDocMembreDesFormations(docId, lienDoc) {
+    if (!membreSelectionne || typeof TABLE_FORMATIONS_SUIVIS === 'undefined') return;
+    try {
+        const nomComplet = `${(membreSelectionne.prenom || '').replace(/"/g, '\\"')} ${(membreSelectionne.nom || '').replace(/"/g, '\\"')}`.trim();
+        const formula = `FIND(UPPER("${nomComplet}"), UPPER({Élève nom})) > 0`;
+        const url = `${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}?filterByFormula=${encodeURIComponent(formula)}`;
+        const suivis = await fetchTousRecordsCache(url, { headers });
+        for (const s of suivis) {
+            const docs = formationJson((s.fields || {})['Documentation'], []);
+            if (!docs.some(d => d.srcDocId === docId || (lienDoc && d.lien === lienDoc))) continue;
+            const maj = docs.map(d => (d.srcDocId === docId || (lienDoc && d.lien === lienDoc)) ? {
+                ...d, statut: 'Demandé',
+                dateFourni: undefined, dateValidite: undefined,
+                lien: undefined, srcDocId: undefined
+            } : d);
+            await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}/${encodeURIComponent(s.id)}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ fields: { 'Documentation': maj } })
+            });
+        }
+    } catch (err) {
+        console.warn('Retrait du document des formations:', err);
     }
 }
 
