@@ -33,7 +33,15 @@ const VALIDITES = [
     { label: 'Instructeur ULM', field: MEMBRE_FIELDS.INSTRUCTEUR_ULM, dataLabel: 'Instructeur ULM', suiviLabels: ['Instructeur ULM'] }
 ];
 
-const TYPES_DOCUMENTS = ['Médical', 'SEP', 'Autorisation parentale', 'Brevet ULM'];
+const TYPES_DOCUMENTS = ['Médical', 'SEP', 'Instructeur avion', 'Instructeur ULM', 'Autorisation parentale', 'Autre'];
+// Type de document -> champ de date de validite de la fiche membre.
+const DOC_TYPE_VERS_CHAMP = {
+    'Médical': 'Médical',
+    'SEP': 'Licence SEP',
+    'Instructeur avion': 'Date de validité instructeur',
+    'Instructeur ULM': 'Date de validité instructeur ULM',
+    'Autorisation parentale': 'Date de validité autorisation parentale'
+};
 const SUIVIS_ACTIFS = 'Suivis actifs';
 let membreSelectionne = null;
 
@@ -362,14 +370,21 @@ function renderAccueilMembre(fields) {
                 <span style="font-size:13px; color:#64748b; text-align:right;">Pour les pilotes ayant un compte Gesasso, retrouvez les documents sur <a href="https://moncompte.ffvp.fr/auth/realms/heva/protocol/openid-connect/auth?client_id=gesasso&amp;redirect_uri=https%3A%2F%2Fgesasso.ffvp.fr%2Fauth%2Fcallback&amp;state=df83886c-203f-4bc5-bd65-b6e881458f8a&amp;response_type=code&amp;response_mode=query&amp;code_challenge=wAx65brpcl57rOiQsfO0oHYUtOJ_7bFKAiqelhK--sI&amp;code_challenge_method=S256" target="_blank" rel="noopener noreferrer" style="color:#1e3d59; text-decoration:underline;">votre profil Gesasso</a></span>
             </div>
             <form id="accueil-doc-form" class="accueil-doc-form" style="display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
-                <div class="form-group" style="flex:1; min-width:160px; margin:0; display:flex; flex-direction:column;">
+                <div class="form-group" style="flex:1; min-width:170px; margin:0; display:flex; flex-direction:column;">
                     <label for="accueil-doc-type" style="margin-bottom:4px; font-size:13px;">Type</label>
-                    <input type="text" id="accueil-doc-type" list="accueil-doc-types" placeholder="Médical, SEP, ou nom libre…" style="height:40px; box-sizing:border-box; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">
-                    <datalist id="accueil-doc-types">${TYPES_DOCUMENTS.map(t => `<option value="${t}"></option>`).join('')}</datalist>
+                    <select id="accueil-doc-type" style="height:40px; box-sizing:border-box; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">
+                        <option value="">—</option>
+                        ${TYPES_DOCUMENTS.map(t => `<option value="${t}">${t}</option>`).join('')}
+                    </select>
+                    <input type="text" id="accueil-doc-titre" placeholder="Nom du document" style="display:none; margin-top:6px; height:36px; box-sizing:border-box; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">
                 </div>
                 <div class="form-group" style="flex:2; min-width:200px; margin:0; display:flex; flex-direction:column;">
                     <label for="accueil-doc-fichier" style="margin-bottom:4px; font-size:13px;">Fichier</label>
                     <input type="file" id="accueil-doc-fichier" accept="*" style="height:40px; box-sizing:border-box; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">
+                </div>
+                <div class="form-group" style="min-width:150px; margin:0; display:flex; flex-direction:column;">
+                    <label for="accueil-doc-validite" style="margin-bottom:4px; font-size:13px;">Fin de validité <span id="accueil-doc-validite-opt" style="color:#94a3b8; font-weight:400;">(requis)</span></label>
+                    <input type="date" id="accueil-doc-validite" style="height:40px; box-sizing:border-box; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; background:white;">
                 </div>
                 <button type="submit" class="btn-primary" style="align-self:flex-end; height:40px; margin:0; padding:0 16px;">Ajouter</button>
             </form>
@@ -799,9 +814,10 @@ async function chargerDocumentsMembre() {
                     : `<button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="archiverDocumentMembre('${r.id}')">Archiver</button>`;
                 actions += `<button type="button" class="doc-suppr-btn" title="Supprimer définitivement" onclick="supprimerDocumentMembre('${r.id}', '${titre.replace(/'/g, "\\'")}')">✕</button>`;
             }
+            const dv = f['Date de validité'] || '';
             return `
                 <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;${archive ? ' opacity:0.75;' : ''}">
-                    <span>${titre}</span>
+                    <span>${titre}${dv ? ` <span style="color:#64748b; font-size:12px;">· jusqu'au ${escapeHtml(dv)}</span>` : ''}</span>
                     <div style="display:flex; align-items:center; gap:8px;">${actions}</div>
                 </div>
             `;
@@ -829,7 +845,7 @@ async function chargerDocumentsMembre() {
             }
             return `
                 <div class="accueil-doc-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;${d.archive ? ' opacity:0.75;' : ''}">
-                    <span>${escapeHtml(d.titre || 'Document')}</span>
+                    <span>${escapeHtml(d.titre || 'Document')}${d.dateValidite ? ` <span style="color:#64748b; font-size:12px;">· jusqu'au ${escapeHtml(d.dateValidite)}</span>` : ''}</span>
                     <div style="display:flex; align-items:center; gap:8px;">${actions}</div>
                 </div>`;
         };
@@ -920,11 +936,18 @@ async function uploaderDocumentMembre(e) {
     e.preventDefault();
     if (!membreSelectionne || !isSuperAdmin()) return;
     const selectType = document.getElementById('accueil-doc-type');
+    const inputTitre = document.getElementById('accueil-doc-titre');
+    const inputValidite = document.getElementById('accueil-doc-validite');
     const inputFichier = document.getElementById('accueil-doc-fichier');
     const btn = e.target.querySelector('button[type="submit"]');
-    const type = (selectType ? selectType.value : '').trim();
+    const type = selectType ? selectType.value : '';
+    const estAutre = type === 'Autre';
+    const titre = estAutre ? (inputTitre ? inputTitre.value.trim() : '') : type;
+    const dateValidite = inputValidite ? inputValidite.value : '';
     const file = inputFichier ? inputFichier.files[0] : null;
-    if (!type) { alert('Veuillez indiquer le nom du document.'); return; }
+    if (!type) { alert('Veuillez choisir un type de document.'); return; }
+    if (estAutre && !titre) { alert('Veuillez indiquer le nom du document.'); return; }
+    if (!estAutre && !dateValidite) { alert('La date de fin de validité est requise pour ce type de document.'); return; }
     if (!file) { alert('Veuillez choisir un fichier.'); return; }
     if (typeof uploaderFichierDocument !== 'function') { alert('Uploader non disponible.'); return; }
     if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours...'; }
@@ -932,12 +955,13 @@ async function uploaderDocumentMembre(e) {
         const lien = await uploaderFichierDocument(file);
         const nomComplet = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim();
         const fields = {
-            'Titre': type,
+            'Titre': titre,
             'Lien': lien,
             'Sous-dossier': nomComplet,
             'Description': 'Justificatif membre',
             'Auteur': currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : ''
         };
+        if (dateValidite) fields['Date de validité'] = dateValidite;
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_DOCUMENTS)}`, {
             method: 'POST',
             headers,
@@ -945,6 +969,15 @@ async function uploaderDocumentMembre(e) {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Erreur Airtable');
+        // Type lie a une case de la fiche : mettre a jour la validite du membre.
+        const champ = DOC_TYPE_VERS_CHAMP[type];
+        if (champ && dateValidite) {
+            try {
+                const dataM = await patchMembre(membreSelectionne.id, { [champ]: dateValidite });
+                membreSelectionne.fields = { ...(membreSelectionne.fields || {}), ...(dataM.fields || {}) };
+                renderAccueilMembre(membreSelectionne.fields);
+            } catch (errM) { console.warn('Mise à jour de la validité membre:', errM); }
+        }
         e.target.reset();
         await chargerDocumentsMembre();
     } catch (err) {
@@ -1105,6 +1138,13 @@ async function uploaderPhoto(event) {
 function attacherListenersAccueil() {
     const formDoc = document.getElementById('accueil-doc-form');
     if (formDoc) formDoc.addEventListener('submit', uploaderDocumentMembre);
+    const selTypeDoc = document.getElementById('accueil-doc-type');
+    if (selTypeDoc) selTypeDoc.addEventListener('change', () => {
+        const t = document.getElementById('accueil-doc-titre');
+        if (t) t.style.display = selTypeDoc.value === 'Autre' ? '' : 'none';
+        const opt = document.getElementById('accueil-doc-validite-opt');
+        if (opt) opt.textContent = selTypeDoc.value === 'Autre' ? '(facultatif)' : '(requis)';
+    });
 
     const btnBilanAccueil = document.getElementById('btn-bilan-validites-accueil');
     if (btnBilanAccueil) {

@@ -785,6 +785,14 @@ async function marquerDocumentFourni(suiviId, docId) {
     if (!suivi) return;
     const inputFichier = document.getElementById(`doc-fichier-${docId}`);
     const inputValidite = document.getElementById(`doc-validite-${docId}`);
+    const docTitre = (formationJson(suivi.fields['Documentation'], []).find(d => String(d.id) === String(docId)) || {}).titre || '';
+    const dv = inputValidite ? inputValidite.value : '';
+    // Pour les documents a echeance (medical, SEP, instructeur...), la
+    // date de fin de validite est requise et reportee sur la fiche membre.
+    if (champValiditePourTitre(docTitre) && !dv) {
+        alert('La date de fin de validité est requise pour ce document.');
+        return;
+    }
     let lien = '';
     try {
         if (inputFichier && inputFichier.files && inputFichier.files[0]) {
@@ -795,11 +803,12 @@ async function marquerDocumentFourni(suiviId, docId) {
         String(d.id) === String(docId) ? {
             ...d, statut: 'Fourni',
             dateFourni: new Date().toISOString().slice(0, 10),
-            dateValidite: inputValidite ? inputValidite.value : '',
+            dateValidite: dv,
             lien: lien || d.lien || ''
         } : d);
     try {
         await patchSuivi(suiviId, { 'Documentation': docs });
+        await reporterValiditeMembre(suivi, dv, docTitre);
         renderDetailSuivi();
     } catch (e) { console.error(e); alert('Erreur lors de la mise à jour.'); }
 }
@@ -814,7 +823,8 @@ async function chargerDocsEspaceMembre(nomComplet) {
     return records.filter(r => !(r.fields || {})['Archivé']).map(r => ({
         id: r.id,
         titre: (r.fields || {})['Titre'] || 'Document',
-        lien: (r.fields || {})['Lien'] || ''
+        lien: (r.fields || {})['Lien'] || '',
+        dateValidite: (r.fields || {})['Date de validité'] || ''
     }));
 }
 
@@ -858,18 +868,54 @@ async function choisirDocumentMembre(suiviId, docId) {
     const doc = docsMembre.find(d => d.id === choix);
     if (!doc || !doc.lien) { alert('Ce document n\'a pas de fichier joint.'); return; }
     const inputValidite = document.getElementById(`doc-validite-${docId}`);
-    const docs = formationJson(suivi.fields['Documentation'], []).map(d =>
-        String(d.id) === String(docId) ? {
+    let dvReporte = '';
+    const titreDemande = (formationJson(suivi.fields['Documentation'], []).find(d => String(d.id) === String(docId)) || {}).titre || doc.titre || '';
+    const docs = formationJson(suivi.fields['Documentation'], []).map(d => {
+        if (String(d.id) !== String(docId)) return d;
+        const dv = (inputValidite && inputValidite.value) || doc.dateValidite || d.dateValidite || '';
+        dvReporte = dv;
+        return {
             ...d, statut: 'Fourni',
             dateFourni: new Date().toISOString().slice(0, 10),
-            dateValidite: inputValidite ? inputValidite.value : (d.dateValidite || ''),
+            dateValidite: dv,
             lien: doc.lien,
             srcDocId: doc.id
-        } : d);
+        };
+    });
+    if (champValiditePourTitre(titreDemande) && !dvReporte) {
+        alert('La date de fin de validité est requise pour ce document.');
+        return;
+    }
     try {
         await patchSuivi(suiviId, { 'Documentation': docs });
+        await reporterValiditeMembre(suivi, dvReporte, titreDemande);
         renderDetailSuivi();
     } catch (e) { console.error(e); alert('Erreur lors de la mise à jour.'); }
+}
+
+// Type de document deduit du titre -> champ de validite de la fiche membre.
+function champValiditePourTitre(titre) {
+    const t = (titre || '').toLowerCase();
+    if (t.includes('instructeur ulm')) return 'Date de validité instructeur ULM';
+    if (t.includes('instructeur')) return 'Date de validité instructeur';
+    if (t.includes('médical') || t.includes('medical')) return 'Médical';
+    if (t.includes('sep')) return 'Licence SEP';
+    if (t.includes('autorisation parentale')) return 'Date de validité autorisation parentale';
+    return '';
+}
+
+// Reporte la date de fin de validite sur la case correspondante de la
+// fiche membre de l'eleve (silencieux si pas le droit ou pas d'eleve lie).
+async function reporterValiditeMembre(suivi, dateValidite, titre) {
+    const champ = champValiditePourTitre(titre);
+    const eleveId = (suivi.fields['Élève'] || [])[0];
+    if (!champ || !dateValidite || !eleveId) return;
+    try {
+        await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${eleveId}`, {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ fields: { [champ]: dateValidite } })
+        });
+    } catch (e) { console.warn('Report de validité sur la fiche membre:', e); }
 }
 
 // L'instructeur peut demander un document supplementaire en cours de
