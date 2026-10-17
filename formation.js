@@ -440,18 +440,21 @@ async function renderDetailSuivi() {
 // date de debut (un vol lie a une seance n'est compte qu'une fois).
 async function calculerStatsSuivi(suivi) {
     const seances = seancesDuSuivi(suivi.id);
-    let dc = 0, solo = 0, simu = 0, att = 0, nav = 0, local = 0;
+    // Vols deja detailles par une seance liee : leurs DC/solo/att ne sont
+    // pas re-comptes depuis la fonction du vol (evite le double compte).
+    const volsLiesIds = new Set(seances.map(s => String(s.fields['Vol'] || '')).filter(Boolean));
+    let dc = 0, solo = 0, simu = 0, att = 0, nav = 0, navSolo = 0, local = 0;
     seances.forEach(s => {
         dc += parseFloat(s.fields['HDV DC']) || 0;
         solo += parseFloat(s.fields['HDV solo']) || 0;
         simu += parseFloat(s.fields['HDV simu']) || 0;
         att += parseInt(s.fields['Atterrissages'], 10) || 0;
     });
-    const ajouterActivite = (libelle, h) => {
-        const a = String(libelle || '').toLowerCase();
-        if (/navigation|nav\b/.test(a)) nav += h;
-        if (/local/.test(a)) local += h;
-    };
+    const CODES_ENCADREMENT = ['EP', 'FI', 'FE', 'EX', 'I', 'ICDB'];
+    const partsFonction = f => String(f['Fonction'] || '').toUpperCase().split('/').map(x => x.trim()).filter(Boolean);
+    // Solo = le pilote vole seul (P sans code d'encadrement FI/EP/EX...).
+    const estSoloVol = v => { const p = partsFonction(v.fields); return p.includes('P') && !p.some(x => CODES_ENCADREMENT.includes(x)); };
+    const estEncadreVol = v => partsFonction(v.fields).some(x => CODES_ENCADREMENT.includes(x));
     let nbVols = 0, heures = 0;
     const volsComptesIds = new Set();
     const nomEleve = suivi.fields['Élève nom'] || '';
@@ -465,7 +468,21 @@ async function calculerStatsSuivi(suivi) {
                 volsComptesIds.add(String(v.id));
                 const h = (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0) / 60;
                 heures += h;
-                ajouterActivite(v.fields['Précision activité'], h);
+                const act = String(v.fields['Précision activité'] || '').toLowerCase();
+                const volSolo = estSoloVol(v);
+                if (!volsLiesIds.has(String(v.id))) {
+                    if (estEncadreVol(v)) dc += h;
+                    else if (volSolo) solo += h;
+                    att += parseInt(v.fields['Atterrissages'], 10) || 0;
+                }
+                // Le minima « navigation » reglementaire (PPL 5h, LAPL 3h)
+                // porte sur la navigation en SOLO supervise : la nav en
+                // double commande n'entre pas dans le compteur exige.
+                if (/navigation|nav\b/.test(act)) {
+                    nav += h;
+                    if (volSolo) navSolo += h;
+                }
+                if (/local/.test(act)) local += h;
             });
         } catch (e) { console.error('Stats suivi:', e); }
     }
@@ -478,11 +495,18 @@ async function calculerStatsSuivi(suivi) {
         if (vid && volsComptesIds.has(vid)) return;
         heures += h;
         // L'activite nav/local d'une seance porte sur ses heures avion (pas le simu).
-        ajouterActivite(s.fields['Activité'], (parseFloat(s.fields['HDV DC']) || 0) + (parseFloat(s.fields['HDV solo']) || 0));
+        const actS = String(s.fields['Activité'] || '');
+        if (actS === 'Navigation') {
+            nav += (parseFloat(s.fields['HDV DC']) || 0) + (parseFloat(s.fields['HDV solo']) || 0);
+            navSolo += parseFloat(s.fields['HDV solo']) || 0;
+        } else if (actS === 'Local') {
+            local += (parseFloat(s.fields['HDV DC']) || 0) + (parseFloat(s.fields['HDV solo']) || 0);
+        }
         if (!vid && (s.fields['Type'] || 'Vol') === 'Vol' && (h > 0 || natt > 0)) nbVols++;
     });
     // Credits manuels : heures/vols saisis a la main (vols hors carnet,
-    // experience anterieure) — comptent dans les minimas.
+    // experience anterieure) — comptent dans les minimas. Les heures de
+    // navigation creditees sont presumees solo (exigence reglementaire).
     const credits = formationJson(suivi.fields['Crédits'], []);
     credits.forEach(c => {
         dc += parseFloat(c.dc) || 0;
@@ -492,9 +516,10 @@ async function calculerStatsSuivi(suivi) {
         nbVols += parseInt(c.vols, 10) || 0;
         heures += parseFloat(c.heures) || 0;
         nav += parseFloat(c.nav) || 0;
+        navSolo += parseFloat(c.nav) || 0;
         local += parseFloat(c.local) || 0;
     });
-    return { dc, solo, simu, att, nbVols, heures, nav, local, credits };
+    return { dc, solo, simu, att, nbVols, heures, nav, navSolo, local, credits };
 }
 
 // Panneau des minimas : chaque exigence avec sa barre de progression,
@@ -516,7 +541,8 @@ function renderMinimasHtml(stats, minimas, suivi, instructeur) {
         ligne('Vols', stats.nbVols, Number(minimas.vols || 0), false),
         ligne('Double commande', stats.dc, Number(minimas.heuresDC || 0), true),
         ligne('Solo', stats.solo, Number(minimas.heuresSolo || 0), true),
-        (stats.nav || minimas.heuresNav) ? ligne('dont navigation 🗺️', stats.nav, Number(minimas.heuresNav || 0), true) : '',
+        (stats.navSolo || minimas.heuresNav) ? ligne('dont navigation solo 🗺️', stats.navSolo, Number(minimas.heuresNav || 0), true) : '',
+        (stats.nav > stats.navSolo) ? ligne('dont navigation DC (hors minima)', stats.nav - stats.navSolo, 0, true) : '',
         stats.local ? ligne('dont local 🏠', stats.local, 0, true) : '',
         stats.simu ? ligne('Simulateur', stats.simu, 0, true) : '',
         (stats.att || minimas.atterrissages) ? ligne('Atterrissages', stats.att, Number(minimas.atterrissages || 0), false) : ''
@@ -566,7 +592,7 @@ function manquesTerminaison(suivi, minimas, p, stats) {
     if (req('vols') && stats.nbVols < req('vols')) manques.push(`vols insuffisants`);
     if (req('heuresDC') && stats.dc < req('heuresDC')) manques.push(`heures en double commande insuffisantes`);
     if (req('heuresSolo') && stats.solo < req('heuresSolo')) manques.push(`heures solo insuffisantes`);
-    if (req('heuresNav') && stats.nav < req('heuresNav')) manques.push(`heures de navigation insuffisantes`);
+    if (req('heuresNav') && stats.navSolo < req('heuresNav')) manques.push(`heures de navigation solo insuffisantes`);
     if (req('atterrissages') && stats.att < req('atterrissages')) manques.push(`atterrissages insuffisants`);
     return manques;
 }
@@ -1551,7 +1577,7 @@ function blocCasHtml(cas) {
     const inp = (cls, ph, v) => `<input type="number" class="${cls}" min="0" step="0.5" placeholder="${ph}" title="${ph}" value="${v ?? ''}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;min-width:0;">`;
     return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:1.6fr repeat(6,0.7fr) auto;gap:6px;margin-bottom:6px;align-items:center;">
         <input type="text" class="cas-nom" placeholder="Nom du cas (ex : déjà licencié ULM)" value="${escapeHtml(cas.nom || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;min-width:0;">
-        ${inp('cas-heures', 'Heures', cas.heures)}${inp('cas-vols', 'Vols', cas.vols)}${inp('cas-hdc', 'h double cmd', cas.heuresDC)}${inp('cas-hsolo', 'h solo', cas.heuresSolo)}${inp('cas-hnav', 'h nav', cas.heuresNav)}${inp('cas-att', 'Atterrissages', cas.atterrissages)}
+        ${inp('cas-heures', 'Heures', cas.heures)}${inp('cas-vols', 'Vols', cas.vols)}${inp('cas-hdc', 'h double cmd', cas.heuresDC)}${inp('cas-hsolo', 'h solo', cas.heuresSolo)}${inp('cas-hnav', 'h nav. solo', cas.heuresNav)}${inp('cas-att', 'Atterrissages', cas.atterrissages)}
         <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
     </div>`;
 }
