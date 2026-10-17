@@ -246,6 +246,9 @@ function renderAccueilMembre(fields) {
         const dn = editable ? toISO(fields['Date de naissance']) : (fields['Date de naissance'] ? new Date(fields['Date de naissance']).toLocaleDateString('fr-FR') : '');
         infosEl.innerHTML =
             ligne('Mail', 'Mail', fields['Mail'], 'email') +
+            ligne('Contact urgence — nom', 'Contact urgence nom', fields['Contact urgence nom'], 'text') +
+            ligne('Contact urgence — téléphone', 'Contact urgence téléphone', fields['Contact urgence téléphone'], 'tel') +
+            ligne('Contact urgence — email', 'Contact urgence email', fields['Contact urgence email'], 'email') +
             ligne('Identifiant', 'Identifiant', fields['Identifiant'], 'text') +
             (editable
                 ? `<div class="accueil-info"><span class="accueil-info-label">Mot de passe</span><input type="password" class="accueil-info-input" data-field="Mot de passe" value="" placeholder="••••••••" autocomplete="new-password"></div>`
