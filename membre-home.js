@@ -205,9 +205,19 @@ function ouvrirModaleUrgence() {
         champU('urgence-nom', 'Nom et prénom', f['Contact urgence nom'], 'text') +
         champU('urgence-tel', 'Téléphone', f['Contact urgence téléphone'], 'tel') +
         champU('urgence-mail', 'Email (optionnel)', f['Contact urgence email'], 'email') +
-        `<div style="text-align:right;"><button type="button" class="btn-primary" id="urgence-save">💾 Enregistrer</button></div>`, '📞');
+        `<div id="urgence-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;"><button type="button" class="btn-primary" id="urgence-save">💾 Enregistrer</button></div>`, '📞');
     const modal = document.getElementById('planning-alert-modal');
     if (!modal) return;
+    // Le « Fermer » du gabarit devient « Annuler » a cote d'Enregistrer.
+    const closeBtn = modal.querySelector('#planning-alert-close');
+    const actions = modal.querySelector('#urgence-actions');
+    if (closeBtn && actions) {
+        const parentDiv = closeBtn.parentElement;
+        closeBtn.className = 'nr-btn-cancel';
+        closeBtn.textContent = 'Annuler';
+        actions.insertBefore(closeBtn, actions.firstChild);
+        if (parentDiv) parentDiv.style.display = 'none';
+    }
     modal.querySelector('#urgence-save').addEventListener('click', async () => {
         const fieldsToSend = {
             'Contact urgence nom': modal.querySelector('#urgence-nom').value.trim() || null,
