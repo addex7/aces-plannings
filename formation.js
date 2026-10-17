@@ -546,7 +546,9 @@ function renderDoc(suivi, d, instructeur, gele) {
     // Suivi gele : consultation uniquement.
     const depot = (!fourni && !gele) ? `
         <div class="formation-doc-depot">
-            <input type="file" id="doc-fichier-${escapeHtml(d.id)}" accept=".pdf,.jpg,.jpeg,.png" title="Joindre le document">
+            <input type="file" id="doc-fichier-${escapeHtml(d.id)}" accept=".pdf,.jpg,.jpeg,.png" class="doc-fichier-hidden" data-fnom="doc-fnom-${escapeHtml(d.id)}" style="display:none">
+            <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-choisir" data-doc="${escapeHtml(d.id)}">📎 Fichier</button>
+            <span class="doc-fnom" id="doc-fnom-${escapeHtml(d.id)}"></span>
             <input type="date" id="doc-validite-${escapeHtml(d.id)}" title="Date de validité (optionnel)">
             <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-fourni" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">Envoyer</button>
             <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-pick-membre" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Choisir un document déjà présent dans l'espace membre">📁 Espace membre</button>
@@ -721,6 +723,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
     else if (a === 'sig-voir') voirSignatureSeance(el.dataset.seid, el.dataset.qui);
     else if (a === 'seance-items') basculerDetailSeance(el.dataset.seid, el);
+    else if (a === 'doc-choisir') { const inp = document.getElementById(`doc-fichier-${el.dataset.doc}`); if (inp) inp.click(); }
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'doc-add') ajouterDocumentDemande(sid);
     else if (a === 'doc-pick-membre') choisirDocumentMembre(sid, el.dataset.doc);
@@ -746,6 +749,11 @@ document.addEventListener('click', (e) => {
 // Le select vol de la page seance est cree dynamiquement : delegation change.
 document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'seance-vol') prefillSeanceDepuisVol();
+    // Fichier choisi pour un document demande : afficher son nom.
+    if (e.target && e.target.classList && e.target.classList.contains('doc-fichier-hidden')) {
+        const fnom = document.getElementById(e.target.dataset.fnom);
+        if (fnom) fnom.textContent = e.target.files[0] ? e.target.files[0].name : '';
+    }
     // Fichier choisi pour une ressource : titre auto + icone coloree.
     if (e.target && e.target.classList.contains('ressource-fichier') && e.target.files[0]) {
         const bloc = e.target.closest('.formation-mini-edit');

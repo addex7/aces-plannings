@@ -5543,6 +5543,17 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     max-width: 200px;
     font-size: 12px;
 }
+/* Nom du fichier choisi (le vrai input file est masque : son widget
+   natif a une largeur minimale qui casse la mise en page). */
+.doc-fnom {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    color: #64748b;
+}
 .formation-doc-depot input[type="date"] {
     width: 108px;
     min-width: 0;
