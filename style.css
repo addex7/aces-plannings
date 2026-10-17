@@ -5814,7 +5814,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 .seance-grid4 {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
 }
 .seance-edition-note {

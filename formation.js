@@ -440,13 +440,18 @@ async function renderDetailSuivi() {
 // date de debut (un vol lie a une seance n'est compte qu'une fois).
 async function calculerStatsSuivi(suivi) {
     const seances = seancesDuSuivi(suivi.id);
-    let dc = 0, solo = 0, simu = 0, att = 0;
+    let dc = 0, solo = 0, simu = 0, att = 0, nav = 0, local = 0;
     seances.forEach(s => {
         dc += parseFloat(s.fields['HDV DC']) || 0;
         solo += parseFloat(s.fields['HDV solo']) || 0;
         simu += parseFloat(s.fields['HDV simu']) || 0;
         att += parseInt(s.fields['Atterrissages'], 10) || 0;
     });
+    const ajouterActivite = (libelle, h) => {
+        const a = String(libelle || '').toLowerCase();
+        if (/navigation|nav\b/.test(a)) nav += h;
+        if (/local/.test(a)) local += h;
+    };
     let nbVols = 0, heures = 0;
     const volsComptesIds = new Set();
     const nomEleve = suivi.fields['Élève nom'] || '';
@@ -458,7 +463,9 @@ async function calculerStatsSuivi(suivi) {
             nbVols = deduis.length;
             deduis.forEach(v => {
                 volsComptesIds.add(String(v.id));
-                heures += (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0) / 60;
+                const h = (typeof dureeVolMinutes === 'function' ? dureeVolMinutes(v.fields) : 0) / 60;
+                heures += h;
+                ajouterActivite(v.fields['Précision activité'], h);
             });
         } catch (e) { console.error('Stats suivi:', e); }
     }
@@ -470,6 +477,8 @@ async function calculerStatsSuivi(suivi) {
         const natt = parseInt(s.fields['Atterrissages'], 10) || 0;
         if (vid && volsComptesIds.has(vid)) return;
         heures += h;
+        // L'activite nav/local d'une seance porte sur ses heures avion (pas le simu).
+        ajouterActivite(s.fields['Activité'], (parseFloat(s.fields['HDV DC']) || 0) + (parseFloat(s.fields['HDV solo']) || 0));
         if (!vid && (s.fields['Type'] || 'Vol') === 'Vol' && (h > 0 || natt > 0)) nbVols++;
     });
     // Credits manuels : heures/vols saisis a la main (vols hors carnet,
@@ -482,8 +491,10 @@ async function calculerStatsSuivi(suivi) {
         att += parseInt(c.att, 10) || 0;
         nbVols += parseInt(c.vols, 10) || 0;
         heures += parseFloat(c.heures) || 0;
+        nav += parseFloat(c.nav) || 0;
+        local += parseFloat(c.local) || 0;
     });
-    return { dc, solo, simu, att, nbVols, heures, credits };
+    return { dc, solo, simu, att, nbVols, heures, nav, local, credits };
 }
 
 // Panneau des minimas : chaque exigence avec sa barre de progression,
@@ -505,6 +516,8 @@ function renderMinimasHtml(stats, minimas, suivi, instructeur) {
         ligne('Vols', stats.nbVols, Number(minimas.vols || 0), false),
         ligne('Double commande', stats.dc, Number(minimas.heuresDC || 0), true),
         ligne('Solo', stats.solo, Number(minimas.heuresSolo || 0), true),
+        (stats.nav || minimas.heuresNav) ? ligne('dont navigation 🗺️', stats.nav, Number(minimas.heuresNav || 0), true) : '',
+        stats.local ? ligne('dont local 🏠', stats.local, 0, true) : '',
         stats.simu ? ligne('Simulateur', stats.simu, 0, true) : '',
         (stats.att || minimas.atterrissages) ? ligne('Atterrissages', stats.att, Number(minimas.atterrissages || 0), false) : ''
     ].filter(Boolean);
@@ -517,6 +530,8 @@ function renderMinimasHtml(stats, minimas, suivi, instructeur) {
             parseFloat(c.dc) ? `DC ${hT(c.dc)}` : '',
             parseFloat(c.solo) ? `solo ${hT(c.solo)}` : '',
             parseFloat(c.simu) ? `simu ${hT(c.simu)}` : '',
+            parseFloat(c.nav) ? `nav ${hT(c.nav)}` : '',
+            parseFloat(c.local) ? `local ${hT(c.local)}` : '',
             parseInt(c.att, 10) ? `${c.att} att.` : ''
         ].filter(Boolean).join(' · ');
         const del = instructeur
@@ -551,6 +566,7 @@ function manquesTerminaison(suivi, minimas, p, stats) {
     if (req('vols') && stats.nbVols < req('vols')) manques.push(`vols insuffisants`);
     if (req('heuresDC') && stats.dc < req('heuresDC')) manques.push(`heures en double commande insuffisantes`);
     if (req('heuresSolo') && stats.solo < req('heuresSolo')) manques.push(`heures solo insuffisantes`);
+    if (req('heuresNav') && stats.nav < req('heuresNav')) manques.push(`heures de navigation insuffisantes`);
     if (req('atterrissages') && stats.att < req('atterrissages')) manques.push(`atterrissages insuffisants`);
     return manques;
 }
@@ -634,6 +650,7 @@ function renderSeance(s, instructeur, gele) {
         parseFloat(f['HDV DC']) ? `DC ${hdvVersHmin(f['HDV DC'])}` : '',
         parseFloat(f['HDV solo']) ? `Solo ${hdvVersHmin(f['HDV solo'])}` : '',
         parseFloat(f['HDV simu']) ? `Simu ${hdvVersHmin(f['HDV simu'])}` : '',
+        f['Activité'] === 'Navigation' ? '🗺️ nav' : (f['Activité'] === 'Local' ? '🏠 local' : ''),
         parseInt(f['Atterrissages'], 10) ? `${f['Atterrissages']} att.` : ''
     ].filter(Boolean).join(' · ');
     const signer = (!gele && !instructeur && !sigE)
@@ -1258,6 +1275,8 @@ function ouvrirModaleCredit(suiviId, creditId) {
         document.getElementById('credit-dc').value = c.dc || '';
         document.getElementById('credit-solo').value = c.solo || '';
         document.getElementById('credit-simu').value = c.simu || '';
+        document.getElementById('credit-nav').value = c.nav || '';
+        document.getElementById('credit-local').value = c.local || '';
         document.getElementById('credit-att').value = c.att || '';
     }
     overlay.style.display = 'flex';
@@ -1275,6 +1294,7 @@ async function enregistrerCredit(e) {
         libelle: document.getElementById('credit-libelle').value.trim(),
         heures: num('credit-heures'), vols: num('credit-vols'),
         dc: num('credit-dc'), solo: num('credit-solo'), simu: num('credit-simu'),
+        nav: num('credit-nav'), local: num('credit-local'),
         att: num('credit-att')
     };
     let credits = formationJson(suivi.fields['Crédits'], []).slice();
@@ -1371,6 +1391,7 @@ async function enregistrerAttribution(e) {
         vols: choisi ? (choisi.vols ?? 0) : (min.vols ?? 0),
         heuresDC: choisi ? (choisi.heuresDC ?? 0) : (min.heuresDC ?? 0),
         heuresSolo: choisi ? (choisi.heuresSolo ?? 0) : (min.heuresSolo ?? 0),
+        heuresNav: choisi ? (choisi.heuresNav ?? 0) : (min.heuresNav ?? 0),
         atterrissages: choisi ? (choisi.atterrissages ?? 0) : (min.atterrissages ?? 0)
     };
     if (choisi) minimas.cas = choisi.nom;
@@ -1528,9 +1549,9 @@ function ajouterBlocLecon() {
 // Cas de figure de minimas (ex : "deja licencié ULM") — nom libre, multiples.
 function blocCasHtml(cas) {
     const inp = (cls, ph, v) => `<input type="number" class="${cls}" min="0" step="0.5" placeholder="${ph}" title="${ph}" value="${v ?? ''}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;min-width:0;">`;
-    return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:1.6fr repeat(5,0.7fr) auto;gap:6px;margin-bottom:6px;align-items:center;">
+    return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:1.6fr repeat(6,0.7fr) auto;gap:6px;margin-bottom:6px;align-items:center;">
         <input type="text" class="cas-nom" placeholder="Nom du cas (ex : déjà licencié ULM)" value="${escapeHtml(cas.nom || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;min-width:0;">
-        ${inp('cas-heures', 'Heures', cas.heures)}${inp('cas-vols', 'Vols', cas.vols)}${inp('cas-hdc', 'h double cmd', cas.heuresDC)}${inp('cas-hsolo', 'h solo', cas.heuresSolo)}${inp('cas-att', 'Atterrissages', cas.atterrissages)}
+        ${inp('cas-heures', 'Heures', cas.heures)}${inp('cas-vols', 'Vols', cas.vols)}${inp('cas-hdc', 'h double cmd', cas.heuresDC)}${inp('cas-hsolo', 'h solo', cas.heuresSolo)}${inp('cas-hnav', 'h nav', cas.heuresNav)}${inp('cas-att', 'Atterrissages', cas.atterrissages)}
         <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
     </div>`;
 }
@@ -1568,7 +1589,7 @@ const CANEVAS_PPL = {
     titre: 'PPL(A)',
     discipline: 'Avion',
     description: 'Livret de progression PPL(A) — formation théorique et pratique.',
-    minimas: { heures: 45, vols: 0, heuresDC: 25, heuresSolo: 10, atterrissages: 0 },
+    minimas: { heures: 45, vols: 0, heuresDC: 25, heuresSolo: 10, heuresNav: 5, atterrissages: 0 },
     modules: ['Réglementation', 'Performance humaine', 'Météorologie', 'Communication', 'Connaissance générale de l’aéronef', 'Principes du vol', 'Navigation', 'Performances et préparation du vol', 'Procédures opérationnelles'].map(titre => ({ titre })),
     prerequis: ['Copie d’une pièce d’identité (carte d’identité ou passeport valide)', 'Attestation parentale signée (si mineur)', 'Copie du certificat médical (requis avant tout vol solo supervisé)', 'Copie de licences éventuellement détenues', 'Attestation de réussite aux examens théoriques PPL(A)'].map(titre => ({ titre })),
     lecons: [
@@ -1592,7 +1613,7 @@ const CANEVAS_LAPL = {
     titre: 'LAPL(A)',
     discipline: 'Avion',
     description: 'Livret de progression LAPL(A) — formation théorique et pratique (canevas ANPI, REV 1 V2 du 13/03/2023). Conditions d’expérience minimales : 30 h de vol totales dont 15 h en double commande et 6 h en solo supervisé (dont 3 h en navigation et une navigation de 80 NM min comprenant un arrêt complet sur un aérodrome différent du départ). Aucune heure de simulateur n’est prise en compte.',
-    minimas: { heures: 30, vols: 0, heuresDC: 15, heuresSolo: 6, atterrissages: 0 },
+    minimas: { heures: 30, vols: 0, heuresDC: 15, heuresSolo: 6, heuresNav: 3, atterrissages: 0 },
     modules: ['Réglementation', 'Performance humaine', 'Météorologie', 'Communication', 'Connaissance générale de l’aéronef', 'Principes du vol', 'Navigation', 'Performances et préparation du vol', 'Procédures opérationnelles'].map(titre => ({ titre })),
     prerequis: ['Copie d’une pièce d’identité (carte d’identité ou passeport valide)', 'Attestation parentale signée des représentants légaux (si mineur)', 'Copie du certificat médical (requis avant tout vol solo supervisé)', 'Copie de licences éventuellement détenues sur d’autres catégories d’aéronefs', 'Attestation de réussite aux examens théoriques LAPL(A)'].map(titre => ({ titre })),
     lecons: [
@@ -1676,6 +1697,7 @@ function ouvrirEditeurFormation(formationId) {
     document.getElementById('edit-formation-vols').value = m.vols ?? '';
     document.getElementById('edit-formation-hdc').value = m.heuresDC ?? '';
     document.getElementById('edit-formation-hsolo').value = m.heuresSolo ?? '';
+    document.getElementById('edit-formation-hnav').value = m.heuresNav ?? '';
     document.getElementById('edit-formation-att').value = m.atterrissages ?? '';
     // Cas de figure : nouveau format (m.cas) ou migration de l'ancien
     // (heuresLicencie/volsLicencie -> un cas "Deja licencié").
@@ -1712,7 +1734,8 @@ async function enregistrerFormationEdit(e) {
     const cas = [...document.querySelectorAll('#editeur-cas .formation-mini-edit')].map(b => ({
         nom: b.querySelector('.cas-nom').value.trim(),
         heures: num(b, '.cas-heures'), vols: num(b, '.cas-vols', true),
-        heuresDC: num(b, '.cas-hdc'), heuresSolo: num(b, '.cas-hsolo'), atterrissages: num(b, '.cas-att', true)
+        heuresDC: num(b, '.cas-hdc'), heuresSolo: num(b, '.cas-hsolo'),
+        heuresNav: num(b, '.cas-hnav'), atterrissages: num(b, '.cas-att', true)
     })).filter(c => c.nom);
     const modules = [...document.querySelectorAll('#editeur-modules .formation-mini-edit')]
         .map(b => ({ titre: b.querySelector('.module-titre').value.trim() }))
@@ -1741,6 +1764,7 @@ async function enregistrerFormationEdit(e) {
             vols: parseInt(document.getElementById('edit-formation-vols').value, 10) || 0,
             heuresDC: parseFloat(document.getElementById('edit-formation-hdc').value) || 0,
             heuresSolo: parseFloat(document.getElementById('edit-formation-hsolo').value) || 0,
+            heuresNav: parseFloat(document.getElementById('edit-formation-hnav').value) || 0,
             atterrissages: parseInt(document.getElementById('edit-formation-att').value, 10) || 0,
             cas
         },
@@ -1901,6 +1925,14 @@ async function ouvrirPageSeance(suiviId, seanceId) {
                     <label for="seance-att">Atterrissages</label>
                     <input type="number" id="seance-att" min="0" step="1" value="${fe['Atterrissages'] || ''}">
                 </div>
+                <div class="form-group">
+                    <label for="seance-activite">Activité</label>
+                    <select id="seance-activite">
+                        <option value="" ${!fe['Activité'] ? 'selected' : ''}>—</option>
+                        <option value="Local" ${fe['Activité'] === 'Local' ? 'selected' : ''}>🏠 Local</option>
+                        <option value="Navigation" ${fe['Activité'] === 'Navigation' ? 'selected' : ''}>🗺️ Navigation</option>
+                    </select>
+                </div>
             </div>
             <div class="form-group">
                 <label for="seance-meteo">Météo & infos opérationnelles</label>
@@ -1966,6 +1998,10 @@ function prefillSeanceDepuisVol() {
     if (f['Atterrissages']) document.getElementById('seance-att').value = f['Atterrissages'];
     if (f['Machine']) document.getElementById('seance-machine').value = f['Machine'];
     if (f['Date']) document.getElementById('seance-date').value = f['Date'];
+    const actVol = String(f['Précision activité'] || '').toLowerCase();
+    const selAct = document.getElementById('seance-activite');
+    if (selAct && /navigation/.test(actVol)) selAct.value = 'Navigation';
+    else if (selAct && /local/.test(actVol)) selAct.value = 'Local';
 }
 
 async function enregistrerPageSeance() {
@@ -2001,6 +2037,7 @@ async function enregistrerPageSeance() {
         'HDV DC': hdv('seance-hdc'),
         'HDV solo': hdv('seance-hsolo'),
         'HDV simu': hdv('seance-hsimu'),
+        'Activité': document.getElementById('seance-activite').value,
         'Atterrissages': parseInt(document.getElementById('seance-att').value, 10) || 0,
         'Commentaire': commentaire,
         'Items': items,
