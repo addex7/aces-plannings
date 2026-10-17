@@ -1358,19 +1358,53 @@ async function enregistrerAttribution(e) {
         'Lecons': formationJson(ff['Lecons'], []),
         'Minimas': minimas,
         'Ressources': formationJson(ff['Ressources'], []),
-        'Modules': formationJson(ff['Modules'], []).map((m, i) => ({ id: `m${Date.now()}_${i}`, titre: m.titre, statut: false, date: '' })),
+        'Modules': formationJson(ff['Modules'], []).map((m, i) => ({ id: `m${Date.now()}_${i}`, titre: m.titre, statut: !!importTerminee, date: importTerminee ? aujourdhui : '' })),
         'Etat civil': { telephone: (membre && membre.fields['Téléphone']) || '', email: (membre && membre.fields['Mail']) || '' },
-        'Statut': importTerminee ? 'Terminée' : 'Ouverte',
+        // L'import cree d'abord le suivi « Ouverte » : une fois « Terminee »
+        // le serveur fige tout (seules Statut/Date fin passent encore), ce
+        // qui empecherait d'ecrire la seance d'import juste apres.
+        'Statut': 'Ouverte',
         'Date début': dateDebut,
         'Documentation': documentation
     };
-    if (importTerminee) fields['Date fin'] = aujourdhui;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}`, {
             method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ? data.error.message : 'Erreur');
+        const suiviId = data.records && data.records[0] && data.records[0].id;
+        if (importTerminee && suiviId) {
+            // Seance « import » : tous les items acquis -> progression 100 %.
+            const itemsImport = [];
+            formationJson(ff['Lecons'], []).forEach(l => (l.items || []).forEach((_, i) =>
+                itemsImport.push({ lecon: l.id, item: i, etat: 'acquis' })));
+            const fieldsSeance = {
+                'Suivi': String(suiviId),
+                'Élève': [eleveId],
+                'Élève nom': nomEleve,
+                'Leçon': '',
+                'Date': aujourdhui,
+                'Type': 'Théorique',
+                'Commentaire': 'Formation suivie hors club — livret importé, items validés d\'office',
+                'Items': itemsImport,
+                'Signature instructeur': {
+                    par: `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim(),
+                    date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                    methode: 'import'
+                }
+            };
+            try {
+                await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}`, {
+                    method: 'POST', headers, body: JSON.stringify({ records: [{ fields: fieldsSeance }] })
+                });
+            } catch (e) { console.error('Seance d\'import:', e); }
+            // Transition vers « Terminee » : autorisee meme sur suivi fige.
+            await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}`, {
+                method: 'PATCH', headers,
+                body: JSON.stringify({ records: [{ id: suiviId, fields: { 'Statut': 'Terminée', 'Date fin': aujourdhui } }] })
+            });
+        }
         overlay.style.display = 'none';
         invaliderFormationCache();
         await chargerSuivis(true);
