@@ -267,6 +267,9 @@ async function renderDetailSuivi() {
     const suivi = (suivisCache || []).find(s => s.id === suiviOuvertId);
     if (!zone) return;
     if (!suivi) { suiviOuvertId = null; chargerFormation(); return; }
+    // Apres une ecriture, seancesCache a ete invalide (null) : le
+    // recharger sinon le journal et les compteurs passent a zero.
+    await chargerToutesSeances();
     const f = suivi.fields;
     const instructeur = estInstructeurFormation();
     const p = progressionSuivi(suivi);
