@@ -555,14 +555,16 @@ function renderDoc(suivi, d, instructeur, gele) {
         ? `<a href="${urlSure(d.lien)}" target="_blank" rel="noopener" title="Ouvrir la pièce jointe">${escapeHtml(d.titre)}</a>`
         : escapeHtml(d.titre);
     const actions = (instructeur && !gele) ? `
-        <span style="display:flex; gap:4px;">
+        <span class="doc-actions">
             <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-rename" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Remplacer le document fourni par un autre">✏️</button>
             <button class="btn-secondary" style="padding:2px 7px;font-size:11px;" data-formation-action="doc-del" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="${fourni ? 'Retirer la pièce jointe (la demande reste en attente)' : 'Supprimer cette demande de document'}">✕</button>
         </span>` : '';
-    return `<div class="formation-doc" style="flex-wrap:wrap;">
-        <span>${fourni ? '✅' : (d.prerequis ? '📋' : '📄')} ${titre}</span>
-        <span class="formation-carte-sub">${infos}</span>
-        ${actions}
+    return `<div class="formation-doc doc-bloc">
+        <div class="doc-ligne">
+            <span class="doc-titre">${fourni ? '✅' : (d.prerequis ? '📋' : '📄')} ${titre}</span>
+            ${actions}
+        </div>
+        ${infos ? `<div class="formation-carte-sub">${infos}</div>` : ''}
         ${depot}
     </div>`;
 }
