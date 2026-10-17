@@ -264,12 +264,13 @@ function ouvrirSuivi(suiviId) {
 
 async function renderDetailSuivi() {
     const zone = document.getElementById('formation-contenu');
-    const suivi = (suivisCache || []).find(s => s.id === suiviOuvertId);
     if (!zone) return;
+    // Apres une ecriture, suivisCache et seancesCache ont ete invalides
+    // (null) : les recharger sinon le detail retombe sur la liste et
+    // les compteurs passent a zero.
+    await Promise.all([chargerSuivis(), chargerToutesSeances()]);
+    const suivi = (suivisCache || []).find(s => s.id === suiviOuvertId);
     if (!suivi) { suiviOuvertId = null; chargerFormation(); return; }
-    // Apres une ecriture, seancesCache a ete invalide (null) : le
-    // recharger sinon le journal et les compteurs passent a zero.
-    await chargerToutesSeances();
     const f = suivi.fields;
     const instructeur = estInstructeurFormation();
     const p = progressionSuivi(suivi);
@@ -1623,19 +1624,44 @@ async function enregistrerPageSeance() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ? data.error.message : 'Erreur');
+        const seanceId = seanceEditionId || (data.records && data.records[0] && data.records[0].id) || '';
+        const nomEleve = suivi.fields['Élève nom'] || '';
+        // Si l'eleve est present, on peut recueillir sa signature tout
+        // de suite ; sinon la signature sera demandee par notification.
+        let eleveASigne = false;
+        const signerMaintenant = await confirmerAction(
+            `L'élève (${nomEleve || 'élève'}) peut-il signer la séance maintenant ?`,
+            { okLabel: 'Faire signer', cancelLabel: 'Plus tard', icone: '✍️', danger: false });
+        if (signerMaintenant && seanceId) {
+            const imgEleve = await ouvrirPadSignature(`Signature de l'élève — ${nomEleve}`);
+            if (imgEleve) {
+                const resE = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}`, {
+                    method: 'PATCH', headers,
+                    body: JSON.stringify({ records: [{ id: seanceId, fields: { 'Signature élève': {
+                        par: nomEleve,
+                        date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                        image: imgEleve } } }] })
+                });
+                const dataE = await resE.json();
+                if (!resE.ok) alert('Erreur lors de la signature élève : ' + (dataE.error ? dataE.error.message : ''));
+                eleveASigne = resE.ok;
+            }
+        }
         seanceEtats = new Map();
         enEditionSeance = false;
         seanceEditionId = null;
         invaliderFormationCache();
         await chargerToutesSeances(true);
         renderDetailSuivi();
-        // L'eleve doit signer (nouvelle seance ou seance modifiee) : notification.
-        try {
-            await creerNotification(
-                suivi.fields['Élève nom'] || '',
-                `Une séance de formation « ${suivi.fields['Formation titre'] || ''} » du ${date} attend votre signature.`,
-                'formation', 'formation');
-        } catch (e) { console.warn('Notification élève:', e); }
+        // Pas de signature eleve recueillie : la demander par notification.
+        if (!eleveASigne) {
+            try {
+                await creerNotification(
+                    nomEleve,
+                    `Une séance de formation « ${suivi.fields['Formation titre'] || ''} » du ${date} attend votre signature.`,
+                    'formation', 'formation');
+            } catch (e) { console.warn('Notification élève:', e); }
+        }
     } catch (err) { console.error(err); alert('Erreur lors de l\'enregistrement de la séance.'); }
 }
 
