@@ -235,8 +235,8 @@ function renderListeSuivis(suivis) {
                 ${statutBadge(f['Statut'] || 'Ouverte')}
             </div>
             <div class="formation-carte-sub">${escapeHtml(f['Formation titre'] || '')} — depuis le ${escapeHtml(f['Date début'] || '?')}</div>
-            ${barreProgression(p.pct)}
-            <div class="formation-carte-sub">${p.faits}/${p.total} items</div>
+            <div class="formation-carte-pied">${barreProgression(p.pct)}
+            <div class="formation-carte-sub">${p.faits}/${p.total} items</div></div>
         </div>`;
     };
     if (!suivis.length) return `<div class="formation-vide">${recherchePilote.trim() ? 'Aucun résultat pour cette recherche.' : 'Aucune formation en cours — attribuez-en une.'}</div>`;
@@ -258,7 +258,7 @@ function renderVueEleve(suivis) {
         return `<div class="formation-carte" data-formation-action="ouvrir" data-sid="${s.id}">
             <div class="formation-carte-tete"><strong>${escapeHtml(f['Formation titre'] || 'Formation')}</strong>${statutBadge(f['Statut'])}</div>
             <div class="formation-carte-sub">Instructeur : ${escapeHtml(f['Instructeur'] || '—')}</div>
-            ${barreProgression(p.pct)}
+            <div class="formation-carte-pied">${barreProgression(p.pct)}</div>
         </div>`;
     };
     return `
@@ -342,24 +342,29 @@ async function renderDetailSuivi() {
         ? `<div class="formation-docs">${docs.map(d => renderDoc(suivi, d, instructeur, gele)).join('')}</div>`
         : '<div class="formation-vide">Aucun document demandé.</div>';
 
-    // Colonnes : theorique | documents | minimas (progression auto sur les seances)
+    // Colonnes : theorique | documents | minimas (progression auto sur les seances).
+    // Chaque titre est cliquable pour plier la colonne (choix conserve).
+    const colPliee = k => sectionsPliees.has(`detail-${k}`);
+    const titreCol = (k, libelle) => `<h4 class="formation-col-titre formation-section-pli" data-formation-action="toggle-col" data-sec="detail-${k}">
+        <span class="formation-section-chevron">${colPliee(k) ? '▸' : '▾'}</span> ${libelle}</h4>`;
     const trioHtml = `
         <div class="formation-trio">
             <div class="formation-col">
-                <h4 class="formation-col-titre">📖 Formation théorique</h4>
-                ${modulesHtml}
+                ${titreCol('theorique', '📖 Formation théorique')}
+                ${colPliee('theorique') ? '' : modulesHtml}
             </div>
             <div class="formation-col">
-                <h4 class="formation-col-titre" style="display:flex;align-items:center;justify-content:space-between;">📋 Documents demandés
+                <h4 class="formation-col-titre formation-section-pli" data-formation-action="toggle-col" data-sec="detail-docs" style="display:flex;align-items:center;justify-content:space-between;"><span><span class="formation-section-chevron">${colPliee('docs') ? '▸' : '▾'}</span> 📋 Documents demandés</span>
                     ${instructeur && !gele ? `<button class="btn-secondary" style="padding:2px 8px;font-size:11px;" title="Demander un document supplémentaire" data-formation-action="doc-add" data-sid="${suivi.id}">＋</button>` : ''}
                 </h4>
-                ${docsHtml}
+                ${colPliee('docs') ? '' : docsHtml}
             </div>
             <div class="formation-col">
-                <h4 class="formation-col-titre">⏱ Minimas requis</h4>
+                ${titreCol('minimas', '⏱ Minimas requis')}
+                ${colPliee('minimas') ? '' : `
                 <div id="${statsVolsId}" class="formation-minimas">Comptage des vols…</div>
                 ${instructeur && !gele ? `<button class="btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:11px;" data-formation-action="credit-add" data-sid="${suivi.id}">＋ Ajouter un vol / des heures</button>` : ''}
-                ${ressourcesHtml}
+                ${ressourcesHtml}`}
             </div>
         </div>`;
 
@@ -704,7 +709,7 @@ document.addEventListener('click', (e) => {
         suiviOuvertId = null;
         chargerFormation();
     }
-    else if (a === 'toggle-section') basculerSectionSuivis(el.dataset.sec);
+    else if (a === 'toggle-section' || a === 'toggle-col') basculerSectionSuivis(el.dataset.sec);
     else if (a === 'nouveau-suivi') ouvrirModaleAttribuer();
     else if (a === 'gerer-catalogue') ouvrirGestionCatalogue();
     else if (a === 'seance') ouvrirPageSeance(sid);
