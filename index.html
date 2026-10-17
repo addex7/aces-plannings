@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=a71f30532d">
+    <link rel="stylesheet" href="style.css?v=a220dbace5">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -1651,7 +1651,7 @@
                     <div class="nr-section-title">MINIMAS REQUIS</div>
                     <div class="form-row" style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px;">
                         <div class="form-group" style="margin-bottom:0;">
-                            <label for="edit-formation-heures">Heures</label>
+                            <label for="edit-formation-heures" title="Heures totales">Heures</label>
                             <input type="number" id="edit-formation-heures" min="0" step="0.5" placeholder="45">
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
@@ -1659,7 +1659,7 @@
                             <input type="number" id="edit-formation-vols" min="0" step="1" placeholder="—">
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
-                            <label for="edit-formation-hdc">h double cmd</label>
+                            <label for="edit-formation-hdc" title="Heures en double commande">h DC</label>
                             <input type="number" id="edit-formation-hdc" min="0" step="0.5" placeholder="25">
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
@@ -1667,11 +1667,11 @@
                             <input type="number" id="edit-formation-hsolo" min="0" step="0.5" placeholder="10">
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
-                            <label for="edit-formation-hnav">h nav. solo</label>
+                            <label for="edit-formation-hnav" title="Heures de navigation en solo supervisé">h nav. solo</label>
                             <input type="number" id="edit-formation-hnav" min="0" step="0.5" placeholder="5">
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
-                            <label for="edit-formation-att">Atterrissages</label>
+                            <label for="edit-formation-att" title="Atterrissages">Att.</label>
                             <input type="number" id="edit-formation-att" min="0" step="1" placeholder="—">
                         </div>
                     </div>
@@ -1846,7 +1846,7 @@
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
     <script src="formation.js?v=be82d86316"></script>
-    <script src="version.js?v=20261017162448"></script>
+    <script src="version.js?v=20261017162601"></script>
     <script src="app.js?v=a87ff05606"></script>
     <script src="utils.js?v=8c80e1465b"></script>
     <script src="presences.js?v=5da5f247ed"></script>

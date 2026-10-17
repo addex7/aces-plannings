@@ -6088,3 +6088,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     margin-bottom: 10px;
     background: #f8fafc;
 }
+
+/* Editeur de formation : labels des minimas sur une ligne (alignement des champs) */
+#modale-formation-editeur .form-row .form-group label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
