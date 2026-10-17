@@ -346,14 +346,20 @@ async function renderDetailSuivi() {
                 <span class="module-actions">${fait ? `<span class="formation-carte-sub" style="white-space:nowrap;">validé le ${escapeHtml(mo.date || '')}</span>` : ''}${zone}</span></div>`;
         }).join('')}</div>` : '<div class="formation-vide">Aucun module.</div>';
     const ressources = formationJson(f['Ressources'], []);
-    const ressourcesHtml = ressources.length ? `
-        <h5 class="formation-phase-titre">📚 Documentation de la formation</h5>
-        <div class="formation-docs">${ressources.map(r => {
+    const ressourcesEdit = instructeur && !gele;
+    const ressourcesHtml = (ressources.length || ressourcesEdit) ? `
+        <h5 class="formation-phase-titre" style="display:flex;align-items:center;justify-content:space-between;">📚 Documentation de la formation
+            ${ressourcesEdit ? `<button class="btn-secondary" style="padding:2px 8px;font-size:11px;" title="Ajouter un document ou un lien" data-formation-action="res-add" data-sid="${suivi.id}">＋</button>` : ''}
+        </h5>
+        <div class="formation-docs">${ressources.map((r, i) => {
             const lien = urlSure(r.lien || '');
-            return `<div class="formation-doc">${lien
-                ? `<a href="${lien}" target="_blank" rel="noopener">🔗 ${escapeHtml(r.titre || r.lien)}</a>`
-                : `<span>🔗 ${escapeHtml(r.titre || '')}</span>`}</div>`;
-        }).join('')}</div>` : '';
+            return `<div class="formation-doc doc-bloc"><div class="doc-ligne">
+                <span class="doc-titre">${lien
+                    ? `<a href="${lien}" target="_blank" rel="noopener">🔗 ${escapeHtml(r.titre || r.lien)}</a>`
+                    : `<span>🔗 ${escapeHtml(r.titre || '')}</span>`}</span>
+                ${ressourcesEdit ? `<span class="doc-actions"><button class="btn-secondary" style="padding:2px 7px;font-size:11px;" title="Retirer cette ressource" data-formation-action="res-del" data-sid="${suivi.id}" data-ridx="${i}">✕</button></span>` : ''}
+            </div></div>`;
+        }).join('') || '<div class="formation-vide">Aucune documentation.</div>'}</div>` : '';
     const docsHtml = docs.length
         ? `<div class="formation-docs">${docs.map(d => renderDoc(suivi, d, instructeur, gele)).join('')}</div>`
         : '<div class="formation-vide">Aucun document demandé.</div>';
@@ -739,6 +745,8 @@ document.addEventListener('click', (e) => {
     else if (a === 'sig-voir') voirSignatureSeance(el.dataset.seid, el.dataset.qui);
     else if (a === 'seance-items') basculerDetailSeance(el.dataset.seid, el);
     else if (a === 'doc-choisir') choisirSourceDocument(sid, el.dataset.doc);
+    else if (a === 'res-add') ajouterRessourceSuivi(sid);
+    else if (a === 'res-del') supprimerRessourceSuivi(sid, parseInt(el.dataset.ridx, 10));
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'doc-add') ajouterDocumentDemande(sid);
     else if (a === 'doc-pick-membre') choisirDocumentMembre(sid, el.dataset.doc);
@@ -1100,6 +1108,56 @@ async function choisirSourceDocument(suiviId, docId) {
     } else if (mode === 'membre') {
         await choisirDocumentMembre(suiviId, docId);
     }
+}
+
+// Ajout d'une ressource a la documentation du suivi : fichier uploade
+// ou lien web — le catalogue de la formation n'est pas modifie.
+async function ajouterRessourceSuivi(suiviId) {
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const mode = await choisirDansListe('Ajouter à la documentation', [
+        { id: 'upload', label: '📎 Envoyer un fichier' },
+        { id: 'lien', label: '🔗 Coller un lien web (URL)' }
+    ]);
+    if (!mode) return;
+    let lien = '', titreDefaut = '';
+    if (mode === 'upload') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,.jpg,.jpeg,.png,.doc,.docx,.odt,.txt';
+        const file = await new Promise(resolve => {
+            input.addEventListener('change', () => resolve(input.files[0] || null));
+            input.click();
+        });
+        if (!file) return;
+        try { lien = await uploaderFichierDocument(file); }
+        catch (e) { alert('Erreur lors de l\'upload : ' + (e.message || '')); return; }
+        titreDefaut = file.name;
+    } else {
+        const url = await demanderSaisie('Adresse du lien (URL)', '', { placeholder: 'https://…', okLabel: 'Suivant' });
+        if (!url || !url.trim()) return;
+        lien = url.trim();
+    }
+    const titre = await demanderSaisie('Titre de la ressource', titreDefaut, { placeholder: 'Ex : carte VFR, livret…', okLabel: 'Ajouter' });
+    const ressources = formationJson(suivi.fields['Ressources'], []);
+    ressources.push({ titre: (titre || '').trim() || titreDefaut || lien, lien });
+    try {
+        await patchSuivi(suiviId, { 'Ressources': ressources });
+        renderDetailSuivi();
+    } catch (e) { console.error(e); alert('Erreur lors de l\'ajout.'); }
+}
+
+async function supprimerRessourceSuivi(suiviId, idx) {
+    const suivi = suivisCache.find(s => s.id === suiviId);
+    if (!suivi) return;
+    const ressources = formationJson(suivi.fields['Ressources'], []);
+    const r = ressources[idx];
+    if (!r || !(await confirmerAction(`Retirer « ${r.titre || r.lien || ''} » de la documentation ?`, { okLabel: 'Retirer', icone: '🔗' }))) return;
+    ressources.splice(idx, 1);
+    try {
+        await patchSuivi(suiviId, { 'Ressources': ressources });
+        renderDetailSuivi();
+    } catch (e) { console.error(e); alert('Erreur lors de la suppression.'); }
 }
 
 // Remplace le document fourni : nouveau fichier uploade ou choix d'un
