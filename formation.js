@@ -547,11 +547,10 @@ function renderDoc(suivi, d, instructeur, gele) {
     const depot = (!fourni && !gele) ? `
         <div class="formation-doc-depot">
             <input type="file" id="doc-fichier-${escapeHtml(d.id)}" accept=".pdf,.jpg,.jpeg,.png" class="doc-fichier-hidden" data-fnom="doc-fnom-${escapeHtml(d.id)}" style="display:none">
-            <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-choisir" data-doc="${escapeHtml(d.id)}">📎 Fichier</button>
+            <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-choisir" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">📎 Fichier</button>
             <span class="doc-fnom" id="doc-fnom-${escapeHtml(d.id)}"></span>
             <input type="date" id="doc-validite-${escapeHtml(d.id)}" title="Date de validité (optionnel)">
             <button class="btn-primary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-fourni" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">Envoyer</button>
-            <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-pick-membre" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}" title="Choisir un document déjà présent dans l'espace membre">📁 Espace membre</button>
         </div>` : '';
     const titre = d.lien
         ? `<a href="${urlSure(d.lien)}" target="_blank" rel="noopener" title="Ouvrir la pièce jointe">${escapeHtml(d.titre)}</a>`
@@ -723,7 +722,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
     else if (a === 'sig-voir') voirSignatureSeance(el.dataset.seid, el.dataset.qui);
     else if (a === 'seance-items') basculerDetailSeance(el.dataset.seid, el);
-    else if (a === 'doc-choisir') { const inp = document.getElementById(`doc-fichier-${el.dataset.doc}`); if (inp) inp.click(); }
+    else if (a === 'doc-choisir') choisirSourceDocument(sid, el.dataset.doc);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'doc-add') ajouterDocumentDemande(sid);
     else if (a === 'doc-pick-membre') choisirDocumentMembre(sid, el.dataset.doc);
@@ -1066,6 +1065,21 @@ async function ajouterDocumentDemande(suiviId) {
         await patchSuivi(suiviId, { 'Documentation': docs });
         renderDetailSuivi();
     } catch (e) { console.error(e); alert('Erreur lors de l\'ajout.'); }
+}
+
+// Bouton « Fichier » d'une demande : propose d'uploader une piece ou
+// de piocher un document deja present dans l'espace membre.
+async function choisirSourceDocument(suiviId, docId) {
+    const mode = await choisirDansListe('Fournir le document', [
+        { id: 'upload', label: '📎 Joindre un fichier' },
+        { id: 'membre', label: '📁 Choisir dans l\'espace membre de l\'élève' }
+    ]);
+    if (mode === 'upload') {
+        const inp = document.getElementById(`doc-fichier-${docId}`);
+        if (inp) inp.click();
+    } else if (mode === 'membre') {
+        await choisirDocumentMembre(suiviId, docId);
+    }
 }
 
 // Remplace le document fourni : nouveau fichier uploade ou choix d'un
