@@ -827,10 +827,11 @@ async function chargerDocumentsMembre() {
         // sont rapatries dans la meme liste (table Documents en ecriture
         // restreinte : on affiche plutot que de dupliquer).
         const docsForm = (await chargerDocumentsFormationMembre()).filter(d => {
-            // Un doc de formation qui pointe vers une fiche Documents de
-            // l'espace (choix « Espace membre ») n'est pas re-affiche :
-            // la fiche existe deja dans la liste.
-            if (d.srcDocId && records.some(r => r.id === d.srcDocId)) return false;
+            // Un doc de formation choisi depuis l'espace membre est deja
+            // une fiche de l'espace : on ne le re-affiche jamais ici,
+            // meme si la fiche source a ete supprimee (suivi fige, la
+            // copie reste consultable dans la formation).
+            if (d.srcDocId) return false;
             if (d.lien && records.some(r => (r.fields || {})['Lien'] === d.lien)) return false;
             return true;
         });
