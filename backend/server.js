@@ -416,8 +416,9 @@ function estEleveDe(fields, user) {
     if (user.id && ids.includes(user.id)) return true;
     return memeNomCreateur(fields['Élève nom'], user.nom);
 }
-// Un eleve peut uniquement : signer SA seance (Signature eleve), renseigner
-// ses documents demandes (Documentation) ou sa fiche (Etat civil) sur SON suivi.
+// Un eleve peut uniquement : signer SA seance (Signature eleve) ou sa
+// fiche (Etat civil) sur SON suivi. Les documents demandes sont
+// renseignes par les instructeurs uniquement.
 async function autoEditionFormation(req, res, tableSqlNom, records, champAuto) {
     if (req.method !== 'PATCH' && req.method !== 'PUT') return false;
     if (!(records || []).length) return false;
@@ -509,7 +510,6 @@ async function droitEcriture(req, res, tableNom, records) {
     }
     if (tableNom === 'Signalements' && req.method === 'POST') return true; // tout membre signale
     if (tableNom === 'Formations Séances' && await autoEditionFormation(req, res, 'formations_seances', records, 'Signature élève')) return true;
-    if (tableNom === 'Formations Suivis' && await autoEditionFormation(req, res, 'formations_suivis', records, 'Documentation')) return true;
     if (tableNom === 'Formations Suivis' && await autoEditionFormation(req, res, 'formations_suivis', records, 'Etat civil')) return true;
     erreur(res, 403, `Droits insuffisants pour écrire sur ${tableNom}`);
     return false;

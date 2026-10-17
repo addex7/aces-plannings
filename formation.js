@@ -563,10 +563,10 @@ function renderDoc(suivi, d, instructeur, gele) {
         ? `fourni le ${escapeHtml(d.dateFourni || '')}` + (d.dateValidite
             ? ` · <span style="color:${expire ? '#b91c1c' : '#166534'};">${expire ? 'expiré' : 'valable'} jusqu'au ${escapeHtml(d.dateValidite)}</span>` : '')
         : '';
-    // Depot possible par l'eleve ET l'instructeur (remise en main propre),
-    // ou choix d'un document deja present dans l'espace membre.
+    // Depot reserve aux instructeurs (remise en main propre) ou choix
+    // d'un document deja present dans l'espace membre.
     // Suivi gele : consultation uniquement.
-    const depot = (!fourni && !gele) ? `
+    const depot = (!fourni && !gele && instructeur) ? `
         <div class="formation-doc-depot">
             <input type="file" id="doc-fichier-${escapeHtml(d.id)}" accept=".pdf,.jpg,.jpeg,.png" class="doc-fichier-hidden" data-fnom="doc-fnom-${escapeHtml(d.id)}" style="display:none">
             <button class="btn-secondary" style="padding:4px 10px;font-size:12px;" data-formation-action="doc-choisir" data-sid="${suivi.id}" data-doc="${escapeHtml(d.id)}">📎 Fichier</button>
