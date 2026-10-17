@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <link rel="icon" type="image/png" href="logo-aces.png">
     <title>Gestion des Vols & Plannings</title>
-    <link rel="stylesheet" href="style.css?v=867655fa1d">
+    <link rel="stylesheet" href="style.css?v=dfd2ed8e68">
     <script>
     (function () {
         if (!location.hostname.endsWith('github.io')) return;
@@ -1722,6 +1722,15 @@
                     <label for="attribuer-cas">Cas particulier</label>
                     <select id="attribuer-cas"><option value="">Minimas standard</option></select>
                 </div>
+                <div class="form-group">
+                    <label style="display:flex; align-items:center; gap:8px; font-weight:500; cursor:pointer;">
+                        <input type="checkbox" id="attribuer-terminee" style="width:auto;"> Formation déjà terminée — importer le livret (PDF)
+                    </label>
+                </div>
+                <div class="form-group" id="attribuer-pdf-groupe" style="display:none;">
+                    <label for="attribuer-pdf">Livret de formation (PDF) *</label>
+                    <input type="file" id="attribuer-pdf" accept=".pdf">
+                </div>
                 <div class="form-actions" style="margin-top:15px;">
                     <button type="submit" class="btn-submit">Attribuer</button>
                 </div>
@@ -1872,8 +1881,8 @@
 
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
-    <script src="formation.js?v=98f1a8ff78"></script>
-    <script src="version.js?v=20261017112626"></script>
+    <script src="formation.js?v=f7cdb789af"></script>
+    <script src="version.js?v=20261017113501"></script>
     <script src="app.js?v=a87ff05606"></script>
     <script src="utils.js?v=8c80e1465b"></script>
     <script src="presences.js?v=5da5f247ed"></script>

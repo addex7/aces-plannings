@@ -596,8 +596,8 @@ function renderSeance(s, instructeur) {
         <button class="btn-secondary" style="padding:2px 8px;font-size:12px;margin-left:auto;" title="Modifier la séance (signatures à refaire)" data-formation-action="seance-edit" data-sid="${escapeHtml(f['Suivi'])}" data-seid="${s.id}">✏️</button>
         <button class="btn-secondary" style="padding:2px 8px;font-size:12px;color:#b91c1c;" title="Supprimer la séance" data-formation-action="seance-del" data-seid="${s.id}">🗑</button>` : '';
     const sigs = `<div class="formation-signatures">
-        <span title="${sigI ? `Signé par ${escapeHtml(sigI.par)} le ${escapeHtml(sigI.date)}` : 'Non signé'}">${sigI ? '✍️ Instructeur' : '⬜ Instructeur'}</span>
-        <span title="${sigE ? `Signé par ${escapeHtml(sigE.par)} le ${escapeHtml(sigE.date)}` : 'Non signé'}">${sigE ? '✍️ Élève' : '⬜ Élève'}</span>
+        ${sigI ? `<span class="sig-lien" data-formation-action="sig-voir" data-seid="${s.id}" data-qui="i" title="Voir la signature — ${escapeHtml(sigI.par)} le ${escapeHtml(sigI.date)}">✍️ Instructeur</span>` : '<span>⬜ Instructeur</span>'}
+        ${sigE ? `<span class="sig-lien" data-formation-action="sig-voir" data-seid="${s.id}" data-qui="e" title="Voir la signature — ${escapeHtml(sigE.par)} le ${escapeHtml(sigE.date)}">✍️ Élève</span>` : '<span>⬜ Élève</span>'}
         ${signer}
     </div>`;
     return `
@@ -639,6 +639,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'seance-save') enregistrerPageSeance();
     else if (a === 'seance-edit') ouvrirPageSeance(sid, el.dataset.seid);
     else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
+    else if (a === 'sig-voir') voirSignatureSeance(el.dataset.seid, el.dataset.qui);
     else if (a === 'doc-fourni') marquerDocumentFourni(sid, el.dataset.doc);
     else if (a === 'doc-add') ajouterDocumentDemande(sid);
     else if (a === 'doc-pick-membre') choisirDocumentMembre(sid, el.dataset.doc);
@@ -683,66 +684,86 @@ document.addEventListener('input', (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// SIGNATURE (pad canvas reutilisable)
+// SIGNATURE ELECTRONIQUE (identifiant + mot de passe du signataire)
 // ---------------------------------------------------------------------------
-function ouvrirPadSignature(titre) {
+// Le signataire prouve son identite avec ses identifiants du site : le
+// serveur les verifie et renvoie son nom. Plus pratique qu'un trace au
+// touchpad et autrement plus fiable.
+function demanderSignatureElectronique(titre, identifiantSuggere) {
     return new Promise(resolve => {
         const overlay = document.createElement('div');
         overlay.className = 'modal';
         overlay.style.cssText = 'display:flex;z-index:1200;';
         overlay.innerHTML = `
-            <div class="modal-content" style="max-width:560px;width:95%;">
-                <h3>${escapeHtml(titre || 'Signature')}</h3>
-                <p style="font-size:13px;color:#64748b;margin:4px 0 8px;">Signez dans le cadre ci-dessous (souris ou doigt).</p>
-                <canvas id="pad-signature" width="520" height="160" style="border:1px solid #cbd5e1;border-radius:8px;background:#fff;touch-action:none;width:100%;height:160px;"></canvas>
+            <div class="modal-content" style="max-width:400px;width:95%;">
+                <h3>${escapeHtml(titre || 'Signature électronique')}</h3>
+                <p style="font-size:13px;color:#64748b;margin:4px 0 10px;">La personne qui signe saisit son identifiant et son mot de passe du site.</p>
+                <div class="form-group"><label for="sig-identifiant">Identifiant ou mail</label><input type="text" id="sig-identifiant" autocomplete="username" value="${escapeHtml(identifiantSuggere || '')}"></div>
+                <div class="form-group"><label for="sig-mdp">Mot de passe</label><input type="password" id="sig-mdp" autocomplete="off"></div>
+                <div id="sig-erreur" style="display:none;color:#b91c1c;font-size:13px;margin-top:6px;"></div>
                 <div class="form-actions" style="margin-top:12px;display:flex;gap:10px;justify-content:flex-end;">
-                    <button type="button" class="btn-secondary" id="pad-effacer">Effacer</button>
-                    <button type="button" class="btn-secondary" id="pad-annuler">Annuler</button>
-                    <button type="button" class="btn-primary" id="pad-valider">✍️ Signer</button>
+                    <button type="button" class="btn-secondary" id="sig-annuler">Annuler</button>
+                    <button type="button" class="btn-primary" id="sig-valider">✍️ Signer</button>
                 </div>
             </div>`;
         document.body.appendChild(overlay);
-        const canvas = overlay.querySelector('#pad-signature');
-        const ctx = canvas.getContext('2d');
-        ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e3d59';
-        let dessin = false, vide = true;
-        const pos = e => {
-            const r = canvas.getBoundingClientRect();
-            const p = e.touches ? e.touches[0] : e;
-            return { x: (p.clientX - r.left) * (canvas.width / r.width), y: (p.clientY - r.top) * (canvas.height / r.height) };
-        };
-        const debut = e => { dessin = true; const { x, y } = pos(e); ctx.beginPath(); ctx.moveTo(x, y); e.preventDefault(); };
-        const trace = e => { if (!dessin) return; const { x, y } = pos(e); ctx.lineTo(x, y); ctx.stroke(); vide = false; e.preventDefault(); };
-        const fin = () => { dessin = false; };
-        canvas.addEventListener('pointerdown', debut);
-        canvas.addEventListener('pointermove', trace);
-        canvas.addEventListener('pointerup', fin);
-        canvas.addEventListener('pointerleave', fin);
         const fermer = v => { overlay.remove(); resolve(v); };
-        overlay.querySelector('#pad-effacer').addEventListener('click', () => { ctx.clearRect(0, 0, canvas.width, canvas.height); vide = true; });
-        overlay.querySelector('#pad-annuler').addEventListener('click', () => fermer(null));
-        overlay.querySelector('#pad-valider').addEventListener('click', () => {
-            if (vide) { alert('Signez dans le cadre avant de valider.'); return; }
-            fermer(canvas.toDataURL('image/png'));
-        });
+        const btn = overlay.querySelector('#sig-valider');
+        const errEl = overlay.querySelector('#sig-erreur');
+        const valider = async () => {
+            const identifiant = overlay.querySelector('#sig-identifiant').value.trim();
+            const motDePasse = overlay.querySelector('#sig-mdp').value;
+            if (!identifiant || !motDePasse) { errEl.textContent = 'Identifiant et mot de passe requis.'; errEl.style.display = 'block'; return; }
+            btn.disabled = true; btn.textContent = 'Vérification…';
+            try {
+                const res = await fetch(`${AUTH_BASE}/verify`, {
+                    method: 'POST', headers,
+                    body: JSON.stringify({ identifiant, motDePasse })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    errEl.textContent = data.error?.message || 'Identifiant ou mot de passe incorrect.';
+                    errEl.style.display = 'block';
+                    btn.disabled = false; btn.textContent = '✍️ Signer';
+                    return;
+                }
+                fermer({
+                    par: data.nom || identifiant,
+                    date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                    methode: 'electronique'
+                });
+            } catch (e) {
+                errEl.textContent = 'Erreur de vérification, réessayez.';
+                errEl.style.display = 'block';
+                btn.disabled = false; btn.textContent = '✍️ Signer';
+            }
+        };
+        btn.addEventListener('click', valider);
+        overlay.querySelector('#sig-annuler').addEventListener('click', () => fermer(null));
+        overlay.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); valider(); } });
+        overlay.querySelector('#sig-mdp').focus();
     });
 }
 
-function signatureObjet(image) {
-    return {
-        par: `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim(),
-        date: new Date().toISOString().slice(0, 16).replace('T', ' '),
-        image
-    };
+// Identifiant du compte de l'eleve (lien Utilisateurs du suivi) pour
+// pre-remplir la modale de signature quand l'instructeur fait signer.
+async function identifiantEleve(suivi) {
+    const eleveId = ((suivi.fields || {})['Élève'] || [])[0];
+    if (!eleveId) return '';
+    try {
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${eleveId}`, { headers });
+        const data = await res.json();
+        return res.ok ? ((data.fields || {})['Identifiant'] || '') : '';
+    } catch (e) { return ''; }
 }
 
 async function signerSeance(seanceId) {
-    const image = await ouvrirPadSignature('Signer la séance');
-    if (!image) return;
+    const sig = await demanderSignatureElectronique('Signature électronique — vos identifiants', currentUser ? currentUser.identifiant : '');
+    if (!sig) return;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}`, {
             method: 'PATCH', headers,
-            body: JSON.stringify({ records: [{ id: seanceId, fields: { 'Signature élève': signatureObjet(image) } }] })
+            body: JSON.stringify({ records: [{ id: seanceId, fields: { 'Signature élève': sig } }] })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ? data.error.message : 'Erreur');
@@ -750,6 +771,31 @@ async function signerSeance(seanceId) {
         await chargerToutesSeances(true);
         if (suiviOuvertId) renderDetailSuivi(); else chargerFormation();
     } catch (e) { console.error(e); alert('Erreur lors de la signature.'); }
+}
+
+// Affiche le detail d'une signature (auteur, date, methode, image).
+function voirSignatureSeance(seanceId, qui) {
+    const s = (seancesCache || []).find(x => x.id === seanceId);
+    if (!s) return;
+    const sig = formationJson(qui === 'i' ? s.fields['Signature instructeur'] : s.fields['Signature élève'], null);
+    if (!sig) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal';
+    overlay.style.cssText = 'display:flex;z-index:1200;';
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-width:420px;">
+            <h3 style="margin-top:0;">✍️ Signature ${qui === 'i' ? 'instructeur' : 'élève'}</h3>
+            <p style="margin:6px 0;"><strong>${escapeHtml(sig.par || '—')}</strong><br>
+            <span style="color:#64748b;font-size:13px;">le ${escapeHtml(sig.date || '')}${sig.methode === 'electronique' ? ' · signature électronique (identifiants vérifiés)' : ''}</span></p>
+            ${sig.image ? `<img src="${sig.image}" alt="Signature" style="max-width:100%;border:1px solid #e2e8f0;border-radius:8px;">` : ''}
+            <div class="form-actions" style="margin-top:12px;display:flex;justify-content:flex-end;">
+                <button type="button" class="btn-secondary" id="sig-voir-fermer">Fermer</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    const fermer = () => overlay.remove();
+    overlay.querySelector('#sig-voir-fermer').addEventListener('click', fermer);
+    overlay.addEventListener('click', e => { if (e.target === overlay) fermer(); });
 }
 
 // ---------------------------------------------------------------------------
@@ -1166,6 +1212,12 @@ async function ouvrirModaleAttribuer() {
     selForm.innerHTML = '<option value="">— Choisir une formation —</option>' +
         formations.map(f => `<option value="${f.id}">${escapeHtml(f.fields['Titre'] || 'Formation')}</option>`).join('');
     document.getElementById('attribuer-date').value = new Date().toISOString().slice(0, 10);
+    const cbTerminee = document.getElementById('attribuer-terminee');
+    const pdfGroupe = document.getElementById('attribuer-pdf-groupe');
+    if (cbTerminee) { cbTerminee.checked = false; cbTerminee.onchange = () => { pdfGroupe.style.display = cbTerminee.checked ? 'block' : 'none'; }; }
+    if (pdfGroupe) pdfGroupe.style.display = 'none';
+    const pdfInput = document.getElementById('attribuer-pdf');
+    if (pdfInput) pdfInput.value = '';
     majCasAttribution();
     overlay.style.display = 'flex';
 }
@@ -1214,9 +1266,20 @@ async function enregistrerAttribution(e) {
     if (choisi) minimas.cas = choisi.nom;
     // Les prerequis du catalogue deviennent les documents demandes a l'eleve.
     const aujourdhui = new Date().toISOString().slice(0, 10);
-    const documentation = formationJson(ff['Prerequis'], []).map((p, i) => ({
-        id: `d${Date.now()}_${i}`, titre: p.titre, statut: 'Demandé', dateDemande: aujourdhui, prerequis: true
-    }));
+    const importTerminee = document.getElementById('attribuer-terminee')?.checked;
+    const pdfInput = document.getElementById('attribuer-pdf');
+    let livretLien = '';
+    if (importTerminee) {
+        const fichier = pdfInput && pdfInput.files && pdfInput.files[0];
+        if (!fichier) { alert('Choisissez le PDF du livret de formation.'); return; }
+        try { livretLien = await uploaderFichierDocument(fichier); }
+        catch (err) { alert('Erreur lors de l\'upload du livret : ' + (err.message || err)); return; }
+    }
+    const documentation = importTerminee
+        ? [{ id: `d${Date.now()}`, titre: `Livret importé — ${(pdfInput.files[0] || {}).name || 'livret.pdf'}`, statut: 'Fourni', dateFourni: aujourdhui, lien: livretLien }]
+        : formationJson(ff['Prerequis'], []).map((p, i) => ({
+            id: `d${Date.now()}_${i}`, titre: p.titre, statut: 'Demandé', dateDemande: aujourdhui, prerequis: true
+        }));
     const fields = {
         'Élève': [eleveId],
         'Élève nom': nomEleve,
@@ -1229,10 +1292,11 @@ async function enregistrerAttribution(e) {
         'Ressources': formationJson(ff['Ressources'], []),
         'Modules': formationJson(ff['Modules'], []).map((m, i) => ({ id: `m${Date.now()}_${i}`, titre: m.titre, statut: false, date: '' })),
         'Etat civil': { telephone: (membre && membre.fields['Téléphone']) || '', email: (membre && membre.fields['Mail']) || '' },
-        'Statut': 'Ouverte',
+        'Statut': importTerminee ? 'Terminée' : 'Ouverte',
         'Date début': dateDebut,
         'Documentation': documentation
     };
+    if (importTerminee) fields['Date fin'] = aujourdhui;
     try {
         const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SUIVIS)}`, {
             method: 'POST', headers, body: JSON.stringify({ records: [{ fields }] })
@@ -1776,8 +1840,8 @@ async function enregistrerPageSeance() {
     const date = document.getElementById('seance-date').value || new Date().toISOString().slice(0, 10);
     if (!items.length && !(await confirmerAction('Aucun item coché — enregistrer la séance quand même ?', { okLabel: 'Enregistrer', icone: '✈️' }))) return;
 
-    const image = await ouvrirPadSignature('Signature de l\'instructeur');
-    if (!image) return;
+    const sigInstr = await demanderSignatureElectronique('Signature de l\'instructeur — vos identifiants', currentUser ? currentUser.identifiant : '');
+    if (!sigInstr) return;
 
     const hdv = id => parseFloat(document.getElementById(id).value) || 0;
     const fields = {
@@ -1797,7 +1861,7 @@ async function enregistrerPageSeance() {
         'Atterrissages': parseInt(document.getElementById('seance-att').value, 10) || 0,
         'Commentaire': commentaire,
         'Items': items,
-        'Signature instructeur': signatureObjet(image)
+        'Signature instructeur': sigInstr
     };
     // En modification, la signature eleve est invalidee : l'eleve devra re-signer.
     if (seanceEditionId) fields['Signature élève'] = null;
@@ -1819,14 +1883,12 @@ async function enregistrerPageSeance() {
             `L'élève (${nomEleve || 'élève'}) peut-il signer la séance maintenant ?`,
             { okLabel: 'Faire signer', cancelLabel: 'Plus tard', icone: '✍️', danger: false });
         if (signerMaintenant && seanceId) {
-            const imgEleve = await ouvrirPadSignature(`Signature de l'élève — ${nomEleve}`);
-            if (imgEleve) {
+            const idfEleve = await identifiantEleve(suivi);
+            const sigEleve = await demanderSignatureElectronique(`Signature de l'élève — ${nomEleve} saisit ses identifiants`, idfEleve);
+            if (sigEleve) {
                 const resE = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_FORMATIONS_SEANCES)}`, {
                     method: 'PATCH', headers,
-                    body: JSON.stringify({ records: [{ id: seanceId, fields: { 'Signature élève': {
-                        par: nomEleve,
-                        date: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                        image: imgEleve } } }] })
+                    body: JSON.stringify({ records: [{ id: seanceId, fields: { 'Signature élève': sigEleve } }] })
                 });
                 const dataE = await resE.json();
                 if (!resE.ok) alert('Erreur lors de la signature élève : ' + (dataE.error ? dataE.error.message : ''));

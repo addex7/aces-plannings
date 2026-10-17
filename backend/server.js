@@ -199,6 +199,38 @@ app.post('/v0/auth/login', async (req, res) => {
     }
 });
 
+// Verification d'identite pour une signature electronique : un membre
+// connecte fait verifier les identifiants du signataire (souvent
+// lui-meme, parfois l'eleve sur le poste de l'instructeur). Aucune
+// session n'est creee.
+app.post('/v0/auth/verify', async (req, res) => {
+    const m = (req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
+    const acteur = m ? await resoudreSession(m[1]) : null;
+    if (!acteur) return erreur(res, 401, 'Non autorisé');
+    const idf = String((req.body || {}).identifiant || '').trim();
+    const mdp = String((req.body || {}).motDePasse || '');
+    if (!idf || !mdp) return erreur(res, 400, 'Identifiant et mot de passe requis');
+    if (!loginThrottle(req.ip)) return erreur(res, 429, 'Trop de tentatives, réessayez plus tard');
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, fields FROM utilisateurs
+             WHERE (fields->>'Identifiant' = $1 OR lower(fields->>'Mail') = lower($1))
+             LIMIT 1`,
+            [idf]);
+        const u = rows[0];
+        const f = (u && u.fields) || {};
+        const actif = !!f['Actif'] && !['false', '0', 'non', 'Non'].includes(String(f['Actif']));
+        const stocke = String(f['Mot de passe'] || '');
+        if (!u || !actif || (stocke !== hacherMdpServeur(mdp) && stocke !== mdp)) {
+            return erreur(res, 401, 'Identifiant ou mot de passe incorrect');
+        }
+        res.json({ ok: true, nom: `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() });
+    } catch (e) {
+        console.error('Verify:', e);
+        erreur(res, 500, 'Erreur de vérification');
+    }
+});
+
 app.post('/v0/auth/logout', (req, res) => {
     const m = (req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
     if (m) {
