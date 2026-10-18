@@ -321,7 +321,7 @@ async function renderDetailSuivi() {
         ${!gele ? `<button class="btn-primary" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : ''}` : '';
     majActionsEntete(`
         <button class="btn-primary" data-formation-action="retour">← Retour</button>
-        <button class="btn-secondary" title="Extraire le livret de formation (imprimable / PDF)" data-formation-action="livret-export" data-sid="${suivi.id}">🖨 Livret</button>
+        <button class="btn-primary" title="Télécharger le livret de formation en PDF" data-formation-action="livret-export" data-sid="${suivi.id}">📄 Extraire en PDF</button>
         ${boutonsInstructeur}`);
 
     // Regroupement des lecons par phase (groupe), comme le livret BLN.
@@ -754,11 +754,15 @@ function basculerDetailSeance(seanceId, btn) {
 }
 
 /* --------------------------------------------------------------------------
-   EXPORT LIVRET : page autonome imprimable (programme + journal + signatures)
+   EXPORT LIVRET : PDF telechargeable (programme + journal + signatures)
    -------------------------------------------------------------------------- */
 async function exporterLivret(sid) {
     const suivi = (suivisCache || []).find(x => x.id === sid);
     if (!suivi) return;
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('La génération PDF n\'est pas disponible (librairie non chargée).');
+        return;
+    }
     const f = suivi.fields || {};
     const p = progressionSuivi(suivi);
     const stats = await calculerStatsSuivi(suivi);
@@ -768,27 +772,70 @@ async function exporterLivret(sid) {
     const ressources = formationJson(f['Ressources'], []);
     const seances = seancesDuSuivi(sid).slice()
         .sort((a, b) => String((a.fields || {})['Date'] || '').localeCompare(String((b.fields || {})['Date'] || '')));
-    const e = escapeHtml;
     const hv = x => { const n = parseFloat(x); return n ? hdvVersHmin(n) : ''; };
+    const ETATS_TXT = { acquis: 'Acquis', encours: 'En cours', arefaire: 'À refaire' };
 
-    // --- Programme pratique : phases / lecons / items avec etat courant
+    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    const bleu = [30, 61, 89];
+    const gris = [100, 116, 139];
+    const W = doc.internal.pageSize.getWidth();
+    const tableOpts = { theme: 'grid', styles: { fontSize: 8, cellPadding: 1.6 }, headStyles: { fillColor: bleu, fontSize: 8 }, margin: { left: 14, right: 14 } };
+    const section = titre => {
+        const y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 40;
+        if (y > 268) doc.addPage();
+        const yy = y > 268 ? 16 : y;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...bleu);
+        doc.text(titre, 14, yy);
+        doc.setDrawColor(...bleu); doc.line(14, yy + 1.5, W - 14, yy + 1.5);
+        return yy + 5;
+    };
+    const pieds = () => {
+        const n = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= n; i++) {
+            doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
+            doc.text(`Page ${i}/${n}`, W - 14, 293, { align: 'right' });
+        }
+    };
+
+    // --- En-tete
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...bleu);
+    doc.text(`Livret de formation — ${f['Formation titre'] || 'Formation'}`, 14, 16);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...gris);
+    doc.text(`Élève : ${f['Élève nom'] || '—'}   ·   Instructeur référent : ${f['Instructeur'] || '—'}   ·   Statut : ${f['Statut'] || 'Ouverte'}`, 14, 23);
+    doc.text(`Du ${f['Date début'] || '?'}${f['Date fin'] ? ` au ${f['Date fin']}` : ''}   ·   Extrait généré le ${new Date().toLocaleDateString('fr-FR')}`, 14, 28);
+    // Barre de progression
+    doc.setFillColor(226, 232, 240); doc.roundedRect(14, 31, 80, 5, 1.5, 1.5, 'F');
+    if (p.pct > 0) { const c = couleurProgression(p.pct); doc.setFillColor(parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)); doc.roundedRect(14, 31, Math.max(2, 80 * p.pct / 100), 5, 1.5, 1.5, 'F'); }
+    doc.setFontSize(8); doc.setTextColor(51, 65, 85);
+    doc.text(`Progression : ${p.pct}% — ${p.faits}/${p.total} items acquis`, 98, 34.5);
+
+    // --- Programme pratique
+    let y0 = section('Programme pratique');
     let dernierGroupe = '';
     const progLignes = [];
     p.lecons.forEach(l => {
         const g = l.groupe || '';
-        if (g && g !== dernierGroupe) progLignes.push(`<tr><td colspan="2" class="phase">${e(g)}</td></tr>`);
+        if (g && g !== dernierGroupe) progLignes.push([{ content: g, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], textColor: [51, 65, 85] } }]);
         dernierGroupe = g;
         const items = l.items || [];
         const valid = p.leconsValidees.has(String(l.id));
-        progLignes.push(`<tr class="lecon"><td>${valid ? '✅' : '⬜'}</td><td><strong>${e(l.titre || l.nom || 'Leçon')}</strong></td></tr>`);
+        progLignes.push([{ content: valid ? 'Validée' : '', styles: { fontStyle: 'bold' } }, { content: l.titre || l.nom || 'Leçon', styles: { fontStyle: 'bold' } }]);
         items.forEach((it, i) => {
             const etat = p.etats.get(`${l.id}:${i}`) || '';
-            progLignes.push(`<tr class="item"><td>${ETATS_ITEM[etat] || '⬜'}</td><td>${e(it)}</td></tr>`);
+            progLignes.push([ETATS_TXT[etat] || '—', `    ${it}`]);
         });
     });
+    doc.autoTable({ ...tableOpts, startY: y0, head: [['État', 'Exercice']], body: progLignes.length ? progLignes : [['', 'Aucune leçon.']], columnStyles: { 0: { cellWidth: 24 } } });
 
     // --- Journal des seances
-    const seancesHtml = seances.map((s, idx) => {
+    y0 = section(`Journal des séances (${seances.length})`);
+    if (!seances.length) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...gris);
+        doc.text('Aucune séance enregistrée.', 14, y0 + 2);
+        doc.lastAutoTable = { finalY: y0 };
+    }
+    const parLecon = new Map(p.lecons.map(l => [String(l.id), l]));
+    seances.forEach((s, idx) => {
         const sf = s.fields || {};
         const sigI = formationJson(sf['Signature instructeur'], null);
         const sigE = formationJson(sf['Signature élève'], null);
@@ -799,90 +846,82 @@ async function exporterLivret(sid) {
             sf['Activité'] ? `Activité : ${sf['Activité']}` : '',
             parseInt(sf['Atterrissages'], 10) ? `${sf['Atterrissages']} atterrissage(s)` : ''
         ].filter(Boolean).join(' · ');
-        const parLecon = new Map(p.lecons.map(l => [String(l.id), l]));
-        const lignesItems = [
-            ...formationJson(sf['Items'], []).map(x => x),
+        const itemsTxt = [
+            ...formationJson(sf['Items'], []),
             ...formationJson(sf['Items validés'], []).map(x => ({ ...x, etat: 'acquis' })),
             ...formationJson(sf['Items reportés'], []).map(x => ({ ...x, etat: 'arefaire' }))
         ].map(x => {
             const l = parLecon.get(String(x.lecon));
             const libelle = (l && l.items && l.items[x.item]) || `item ${x.item}`;
-            return `<li>${ETATS_ITEM[x.etat] || '⬜'} ${e(l ? `${l.titre || l.nom || ''} — ` : '')}${e(libelle)}</li>`;
-        }).join('');
-        return `<div class="seance">
-            <div class="seance-tete"><strong>Séance n°${idx + 1}</strong> — ${e(sf['Type'] || 'Vol')} · ${e(sf['Date'] || '')}${sf['Machine'] ? ` · ${e(sf['Machine'])}` : ''}${sf['Vol libellé'] ? ` · ${e(sf['Vol libellé'])}` : ''}</div>
-            ${compteurs ? `<div class="ligne">⏱ ${e(compteurs)}</div>` : ''}
-            ${sf['Météo'] ? `<div class="ligne">🌦 ${e(sf['Météo'])}</div>` : ''}
-            ${sf['Commentaire'] ? `<div class="ligne commentaire">${e(sf['Commentaire']).replace(/\n/g, '<br>')}</div>` : ''}
-            ${lignesItems ? `<ul class="items">${lignesItems}</ul>` : ''}
-            <div class="sigs">
-                <span>${sigI ? `✍️ Instructeur : ${e(sigI.par || '')} le ${e(sigI.date || '')}` : '⬜ Instructeur : non signé'}</span>
-                <span>${sigE ? `✍️ Élève : ${e(sigE.par || '')} le ${e(sigE.date || '')}` : '⬜ Élève : non signé'}</span>
-            </div>
-        </div>`;
-    }).join('') || '<p class="vide">Aucune séance enregistrée.</p>';
+            return `• [${ETATS_TXT[x.etat] || '—'}] ${l ? `${l.titre || l.nom || ''} — ` : ''}${libelle}`;
+        });
+        const lignes = [];
+        if (compteurs) lignes.push(`Heures : ${compteurs}`);
+        if (sf['Météo']) lignes.push(`Météo : ${sf['Météo']}`);
+        if (sf['Commentaire']) lignes.push(String(sf['Commentaire']));
+        lignes.push(...itemsTxt);
+        lignes.push(`Signatures — Instructeur : ${sigI ? `${sigI.par || ''} le ${sigI.date || ''}` : 'non signé'}   ·   Élève : ${sigE ? `${sigE.par || ''} le ${sigE.date || ''}` : 'non signé'}`);
+        doc.autoTable({
+            ...tableOpts,
+            startY: y0,
+            head: [[{ content: `Séance n°${idx + 1} — ${sf['Type'] || 'Vol'} · ${sf['Date'] || ''}${sf['Machine'] ? ` · ${sf['Machine']}` : ''}${sf['Vol libellé'] ? ` · ${sf['Vol libellé']}` : ''}`, styles: { fontSize: 9 } }]],
+            body: lignes.map(l => [{ content: l }]),
+            didDrawPage: () => {}
+        });
+        y0 = doc.lastAutoTable.finalY + 4;
+    });
 
-    // --- Minimas : requis vs realise
-    const minimasLignes = [
-        ['Heures totales', minimas.heures, stats.heures, true],
-        ['Vols', minimas.vols, stats.nbVols, false],
-        ['Heures en double commande', minimas.heuresDC, stats.dc, true],
-        ['Heures solo', minimas.heuresSolo, stats.solo, true],
-        ['Heures de navigation en solo supervisé', minimas.heuresNav, stats.navSolo, true],
-        ['Atterrissages', minimas.atterrissages, stats.att, false]
-    ].map(([lib, req, fait, enHeures]) => `<tr><td>${lib}</td><td>${req ? (enHeures ? hv(req) : req) : '—'}</td><td>${enHeures ? hv(fait) : (fait || 0)}</td><td>${req ? (fait >= req ? '✅' : '⬜') : '—'}</td></tr>`).join('');
+    // --- Formation theorique
+    if (modules.length) {
+        y0 = section('Formation théorique');
+        doc.autoTable({ ...tableOpts, startY: y0, head: [['État', 'Module', 'Validé le']],
+            body: modules.map(mo => [mo.statut ? 'Validé' : '—', mo.titre, mo.statut ? (mo.date || '') : '']),
+            columnStyles: { 0: { cellWidth: 22 }, 2: { cellWidth: 30 } } });
+    }
 
-    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<title>Livret de formation — ${e(f['Élève nom'] || '')}</title>
-<style>
-    body { font-family:'Segoe UI',Arial,sans-serif; margin:24px; color:#1e293b; font-size:11px; }
-    h1 { font-size:18px; margin:0 0 2px; } h2 { font-size:14px; margin:20px 0 8px; border-bottom:2px solid #1e3d59; padding-bottom:4px; }
-    .meta { color:#64748b; margin-bottom:10px; }
-    table { width:100%; border-collapse:collapse; margin-bottom:8px; }
-    th,td { border:1px solid #cbd5e1; padding:4px 7px; text-align:left; }
-    th { background:#1e3d59; color:#fff; font-size:10px; }
-    tr.phase td { background:#e2e8f0; font-weight:700; text-transform:uppercase; font-size:10px; }
-    tr.item td:first-child, tr.lecon td:first-child { width:26px; text-align:center; }
-    .progress { background:#e2e8f0; border-radius:6px; height:16px; width:300px; position:relative; }
-    .progress b { display:block; height:100%; border-radius:6px; background:${couleurProgression(p.pct)}; width:${p.pct}%; }
-    .progress span { position:absolute; inset:0; text-align:center; font-size:10px; line-height:16px; font-weight:700; }
-    .seance { border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; margin-bottom:8px; page-break-inside:avoid; }
-    .seance-tete { font-size:11.5px; } .ligne { margin-top:3px; } .commentaire { background:#f8fafc; padding:5px 8px; border-radius:4px; }
-    .items { margin:4px 0 0 18px; } .sigs { display:flex; gap:24px; margin-top:6px; color:#475569; border-top:1px dashed #cbd5e1; padding-top:5px; }
-    .vide { color:#94a3b8; } ul.docs { margin:4px 0 0 18px; }
-    .sign { margin-top:30px; display:flex; justify-content:space-between; }
-    .sign div { width:45%; border-top:1px solid #94a3b8; padding-top:4px; color:#64748b; }
-    @media print { body { margin:8mm; } .noprint { display:none; } }
-</style></head><body>
-<button class="noprint" onclick="window.print()" style="margin-bottom:12px;padding:8px 14px;">🖨 Imprimer / Enregistrer en PDF</button>
-<h1>Livret de formation — ${e(f['Formation titre'] || 'Formation')}</h1>
-<div class="meta">Élève : <strong>${e(f['Élève nom'] || '—')}</strong> · Instructeur référent : ${e(f['Instructeur'] || '—')} · Statut : ${e(f['Statut'] || 'Ouverte')}<br>
-Du ${e(f['Date début'] || '?')}${f['Date fin'] ? ` au ${e(f['Date fin'])}` : ''} · Extract généré le ${new Date().toLocaleDateString('fr-FR')}</div>
-<div class="progress"><b></b><span>Progression : ${p.pct}% — ${p.faits}/${p.total} items acquis</span></div>
+    // --- Documents demandes
+    if (docs.length) {
+        y0 = section('Documents demandés');
+        doc.autoTable({ ...tableOpts, startY: y0, head: [['État', 'Document', 'Validité']],
+            body: docs.map(d => [d.statut === 'Fourni' ? 'Fourni' : 'Demandé', d.titre,
+                d.dateValidite ? `jusqu'au ${dateISOversFR(d.dateValidite) || d.dateValidite}` : '']),
+            columnStyles: { 0: { cellWidth: 22 }, 2: { cellWidth: 40 } } });
+    }
 
-<h2>✈️ Programme pratique</h2>
-<table>${progLignes.join('') || '<tr><td>Aucune leçon.</td></tr>'}</table>
+    // --- Minimas requis vs realises
+    y0 = section('Minimas requis vs réalisé');
+    doc.autoTable({ ...tableOpts, startY: y0, head: [['Critère', 'Requis', 'Réalisé', 'Atteint']],
+        body: [
+            ['Heures totales', minimas.heures, stats.heures, true],
+            ['Vols', minimas.vols, stats.nbVols, false],
+            ['Heures en double commande', minimas.heuresDC, stats.dc, true],
+            ['Heures solo', minimas.heuresSolo, stats.solo, true],
+            ['Heures de navigation en solo supervisé', minimas.heuresNav, stats.navSolo, true],
+            ['Atterrissages', minimas.atterrissages, stats.att, false]
+        ].map(([lib, req, fait, enHeures]) => [lib, req ? (enHeures ? hv(req) : String(req)) : '—', enHeures ? (hv(fait) || '0:00') : String(fait || 0), req ? (fait >= req ? 'Oui' : 'Non') : '—']),
+        columnStyles: { 1: { cellWidth: 24 }, 2: { cellWidth: 24 }, 3: { cellWidth: 20 } } });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...gris);
+    const yMeta = doc.lastAutoTable.finalY + 5;
+    doc.text(`dont navigation totale : ${hv(stats.nav) || '0:00'} (solo ${hv(stats.navSolo) || '0:00'}) · local : ${hv(stats.local) || '0:00'} · simulateur : ${hv(stats.simu) || '0:00'}`, 14, yMeta);
+    doc.lastAutoTable.finalY = yMeta;
 
-<h2>📋 Journal des séances (${seances.length})</h2>
-${seancesHtml}
+    // --- Documentation de la formation
+    if (ressources.length) {
+        y0 = section('Documentation de la formation');
+        doc.autoTable({ ...tableOpts, startY: y0, head: [['Ressource']],
+            body: ressources.map(r => [r.titre || r.lien || '']) });
+    }
 
-${modules.length ? `<h2>📖 Formation théorique</h2><ul class="docs">${modules.map(mo => `<li>${mo.statut ? '✅' : '⬜'} ${e(mo.titre)}${mo.statut && mo.date ? ` — validé le ${e(mo.date)}` : ''}</li>`).join('')}</ul>` : ''}
+    // --- Zone de signature
+    let ySign = doc.lastAutoTable.finalY + 18;
+    if (ySign > 265) { doc.addPage(); ySign = 30; }
+    doc.setDrawColor(148, 163, 184); doc.setFontSize(8); doc.setTextColor(...gris);
+    doc.line(14, ySign, 90, ySign); doc.line(W - 104, ySign, W - 14, ySign);
+    doc.text('Fait à ………………………, le ………………………', 14, ySign + 4);
+    doc.text('Signature de l\'instructeur référent', W - 104, ySign + 4);
 
-${docs.length ? `<h2>📄 Documents demandés</h2><ul class="docs">${docs.map(d => `<li>${d.statut === 'Fourni' ? '✅' : '⬜'} ${e(d.titre)}${d.dateValidite ? ` — valable jusqu'au ${e(dateISOversFR(d.dateValidite) || d.dateValidite)}` : ''}</li>`).join('')}</ul>` : ''}
-
-<h2>⏱ Minimas requis vs réalisé</h2>
-<table><thead><tr><th>Critère</th><th>Requis</th><th>Réalisé</th><th></th></tr></thead><tbody>${minimasLignes}</tbody></table>
-<div class="meta">dont navigation totale : ${hv(stats.nav) || '0:00'} (solo ${hv(stats.navSolo) || '0:00'}) · local : ${hv(stats.local) || '0:00'} · simulateur : ${hv(stats.simu) || '0:00'}</div>
-
-${ressources.length ? `<h2>📚 Documentation</h2><ul class="docs">${ressources.map(r => `<li>${e(r.titre || r.lien || '')}</li>`).join('')}</ul>` : ''}
-
-<div class="sign"><div>Fait à ………………………, le ………………………</div><div>Signature de l'instructeur référent</div></div>
-</body></html>`;
-
-    const w = window.open('', '_blank');
-    if (!w) { alert('Autorisez les fenêtres surgissantes pour générer le livret.'); return; }
-    w.document.write(html);
-    w.document.close();
+    pieds();
+    doc.save(`livret-${(f['Élève nom'] || 'formation').replace(/\s+/g, '-').toLowerCase()}.pdf`);
 }
 
 // ---------------------------------------------------------------------------

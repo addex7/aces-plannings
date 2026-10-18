@@ -497,7 +497,7 @@ async function verifierAlertesFormation() {
             const sv = suivisParId.get(String(sf['Suivi'] || ''));
             if (!sv) continue;
             const sigI = parseJson(sf['Signature instructeur']);
-            if (!sigI || sf['Signature élève']) continue;
+            if (!sigI || parseJson(sf['Signature élève'])) continue;
             const dSign = new Date(String(sigI.date || sf['Date'] || '').replace(' ', 'T'));
             if (isNaN(dSign.getTime()) || dSign > limiteSign) continue;
             const nomEleve = (sv.fields || {})['Élève nom'] || '';

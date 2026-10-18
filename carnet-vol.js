@@ -406,20 +406,24 @@ function cvRendreLignes() {
         });
 }
 
-// --- EXTRACT IMPRIMABLE ------------------------------------------------------
+// --- EXTRACT PDF -------------------------------------------------------------
 
-// Genere une page autonome (format carnet de vol EASA) depuis les lignes
-// affichees — le filtre machine en cours est respecte. L'utilisateur
-// l'imprime ou l'enregistre en PDF depuis le dialogue d'impression.
+// Genere un PDF telechargeable (format carnet de vol) depuis les lignes
+// affichees — le filtre machine en cours est respecte.
 function cvExporterCarnet() {
     if (!cvLignesCourantes.length) {
         alert('Aucun vol à exporter.');
+        return;
+    }
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('La génération PDF n\'est pas disponible (librairie non chargée).');
         return;
     }
     const selMachine = document.getElementById('carnet-vol-machine-select');
     const filtreMachine = selMachine ? selMachine.value : '';
     const lignes = cvLignesCourantes.filter(l => !filtreMachine || l.immat === filtreMachine);
     const nom = `${cvPiloteCible.prenom || ''} ${cvPiloteCible.nom || ''}`.trim();
+    const fm = cvFormaterMinutes;
 
     const t = lignes.reduce((acc, l) => {
         acc.duree += l.dureeMin; acc.attJ += l.attJour; acc.attN += l.attNuit;
@@ -427,61 +431,55 @@ function cvExporterCarnet() {
         acc.instr += l.instrMin; if (l.mono) acc.mono += l.dureeMin;
         return acc;
     }, { duree: 0, attJ: 0, attN: 0, nuit: 0, cdb: 0, dc: 0, instr: 0, mono: 0 });
-    const fm = cvFormaterMinutes;
 
-    const trs = lignes.map(l => `<tr>
-        <td>${cvFormaterDate(l.date)}</td>
-        <td>${cvEscape(l.lieuDep)}</td><td>${cvEscape(l.hDep)}</td>
-        <td>${cvEscape(l.lieuArr)}</td><td>${cvEscape(l.hArr)}</td>
-        <td>${cvEscape(l.modele)}</td><td>${cvEscape(l.immat)}</td>
-        <td>${l.mono ? 'X' : ''}</td>
-        <td>${fm(l.dureeMin)}</td>
-        <td>${cvEscape(l.cdb)}</td>
-        <td>${l.attJour || ''}</td><td>${l.attNuit || ''}</td>
-        <td>${l.nuitMin ? fm(l.nuitMin) : ''}</td>
-        <td>${l.cdbMin ? fm(l.cdbMin) : ''}</td>
-        <td>${l.dcMin ? fm(l.dcMin) : ''}</td>
-        <td>${l.instrMin ? fm(l.instrMin) : ''}</td>
-        <td>${cvEscape(l.obs || '')}</td>
-    </tr>`).join('');
+    const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const bleu = [30, 61, 89];
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...bleu);
+    doc.text(`Carnet de vol — ${nom}`, 14, 14);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+    doc.text(`Extrait généré le ${new Date().toLocaleDateString('fr-FR')} — ${lignes.length} vol(s)${filtreMachine ? ` — machine ${filtreMachine}` : ''}`, 14, 20);
 
-    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<title>Carnet de vol — ${cvEscape(nom)}</title>
-<style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 24px; color: #1e293b; font-size: 10.5px; }
-    h1 { font-size: 17px; margin: 0 0 2px; }
-    .meta { color: #64748b; margin-bottom: 14px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #cbd5e1; padding: 3px 5px; text-align: left; white-space: nowrap; }
-    th { background: #1e3d59; color: #fff; font-size: 9.5px; }
-    tr.totaux td { background: #f1f5f9; font-weight: 700; }
-    .sign { margin-top: 28px; display: flex; justify-content: space-between; }
-    .sign div { width: 45%; border-top: 1px solid #94a3b8; padding-top: 4px; color: #64748b; }
-    @media print { body { margin: 8mm; } .noprint { display: none; } }
-</style></head><body>
-<button class="noprint" onclick="window.print()" style="margin-bottom:12px;padding:8px 14px;">🖨 Imprimer / Enregistrer en PDF</button>
-<h1>Carnet de vol — ${cvEscape(nom)}</h1>
-<div class="meta">Extract généré le ${new Date().toLocaleDateString('fr-FR')} — ${lignes.length} vol(s)${filtreMachine ? ` — machine ${cvEscape(filtreMachine)}` : ''}</div>
-<table>
-<thead><tr>
-    <th>Date</th><th colspan="2">Départ (lieu · heure)</th><th colspan="2">Arrivée (lieu · heure)</th>
-    <th>Type</th><th>Immat.</th><th>Mono</th><th>Temps total</th><th>CdB</th>
-    <th>Att. jour</th><th>Att. nuit</th><th>Nuit</th><th>CdB</th><th>DC</th><th>Instructeur</th><th>Observations</th>
-</tr></thead>
-<tbody>${trs}
-<tr class="totaux">
-    <td colspan="8">Total — ${lignes.length} vol(s)</td>
-    <td>${fm(t.duree)}</td><td></td>
-    <td>${t.attJ}</td><td>${t.attN}</td><td>${fm(t.nuit)}</td>
-    <td>${fm(t.cdb)}</td><td>${fm(t.dc)}</td><td>${fm(t.instr)}</td><td></td>
-</tr></tbody></table>
-<div class="sign"><div>Fait à ………………………, le ………………………</div><div>Signature du pilote</div></div>
-</body></html>`;
+    const corps = lignes.map(l => [
+        cvFormaterDate(l.date), l.lieuDep, l.hDep, l.lieuArr, l.hArr,
+        l.modele, l.immat, l.mono ? 'X' : '', fm(l.dureeMin), l.cdb,
+        l.attJour || '', l.attNuit || '', l.nuitMin ? fm(l.nuitMin) : '',
+        l.cdbMin ? fm(l.cdbMin) : '', l.dcMin ? fm(l.dcMin) : '', l.instrMin ? fm(l.instrMin) : '',
+        (l.obs || '')
+    ]);
+    corps.push([
+        { content: `Total — ${lignes.length} vol(s)`, colSpan: 8, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        { content: fm(t.duree), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        { content: '', styles: { fillColor: [241, 245, 249] } },
+        { content: String(t.attJ), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        { content: String(t.attN), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        { content: fm(t.nuit), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        { content: fm(t.cdb), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        { content: fm(t.dc), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        { content: fm(t.instr), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        { content: '', styles: { fillColor: [241, 245, 249] } }
+    ]);
 
-    const w = window.open('', '_blank');
-    if (!w) { alert('Autorisez les fenêtres surgissantes pour générer l\'extract.'); return; }
-    w.document.write(html);
-    w.document.close();
+    doc.autoTable({
+        startY: 24,
+        head: [['Date', 'Départ', 'Heure', 'Arrivée', 'Heure', 'Type', 'Immat.', 'Mono', 'Total', 'CdB',
+            'Att. jour', 'Att. nuit', 'Nuit', 'CdB', 'DC', 'Instructeur', 'Observations']],
+        body: corps,
+        styles: { fontSize: 7, cellPadding: 1.2 },
+        headStyles: { fillColor: bleu, fontSize: 6.5 },
+        columnStyles: { 16: { cellWidth: 'auto' } },
+        didDrawPage: (data) => {
+            doc.setFontSize(7); doc.setTextColor(148, 163, 184);
+            doc.text(`Page ${doc.internal.getNumberOfPages()}`, doc.internal.pageSize.getWidth() - 14, doc.internal.pageSize.getHeight() - 6, { align: 'right' });
+        }
+    });
+
+    const y = doc.lastAutoTable.finalY + 14;
+    doc.setDrawColor(148, 163, 184); doc.setFontSize(8); doc.setTextColor(100, 116, 139);
+    doc.line(14, y, 130, y); doc.line(165, y, 281, y);
+    doc.text('Fait à ………………………, le ………………………', 14, y + 4);
+    doc.text('Signature du pilote', 165, y + 4);
+
+    doc.save(`carnet-de-vol-${nom.replace(/\s+/g, '-').toLowerCase()}.pdf`);
 }
 
 function cvProposerAllerCarnetRoute() {
