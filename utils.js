@@ -66,14 +66,19 @@ function dureeVolMinutes(f) {
 // ==========================================================================
 
 // Récupère tous les vols d'un pilote sur 24 mois : carnet de route (filtré
-// par nom côté serveur) + vols extérieurs saisis à la main (carnet de vol).
+// par nom côté serveur, en pilote OU en instructeur — les heures
+// d'instruction comptent dans l'experience) + vols extérieurs (carnet de vol).
+// Chaque record est marque _volCommePilote / _volCommeInstructeur pour
+// permettre aux calculs de distinguer le role tenu sur le vol.
 async function chargerVolsPilote(prenom, nom) {
     const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
     const p = (prenom || '').replace(/"/g, '\\"');
     const n = (nom || '').replace(/"/g, '\\"');
+    const nomComplet = `${prenom || ''} ${nom || ''}`.trim();
     const mois24 = dateIlYAMois(24);
     const dateMin = `${mois24.getFullYear()}-${String(mois24.getMonth() + 1).padStart(2, '0')}-${String(mois24.getDate()).padStart(2, '0')}`;
-    const formula = `AND(FIND(UPPER("${p}"), UPPER({Pilote})) > 0, FIND(UPPER("${n}"), UPPER({Pilote})) > 0, IS_AFTER({Date}, "${dateMin}"))`;
+    const critere = champ => `AND({${champ}} != '', FIND(UPPER("${p}"), UPPER({${champ}})) > 0, FIND(UPPER("${n}"), UPPER({${champ}})) > 0)`;
+    const formula = `AND(OR(${critere('Pilote')}, ${critere('Instructeur')}), IS_AFTER({Date}, "${dateMin}"))`;
     const url = `${API_BASE}/${encodeURIComponent(tableCarnet)}?filterByFormula=${encodeURIComponent(formula)}&sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
 
     let records = await fetchTousRecordsCache(url, { headers });
@@ -81,6 +86,14 @@ async function chargerVolsPilote(prenom, nom) {
         const urlManu = `${API_BASE}/${encodeURIComponent('Carnet de vol')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
         records = records.concat(await fetchTousRecordsCache(urlManu, { headers }));
     } catch (e) { console.error('Erreur lecture carnet de vol manuel:', e); }
+    records.forEach(r => {
+        const f = r.fields || {};
+        const matchNom = v => typeof correspondanceNom === 'function'
+            ? correspondanceNom(v, nomComplet)
+            : String(v || '').toLowerCase() === nomComplet.toLowerCase();
+        r._volCommePilote = !!(f['Pilote'] && matchNom(f['Pilote']));
+        r._volCommeInstructeur = !!(f['Instructeur'] && matchNom(f['Instructeur']));
+    });
     return records;
 }
 
@@ -116,7 +129,9 @@ function calculerExperiencesPilote(records, cpl = false) {
             decollages24m += dec;
             atterrissages24m += att;
             const inst = (f['Instructeur'] || '').toString().trim();
-            if (inst && duree >= 60) instruction1h = true;
+            // L'heure d'instruction requise (LAPL) doit etre RECUE : si le
+            // pilote etait lui-meme l'instructeur du vol, elle ne compte pas.
+            if (inst && !r._volCommeInstructeur && duree >= 60) instruction1h = true;
         }
         if (d >= limite12m) {
             minutes12m += duree;

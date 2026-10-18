@@ -321,6 +321,7 @@ async function renderDetailSuivi() {
         ${!gele ? `<button class="btn-primary" data-formation-action="suppr-suivi" data-sid="${suivi.id}">🗑 Supprimer</button>` : ''}` : '';
     majActionsEntete(`
         <button class="btn-primary" data-formation-action="retour">← Retour</button>
+        <button class="btn-secondary" title="Extraire le livret de formation (imprimable / PDF)" data-formation-action="livret-export" data-sid="${suivi.id}">🖨 Livret</button>
         ${boutonsInstructeur}`);
 
     // Regroupement des lecons par phase (groupe), comme le livret BLN.
@@ -424,6 +425,19 @@ async function renderDetailSuivi() {
         if (seq !== statsRenderSeq) return;
         const el = document.getElementById(statsVolsId);
         if (el) el.innerHTML = renderMinimasHtml(stats, minimas, suivi, instructeur && !gele);
+        // Vol orphelin : la seance pointe vers un vol du carnet qui n'existe
+        // plus (supprime). On signale sans toucher aux donnees.
+        seancesDuSuivi(suivi.id).forEach(s => {
+            const vid = String((s.fields || {})['Vol'] || '');
+            if (!vid || (stats.volsIds && stats.volsIds.has(vid))) return;
+            const bloc = document.getElementById(`seance-items-${s.id}`)?.closest('.formation-seance');
+            if (bloc && !bloc.querySelector('.seance-vol-orphelin')) {
+                const warn = document.createElement('div');
+                warn.className = 'formation-carte-sub seance-vol-orphelin';
+                warn.textContent = '⚠️ Vol associé introuvable dans le carnet de route (supprimé ?) — la séance est conservée et ses heures restent comptées.';
+                bloc.querySelector('.formation-seance-tete')?.insertAdjacentElement('afterend', warn);
+            }
+        });
         const btn = document.getElementById('btn-terminer-suivi');
         if (btn) {
             const manques = manquesTerminaison(suivi, minimas, p, stats);
@@ -457,10 +471,12 @@ async function calculerStatsSuivi(suivi) {
     const estEncadreVol = v => partsFonction(v.fields).some(x => CODES_ENCADREMENT.includes(x));
     let nbVols = 0, heures = 0;
     const volsComptesIds = new Set();
+    const volsIdsEleve = new Set();
     const nomEleve = suivi.fields['Élève nom'] || '';
     if (nomEleve) {
         try {
             const vols = await chargerVolsEleve(nomEleve);
+            vols.forEach(v => volsIdsEleve.add(String(v.id)));
             const debut = suivi.fields['Date début'] || '1900-01-01';
             const deduis = vols.filter(v => String(v.fields['Date'] || '') >= String(debut));
             nbVols = deduis.length;
@@ -519,7 +535,7 @@ async function calculerStatsSuivi(suivi) {
         navSolo += parseFloat(c.nav) || 0;
         local += parseFloat(c.local) || 0;
     });
-    return { dc, solo, simu, att, nbVols, heures, nav, navSolo, local, credits };
+    return { dc, solo, simu, att, nbVols, heures, nav, navSolo, local, credits, volsIds: volsIdsEleve };
 }
 
 // Panneau des minimas : chaque exigence avec sa barre de progression,
@@ -737,6 +753,138 @@ function basculerDetailSeance(seanceId, btn) {
     if (btn) btn.textContent = ouvert ? '▾ Détail des items' : '▸ Détail des items';
 }
 
+/* --------------------------------------------------------------------------
+   EXPORT LIVRET : page autonome imprimable (programme + journal + signatures)
+   -------------------------------------------------------------------------- */
+async function exporterLivret(sid) {
+    const suivi = (suivisCache || []).find(x => x.id === sid);
+    if (!suivi) return;
+    const f = suivi.fields || {};
+    const p = progressionSuivi(suivi);
+    const stats = await calculerStatsSuivi(suivi);
+    const minimas = formationJson(f['Minimas'], {});
+    const modules = formationJson(f['Modules'], []);
+    const docs = formationJson(f['Documentation'], []);
+    const ressources = formationJson(f['Ressources'], []);
+    const seances = seancesDuSuivi(sid).slice()
+        .sort((a, b) => String((a.fields || {})['Date'] || '').localeCompare(String((b.fields || {})['Date'] || '')));
+    const e = escapeHtml;
+    const hv = x => { const n = parseFloat(x); return n ? hdvVersHmin(n) : ''; };
+
+    // --- Programme pratique : phases / lecons / items avec etat courant
+    let dernierGroupe = '';
+    const progLignes = [];
+    p.lecons.forEach(l => {
+        const g = l.groupe || '';
+        if (g && g !== dernierGroupe) progLignes.push(`<tr><td colspan="2" class="phase">${e(g)}</td></tr>`);
+        dernierGroupe = g;
+        const items = l.items || [];
+        const valid = p.leconsValidees.has(String(l.id));
+        progLignes.push(`<tr class="lecon"><td>${valid ? '✅' : '⬜'}</td><td><strong>${e(l.titre || l.nom || 'Leçon')}</strong></td></tr>`);
+        items.forEach((it, i) => {
+            const etat = p.etats.get(`${l.id}:${i}`) || '';
+            progLignes.push(`<tr class="item"><td>${ETATS_ITEM[etat] || '⬜'}</td><td>${e(it)}</td></tr>`);
+        });
+    });
+
+    // --- Journal des seances
+    const seancesHtml = seances.map((s, idx) => {
+        const sf = s.fields || {};
+        const sigI = formationJson(sf['Signature instructeur'], null);
+        const sigE = formationJson(sf['Signature élève'], null);
+        const compteurs = [
+            parseFloat(sf['HDV DC']) ? `DC ${hv(sf['HDV DC'])}` : '',
+            parseFloat(sf['HDV solo']) ? `Solo ${hv(sf['HDV solo'])}` : '',
+            parseFloat(sf['HDV simu']) ? `Simu ${hv(sf['HDV simu'])}` : '',
+            sf['Activité'] ? `Activité : ${sf['Activité']}` : '',
+            parseInt(sf['Atterrissages'], 10) ? `${sf['Atterrissages']} atterrissage(s)` : ''
+        ].filter(Boolean).join(' · ');
+        const parLecon = new Map(p.lecons.map(l => [String(l.id), l]));
+        const lignesItems = [
+            ...formationJson(sf['Items'], []).map(x => x),
+            ...formationJson(sf['Items validés'], []).map(x => ({ ...x, etat: 'acquis' })),
+            ...formationJson(sf['Items reportés'], []).map(x => ({ ...x, etat: 'arefaire' }))
+        ].map(x => {
+            const l = parLecon.get(String(x.lecon));
+            const libelle = (l && l.items && l.items[x.item]) || `item ${x.item}`;
+            return `<li>${ETATS_ITEM[x.etat] || '⬜'} ${e(l ? `${l.titre || l.nom || ''} — ` : '')}${e(libelle)}</li>`;
+        }).join('');
+        return `<div class="seance">
+            <div class="seance-tete"><strong>Séance n°${idx + 1}</strong> — ${e(sf['Type'] || 'Vol')} · ${e(sf['Date'] || '')}${sf['Machine'] ? ` · ${e(sf['Machine'])}` : ''}${sf['Vol libellé'] ? ` · ${e(sf['Vol libellé'])}` : ''}</div>
+            ${compteurs ? `<div class="ligne">⏱ ${e(compteurs)}</div>` : ''}
+            ${sf['Météo'] ? `<div class="ligne">🌦 ${e(sf['Météo'])}</div>` : ''}
+            ${sf['Commentaire'] ? `<div class="ligne commentaire">${e(sf['Commentaire']).replace(/\n/g, '<br>')}</div>` : ''}
+            ${lignesItems ? `<ul class="items">${lignesItems}</ul>` : ''}
+            <div class="sigs">
+                <span>${sigI ? `✍️ Instructeur : ${e(sigI.par || '')} le ${e(sigI.date || '')}` : '⬜ Instructeur : non signé'}</span>
+                <span>${sigE ? `✍️ Élève : ${e(sigE.par || '')} le ${e(sigE.date || '')}` : '⬜ Élève : non signé'}</span>
+            </div>
+        </div>`;
+    }).join('') || '<p class="vide">Aucune séance enregistrée.</p>';
+
+    // --- Minimas : requis vs realise
+    const minimasLignes = [
+        ['Heures totales', minimas.heures, stats.heures, true],
+        ['Vols', minimas.vols, stats.nbVols, false],
+        ['Heures en double commande', minimas.heuresDC, stats.dc, true],
+        ['Heures solo', minimas.heuresSolo, stats.solo, true],
+        ['Heures de navigation en solo supervisé', minimas.heuresNav, stats.navSolo, true],
+        ['Atterrissages', minimas.atterrissages, stats.att, false]
+    ].map(([lib, req, fait, enHeures]) => `<tr><td>${lib}</td><td>${req ? (enHeures ? hv(req) : req) : '—'}</td><td>${enHeures ? hv(fait) : (fait || 0)}</td><td>${req ? (fait >= req ? '✅' : '⬜') : '—'}</td></tr>`).join('');
+
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<title>Livret de formation — ${e(f['Élève nom'] || '')}</title>
+<style>
+    body { font-family:'Segoe UI',Arial,sans-serif; margin:24px; color:#1e293b; font-size:11px; }
+    h1 { font-size:18px; margin:0 0 2px; } h2 { font-size:14px; margin:20px 0 8px; border-bottom:2px solid #1e3d59; padding-bottom:4px; }
+    .meta { color:#64748b; margin-bottom:10px; }
+    table { width:100%; border-collapse:collapse; margin-bottom:8px; }
+    th,td { border:1px solid #cbd5e1; padding:4px 7px; text-align:left; }
+    th { background:#1e3d59; color:#fff; font-size:10px; }
+    tr.phase td { background:#e2e8f0; font-weight:700; text-transform:uppercase; font-size:10px; }
+    tr.item td:first-child, tr.lecon td:first-child { width:26px; text-align:center; }
+    .progress { background:#e2e8f0; border-radius:6px; height:16px; width:300px; position:relative; }
+    .progress b { display:block; height:100%; border-radius:6px; background:${couleurProgression(p.pct)}; width:${p.pct}%; }
+    .progress span { position:absolute; inset:0; text-align:center; font-size:10px; line-height:16px; font-weight:700; }
+    .seance { border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; margin-bottom:8px; page-break-inside:avoid; }
+    .seance-tete { font-size:11.5px; } .ligne { margin-top:3px; } .commentaire { background:#f8fafc; padding:5px 8px; border-radius:4px; }
+    .items { margin:4px 0 0 18px; } .sigs { display:flex; gap:24px; margin-top:6px; color:#475569; border-top:1px dashed #cbd5e1; padding-top:5px; }
+    .vide { color:#94a3b8; } ul.docs { margin:4px 0 0 18px; }
+    .sign { margin-top:30px; display:flex; justify-content:space-between; }
+    .sign div { width:45%; border-top:1px solid #94a3b8; padding-top:4px; color:#64748b; }
+    @media print { body { margin:8mm; } .noprint { display:none; } }
+</style></head><body>
+<button class="noprint" onclick="window.print()" style="margin-bottom:12px;padding:8px 14px;">🖨 Imprimer / Enregistrer en PDF</button>
+<h1>Livret de formation — ${e(f['Formation titre'] || 'Formation')}</h1>
+<div class="meta">Élève : <strong>${e(f['Élève nom'] || '—')}</strong> · Instructeur référent : ${e(f['Instructeur'] || '—')} · Statut : ${e(f['Statut'] || 'Ouverte')}<br>
+Du ${e(f['Date début'] || '?')}${f['Date fin'] ? ` au ${e(f['Date fin'])}` : ''} · Extract généré le ${new Date().toLocaleDateString('fr-FR')}</div>
+<div class="progress"><b></b><span>Progression : ${p.pct}% — ${p.faits}/${p.total} items acquis</span></div>
+
+<h2>✈️ Programme pratique</h2>
+<table>${progLignes.join('') || '<tr><td>Aucune leçon.</td></tr>'}</table>
+
+<h2>📋 Journal des séances (${seances.length})</h2>
+${seancesHtml}
+
+${modules.length ? `<h2>📖 Formation théorique</h2><ul class="docs">${modules.map(mo => `<li>${mo.statut ? '✅' : '⬜'} ${e(mo.titre)}${mo.statut && mo.date ? ` — validé le ${e(mo.date)}` : ''}</li>`).join('')}</ul>` : ''}
+
+${docs.length ? `<h2>📄 Documents demandés</h2><ul class="docs">${docs.map(d => `<li>${d.statut === 'Fourni' ? '✅' : '⬜'} ${e(d.titre)}${d.dateValidite ? ` — valable jusqu'au ${e(dateISOversFR(d.dateValidite) || d.dateValidite)}` : ''}</li>`).join('')}</ul>` : ''}
+
+<h2>⏱ Minimas requis vs réalisé</h2>
+<table><thead><tr><th>Critère</th><th>Requis</th><th>Réalisé</th><th></th></tr></thead><tbody>${minimasLignes}</tbody></table>
+<div class="meta">dont navigation totale : ${hv(stats.nav) || '0:00'} (solo ${hv(stats.navSolo) || '0:00'}) · local : ${hv(stats.local) || '0:00'} · simulateur : ${hv(stats.simu) || '0:00'}</div>
+
+${ressources.length ? `<h2>📚 Documentation</h2><ul class="docs">${ressources.map(r => `<li>${e(r.titre || r.lien || '')}</li>`).join('')}</ul>` : ''}
+
+<div class="sign"><div>Fait à ………………………, le ………………………</div><div>Signature de l'instructeur référent</div></div>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) { alert('Autorisez les fenêtres surgissantes pour générer le livret.'); return; }
+    w.document.write(html);
+    w.document.close();
+}
+
 // ---------------------------------------------------------------------------
 // ACTIONS COMMUNES (delegation)
 // ---------------------------------------------------------------------------
@@ -778,6 +926,7 @@ document.addEventListener('click', (e) => {
         chargerFormation();
     }
     else if (a === 'toggle-section' || a === 'toggle-col') basculerSectionSuivis(el.dataset.sec);
+    else if (a === 'livret-export') exporterLivret(sid);
     else if (a === 'nouveau-suivi') ouvrirModaleAttribuer();
     else if (a === 'gerer-catalogue') ouvrirGestionCatalogue();
     else if (a === 'seance') ouvrirPageSeance(sid);

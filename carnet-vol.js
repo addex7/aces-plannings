@@ -406,6 +406,84 @@ function cvRendreLignes() {
         });
 }
 
+// --- EXTRACT IMPRIMABLE ------------------------------------------------------
+
+// Genere une page autonome (format carnet de vol EASA) depuis les lignes
+// affichees — le filtre machine en cours est respecte. L'utilisateur
+// l'imprime ou l'enregistre en PDF depuis le dialogue d'impression.
+function cvExporterCarnet() {
+    if (!cvLignesCourantes.length) {
+        alert('Aucun vol à exporter.');
+        return;
+    }
+    const selMachine = document.getElementById('carnet-vol-machine-select');
+    const filtreMachine = selMachine ? selMachine.value : '';
+    const lignes = cvLignesCourantes.filter(l => !filtreMachine || l.immat === filtreMachine);
+    const nom = `${cvPiloteCible.prenom || ''} ${cvPiloteCible.nom || ''}`.trim();
+
+    const t = lignes.reduce((acc, l) => {
+        acc.duree += l.dureeMin; acc.attJ += l.attJour; acc.attN += l.attNuit;
+        acc.nuit += l.nuitMin; acc.cdb += l.cdbMin; acc.dc += l.dcMin;
+        acc.instr += l.instrMin; if (l.mono) acc.mono += l.dureeMin;
+        return acc;
+    }, { duree: 0, attJ: 0, attN: 0, nuit: 0, cdb: 0, dc: 0, instr: 0, mono: 0 });
+    const fm = cvFormaterMinutes;
+
+    const trs = lignes.map(l => `<tr>
+        <td>${cvFormaterDate(l.date)}</td>
+        <td>${cvEscape(l.lieuDep)}</td><td>${cvEscape(l.hDep)}</td>
+        <td>${cvEscape(l.lieuArr)}</td><td>${cvEscape(l.hArr)}</td>
+        <td>${cvEscape(l.modele)}</td><td>${cvEscape(l.immat)}</td>
+        <td>${l.mono ? 'X' : ''}</td>
+        <td>${fm(l.dureeMin)}</td>
+        <td>${cvEscape(l.cdb)}</td>
+        <td>${l.attJour || ''}</td><td>${l.attNuit || ''}</td>
+        <td>${l.nuitMin ? fm(l.nuitMin) : ''}</td>
+        <td>${l.cdbMin ? fm(l.cdbMin) : ''}</td>
+        <td>${l.dcMin ? fm(l.dcMin) : ''}</td>
+        <td>${l.instrMin ? fm(l.instrMin) : ''}</td>
+        <td>${cvEscape(l.obs || '')}</td>
+    </tr>`).join('');
+
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<title>Carnet de vol — ${cvEscape(nom)}</title>
+<style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 24px; color: #1e293b; font-size: 10.5px; }
+    h1 { font-size: 17px; margin: 0 0 2px; }
+    .meta { color: #64748b; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #cbd5e1; padding: 3px 5px; text-align: left; white-space: nowrap; }
+    th { background: #1e3d59; color: #fff; font-size: 9.5px; }
+    tr.totaux td { background: #f1f5f9; font-weight: 700; }
+    .sign { margin-top: 28px; display: flex; justify-content: space-between; }
+    .sign div { width: 45%; border-top: 1px solid #94a3b8; padding-top: 4px; color: #64748b; }
+    @media print { body { margin: 8mm; } .noprint { display: none; } }
+</style></head><body>
+<button class="noprint" onclick="window.print()" style="margin-bottom:12px;padding:8px 14px;">🖨 Imprimer / Enregistrer en PDF</button>
+<h1>Carnet de vol — ${cvEscape(nom)}</h1>
+<div class="meta">Extract généré le ${new Date().toLocaleDateString('fr-FR')} — ${lignes.length} vol(s)${filtreMachine ? ` — machine ${cvEscape(filtreMachine)}` : ''}</div>
+<table>
+<thead><tr>
+    <th>Date</th><th colspan="2">Départ (lieu · heure)</th><th colspan="2">Arrivée (lieu · heure)</th>
+    <th>Type</th><th>Immat.</th><th>Mono</th><th>Temps total</th><th>CdB</th>
+    <th>Att. jour</th><th>Att. nuit</th><th>Nuit</th><th>CdB</th><th>DC</th><th>Instructeur</th><th>Observations</th>
+</tr></thead>
+<tbody>${trs}
+<tr class="totaux">
+    <td colspan="8">Total — ${lignes.length} vol(s)</td>
+    <td>${fm(t.duree)}</td><td></td>
+    <td>${t.attJ}</td><td>${t.attN}</td><td>${fm(t.nuit)}</td>
+    <td>${fm(t.cdb)}</td><td>${fm(t.dc)}</td><td>${fm(t.instr)}</td><td></td>
+</tr></tbody></table>
+<div class="sign"><div>Fait à ………………………, le ………………………</div><div>Signature du pilote</div></div>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) { alert('Autorisez les fenêtres surgissantes pour générer l\'extract.'); return; }
+    w.document.write(html);
+    w.document.close();
+}
+
 function cvProposerAllerCarnetRoute() {
     const existing = document.getElementById('cv-redirect-modal');
     if (existing) existing.remove();
@@ -531,6 +609,9 @@ function initCarnetVol() {
 
     const filtreMachine = document.getElementById('carnet-vol-machine-select');
     if (filtreMachine) filtreMachine.addEventListener('change', cvRendreLignes);
+
+    const btnExport = document.getElementById('btn-export-carnet-vol');
+    if (btnExport) btnExport.addEventListener('click', cvExporterCarnet);
 
     const btnSuppr = document.getElementById('cv-btn-supprimer');
     if (btnSuppr) btnSuppr.addEventListener('click', () => { if (btnSuppr.dataset.id) cvSupprimerVol(btnSuppr.dataset.id); });

@@ -466,6 +466,85 @@ async function verifierAlertesInstructeurs() {
 }
 
 /* --------------------------------------------------------------------------
+   FORMATIONS : rappels automatiques
+   - seance signee par l'instructeur mais sans signature eleve depuis > 7 j
+     -> relance l'eleve (la notif initiale part a la creation de la seance)
+   - document demande fourni mais arrivant a echeance / perime
+     -> rappel a l'eleve + alerte groupee pour les instructeurs
+   -------------------------------------------------------------------------- */
+const NOTIF_JOURS_SIGNATURE_FORMATION = 7;
+
+async function verifierAlertesFormation() {
+    let suivis;
+    try {
+        suivis = await fetchTousRecords(
+            `${API_BASE}/${encodeURIComponent('Formations Suivis')}?filterByFormula=${encodeURIComponent("{Statut}='Ouverte'")}&pageSize=100`, { headers });
+    } catch (e) { console.warn('Vérification formations (suivis):', e); return; }
+    if (!suivis.length) return;
+
+    const auj = new Date(); auj.setHours(0, 0, 0, 0);
+    const limiteEch = new Date(auj); limiteEch.setDate(limiteEch.getDate() + NOTIF_JOURS_ECHANCE);
+    const limiteSign = new Date(auj); limiteSign.setDate(limiteSign.getDate() - NOTIF_JOURS_SIGNATURE_FORMATION);
+    const parseJson = v => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return null; } };
+
+    // 1) Relances de signature eleve
+    try {
+        const seances = await fetchTousRecords(
+            `${API_BASE}/${encodeURIComponent('Formations Séances')}?pageSize=100`, { headers });
+        const suivisParId = new Map(suivis.map(s => [String(s.id), s]));
+        for (const se of seances) {
+            const sf = se.fields || {};
+            const sv = suivisParId.get(String(sf['Suivi'] || ''));
+            if (!sv) continue;
+            const sigI = parseJson(sf['Signature instructeur']);
+            if (!sigI || sf['Signature élève']) continue;
+            const dSign = new Date(String(sigI.date || sf['Date'] || '').replace(' ', 'T'));
+            if (isNaN(dSign.getTime()) || dSign > limiteSign) continue;
+            const nomEleve = (sv.fields || {})['Élève nom'] || '';
+            await notifierUnique(
+                nomEleve, `form-sign-${se.id}`,
+                `✍️ Rappel : une séance de formation « ${sv.fields['Formation titre'] || ''} » du ${sf['Date'] || '?'} attend toujours votre signature.`,
+                'warning', 'formation:'
+            );
+        }
+    } catch (e) { console.warn('Vérification signatures de séances:', e); }
+
+    // 2) Documents demandes en echeance -> eleve + notif groupee instructeurs
+    try {
+        const lignesInstr = [];
+        for (const sv of suivis) {
+            const f = sv.fields || {};
+            const docs = parseJson(f['Documentation']) || [];
+            const nomEleve = f['Élève nom'] || '';
+            for (const d of docs) {
+                if (d.statut !== 'Fourni' || !d.dateValidite) continue;
+                const dv = new Date(String(d.dateValidite) + 'T00:00:00');
+                if (isNaN(dv.getTime()) || dv > limiteEch) continue;
+                const perime = dv < auj;
+                const dFr = dv.toLocaleDateString('fr-FR');
+                if (nomEleve) {
+                    await notifierUnique(
+                        nomEleve, `form-doc-${sv.id}-${d.id}`,
+                        `📄 Le document « ${d.titre || 'document'} » de votre formation « ${f['Formation titre'] || ''} » ${perime ? `est périmé depuis le ${dFr}` : `expire le ${dFr}`}.`,
+                        'warning', 'formation:'
+                    );
+                }
+                lignesInstr.push(`• ${nomEleve || '?'} — ${d.titre || 'document'} (${f['Formation titre'] || 'formation'}) : ${perime ? 'périmé depuis le' : 'expire le'} ${dFr}`);
+            }
+        }
+        if (lignesInstr.length) {
+            lignesInstr.sort();
+            await notifierParRole(
+                r => notifEstInstructeur(r) || notifEstSuperAdmin(r),
+                `form-docs-instr-${notifHash(lignesInstr.join('|'))}`,
+                `📄 Documents de formation en échéance ou périmés :\n${lignesInstr.join('\n')}`,
+                'warning', 'formation:'
+            );
+        }
+    } catch (e) { console.warn('Vérification documents de formation:', e); }
+}
+
+/* --------------------------------------------------------------------------
    HOOKS ÉVÉNEMENTIELS (appelés depuis les modules concernés)
    -------------------------------------------------------------------------- */
 
@@ -523,7 +602,8 @@ async function verifierNotificationsMetier() {
         const taches = [
             verifierPotentielReservations(),
             verifierSoldePiloteNegatif(),
-            verifierValiditesPilote()
+            verifierValiditesPilote(),
+            verifierAlertesFormation()
         ];
         if (notifEstMecanicien(roles) || notifEstSuperAdmin(roles)) taches.push(verifierAlertesMecaniciens());
         if (notifEstInstructeur(roles) || notifEstSuperAdmin(roles)) taches.push(verifierAlertesInstructeurs());

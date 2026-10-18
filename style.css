@@ -6042,6 +6042,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     gap: 8px;
     flex-wrap: wrap;
 }
+.seance-vol-orphelin {
+    color: #b45309;
+    font-weight: 500;
+}
 .formation-commentaire {
     font-size: 13px;
     color: #334155;
