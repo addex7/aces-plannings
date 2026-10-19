@@ -1881,6 +1881,28 @@ const CANEVAS_SEP = {
     ressources: []
 };
 
+// Livret stagiaire Vol de Nuit (VDN) — programme type 1 ANPI accepte
+// DSAC, REV 0 V1 du 14/11/2018. Items numerotes comme le bilan des
+// exercices obligatoires du livret : 1-3 VSV (LAPL), 4-7 vol de nuit,
+// SOLO = 5 atterrissages complets en solo supervise.
+const CANEVAS_VDN = {
+    titre: 'Vol de Nuit (VDN)',
+    discipline: 'Avion',
+    description: 'Livret stagiaire Vol de Nuit (VDN) — formation théorique et pratique (programme type 1 ANPI accepté DSAC, REV 0 V1 du 14/11/2018). Formation complète en 6 mois maximum. Minimas fin de formation : 5 h de vol totales dont 1 h de navigation (50 km min), 5 atterrissages complets en solo supervisé ; si LAPL(A) : 3 h de VSV en double commande supplémentaires.',
+    minimas: {
+        heures: 5, vols: 0, heuresDC: 0, heuresSolo: 0, heuresNav: 1, atterrissages: 5,
+        cas: [{ nom: 'Élève LAPL(A) — VSV requis', heures: 5, vols: 0, heuresDC: 3, heuresSolo: 0, heuresNav: 1, atterrissages: 5 }]
+    },
+    modules: [{ titre: 'Vol de nuit' }, { titre: 'Pilotage sans visibilité (VSV) — si LAPL(A)' }],
+    prerequis: ['Attestation parentale si mineur et/ou contrat de formation (avant tout vol)', 'Licence LAPL(A) ou PPL(A) + qualification de classe valide (avant tout vol solo supervisé)', 'Certificat médical valide (avant tout vol solo supervisé)', 'Attestation de formation Vol de Nuit à remettre à l’élève à l’issue (formulaire DGAC)'].map(titre => ({ titre })),
+    lecons: [
+        { id: 'VSV', titre: 'Pilotage sans visibilité — si LAPL(A)', groupe: 'VSV (si LAPL)', objectif: 'Exercices 1 à 6 acquis avant le lâché solo (LAPL)', items: ['1 Pilotage sans visibilité', '2 Situations inusuelles', '3 Vol aux instruments (moyens radio)'] },
+        { id: 'VDN', titre: 'Vol de nuit', groupe: 'Vol de nuit', objectif: 'Exercices 4 à 6 (PPL) ou 1 à 6 (LAPL) acquis avant le lâché solo', items: ['4 Pilotage', '5 Approche et atterrissage', '6 Situations inusuelles', '7 Navigation'] },
+        { id: 'SOLO', titre: 'Solo supervisé', groupe: 'Solo supervisé', objectif: 'Lâché une fois les exercices requis acquis — 5 atterrissages complets', items: ['SOLO Tours de piste en solo supervisé (5 atterrissages complets)'] }
+    ],
+    ressources: []
+};
+
 function appliquerCanevas(c) {
     const deja = document.getElementById('edit-formation-titre').value.trim();
     if (deja && !confirm(`Remplacer le contenu actuel par le canevas « ${c.titre} » ?`)) return;
@@ -1891,6 +1913,7 @@ function appliquerCanevas(c) {
     document.getElementById('edit-formation-vols').value = c.minimas.vols || '';
     document.getElementById('edit-formation-hdc').value = c.minimas.heuresDC;
     document.getElementById('edit-formation-hsolo').value = c.minimas.heuresSolo;
+    document.getElementById('edit-formation-hnav').value = c.minimas.heuresNav || '';
     document.getElementById('edit-formation-att').value = c.minimas.atterrissages || '';
     document.getElementById('editeur-cas').innerHTML = (c.cas || []).map(blocCasHtml).join('');
     document.getElementById('editeur-modules').innerHTML = c.modules.map(blocModuleHtml).join('');
@@ -2354,7 +2377,8 @@ function initFormation() {
     const btnMod = document.getElementById('btn-formation-module-add');
     if (btnMod) btnMod.addEventListener('click', () => ajouterBlocMini('editeur-modules', blocModuleHtml({})));
     [['btn-formation-canevas-ppl', CANEVAS_PPL], ['btn-formation-canevas-lapl', CANEVAS_LAPL],
-     ['btn-formation-canevas-lache', CANEVAS_LACHE], ['btn-formation-canevas-sep', CANEVAS_SEP]]
+     ['btn-formation-canevas-lache', CANEVAS_LACHE], ['btn-formation-canevas-sep', CANEVAS_SEP],
+     ['btn-formation-canevas-vdn', CANEVAS_VDN]]
         .forEach(([id, c]) => {
             const b = document.getElementById(id);
             if (b) b.addEventListener('click', () => appliquerCanevas(c));
