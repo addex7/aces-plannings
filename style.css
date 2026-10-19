@@ -1852,6 +1852,12 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
         grid-template-columns: 1fr;
     }
 }
+/* Champs de date des cartes de validites : juste la place du contenu,
+   pas toute la largeur de la carte */
+.validite-input[type="date"] {
+    width: auto;
+    max-width: 100%;
+}
 #view-instructeur .select-recherche {
     width: 240px;
     min-width: 240px;
@@ -3215,6 +3221,19 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     display: inline-flex;
     align-items: center;
     box-sizing: border-box;
+}
+@media (max-width: 1100px) {
+    /* Boutons de l'en-tete aéronefs : ils se replient proprement au lieu
+       de se couper en plusieurs lignes dans une rangee ecrasee */
+    #view-aeronefs .header { flex-wrap: wrap; }
+    #view-aeronefs .header > div:last-child { flex-wrap: wrap; justify-content: flex-end; }
+    /* Formulaire de saisie de vol : une colonne — la grille a deux
+       colonnes devient illisible sur tablette */
+    #carnet-form { grid-template-columns: 1fr; }
+    /* Carnet de vol : le tableau n'impose plus 1100 px de large,
+       il defile doucement avec des cellules resserrees */
+    .carnet-vol-table { min-width: 780px; font-size: 12px; }
+    .carnet-vol-table th, .carnet-vol-table td { padding: 6px 7px; }
 }
 .sidebar-icon-btn:active {
     transform: scale(0.95);
@@ -5087,16 +5106,13 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     input, select, textarea { font-size: 16px; }
     .nav-sub li, .nav-group-title { padding-top: 10px; padding-bottom: 10px; }
 
-    /* Glisser-deposer au doigt : le navigateur ne doit pas convertir
-       le geste en defilement de la page */
-    .reservation-bar, .maintenance-bar, .resize-handle { touch-action: none; }
-    /* Cellules de dispos instructeurs : peinture horizontale au doigt,
-       defilement vertical de la page conserve */
-    .dispo-slot { touch-action: pan-y; }
     /* Poignees de resize elargies pour le tactile */
     .resize-handle { width: 16px; }
     .resize-handle-left { left: -4px; }
     .resize-handle-right { right: -4px; }
+    /* Emojis decoratifs des cartes d'accueil : masques au tactile,
+       ils recouvrent le texte quand les cartes retrecissent */
+    .ap-card-icon { display: none; }
 
     /* Zones sures iPhone (encoche, barre home) */
     .main-content { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
@@ -5111,6 +5127,20 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     /* Pas de reflet gris au tap iOS */
     a, button, .nav-sub li, .nav-group-title { -webkit-tap-highlight-color: transparent; }
 }
+
+/* Glisser-deposer au doigt : ces regles doivent s'appliquer a TOUTES les
+   tailles — une tablette en paysage depasse les 1024 px de la media query,
+   et sans touch-action le navigateur transforme le geste en defilement. */
+.reservation-bar, .maintenance-bar, .resize-handle,
+.initiation-selection-barre, .drag-ghost-preview {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+/* Cellules de dispos instructeurs : peinture horizontale au doigt,
+   defilement vertical de la page conserve */
+.dispo-slot { touch-action: pan-y; }
 
 /* ==========================================================================
    TELEPHONE (≤700 px) : une colonne partout, en-tetes et controles replies
