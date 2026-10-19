@@ -2512,12 +2512,16 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     margin-bottom: 16px;
 }
 .header .bandeau-informatif {
-    flex: 1;
-    margin: 0 24px;
+    /* Le bandeau passe sous le titre et les boutons, sur toute la
+       largeur de la carte d'en-tete (avant : coince entre les deux) */
+    flex: 1 1 100%;
+    order: 10;
+    margin: 10px 0 0;
     padding: 10px 14px;
     font-size: 13px;
     text-align: center;
 }
+.header { flex-wrap: wrap; }
 .bandeau-informatif strong {
     color: #78350f;
 }
