@@ -3229,10 +3229,26 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 /* Tactile OU ecran etroit : les tablettes en paysage depassent 1024 px,
    on cible donc aussi le pointeur tactile (pointer: coarse) */
 @media (max-width: 1100px), (pointer: coarse) {
-    /* Boutons de l'en-tete aéronefs : ils se replient proprement au lieu
-       de se couper en plusieurs lignes dans une rangee ecrasee */
-    #view-aeronefs .header { flex-wrap: wrap; }
-    #view-aeronefs .header > div:last-child { flex-wrap: wrap; justify-content: flex-end; }
+    /* Boutons d'en-tete : taille reduite pour RESTER a droite du titre
+       au lieu de passer a la ligne (le .header garde flex-wrap: wrap
+       pour le bandeau informatif, mais titre + actions tiennent
+       desormais sur une seule ligne) */
+    .header { gap: 8px 12px; }
+    .header h2 { font-size: 18px; }
+    .planning-titre-groupe { min-width: 0; gap: 8px; flex-shrink: 1; }
+    .header-actions { gap: 6px; flex-wrap: nowrap; flex-shrink: 0; }
+    .header .btn-primary,
+    .header .btn-secondary,
+    .header .btn-toggle,
+    .header .aeronef-ctl,
+    #documents-toolbar .btn-primary {
+        padding: 7px 10px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    .date-navigation { height: 32px; padding: 0 8px; font-size: 12px; gap: 5px; }
+    .btn-nav { font-size: 11px; padding: 0 3px; }
+    #view-aeronefs .header > div:last-child { flex-wrap: nowrap; justify-content: flex-end; }
     /* Formulaire de saisie de vol : une colonne — la grille a deux
        colonnes devient illisible sur tablette */
     #carnet-form { grid-template-columns: 1fr; }
