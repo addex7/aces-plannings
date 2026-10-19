@@ -5097,6 +5097,80 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     .resize-handle { width: 16px; }
     .resize-handle-left { left: -4px; }
     .resize-handle-right { right: -4px; }
+
+    /* Zones sures iPhone (encoche, barre home) */
+    .main-content { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+    .sidebar { padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px)); }
+    .modal-content { max-height: 92dvh; }
+
+    /* Cibles tactiles : boutons principaux au doigt (~40 px min) */
+    .btn-primary, .btn-secondary, .btn-submit, .btn-toggle {
+        min-height: 40px;
+        box-sizing: border-box;
+    }
+    /* Pas de reflet gris au tap iOS */
+    a, button, .nav-sub li, .nav-group-title { -webkit-tap-highlight-color: transparent; }
+}
+
+/* ==========================================================================
+   TELEPHONE (≤700 px) : une colonne partout, en-tetes et controles replies
+   ========================================================================== */
+@media (max-width: 700px) {
+    /* En-tetes de vue : titre et controles passent sur deux lignes */
+    .header {
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    .header h2 { font-size: 18px; }
+    .header-sub { font-size: 12px; }
+    .header-actions,
+    .carnet-header-controls,
+    #view-carnet-vol .header,
+    #view-carnet-vol .carnet-header-controls {
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+    }
+    /* Recherche pilote formation pleine largeur */
+    .formation-recherche { width: 100%; }
+
+    /* Modales : jamais plus larges que l'ecran */
+    .modal-content {
+        width: auto;
+        max-width: 94vw;
+        padding: 20px 16px;
+        margin: 0 8px;
+    }
+    /* La modale carnet de route reste plein ecran (saisie de vol) */
+    #carnet-modal .modal-content {
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        max-height: 100dvh;
+        margin: 0;
+    }
+    #reservation-modal .modal-content,
+    #carnet-vol-modal .modal-content { max-width: 94vw; }
+
+    /* Grilles de saisie -> une colonne */
+    .seance-grid4 { grid-template-columns: 1fr; }
+    .cv-grid-3, .cv-grid-4 { grid-template-columns: 1fr 1fr; }
+    .formation-duo { gap: 10px; }
+
+    /* Titres de sections formation : texte un peu plus petit */
+    .formation-entete { padding: 12px; }
+    .formation-col { padding: 10px; }
+
+    /* Navigation de date : occupe toute la ligne */
+    .date-navigation { flex-wrap: wrap; justify-content: center; }
+
+    /* Tableaux : defilement fluide au doigt */
+    .table-scroll, .timeline-container, .carnet-table-container {
+        -webkit-overflow-scrolling: touch;
+    }
+    /* Indicateur de scroll : ombre en haut des tableaux masques */
+    .carnet-table-container { overflow-x: auto; }
 }
 
 /* ==========================================================================

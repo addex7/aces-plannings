@@ -102,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof initFormation === 'function') initFormation();
     initComptesPilotes();
     initNotifications();
-    afficherAvertissementMobile();
     adapterTableauxPetitEcran();
 });
 
@@ -120,31 +119,6 @@ function chargerDonneesInitiales() {
     ]).catch(err => console.error('Erreur chargement initial:', err));
     if (typeof chargerProchainsEvenements === 'function') chargerProchainsEvenements();
     if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
-}
-
-// Détection téléphone : les tablettes (iPad, Android) affichent le site
-// complet adapte via media queries ; seuls les petits ecrans tactiles
-// gardent le message informatif au chargement.
-function estAppareilMobileOuTablette() {
-    const ua = navigator.userAgent || '';
-    if (/iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
-    // Les telephones Android ont "Mobile" dans l'UA — les tablettes non
-    if (/Android/i.test(ua) && /Mobile/i.test(ua)) return true;
-    // Repli : pointeur tactile principal sur un petit ecran
-    const tactilePrincipal = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    // < 700 px : telephones ; l'iPad mini (744 px) et au-dessus passent
-    return !!tactilePrincipal && Math.min(screen.width, screen.height) < 700;
-}
-
-function afficherAvertissementMobile() {
-    if (!estAppareilMobileOuTablette()) return;
-    const modal = document.getElementById('mobile-warning-modal');
-    if (!modal) return;
-    modal.style.display = 'flex';
-    const fermer = () => { modal.style.display = 'none'; };
-    const btnOk = document.getElementById('btn-mobile-warning-ok');
-    if (btnOk) btnOk.addEventListener('click', fermer);
-    modal.addEventListener('click', (e) => { if (e.target === modal) fermer(); });
 }
 
 function initSidebarToggle() {
