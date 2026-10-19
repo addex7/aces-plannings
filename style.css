@@ -3222,7 +3222,9 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     align-items: center;
     box-sizing: border-box;
 }
-@media (max-width: 1100px) {
+/* Tactile OU ecran etroit : les tablettes en paysage depassent 1024 px,
+   on cible donc aussi le pointeur tactile (pointer: coarse) */
+@media (max-width: 1100px), (pointer: coarse) {
     /* Boutons de l'en-tete aéronefs : ils se replient proprement au lieu
        de se couper en plusieurs lignes dans une rangee ecrasee */
     #view-aeronefs .header { flex-wrap: wrap; }
@@ -3234,6 +3236,17 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
        il defile doucement avec des cellules resserrees */
     .carnet-vol-table { min-width: 780px; font-size: 12px; }
     .carnet-vol-table th, .carnet-vol-table td { padding: 6px 7px; }
+    /* Emojis decoratifs des cartes d'accueil : masques au tactile,
+       ils recouvrent le texte quand les cartes retrecissent */
+    .ap-card-icon { display: none; }
+    /* Sous-titres descriptifs des en-tetes : une seule ligne compacte,
+       ils prenaient trop de place sur petit ecran */
+    .header-sub {
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }
 .sidebar-icon-btn:active {
     transform: scale(0.95);
@@ -5110,9 +5123,6 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     .resize-handle { width: 16px; }
     .resize-handle-left { left: -4px; }
     .resize-handle-right { right: -4px; }
-    /* Emojis decoratifs des cartes d'accueil : masques au tactile,
-       ils recouvrent le texte quand les cartes retrecissent */
-    .ap-card-icon { display: none; }
 
     /* Zones sures iPhone (encoche, barre home) */
     .main-content { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
