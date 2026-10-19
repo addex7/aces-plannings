@@ -5148,6 +5148,41 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     a, button, .nav-sub li, .nav-group-title { -webkit-tap-highlight-color: transparent; }
 }
 
+/* ==========================================================================
+   VERROUILLAGE PAYSAGE TABLETTE
+   Une page web ne peut pas imposer l'orientation — on bloque en portrait
+   avec un ecran plein « tournez votre appareil ».
+   Cible : pointeur tactile + portrait + largeur >= 600 px (= tablettes ;
+   les telephones en portrait < 600 px conservent l'acces).
+   ========================================================================== */
+#rotation-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #1e3d59;
+    color: #fff;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: center;
+    padding: 24px;
+}
+.rotation-icone {
+    font-size: 64px;
+    animation: rotation-pivot 1.8s ease-in-out infinite;
+}
+.rotation-titre { font-size: 22px; font-weight: 700; }
+.rotation-texte { font-size: 14px; opacity: 0.85; max-width: 300px; }
+@keyframes rotation-pivot {
+    0%, 20% { transform: rotate(0deg); }
+    60%, 100% { transform: rotate(90deg); }
+}
+@media (orientation: portrait) and (pointer: coarse) and (min-width: 600px) {
+    #rotation-overlay { display: flex; }
+}
+
 /* Glisser-deposer au doigt : ces regles doivent s'appliquer a TOUTES les
    tailles — une tablette en paysage depasse les 1024 px de la media query,
    et sans touch-action le navigateur transforme le geste en defilement. */
