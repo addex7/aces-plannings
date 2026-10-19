@@ -3237,16 +3237,50 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     .header h2 { font-size: 18px; }
     .planning-titre-groupe { min-width: 0; gap: 8px; flex-shrink: 1; }
     .header-actions { gap: 6px; flex-wrap: nowrap; flex-shrink: 0; }
+    /* Harmonisation : tous les boutons d'en-tete partagent la meme
+       taille, la meme police et la meme couleur (bleu nuit) */
     .header .btn-primary,
     .header .btn-secondary,
     .header .btn-toggle,
     .header .aeronef-ctl,
-    #documents-toolbar .btn-primary {
-        padding: 7px 10px;
+    .header .carnet-header-controls button,
+    .header .carnet-header-controls .btn-primary,
+    #documents-toolbar .btn-primary,
+    #documents-toolbar .btn-secondary {
+        height: 32px;
+        padding: 0 12px;
         font-size: 12px;
+        font-weight: 700;
+        border-radius: 6px;
+        border: none;
+        background: #1e3d59;
+        color: #fff;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+    /* L'etat actif d'un bouton bascule reste lisible (vert) */
+    .header .btn-toggle.active { background: #10b981; }
+    .header .btn-primary:hover,
+    .header .btn-secondary:hover,
+    .header .btn-toggle:hover,
+    .header .aeronef-ctl:hover {
+        background: #17b978;
+        color: #fff;
     }
     .date-navigation { height: 32px; padding: 0 8px; font-size: 12px; gap: 5px; }
+    /* Selects et champs de recherche des en-tetes : meme hauteur que les
+       boutons pour une ligne parfaitement alignee */
+    .header select,
+    .header .form-control,
+    .formation-recherche {
+        height: 32px;
+        font-size: 12px;
+        padding: 0 8px;
+        box-sizing: border-box;
+    }
     .btn-nav { font-size: 11px; padding: 0 3px; }
     #view-aeronefs .header > div:last-child { flex-wrap: nowrap; justify-content: flex-end; }
     /* Formulaire de saisie de vol : une colonne — la grille a deux
