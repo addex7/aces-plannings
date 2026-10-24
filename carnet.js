@@ -508,17 +508,25 @@ async function peuplerCarnetInstructeurs(instructeur = '', machine = '') {
     const isJVIO = machine === 'F-JVIO';
     try {
         if (isJVIO) {
+            // Equipage 2 peut etre n'importe quel membre (instructeur,
+            // copilote, passager...) — la liste est chargee directement,
+            // independamment du droit de choisir le pilote (peuplerPilotesSelect
+            // ne remplit carnetPilotesCache que pour les admins/instructeurs,
+            // sinon Equipage 2 restait limite au membre connecte).
+            if (!carnetPilotesCache.length) {
+                const table = typeof TABLE_UTILISATEURS !== 'undefined' ? TABLE_UTILISATEURS : 'Utilisateurs';
+                const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(table)}?sort[0][field]=Nom&sort[0][direction]=asc&pageSize=100`, { headers });
+                carnetPilotesCache = tous.map(r => {
+                    const f = r.fields || {};
+                    return `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim();
+                }).filter(Boolean);
+            }
             let noms = [...carnetPilotesCache];
             if (!noms.length) {
                 const piloteSel = document.getElementById('carnet-pilote');
                 if (piloteSel && piloteSel.options.length) {
                     noms = [...piloteSel.options].map(o => o.value).filter(Boolean);
                 }
-            }
-            if (!noms.length) {
-                await peuplerPilotesSelect('');
-                const piloteSel = document.getElementById('carnet-pilote');
-                noms = (piloteSel && piloteSel.options.length) ? [...piloteSel.options].map(o => o.value).filter(Boolean) : [...carnetPilotesCache];
             }
             if (instructeur && !noms.includes(instructeur)) noms.push(instructeur);
             sel.innerHTML = '<option value="">-- Aucun --</option>';
