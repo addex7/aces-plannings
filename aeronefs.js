@@ -1096,6 +1096,9 @@ if (btnLegendeSuivi) {
             ${rond('#10b981', 'Document en cours de validité (> 3 mois)')}
             ${rond('#f97316', 'Document en fin de validité (< 3 mois)')}
             ${rond('#dc2626', 'Document expiré')}
+            ${titre('🌗 Repères horaires')}
+            ${item('repeating-linear-gradient(-45deg, rgba(30, 61, 89, 0.22), rgba(30, 61, 89, 0.22) 6px, rgba(186, 215, 233, 0.45) 6px, rgba(186, 215, 233, 0.45) 12px)', 'Nuit — soleil sous l\'horizon (vol de jour encore possible)')}
+            ${item('repeating-linear-gradient(-45deg, rgba(30, 61, 89, 0.12), rgba(30, 61, 89, 0.12) 6px, rgba(240, 244, 248, 0.4) 6px, rgba(240, 244, 248, 0.4) 12px)', 'Nuit aéronautique (qualification nuit requise)')}
         `, 'ℹ️');
     });
 }
