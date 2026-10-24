@@ -108,6 +108,7 @@ function initDocuments() {
         } catch (err) {
             console.error(err);
             alert('Erreur lors de l\'upload : ' + err.message);
+            inputFichier.value = '';
         } finally {
             if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Enregistrer'; }
         }
@@ -931,17 +932,35 @@ function creerCarteDocument(rec, contexte = '') {
 }
 
 async function uploaderFichierDocument(file) {
+    if (file.size > 50 * 1024 * 1024) throw new Error('Fichier trop volumineux (50 Mo max).');
+    // Vérifie que le fichier est lisible (un fichier iCloud non téléchargé
+    // fait échouer l'upload Safari avec « Load failed » sans autre indice)
+    await new Promise((ok, ko) => {
+        const r = new FileReader();
+        r.onload = ok;
+        r.onerror = () => ko(new Error('Fichier illisible — si le document est sur iCloud, téléchargez-le d\'abord en local.'));
+        r.readAsArrayBuffer(file.slice(0, 1));
+    });
     const uploadBase = API_BASE.slice(0, API_BASE.lastIndexOf('/'));
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${uploadBase}/upload`, {
-        method: 'POST',
-        headers: { Authorization: headers.Authorization },
-        body: formData
+    // XMLHttpRequest : l'upload fetch de Safari échoue parfois avec « Load
+    // failed » sans que la requête n'atteigne le serveur.
+    return await new Promise((ok, ko) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${uploadBase}/upload`);
+        xhr.setRequestHeader('Authorization', headers.Authorization);
+        xhr.onload = () => {
+            let data = {};
+            try { data = JSON.parse(xhr.responseText || '{}'); } catch {}
+            if (xhr.status >= 200 && xhr.status < 300 && data.url) ok(data.url);
+            else ko(new Error((data.error && data.error.message) || `Erreur upload (${xhr.status})`));
+        };
+        xhr.onerror = () => ko(new Error('Échec réseau de l\'envoi — vérifiez la connexion puis réessayez.'));
+        xhr.ontimeout = () => ko(new Error('Envoi trop long — connexion trop lente pour ce fichier.'));
+        xhr.timeout = 120000;
+        xhr.send(formData);
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.url) throw new Error((data.error && data.error.message) || `Erreur upload (${res.status})`);
-    return data.url;
 }
 
 function ouvrirFormDocument(id = null) {
@@ -1004,6 +1023,9 @@ async function enregistrerDocument(e) {
     if (!titre || !lien) { alert('Le titre et le fichier sont obligatoires.'); return; }
     if (!dossier) { alert('Veuillez choisir un dossier.'); return; }
 
+    const btnSubmitDoc = document.querySelector('#form-document button[type="submit"]');
+    if (btnSubmitDoc) { btnSubmitDoc.disabled = true; btnSubmitDoc.textContent = 'Enregistrement en cours...'; }
+
     const fields = {
         'Titre': titre,
         'Catégorie': dossier,
@@ -1027,6 +1049,8 @@ async function enregistrerDocument(e) {
     } catch (err) {
         console.error(err);
         alert(`Erreur lors de l'enregistrement : ${err.message}`);
+    } finally {
+        if (btnSubmitDoc) { btnSubmitDoc.disabled = false; btnSubmitDoc.textContent = 'Enregistrer'; }
     }
 }
 
