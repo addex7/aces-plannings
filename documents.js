@@ -34,7 +34,6 @@ function initDocuments() {
     const form = document.getElementById('form-document');
     const formDossier = document.getElementById('form-dossier');
     const inputFichier = document.getElementById('document-fichier');
-    const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
 
     appliquerAccesDocumentaire();
     const btnLegende = document.getElementById('btn-legende-documents');
@@ -96,21 +95,13 @@ function initDocuments() {
         if (c && c.style.display === 'block') cacherFormDossier();
         else ouvrirFormDossier();
     });
-    if (inputFichier) inputFichier.addEventListener('change', async (e) => {
+    if (inputFichier) inputFichier.addEventListener('change', (e) => {
+        // Le fichier n'est PAS envoyé ici : il partira avec « Enregistrer ».
+        // On ne fait que prévenir tout de suite s'il est manifestement trop gros.
         const file = e.target.files[0];
-        if (!file) return;
-        if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Envoi en cours...'; }
-        const inputLien = document.getElementById('document-lien');
-        try {
-            const url = await uploaderFichierDocument(file);
-            if (inputLien) inputLien.value = url;
+        if (file && file.size > 50 * 1024 * 1024) {
+            alert('Fichier trop volumineux (50 Mo max).');
             inputFichier.value = '';
-        } catch (err) {
-            console.error(err);
-            alert('Erreur lors de l\'upload : ' + err.message);
-            inputFichier.value = '';
-        } finally {
-            if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Enregistrer'; }
         }
     });
     if (btnCancelDoc) btnCancelDoc.addEventListener('click', cacherFormDocument);
@@ -1020,17 +1011,32 @@ async function enregistrerDocument(e) {
     const lien = document.getElementById('document-lien').value.trim();
     const description = document.getElementById('document-description').value.trim();
 
-    if (!titre || !lien) { alert('Le titre et le fichier sont obligatoires.'); return; }
+    const inputFichier = document.getElementById('document-fichier');
+    const fichier = inputFichier && inputFichier.files && inputFichier.files[0];
+    if (!titre || (!lien && !fichier)) { alert('Le titre et le fichier sont obligatoires.'); return; }
     if (!dossier) { alert('Veuillez choisir un dossier.'); return; }
 
     const btnSubmitDoc = document.querySelector('#form-document button[type="submit"]');
     if (btnSubmitDoc) { btnSubmitDoc.disabled = true; btnSubmitDoc.textContent = 'Enregistrement en cours...'; }
 
+    // Fichier choisi ? On l'envoie maintenant (et non plus à sa sélection)
+    let lienFinal = lien;
+    if (fichier) {
+        try {
+            lienFinal = await uploaderFichierDocument(fichier);
+        } catch (err) {
+            console.error(err);
+            alert('Erreur lors de l\'upload : ' + err.message);
+            if (btnSubmitDoc) { btnSubmitDoc.disabled = false; btnSubmitDoc.textContent = 'Enregistrer'; }
+            return;
+        }
+    }
+
     const fields = {
         'Titre': titre,
         'Catégorie': dossier,
         'Sous-dossier': sousDossier,
-        'Lien': lien,
+        'Lien': lienFinal,
         'Description': description
     };
     if (!id) {
