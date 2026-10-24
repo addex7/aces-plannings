@@ -48,9 +48,23 @@ function bientotExpire(str) {
 // Durée d'un vol en minutes : horamètres en priorité, sinon heures départ/arrivée.
 function dureeVolMinutes(f) {
     if (f['Horamètre départ'] !== undefined && f['Horamètre arrivée'] !== undefined) {
-        const dep = parseFloat(f['Horamètre départ']);
-        const arr = parseFloat(f['Horamètre arrivée']);
-        if (!isNaN(dep) && !isNaN(arr) && arr >= dep) return Math.round((arr - dep) * 60);
+        const machine = (f['Machine'] || '').toString().trim().toUpperCase();
+        if (machine === 'F-JVIO') {
+            // Horamètre JVIO au format H.MM (1154.17 = 1154 h 17 min), pas décimal
+            const versMin = v => {
+                const t = parseFloat(String(v).replace(',', '.'));
+                if (isNaN(t)) return null;
+                const h = Math.floor(t);
+                return h * 60 + Math.round((t - h) * 100);
+            };
+            const dep = versMin(f['Horamètre départ']);
+            const arr = versMin(f['Horamètre arrivée']);
+            if (dep !== null && arr !== null && arr >= dep) return arr - dep;
+        } else {
+            const dep = parseFloat(f['Horamètre départ']);
+            const arr = parseFloat(f['Horamètre arrivée']);
+            if (!isNaN(dep) && !isNaN(arr) && arr >= dep) return Math.round((arr - dep) * 60);
+        }
     }
     if (!f['Heure départ'] || !f['Heure arrivée']) return 0;
     const [hD, mD] = f['Heure départ'].split(':').map(Number);
