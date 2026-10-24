@@ -166,16 +166,25 @@ function populerDossiers() {
             descendre(node.sous[nom], c);
         });
     };
-    Object.keys(arbre).sort(triFr).forEach(cat => {
+    Object.keys(arbre).filter(c => !c.startsWith('⚙️ ')).sort(triFr).forEach(cat => {
         ajouterOption(cat, cat, '');
         descendre(arbre[cat], [cat]);
+    });
+    // Dossiers machines : union des machines documentées et des dossiers « ⚙️ »
+    const machinesListe = [...new Set(
+        Object.keys(documentsAeronefsBibliothequeCache || {})
+            .concat(Object.keys(arbre).filter(c => c.startsWith('⚙️ ')).map(c => c.slice(3)))
+    )].sort(triFr);
+    machinesListe.forEach(m => {
+        const cle = '⚙️ ' + m;
+        ajouterOption(cle, cle, '');
+        if (arbre[cle]) descendre(arbre[cle], [cle]);
     });
     ajouterOption('Autre', 'Autre', '');
 }
 
-// Chemin complet du dossier courant (« Cat » , « Cat/S1/S2 »…), '' a la racine ou dans une machine
+// Chemin complet du dossier courant (« Cat » , « Cat/S1/S2 », « ⚙️ M/S »…), '' a la racine
 function dossierCourantBibliotheque() {
-    if ((docsNavChemin[0] || '').startsWith('⚙️ ')) return '';
     return docsNavChemin.join('/');
 }
 
@@ -191,7 +200,7 @@ function ouvrirFormDossier() {
     if (form) form.reset();
     dossierEnRenommage = null;
     const cat = dossierCourantBibliotheque();
-    if (title) title.textContent = cat ? `Nouveau sous-dossier dans « ${docsNavChemin.join(' › ')} »` : 'Nouveau dossier';
+    if (title) title.textContent = cat ? `Nouveau sous-dossier dans « ${docsNavChemin.map(s => s.startsWith('⚙️ ') ? s.slice(3) : s).join(' › ')} »` : 'Nouveau dossier';
     const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
     if (btnSubmit) btnSubmit.textContent = 'Créer';
     cacherFormDocument();
@@ -648,7 +657,12 @@ function afficherDocuments(records) {
     let noeud = null;
     for (const seg of docsNavChemin) {
         if (!noeud) {
-            if (seg.startsWith('⚙️ ')) { if (machines.includes(seg.slice(3))) valides.push(seg); break; }
+            if (seg.startsWith('⚙️ ')) {
+                if (!machines.includes(seg.slice(3)) && !arbre[seg]) break;
+                valides.push(seg);
+                noeud = arbre[seg] || { sous: {}, docs: [] };
+                continue;
+            }
             if (!arbre[seg]) break;
             noeud = arbre[seg];
         } else {
@@ -669,13 +683,22 @@ function afficherDocuments(records) {
     const cat = docsNavChemin[0];
 
     if (!cat) {
-        // Racine : tuiles des categories + des machines
-        const tuiles = cats.map(c => docsTileDossier(c, c, '')).join('') +
-            machines.map(m => docsTileDossier(m, '⚙️ ' + m)).join('');
+        // Racine : tuiles des categories + des machines (sans doublon « ⚙️ »)
+        const machinesTuiles = [...new Set(machines.concat(
+            cats.filter(c => c.startsWith('⚙️ ')).map(c => c.slice(3))))].sort();
+        const tuiles = cats.filter(c => !c.startsWith('⚙️ ')).map(c => docsTileDossier(c, c, '')).join('') +
+            machinesTuiles.map(m => docsTileDossier(m, '⚙️ ' + m)).join('');
         contenu = `<div class="docs-tiles">${tuiles}</div>`;
     } else if (cat.startsWith('⚙️ ')) {
-        // Dossier machine : mini-cartes avec pastille de validite
-        contenu = docsHtmlMachine(cat.slice(3));
+        // Dossier machine : sous-dossiers + docs aéronef (racine) + docs bibliothèque
+        const node = docsNoeudCourant(arbre, docsNavChemin) || { sous: {}, docs: [] };
+        const cheminParent = docsNavChemin.join('/');
+        const tuiles = Object.keys(node.sous).sort()
+            .map(s => docsTileDossier(s, s, cheminParent)).join('');
+        const cartesBiblio = node.docs.length ? docsHtmlCartes(node.docs) : '';
+        const cartesMachine = docsNavChemin.length === 1 ? docsHtmlMachine(cat.slice(3), !(tuiles || cartesBiblio)) : '';
+        contenu = (tuiles ? `<div class="docs-tiles">${tuiles}</div>` : '') + cartesMachine + cartesBiblio;
+        if (!contenu) contenu = '<p style="color:#94a3b8; font-size:13px;">Aucun document.</p>';
     } else {
         // Interieur d'un dossier : sous-dossiers en tuiles + documents
         const node = docsNoeudCourant(arbre, docsNavChemin) || { sous: {}, docs: [] };
@@ -845,9 +868,9 @@ document.addEventListener('click', (e) => {
     else if (el.dataset.docbibAction === 'supprimer') supprimerDocumentAeronefBiblio(el.dataset.rid, el.dataset.machine);
 });
 
-function docsHtmlMachine(machine) {
+function docsHtmlMachine(machine, afficherSiVide = true) {
     const docs = (documentsAeronefsBibliothequeCache[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
-    if (!docs.length) return '<p style="color:#94a3b8; font-size:13px;">Aucun document actif.</p>';
+    if (!docs.length) return afficherSiVide ? '<p style="color:#94a3b8; font-size:13px;">Aucun document actif.</p>' : '';
     const canEdit = typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef();
     const aujourdhui = new Date();
     aujourdhui.setHours(0, 0, 0, 0);
@@ -883,7 +906,7 @@ async function supprimerDocumentAeronefBiblio(id, machine) {
 
 function docsContexteDocument(rec) {
     const f = rec.fields || {};
-    const cat = f['Catégorie'] || 'Autre';
+    const cat = (f['Catégorie'] || 'Autre').replace(/^⚙️ /, '');
     const sous = (f['Sous-dossier'] || '').split('/').filter(Boolean).join(' › ');
     return `📁 ${cat}${sous ? ' › ' + sous : ''}`;
 }
