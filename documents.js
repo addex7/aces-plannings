@@ -682,15 +682,26 @@ function afficherDocuments(records) {
             machinesTuiles.map(m => docsTileDossier(m, '⚙️ ' + m)).join('');
         contenu = `<div class="docs-tiles">${tuiles}</div>`;
     } else if (cat.startsWith('⚙️ ')) {
-        // Dossier machine : sous-dossiers + docs aéronef (racine) + docs bibliothèque
+        // Dossier machine : sous-dossiers + une seule grille commune
+        // (cartes aéronef + docs bibliothèque, même gabarit visuel)
         const node = docsNoeudCourant(arbre, docsNavChemin) || { sous: {}, docs: [] };
         const cheminParent = docsNavChemin.join('/');
         const tuiles = Object.keys(node.sous).sort()
             .map(s => docsTileDossier(s, s, cheminParent)).join('');
-        const cartesBiblio = node.docs.length ? docsHtmlCartes(node.docs) : '';
-        const cartesMachine = docsNavChemin.length === 1 ? docsHtmlMachine(cat.slice(3), !(tuiles || cartesBiblio)) : '';
-        contenu = (tuiles ? `<div class="docs-tiles">${tuiles}</div>` : '') + cartesMachine + cartesBiblio;
-        if (!contenu) contenu = '<p style="color:#94a3b8; font-size:13px;">Aucun document.</p>';
+        const m = cat.slice(3);
+        const canEdit = typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef();
+        const aujourdhui = new Date(); aujourdhui.setHours(0, 0, 0, 0);
+        const dans3mois = new Date(aujourdhui); dans3mois.setMonth(dans3mois.getMonth() + 3);
+        const cartesMachine = docsNavChemin.length === 1
+            ? (documentsAeronefsBibliothequeCache[m] || [])
+                .filter(r => r.fields && r.fields['Activé'] !== false)
+                .map(r => docsCarteMachineHtml(r, m, canEdit, aujourdhui, dans3mois))
+            : [];
+        const toutes = cartesMachine.concat(node.docs.map(r => creerCarteDocument(r)));
+        contenu = (tuiles ? `<div class="docs-tiles">${tuiles}</div>` : '') +
+            (toutes.length
+                ? `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${toutes.join('')}</div>`
+                : '<p style="color:#94a3b8; font-size:13px;">Aucun document actif.</p>');
     } else {
         // Interieur d'un dossier : sous-dossiers en tuiles + documents
         const node = docsNoeudCourant(arbre, docsNavChemin) || { sous: {}, docs: [] };
@@ -860,18 +871,6 @@ document.addEventListener('click', (e) => {
     else if (el.dataset.docbibAction === 'supprimer') supprimerDocumentAeronefBiblio(el.dataset.rid, el.dataset.machine);
 });
 
-function docsHtmlMachine(machine, afficherSiVide = true) {
-    const docs = (documentsAeronefsBibliothequeCache[machine] || []).filter(r => r.fields && r.fields['Activé'] !== false);
-    if (!docs.length) return afficherSiVide ? '<p style="color:#94a3b8; font-size:13px;">Aucun document actif.</p>' : '';
-    const canEdit = typeof peutGererDocumentsAeronef === 'function' && peutGererDocumentsAeronef();
-    const aujourdhui = new Date();
-    aujourdhui.setHours(0, 0, 0, 0);
-    const dans3mois = new Date(aujourdhui);
-    dans3mois.setMonth(dans3mois.getMonth() + 3);
-    const cartes = docs.map(r => docsCarteMachineHtml(r, machine, canEdit, aujourdhui, dans3mois)).join('');
-    return `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${cartes}</div>`;
-}
-
 async function rafraichirBibliothequeDocsAeronefs() {
     const vue = document.getElementById('view-documents');
     if (!vue || vue.style.display === 'none') return;
@@ -906,11 +905,28 @@ function docsContexteDocument(rec) {
 function creerCarteDocument(rec, contexte = '') {
     const f = rec.fields || {};
     const canEdit = isDocumentaliste();
+    // Pastille + texte de validité, même code couleur que les cartes machines
+    let pastille = '';
+    let validiteTxt = '';
+    if (f['Date de validité']) {
+        const aujourdhui = new Date(); aujourdhui.setHours(0, 0, 0, 0);
+        const dans3mois = new Date(aujourdhui); dans3mois.setMonth(dans3mois.getMonth() + 3);
+        const dateValid = new Date(f['Date de validité'] + 'T00:00:00');
+        const dateStr = dateValid.toLocaleDateString('fr-FR');
+        let couleur = '#10b981';
+        if (dateValid < aujourdhui) { couleur = '#dc2626'; validiteTxt = `Expiré le ${dateStr}`; }
+        else if (dateValid < dans3mois) { couleur = '#f97316'; validiteTxt = `Expire le ${dateStr}`; }
+        else validiteTxt = `Valide jusqu'au ${dateStr}`;
+        pastille = `<span style="width:10px; height:10px; border-radius:50%; background:${couleur}; display:inline-block; flex-shrink:0;"></span>`;
+    }
     return `
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; display:flex; flex-direction:column;">
-            <h4 style="margin:0 0 6px; color:#0f172a;">${escapeHtml(f['Titre']) || 'Sans titre'}</h4>
+            <h4 style="margin:0 0 6px; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                ${pastille}${escapeHtml(f['Titre']) || 'Sans titre'}
+            </h4>
             ${contexte ? `<div style="font-size:12px; color:#64748b; margin:-2px 0 6px;">${escapeHtml(contexte)}</div>` : ''}
-            <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${escapeHtml(f['Description'])}</p>
+            <p style="margin:0 0 ${validiteTxt ? '4px' : '10px'}; font-size:13px; color:#475569; min-height:1.2em;">${escapeHtml(f['Description'])}</p>
+            ${validiteTxt ? `<p style="margin:0 0 10px; font-size:13px; color:#475569;">${validiteTxt}</p>` : ''}
             <div style="margin-top:auto;">
                 <a href="${escapeHtml(urlSure(f['Lien']))}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">Ouvrir le document ↗</a>
                 ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
@@ -977,6 +993,8 @@ function ouvrirFormDocument(id = null) {
                 populerDossiers();
                 document.getElementById('document-lien').value = f['Lien'] || '';
                 document.getElementById('document-description').value = f['Description'] || '';
+                const inpValidite = document.getElementById('document-validite');
+                if (inpValidite) inpValidite.value = f['Date de validité'] || '';
             }
         } else {
             if (select) {
@@ -1037,7 +1055,8 @@ async function enregistrerDocument(e) {
         'Catégorie': dossier,
         'Sous-dossier': sousDossier,
         'Lien': lienFinal,
-        'Description': description
+        'Description': description,
+        'Date de validité': (document.getElementById('document-validite') || {}).value || ''
     };
     if (!id) {
         fields['Auteur'] = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
