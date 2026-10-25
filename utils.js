@@ -84,6 +84,63 @@ function dureeVolMinutes(f) {
 // d'instruction comptent dans l'experience) + vols extérieurs (carnet de vol).
 // Chaque record est marque _volCommePilote / _volCommeInstructeur pour
 // permettre aux calculs de distinguer le role tenu sur le vol.
+// Normalisation de noms identique a celle du carnet (normNomGvv /
+// nomsGvvCompatibles dans carnet.js) — copies pour independance de chargement.
+function normNomGvv2(s) {
+    return (s || '').toString().toLowerCase().normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ')
+        .split(' ').filter(Boolean).sort().join(' ');
+}
+function nomsGvvCompatibles2(nomA, nomB) {
+    const ta = normNomGvv2(nomA).split(' ').filter(Boolean);
+    const tb = normNomGvv2(nomB).split(' ').filter(Boolean);
+    if (ta.join(' ') === tb.join(' ')) return true;
+    return ta.length === tb.length && ta.every((t, i) => t === tb[i] || tb[i].startsWith(t) || t.startsWith(tb[i]));
+}
+
+// Vols importes de GVV qui n'ont pas de ligne carnet pour CE pilote :
+// convertis en pseudo-lignes marquees _sourceGvv pour le calcul d'experience
+// (heures = horametres, atterrissages = champ « Attero » GVV quand present).
+async function volsGvvOrphelinsPilote(nomComplet, recordsCarnet) {
+    const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Vols GVV')}?pageSize=100`, { headers });
+    const num = v => parseFloat(String(v ?? '').replace(',', '.'));
+    const lignes = (recordsCarnet || []).map(r => r.fields || {}).filter(f => f['Date'] && f['Machine']);
+    const couvert = g => {
+        const jour = lignes.filter(f => f['Date'] === g.date && (f['Machine'] || '').toString().trim().toUpperCase() === g.immat);
+        // Match strict : une ligne avec meme debut ET fin.
+        if (jour.some(f => Math.abs(num(f['Horamètre départ']) - g.deb) <= 0.005 && Math.abs(num(f['Horamètre arrivée']) - g.fin) <= 0.005)) return true;
+        // Match groupe : debut sur une ligne, fin sur une autre (nav en 2 lignes).
+        return jour.some(f => Math.abs(num(f['Horamètre départ']) - g.deb) <= 0.005)
+            && jour.some(f => Math.abs(num(f['Horamètre arrivée']) - g.fin) <= 0.005);
+    };
+    return (tous || []).map(r => {
+        const f = r.fields || {};
+        const g = {
+            pilote: (f['Pilote'] || '').toString(),
+            date: f['Date'] || '',
+            immat: (f['Machine'] || '').toString().trim().toUpperCase(),
+            deb: num(f['Compteur début']), fin: num(f['Compteur fin']),
+            att: parseInt(f['Attero'], 10) || 1,
+            inst: (f['Inst/PAX'] || '').toString().trim(),
+            dc: String(f['DC'] || '') === '1',
+        };
+        if (!g.date || !g.immat || isNaN(g.deb) || isNaN(g.fin)) return null;
+        if (!nomsGvvCompatibles2(g.pilote, nomComplet)) return null;
+        if (couvert(g)) return null;
+        return {
+            id: `gvv-${r.id}`,
+            fields: {
+                'Date': g.date, 'Machine': g.immat, 'Pilote': g.pilote,
+                'Fonction': g.dc ? 'EP' : 'P',
+                'Instructeur': g.dc ? g.inst : '',
+                'Horamètre départ': g.deb, 'Horamètre arrivée': g.fin,
+                'Décollages': g.att, 'Atterrissages': g.att,
+            },
+            _volCommePilote: true, _volCommeInstructeur: false, _sourceGvv: true,
+        };
+    }).filter(Boolean);
+}
+
 async function chargerVolsPilote(prenom, nom) {
     const tableCarnet = typeof TABLE_CARNET_ROUTE !== 'undefined' ? TABLE_CARNET_ROUTE : 'Carnet de route Pilotes';
     const p = (prenom || '').replace(/"/g, '\\"');
@@ -108,6 +165,10 @@ async function chargerVolsPilote(prenom, nom) {
         r._volCommePilote = !!(f['Pilote'] && matchNom(f['Pilote']));
         r._volCommeInstructeur = !!(f['Instructeur'] && matchNom(f['Instructeur']));
     });
+    // Vols GVV orphelins du pilote : completes l'experience (payeur = pilote).
+    try {
+        records = records.concat(await volsGvvOrphelinsPilote(nomComplet, records));
+    } catch (e) { console.warn('Vols GVV expérience :', e); }
     return records;
 }
 
@@ -124,6 +185,7 @@ function calculerExperiencesPilote(records, cpl = false) {
     let decollages3mUlm = 0, atterrissages3mUlm = 0;
     let minutes24m = 0, decollages24m = 0, atterrissages24m = 0, instruction1h = false;
     let minutes12m = 0;
+    let gvvDec3m = 0, gvvAtt3m = 0, gvvMin12 = 0, gvvMin24 = 0;
 
     // Seuls les vols en AVION comptent pour « emport passager avion », LAPL et
     // initiation avion : immats moteur du carnet de route ou case « Monomoteur »
@@ -174,6 +236,11 @@ function calculerExperiencesPilote(records, cpl = false) {
         if (d >= limite12m) {
             minutes12m += duree;
         }
+        if (r._sourceGvv) {
+            if (d >= limite3m) { gvvDec3m += decN; gvvAtt3m += attN; }
+            gvvMin24 += duree;
+            if (d >= limite12m) gvvMin12 += duree;
+        }
     });
 
     const h24 = Math.floor(minutes24m / 60);
@@ -196,15 +263,15 @@ function calculerExperiencesPilote(records, cpl = false) {
 
     const passager = decollages3m >= 3 && atterrissages3m >= 3;
     const passagerBientot = !passager && (decollages3m > 0 || atterrissages3m > 0);
-    const passagerDetail = `${decollages3m} décollages, ${atterrissages3m} atterrissages / 3`;
+    const passagerDetail = `${decollages3m} décollages, ${atterrissages3m} atterrissages / 3${(gvvDec3m || gvvAtt3m) ? ` — dont ${gvvDec3m} déc./${gvvAtt3m} att. importés de GVV` : ''}`;
 
     const lapl = minutes24m >= 12 * 60 && decollages24m >= 12 && atterrissages24m >= 12 && instruction1h;
-    const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00 — ${decollages24m} décollages / 12 — ${atterrissages24m} atterrissages / 12 — 1h instructeur : ${instruction1h ? 'oui' : 'non'}`;
+    const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00 — ${decollages24m} décollages / 12 — ${atterrissages24m} atterrissages / 12 — 1h instructeur : ${instruction1h ? 'oui' : 'non'}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}`;
 
     const initiation = passager && (cpl || minutes12m >= 25 * 60);
     const initiationDetail = cpl
         ? `Pilote CPL — ${h12}h${String(m12).padStart(2, '0')} sur 12 mois`
-        : `${h12}h${String(m12).padStart(2, '0')} / 25h00 sur 12 mois — emport passager : ${passager ? 'oui' : 'non'}`;
+        : `${h12}h${String(m12).padStart(2, '0')} / 25h00 sur 12 mois — emport passager : ${passager ? 'oui' : 'non'}${gvvMin12 ? ` — dont ${Math.floor(gvvMin12 / 60)}h${String(Math.floor(gvvMin12 % 60)).padStart(2, '0')} importées de GVV` : ''}`;
 
     return {
         dernierVol, decollages3m, atterrissages3m, decollages3mUlm, atterrissages3mUlm,
