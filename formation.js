@@ -1801,11 +1801,12 @@ function ajouterBlocMini(zoneId, html) {
 // (meme disposition que la page Bibliotheque), insere une ligne
 // lien+titre dans la documentation de la formation.
 async function piocherDocumentBibliotheque() {
-    let recDocs = [], recDossiers = [];
+    let recDocs = [], recDossiers = [], recDocsAero = [];
     try {
-        [recDocs, recDossiers] = await Promise.all([
+        [recDocs, recDossiers, recDocsAero] = await Promise.all([
             fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Documents')}?pageSize=100`, { headers }),
-            fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Dossiers')}?pageSize=100`, { headers })
+            fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Dossiers')}?pageSize=100`, { headers }),
+            fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Documents Aéronefs')}?pageSize=100`, { headers })
         ]);
     } catch (e) { alert('Bibliothèque indisponible : ' + e.message); return; }
 
@@ -1824,6 +1825,19 @@ async function piocherDocumentBibliotheque() {
         const p = [(f['Catégorie'] || 'Autre').trim() || 'Autre', ...(f['Sous-dossier'] || '').split('/').filter(Boolean)];
         const d = { titre: (f['Titre'] || '').toString(), lien: (f['Lien'] || '').toString() };
         noeud(p).docs.push(d);
+        docsPlats.push(d);
+    });
+    // Documents machines : dossier « ⚙️ Immat » par aéronef, comme dans la
+    // bibliothèque (seuls les docs activés et avec un lien).
+    recDocsAero.forEach(r => {
+        const f = r.fields || {};
+        if (f['Activé'] === false) return;
+        const machine = (f['Machine'] || '').toString().trim() || 'Sans machine';
+        const d = {
+            titre: (f['Nom libre'] || f['Titre'] || f['Type'] || '').toString(),
+            lien: (f['Lien'] || '').toString()
+        };
+        noeud(['⚙️ ' + machine]).docs.push(d);
         docsPlats.push(d);
     });
     if (!docsPlats.length) { alert('Bibliothèque vide.'); return; }
