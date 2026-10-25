@@ -6362,3 +6362,13 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     color: #1d4ed8;
     border: 1px solid #93c5fd;
 }
+
+/* Champs de plage de dates du carnet de vol pilote */
+.cv-date-filtre {
+    padding: 5px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #334155;
+    font-family: inherit;
+}

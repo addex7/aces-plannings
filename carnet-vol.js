@@ -320,6 +320,7 @@ async function chargerCarnetVol() {
 
         cvLignesCourantes = lignes;
         cvPeuplerFiltreMachine(lignes);
+        cvPeuplerFiltreAnnee(lignes);
         cvRendreLignes();
     } catch (err) {
         console.error('Erreur chargement carnet de vol:', err);
@@ -338,11 +339,36 @@ function cvPeuplerFiltreMachine(lignes) {
     select.dispatchEvent(new Event('maj-affichage'));
 }
 
+function cvPeuplerFiltreAnnee(lignes) {
+    const select = document.getElementById('carnet-vol-annee-select');
+    if (!select) return;
+    const annees = [...new Set(lignes.map(l => (l.date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+    const courante = select.value;
+    select.innerHTML = '<option value="">Toutes les années</option>' +
+        annees.map(a => `<option value="${a}">${a}</option>`).join('');
+    if (annees.includes(courante)) select.value = courante;
+    select.dispatchEvent(new Event('maj-affichage'));
+}
+
+// Filtre combine machine + annee + plage de dates (Du/Au), partage par le
+// rendu du tableau et l export PDF.
+function cvLignesFiltrees() {
+    const filtre = (document.getElementById('carnet-vol-machine-select')?.value || '').toUpperCase();
+    const annee = document.getElementById('carnet-vol-annee-select')?.value || '';
+    const dDeb = document.getElementById('carnet-vol-date-debut')?.value || '';
+    const dFin = document.getElementById('carnet-vol-date-fin')?.value || '';
+    return cvLignesCourantes.filter(l =>
+        (!filtre || (l.immat || '').toUpperCase() === filtre)
+        && (!annee || (l.date || '').slice(0, 4) === annee)
+        && (!dDeb || (l.date || '') >= dDeb)
+        && (!dFin || (l.date || '') <= dFin));
+}
+
 function cvRendreLignes() {
     const body = document.getElementById('carnet-vol-body');
     if (!body) return;
     const filtre = (document.getElementById('carnet-vol-machine-select')?.value || '').toUpperCase();
-    const lignes = cvLignesCourantes.filter(l => !filtre || (l.immat || '').toUpperCase() === filtre);
+    const lignes = cvLignesFiltrees();
     const nomComplet = `${cvPiloteCible.prenom || ''} ${cvPiloteCible.nom || ''}`.trim();
 
     if (!lignes.length) {
@@ -429,9 +455,7 @@ function cvExporterCarnet() {
         alert('La génération PDF n\'est pas disponible (librairie non chargée).');
         return;
     }
-    const selMachine = document.getElementById('carnet-vol-machine-select');
-    const filtreMachine = selMachine ? selMachine.value : '';
-    const lignes = cvLignesCourantes.filter(l => !filtreMachine || l.immat === filtreMachine);
+    const lignes = cvLignesFiltrees();
     const nom = `${cvPiloteCible.prenom || ''} ${cvPiloteCible.nom || ''}`.trim();
     const fm = cvFormaterMinutes;
 
@@ -617,6 +641,10 @@ function initCarnetVol() {
 
     const filtreMachine = document.getElementById('carnet-vol-machine-select');
     if (filtreMachine) filtreMachine.addEventListener('change', cvRendreLignes);
+    ['carnet-vol-annee-select', 'carnet-vol-date-debut', 'carnet-vol-date-fin'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', cvRendreLignes);
+    });
 
     const btnExport = document.getElementById('btn-export-carnet-vol');
     if (btnExport) btnExport.addEventListener('click', cvExporterCarnet);

@@ -527,6 +527,9 @@
                     <div class="carnet-header-controls">
                         <select id="carnet-vol-pilote-select" style="display:none;"></select>
                         <select id="carnet-vol-machine-select"><option value="">Toutes les machines</option></select>
+                        <select id="carnet-vol-annee-select"><option value="">Toutes les années</option></select>
+                        <input type="date" id="carnet-vol-date-debut" class="cv-date-filtre" title="Du — filtre par date de début">
+                        <input type="date" id="carnet-vol-date-fin" class="cv-date-filtre" title="Au — filtre par date de fin">
                         <button id="btn-export-carnet-vol" class="btn-primary" title="Télécharger le carnet de vol en PDF">📄 Extraire en PDF</button>
                         <button id="btn-ajouter-vol-manuel" class="btn-primary" style="display:none;">+ Ajouter un vol</button>
                     </div>
@@ -1855,7 +1858,7 @@
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
     <script src="formation.js?v=50db0736e8"></script>
-    <script src="version.js?v=20261025164658"></script>
+    <script src="version.js?v=20261025165013"></script>
     <script src="app.js?v=0b0d730032"></script>
     <script src="utils.js?v=3bbbe67bdd"></script>
     <script src="presences.js?v=5da5f247ed"></script>
