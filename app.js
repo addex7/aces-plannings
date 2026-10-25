@@ -558,3 +558,18 @@ setInterval(rafraichirVueCourante, REFRESH_AUTO_INTERVAL_MS);
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden && Date.now() - dernierRefreshAuto > REFRESH_AUTO_MIN_ECART_MS) rafraichirVueCourante();
 });
+
+// Un clic qui ne fait que SE TERMINER sur le fond d'une modale — par ex. une
+// selection de texte commencee dans la modale et relachee dehors — ne doit
+// pas la fermer. La fermeture par clic exterieur reste active quand la
+// pression a bien commence sur le fond.
+let modalDownTarget = null;
+document.addEventListener('mousedown', e => { modalDownTarget = e.target; }, true);
+document.addEventListener('click', e => {
+    const t = e.target;
+    if (t && t.classList && t.classList.contains('modal') && modalDownTarget && modalDownTarget !== t) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+    }
+    modalDownTarget = null;
+}, true);
