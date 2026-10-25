@@ -124,13 +124,14 @@ function calculerExperiencesPilote(records, cpl = false) {
     let minutes24m = 0, decollages24m = 0, atterrissages24m = 0, instruction1h = false;
     let minutes12m = 0;
 
-    // Seuls les vols moteur comptent pour « emport passager avion », LAPL et
-    // initiation avion : immat du carnet de route, ou case « Monomoteur » /
-    // immat connue dans le carnet de vol manuel.
+    // Seuls les vols en AVION comptent pour « emport passager avion », LAPL et
+    // initiation avion : immats moteur du carnet de route ou case « Monomoteur »
+    // du carnet de vol manuel, en excluant les ULM (immat F-J…, ex. F-JVIO).
     const MOTORISES = (typeof MACHINES_MOTEURS !== 'undefined' ? MACHINES_MOTEURS : ['F-BLIO', 'F-GASB', 'F-JVIO'])
         .map(m => m.toUpperCase());
-    const estVolMoteur = f => {
+    const estVolAvion = f => {
         const machine = (f['Machine'] || f['Immatriculation'] || '').toString().trim().toUpperCase();
+        if (/^F-J/.test(machine)) return false;
         return MOTORISES.includes(machine) || f['Monomoteur'] === true;
     };
 
@@ -140,7 +141,7 @@ function calculerExperiencesPilote(records, cpl = false) {
         const d = new Date(f['Date']);
         if (d < limite24m) return;
         if (!dernierVol || d > dernierVol) dernierVol = d;
-        if (!estVolMoteur(f)) return;
+        if (!estVolAvion(f)) return;
         const duree = dureeVolMinutes(f);
         // Champ absent = vol normal (1) ; un 0 saisi reste 0 (ex. vol passager).
         const dec = parseInt(f['Décollages'], 10);
