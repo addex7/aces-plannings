@@ -54,6 +54,7 @@ const TABLES = {
     'Carnet de vol': 'carnet_vol',
     'Soldes GVV': 'gvv_soldes',
     'Écritures GVV': 'gvv_ecritures',
+    'Vols GVV': 'gvv_vols',
     'Formations': 'formations',
     'Formations Suivis': 'formations_suivis',
     'Formations Séances': 'formations_seances',
@@ -103,7 +104,7 @@ pool.query(`CREATE TABLE IF NOT EXISTS erreurs_client (
 )`).catch(e => console.error('Init table erreurs_client:', e.message));
 
 // Module Formation : catalogue de programmes, suivis eleves et seances de vol.
-for (const t of ['formations', 'formations_suivis', 'formations_seances', 'fiches_vlo']) {
+for (const t of ['formations', 'formations_suivis', 'formations_seances', 'fiches_vlo', 'gvv_vols']) {
     pool.query(`CREATE TABLE IF NOT EXISTS ${t} (
         id TEXT PRIMARY KEY,
         fields JSONB NOT NULL DEFAULT '{}',

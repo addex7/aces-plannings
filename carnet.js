@@ -264,6 +264,8 @@ function estSuperAdminCarnet() {
 
 // Rapprochement GVV : vols saisis directement dans GVV (hors de l'app) →
 // pastille « GVV » bleue sur la ligne du carnet (verte = envoyé depuis l'app).
+// Certitude par horametre : compteur debut ET compteur fin identiques a
+// ±0,005 h, plus meme pilote/date/machine — quasi impossible a confondre.
 let clesGvvVols = null;
 let gvvEnCours = null;
 
@@ -278,21 +280,20 @@ async function chargerEcrituresGvv() {
     if (gvvEnCours) return gvvEnCours;
     gvvEnCours = (async () => {
         try {
-            const formula = `FIND('sur F-', {Description}) > 0`;
-            const url = `${API_BASE}/${encodeURIComponent('Écritures GVV')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+            const url = `${API_BASE}/${encodeURIComponent('Vols GVV')}?pageSize=100`;
             const records = await fetchTousRecordsCache(url, { headers });
             clesGvvVols = records.map(r => {
                 const f = r.fields || {};
-                const immat = ((f['Description'] || '').match(/F-[A-Z0-9]+/i) || [''])[0].toUpperCase();
                 return {
-                    compte: normNomGvv(f['Compte']),
+                    compte: normNomGvv(f['Pilote']),
                     date: f['Date'] || '',
-                    immat,
-                    q: parseFloat(f['Quantité']) || 0
+                    immat: (f['Machine'] || '').toString().trim().toUpperCase(),
+                    deb: parseFloat(f['Compteur début']),
+                    fin: parseFloat(f['Compteur fin'])
                 };
-            });
+            }).filter(v => !isNaN(v.deb) && !isNaN(v.fin));
         } catch (e) {
-            console.warn('Écritures GVV:', e);
+            console.warn('Vols GVV:', e);
             clesGvvVols = [];
         }
     })();
@@ -301,17 +302,15 @@ async function chargerEcrituresGvv() {
 
 function volExisteDansGvv(f) {
     if (!clesGvvVols || f['GVV ID']) return false;
-    // Certitude horametre : delta carnet == Quantite GVV a 0.05 h (3 min) pres,
-    // ce qui evite les faux positifs entre vols du meme jour/meme pilote.
     const hd = parseFloat(String(f['Horamètre départ']).replace(',', '.'));
     const ha = parseFloat(String(f['Horamètre arrivée']).replace(',', '.'));
     if (isNaN(hd) || isNaN(ha)) return false;
-    const duree = Math.abs(ha - hd);
     const compte = normNomGvv(f['Pilote']);
     const date = f['Date'] || '';
     const immat = (f['Machine'] || '').toString().trim().toUpperCase();
     return clesGvvVols.some(e =>
-        e.compte === compte && e.date === date && e.immat === immat && Math.abs(e.q - duree) <= 0.05);
+        e.compte === compte && e.date === date && e.immat === immat
+        && Math.abs(e.deb - hd) <= 0.005 && Math.abs(e.fin - ha) <= 0.005);
 }
 
 function badgeGvvCarnet(f) {
@@ -2005,6 +2004,7 @@ function initCarnetRoute() {
                 <div class="legende-ligne"><span class="legende-pastille" style="background:#fffbeb; border-left-color:#d97706;"></span><span>Ligne de maintenance</span></div>
                 ${item('background:#dc2626;', 'Écart d\'horamètre (continuité à vérifier)')}
                 <div class="legende-ligne"><span style="display:inline-block; padding:1px 6px; font-size:10px; font-weight:700; color:#166534; background:#dcfce7; border:1px solid #86efac; border-radius:8px;">GVV</span><span>Vol envoyé vers GVV (compta)</span></div>
+                <div class="legende-ligne"><span style="display:inline-block; padding:1px 6px; font-size:10px; font-weight:700; color:#1d4ed8; background:#dbeafe; border:1px solid #93c5fd; border-radius:8px;">GVV</span><span>Vol déjà saisi dans GVV (même pilote, date, machine et horamètres)</span></div>
                 ${titre('📋 Statuts d\'une observation')}
                 ${rond('#dc2626', 'Non prise en compte')}
                 ${rond('#d97706', 'Prise en compte')}

@@ -20,6 +20,7 @@ const DATABASE_URL = process.env.DATABASE_URL || 'postgres://glide2000:glide2000
 
 const TABLE_SOLDES = 'gvv_soldes';
 const TABLE_ECRITURES = 'gvv_ecritures';
+const TABLE_VOLS = 'gvv_vols';
 const DELAI_REQUETES_MS = 150; // menage le serveur GVV
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -185,6 +186,82 @@ async function sauvegarderSoldes(pool, soldes) {
             Date: new Date().toISOString()
         })]
     ).catch(() => {});
+}
+
+// Liste des vols avion GVV (vols_avion/page + pagination par offset) :
+// date, pilote, immat, compteur debut/fin — sert au rapprochement par
+// horametre des lignes du carnet (pastille « GVV » bleue).
+async function recupererVolsGvv(client) {
+    const vols = [];
+    const vus = new Set();
+    for (let page = 0; page < 20; page++) {
+        const url = page === 0 ? '/index.php/vols_avion/page' : `/index.php/vols_avion/page/${page * 25}`;
+        const res = await client.get(url);
+        if (res.status !== 200) break;
+        const html = await res.text();
+        const $ = cheerio.load(html);
+        let nouveaux = 0;
+        $('tr').each((_, tr) => {
+            const tds = $(tr).find('td').map((__, td) => $(td).text().replace(/\s+/g, ' ').trim()).get();
+            if (tds.length < 7 || !/^\d{2}\/\d{2}\/\d{4}$/.test(tds[0])) return;
+            const idx = tds.findIndex(t => /^F-[A-Z0-9]{4}$/i.test(t));
+            if (idx < 0) return;
+            const deb = parseFloat((tds[idx + 1] || '').replace(',', '.'));
+            const fin = parseFloat((tds[idx + 2] || '').replace(',', '.'));
+            if (isNaN(deb) || isNaN(fin)) return;
+            const [j, m, a] = tds[0].split('/');
+            const v = { date: `${a}-${m}-${j}`, pilote: tds[1] || '', immat: tds[idx].toUpperCase(), deb, fin };
+            const cle = `${v.date}|${v.pilote}|${v.immat}|${v.deb}|${v.fin}`;
+            if (vus.has(cle)) return;
+            vus.add(cle);
+            nouveaux++;
+            vols.push(v);
+        });
+        if (nouveaux === 0) break;
+        await sleep(DELAI_REQUETES_MS);
+    }
+    return vols;
+}
+
+// Vols GVV : upsert par cle stable (date+pilote+immat+compteurs) et purge
+// a 12 mois. A la difference des ecritures, les vols sortent de la 1re
+// page GVV au fil du temps — on conserve l'historique pour le carnet.
+async function sauvegarderVols(pool, vols) {
+    await ensureTable(pool);
+    await pool.query(`CREATE TABLE IF NOT EXISTS ${TABLE_VOLS} (
+        id TEXT PRIMARY KEY, fields JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+    const maintenant = new Date().toISOString();
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        for (const v of vols) {
+            const id = 'gvvv_' + crypto.createHash('sha1')
+                .update(`${v.date}|${v.pilote}|${v.immat}|${v.deb}|${v.fin}`)
+                .digest('hex').slice(0, 16);
+            await client.query(
+                `INSERT INTO ${TABLE_VOLS} (id, fields) VALUES ($1, $2)
+                 ON CONFLICT (id) DO UPDATE SET fields = EXCLUDED.fields`,
+                [id, JSON.stringify({
+                    'Date': v.date,
+                    'Pilote': v.pilote,
+                    'Machine': v.immat,
+                    'Compteur début': v.deb,
+                    'Compteur fin': v.fin,
+                    'Synchronisé le': maintenant
+                })]
+            );
+        }
+        await client.query(
+            `DELETE FROM ${TABLE_VOLS} WHERE (fields->>'Date') < $1`,
+            [new Date(Date.now() - 400 * 24 * 3600 * 1000).toISOString().slice(0, 10)]);
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    } finally {
+        client.release();
+    }
 }
 
 // Remplace les ecritures d'un seul compte (rafraichissement cible apres envoi de vol)
@@ -353,6 +430,18 @@ async function main() {
         await sauvegarderEcritures(pool, ecritures);
         console.log('Ecritures enregistrees.');
     }
+
+    // Vols avion (compteurs debut/fin) : rapprochement horametre du carnet.
+    try {
+        const vols = await recupererVolsGvv(client);
+        console.log(`${vols.length} vols GVV recuperes`);
+        if (vols.length) {
+            await sauvegarderVols(pool, vols);
+            console.log('Vols GVV enregistres.');
+        }
+    } catch (e) {
+        console.error(`Vols GVV: ${e.message}`);
+    }
     await pool.end();
 }
 
@@ -367,5 +456,7 @@ module.exports = {
     sauvegarderSoldes,
     sauvegarderEcritures,
     sauvegarderEcrituresCompte,
+    recupererVolsGvv,
+    sauvegarderVols,
     ensureTable
 };

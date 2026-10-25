@@ -186,3 +186,11 @@ CREATE TABLE IF NOT EXISTS fiches_vlo (
     fields      JSONB NOT NULL DEFAULT '{}',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Vols GVV (liste vols_avion scrapee par la synchro) : rapprochement
+-- des lignes du carnet sur compteur debut + compteur fin.
+CREATE TABLE IF NOT EXISTS gvv_vols (
+    id          TEXT PRIMARY KEY,
+    fields      JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
