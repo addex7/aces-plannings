@@ -208,9 +208,10 @@ function calculerExperiencesPilote(records, cpl = false) {
     let minutes24m = 0, decollages24m = 0, atterrissages24m = 0, instruction1h = false;
     let minutes12m = 0;
     let gvvDec3m = 0, gvvAtt3m = 0, gvvMin12 = 0, gvvMin24 = 0;
-    // LAPL : les heures CDB sur ULM comptent dans les 12 h/24 mois
-    // (les 12 decollages/atterrissages, eux, restent des vols avion).
-    let minutes24mUlmCdb = 0;
+    // LAPL classe 3 : heures et decollages/atterrissages sur ULM comptent
+    // dans les 12 h et les 12 dec./att. sur 24 mois ; seule l'heure
+    // d'instruction reste avion.
+    let minutes24mUlmCdb = 0, decollages24mUlm = 0, atterrissages24mUlm = 0;
 
     // Seuls les vols en AVION comptent pour « emport passager avion », LAPL et
     // initiation avion : immats moteur du carnet de route ou case « Monomoteur »
@@ -246,9 +247,13 @@ function calculerExperiencesPilote(records, cpl = false) {
             decollages3mUlm += decN;
             atterrissages3mUlm += attN;
         }
-        // Heures ULM en tant que commandant de bord (pilote ou instructeur,
-        // pas eleve EP/passager) : comptent dans les 12 h LAPL/24 mois.
-        if (ulm && (r._volCommePilote || r._volCommeInstructeur)) minutes24mUlmCdb += duree;
+        // ULM classe 3 (F-J…) : heures + dec./att. comptent pour le LAPL
+        // (CDB, double commande ou solo supervise — toute ligne du membre).
+        if (ulm) {
+            minutes24mUlmCdb += duree;
+            decollages24mUlm += decN;
+            atterrissages24mUlm += attN;
+        }
         if (!avion) return;
         if (d >= limite3m) {
             decollages3m += decN;
@@ -293,9 +298,13 @@ function calculerExperiencesPilote(records, cpl = false) {
     const passagerBientot = !passager && (decollages3m > 0 || atterrissages3m > 0);
     const passagerDetail = `${decollages3m} décollages, ${atterrissages3m} atterrissages / 3${(gvvDec3m || gvvAtt3m) ? ` — dont ${gvvDec3m} déc./${gvvAtt3m} att. importés de GVV` : ''}`;
 
-    const lapl = (minutes24m + minutes24mUlmCdb) >= 12 * 60 && decollages24m >= 12 && atterrissages24m >= 12 && instruction1h;
+    const lapl = (minutes24m + minutes24mUlmCdb) >= 12 * 60
+        && (decollages24m + decollages24mUlm) >= 12
+        && (atterrissages24m + atterrissages24mUlm) >= 12
+        && instruction1h;
     const h24U = Math.floor(minutes24mUlmCdb / 60), m24U = Math.floor(minutes24mUlmCdb % 60);
-    const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00${minutes24mUlmCdb ? ` (+${h24U}h${String(m24U).padStart(2, '0')} ULM CDB)` : ''} — ${decollages24m} décollages / 12 — ${atterrissages24m} atterrissages / 12 — 1h instructeur : ${instruction1h ? 'oui' : 'non'}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}`;
+    const totDec24 = decollages24m + decollages24mUlm, totAtt24 = atterrissages24m + atterrissages24mUlm;
+    const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00${minutes24mUlmCdb ? ` (+${h24U}h${String(m24U).padStart(2, '0')} ULM)` : ''} — ${totDec24} décollages / 12 — ${totAtt24} atterrissages / 12${decollages24mUlm ? ` dont ${decollages24mUlm} déc./${atterrissages24mUlm} att. ULM` : ''} — 1h instructeur (avion) : ${instruction1h ? 'oui' : 'non'}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}`;
 
     const initiation = passager && (cpl || minutes12m >= 25 * 60);
     const initiationDetail = cpl
@@ -304,7 +313,7 @@ function calculerExperiencesPilote(records, cpl = false) {
 
     return {
         dernierVol, decollages3m, atterrissages3m, decollages3mUlm, atterrissages3mUlm,
-        minutes24m, minutes24mUlmCdb, decollages24m, atterrissages24m, instruction1h, minutes12m,
+        minutes24m, minutes24mUlmCdb, decollages24m, decollages24mUlm, atterrissages24m, atterrissages24mUlm, instruction1h, minutes12m,
         recent, recentBientot, recentDetail,
         passager, passagerBientot, passagerDetail,
         lapl, laplDetail, initiation, initiationDetail
