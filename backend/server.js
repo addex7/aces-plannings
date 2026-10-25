@@ -1128,7 +1128,10 @@ app.post('/v0/:base/vol-facturation-tempo', async (req, res) => {
             'Description': `Vol ${f['Machine'] || ''} du ${f['Date'] || ''} — facturation provisoire en attente GVV`,
             'Référence': f['Machine'] || '',
             'Prix': prix, 'Quantité': 1, 'Débit': prix, 'Crédit': 0,
-            'Source': SOURCE_FACT_TEMP, 'Statut': 'Temporaire', 'Vol': recordId
+            // Statut « Validé » : compte dans le solde du pilote tant que
+            // l'ecriture GVV reelle n'est pas remontee (la Description
+            // signale le caractere provisoire).
+            'Source': SOURCE_FACT_TEMP, 'Statut': 'Validé', 'Vol': recordId
         };
         if (exist.length) {
             await pool.query('UPDATE comptes_pilotes SET fields = $1 WHERE id = $2', [JSON.stringify(champs), exist[0].id]);
