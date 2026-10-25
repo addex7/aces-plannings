@@ -534,7 +534,7 @@ async function chargerValiditesAccueil() {
                 { label: 'Emport de passager avion (3 décollages / 3 atterrissages)', ok: passagerActive ? experiences.passager : null, bientot: !!experiences.passagerBientot, detail: experiences.passagerDetail, actif: passagerActive },
                 { label: 'LAPL', ok: laplActive ? experiences.lapl : null, detail: experiences.laplDetail, actif: laplActive },
                 { label: 'Vol d\'initiation', ok: initiationActive ? experiences.initiation : null, detail: experiences.initiationDetail, actif: initiationActive },
-                { label: 'VLD (vol de découverte)', ok: viulmActive ? (viulm ? viulm.ok : null) : null, detail: viulm && !viulm.ok ? viulm.manques.join(' · ') : '', actif: viulmActive },
+                { label: 'VLD', ok: viulmActive ? (viulm ? viulm.ok : null) : null, detail: viulm && !viulm.ok ? viulm.manques.join(' · ') : '', actif: viulmActive },
             ],
             solde: await chargerSoldeAccueil()
         };
