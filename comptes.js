@@ -142,7 +142,8 @@ async function chargerComptesPilotes() {
         const lignes = gvvLignes.map(ecritureVersTransaction);
         lignes.push(...records.filter(r => {
             const f = r.fields || {};
-            return f['Source'] === 'Saisie pilote' && f['Statut'] === 'En attente';
+            return (f['Source'] === 'Saisie pilote' && f['Statut'] === 'En attente')
+                || f['Source'] === 'Facturation temporaire';
         }));
         lignes.sort((a, b) => new Date(b.fields?.['Date'] || 0) - new Date(a.fields?.['Date'] || 0));
         afficherTransactions(lignes.length ? lignes : records, container, piloteNom);
@@ -337,7 +338,7 @@ function parseMontantCompte(s) {
 }
 
 function afficherResume(records, summary, piloteNom, gvv) {
-    let depenses = 0, recettes = 0, enAttente = 0, solde = 0;
+    let depenses = 0, recettes = 0, enAttente = 0, solde = 0, temporaire = 0;
     records.forEach(r => {
         const f = r.fields || {};
         const debit = parseMontantCompte(f['Débit']);
@@ -351,10 +352,13 @@ function afficherResume(records, summary, piloteNom, gvv) {
         if (statut !== 'Validé') return;
         if (debit > 0) { depenses += debit; solde -= debit; }
         if (credit > 0) { recettes += credit; solde += credit; }
+        // Facturation provisoire en attente de l ecriture GVV reelle :
+        // elle se deduit du solde GVV affiche pour anticiper la facture.
+        if (source === 'Facturation temporaire') temporaire += debit - credit;
     });
 
     const soldeGvv = (gvv && gvv['Solde'] !== undefined && gvv['Solde'] !== null && gvv['Solde'] !== '') ? Number(gvv['Solde']) : null;
-    const soldeFinal = (soldeGvv !== null ? soldeGvv : solde) + enAttente;
+    const soldeFinal = (soldeGvv !== null ? soldeGvv - temporaire : solde) + enAttente;
     if (soldeFinal < 0 && typeof notifierCompteNegatif === 'function') notifierCompteNegatif(piloteNom, soldeFinal);
 
     const html = `
