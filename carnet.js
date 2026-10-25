@@ -285,6 +285,7 @@ async function chargerEcrituresGvv() {
                 const f = r.fields || {};
                 return {
                     compte: normNomGvv(f['Pilote']),
+                    pilote: (f['Pilote'] || '').toString(),
                     date: f['Date'] || '',
                     immat: (f['Machine'] || '').toString().trim().toUpperCase(),
                     deb: parseFloat(f['Compteur début']),
@@ -303,16 +304,24 @@ async function chargerEcrituresGvv() {
     return gvvEnCours;
 }
 
+// Noms compatibles : jetons identiques, ou un jeton tronque accepte comme
+// prefixe du jeton complet (« Benjamin Q. » = « QUONIAM Benjamin »).
+function nomsGvvCompatibles(nomA, nomB) {
+    const ta = normNomGvv(nomA).split(' ').filter(Boolean);
+    const tb = normNomGvv(nomB).split(' ').filter(Boolean);
+    if (ta.join(' ') === tb.join(' ')) return true;
+    return ta.length === tb.length && ta.every((t, i) => t === tb[i] || tb[i].startsWith(t) || t.startsWith(tb[i]));
+}
+
 function volExisteDansGvv(f) {
     if (!clesGvvVols || f['GVV ID']) return false;
     const hd = parseFloat(String(f['Horamètre départ']).replace(',', '.'));
     const ha = parseFloat(String(f['Horamètre arrivée']).replace(',', '.'));
     if (isNaN(hd) || isNaN(ha)) return false;
-    const compte = normNomGvv(f['Pilote']);
     const date = f['Date'] || '';
     const immat = (f['Machine'] || '').toString().trim().toUpperCase();
     return clesGvvVols.some(e =>
-        e.compte === compte && e.date === date && e.immat === immat
+        nomsGvvCompatibles(f['Pilote'], e.pilote) && e.date === date && e.immat === immat
         && Math.abs(e.deb - hd) <= 0.005 && Math.abs(e.fin - ha) <= 0.005);
 }
 
