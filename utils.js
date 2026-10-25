@@ -124,29 +124,41 @@ function calculerExperiencesPilote(records, cpl = false) {
     let minutes24m = 0, decollages24m = 0, atterrissages24m = 0, instruction1h = false;
     let minutes12m = 0;
 
+    // Seuls les vols moteur comptent pour « emport passager avion », LAPL et
+    // initiation avion : immat du carnet de route, ou case « Monomoteur » /
+    // immat connue dans le carnet de vol manuel.
+    const MOTORISES = (typeof MACHINES_MOTEURS !== 'undefined' ? MACHINES_MOTEURS : ['F-BLIO', 'F-GASB', 'F-JVIO'])
+        .map(m => m.toUpperCase());
+    const estVolMoteur = f => {
+        const machine = (f['Machine'] || f['Immatriculation'] || '').toString().trim().toUpperCase();
+        return MOTORISES.includes(machine) || f['Monomoteur'] === true;
+    };
+
     records.forEach(r => {
         const f = r.fields || {};
         if (!f['Date']) return;
         const d = new Date(f['Date']);
         if (d < limite24m) return;
         if (!dernierVol || d > dernierVol) dernierVol = d;
+        if (!estVolMoteur(f)) return;
         const duree = dureeVolMinutes(f);
-        const dec = parseInt(f['Décollages'], 10) || 1;
-        const att = parseInt(f['Atterrissages'], 10) || 1;
+        // Champ absent = vol normal (1) ; un 0 saisi reste 0 (ex. vol passager).
+        const dec = parseInt(f['Décollages'], 10);
+        const att = parseInt(f['Atterrissages'], 10);
+        const decN = isNaN(dec) ? 1 : dec;
+        const attN = isNaN(att) ? 1 : att;
 
         if (d >= limite3m) {
-            decollages3m += dec;
-            atterrissages3m += att;
+            decollages3m += decN;
+            atterrissages3m += attN;
         }
-        if (d >= limite24m) {
-            minutes24m += duree;
-            decollages24m += dec;
-            atterrissages24m += att;
-            const inst = (f['Instructeur'] || '').toString().trim();
-            // L'heure d'instruction requise (LAPL) doit etre RECUE : si le
-            // pilote etait lui-meme l'instructeur du vol, elle ne compte pas.
-            if (inst && !r._volCommeInstructeur && duree >= 60) instruction1h = true;
-        }
+        minutes24m += duree;
+        decollages24m += decN;
+        atterrissages24m += attN;
+        const inst = (f['Instructeur'] || '').toString().trim();
+        // L'heure d'instruction requise (LAPL) doit etre RECUE : si le
+        // pilote etait lui-meme l'instructeur du vol, elle ne compte pas.
+        if (inst && !r._volCommeInstructeur && duree >= 60) instruction1h = true;
         if (d >= limite12m) {
             minutes12m += duree;
         }
