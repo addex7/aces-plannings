@@ -293,6 +293,13 @@ async function chargerCarnetVol() {
         ]);
         cvLignesManuelles = volsManuels;
 
+        // Vols GVV sans ligne carnet : affiches dans le carnet de vol avec
+        // un badge « GVV » (payeur=pilote, ou instructeur via Inst/PAX).
+        let volsGvv = [];
+        try {
+            volsGvv = await volsGvvOrphelinsPilote(cvPiloteCible.prenom, cvPiloteCible.nom, volsClub);
+        } catch (e) { console.warn('Vols GVV carnet de vol:', e); }
+
         const lignes = volsClub
             // Seuls les vols sur une machine referencee dans "Aeronefs"
             // comptent : le carnet de route contient aussi des lignes
@@ -303,6 +310,7 @@ async function chargerCarnetVol() {
             })
             .map(r => cvDeriveVolClub(r, nomComplet))
             .concat(volsManuels.map(cvDeriveVolManuel))
+            .concat(volsGvv.map(r => ({ ...cvDeriveVolClub(r, nomComplet), origine: 'gvv' })))
             .filter(l => l.date)
             .sort((a, b) => {
                 const d = (b.date || '').localeCompare(a.date || '');
@@ -347,7 +355,9 @@ function cvRendreLignes() {
             const hdvMono = l.mono ? cvFormaterMinutes(l.dureeMin) : '—';
             const badge = l.origine === 'manuel'
                 ? '<span class="cv-badge cv-badge-manuel">Manuel</span>'
-                : '<span class="cv-badge cv-badge-club">Club</span>';
+                : l.origine === 'gvv'
+                    ? '<span class="cv-badge cv-badge-gvv" title="Vol importé de la compta GVV — informations limitées">GVV</span>'
+                    : '<span class="cv-badge cv-badge-club">Club</span>';
             const obsIcon = l.obs ? ` <span class="cv-obs" data-obs="${cvEscape(l.obs)}" title="Lire l'observation" style="cursor:pointer;">📝</span>` : '';
             const cliquable = l.origine === 'club' || (l.origine === 'manuel' && editable);
             return `<tr class="${l.origine === 'manuel' ? 'cv-ligne-manuelle' : ''}" data-id="${l.recId}" data-origine="${l.origine}"${cliquable ? ' style="cursor:pointer;"' : ''}>

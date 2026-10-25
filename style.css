@@ -6355,3 +6355,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 .seance-tout .ts-btn:hover { opacity: 1; }
 .seance-tout .ts-btn.ts-on { opacity: 1; }
+
+/* Badge des vols importes de GVV dans le carnet de vol pilote */
+.cv-badge-gvv {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+}

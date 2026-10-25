@@ -101,7 +101,8 @@ function nomsGvvCompatibles2(nomA, nomB) {
 // Vols importes de GVV qui n'ont pas de ligne carnet pour CE pilote :
 // convertis en pseudo-lignes marquees _sourceGvv pour le calcul d'experience
 // (heures = horametres, atterrissages = champ « Attero » GVV quand present).
-async function volsGvvOrphelinsPilote(nomComplet, recordsCarnet) {
+async function volsGvvOrphelinsPilote(prenom, nom, recordsCarnet) {
+    const nomComplet = `${prenom || ''} ${nom || ''}`.trim();
     const tous = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Vols GVV')}?pageSize=100`, { headers });
     const num = v => parseFloat(String(v ?? '').replace(',', '.'));
     const lignes = (recordsCarnet || []).map(r => r.fields || {}).filter(f => f['Date'] && f['Machine']);
@@ -113,30 +114,51 @@ async function volsGvvOrphelinsPilote(nomComplet, recordsCarnet) {
         return jour.some(f => Math.abs(num(f['Horamètre départ']) - g.deb) <= 0.005)
             && jour.some(f => Math.abs(num(f['Horamètre arrivée']) - g.fin) <= 0.005);
     };
+    // Trigramme du membre : le champ Inst/PAX de GVV utilise souvent le
+    // trigramme de l'instructeur (« QNM », « TLM »…) plutot que le nom complet.
+    let trigramme = '';
+    try {
+        const p = (prenom || '').replace(/"/g, '\\"');
+        const n = (nom || '').replace(/"/g, '\\"');
+        const fU = `AND(FIND(UPPER("${p}"), UPPER({Prénom})) > 0, FIND(UPPER("${n}"), UPPER({Nom})) > 0)`;
+        const us = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Utilisateurs')}?filterByFormula=${encodeURIComponent(fU)}&pageSize=5`, { headers });
+        trigramme = ((us[0] || {}).fields || {})['Trigramme'] || '';
+        trigramme = trigramme.toString().trim().toUpperCase();
+    } catch (e) { /* sans trigramme : match par nom complet uniquement */ }
     return (tous || []).map(r => {
         const f = r.fields || {};
+        const instGvv = (f['Inst/PAX'] || '').toString().trim();
+        const dc = String(f['DC'] || '') === '1';
+        const payeurMatch = nomsGvvCompatibles2(f['Pilote'], nomComplet);
+        const instMatch = dc && instGvv && (
+            nomsGvvCompatibles2(instGvv, nomComplet)
+            || (trigramme && instGvv.toUpperCase() === trigramme));
         const g = {
             pilote: (f['Pilote'] || '').toString(),
             date: f['Date'] || '',
             immat: (f['Machine'] || '').toString().trim().toUpperCase(),
             deb: num(f['Compteur début']), fin: num(f['Compteur fin']),
             att: parseInt(f['Attero'], 10) || 1,
-            inst: (f['Inst/PAX'] || '').toString().trim(),
-            dc: String(f['DC'] || '') === '1',
+            obs: (f['Observations'] || '').toString().trim(),
+            lieu: (f['Lieu'] || '').toString().trim(),
+            inst: instGvv, dc,
         };
         if (!g.date || !g.immat || isNaN(g.deb) || isNaN(g.fin)) return null;
-        if (!nomsGvvCompatibles2(g.pilote, nomComplet)) return null;
+        if (!payeurMatch && !instMatch) return null;
         if (couvert(g)) return null;
         return {
             id: `gvv-${r.id}`,
             fields: {
                 'Date': g.date, 'Machine': g.immat, 'Pilote': g.pilote,
-                'Fonction': g.dc ? 'EP' : 'P',
-                'Instructeur': g.dc ? g.inst : '',
+                'Fonction': instMatch ? 'I' : (g.dc ? 'EP' : 'P'),
+                'Instructeur': instMatch ? nomComplet : (g.dc ? g.inst : ''),
                 'Horamètre départ': g.deb, 'Horamètre arrivée': g.fin,
                 'Décollages': g.att, 'Atterrissages': g.att,
+                'Observations': g.obs, 'Arrivée': g.lieu,
             },
-            _volCommePilote: true, _volCommeInstructeur: false, _sourceGvv: true,
+            _volCommePilote: payeurMatch && !instMatch,
+            _volCommeInstructeur: !!instMatch,
+            _sourceGvv: true,
         };
     }).filter(Boolean);
 }
@@ -167,7 +189,7 @@ async function chargerVolsPilote(prenom, nom) {
     });
     // Vols GVV orphelins du pilote : completes l'experience (payeur = pilote).
     try {
-        records = records.concat(await volsGvvOrphelinsPilote(nomComplet, records));
+        records = records.concat(await volsGvvOrphelinsPilote(prenom, nom, records));
     } catch (e) { console.warn('Vols GVV expérience :', e); }
     return records;
 }
