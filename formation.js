@@ -2161,8 +2161,7 @@ async function ouvrirPageSeance(suiviId, seanceId) {
                 <div class="form-group">
                     <label for="seance-type">Type de séance</label>
                     <select id="seance-type">
-                        <option value="Vol" ${fe['Type'] === 'Vol' ? 'selected' : ''}>Avion (vol)</option>
-                        <option value="Simulateur" ${fe['Type'] === 'Simulateur' ? 'selected' : ''}>Simulateur</option>
+                        <option value="Vol" ${fe['Type'] === 'Vol' ? 'selected' : ''}>Vol</option>
                         <option value="Théorique" ${fe['Type'] === 'Théorique' ? 'selected' : ''}>Formation théorique</option>
                     </select>
                 </div>
