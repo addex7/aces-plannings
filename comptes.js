@@ -424,7 +424,9 @@ function afficherTransactions(records, container, piloteNom, showAll = comptesSh
         let montant = '', cls = '', arrow = '';
         if (debit > 0) {
             montant = `-${debit.toFixed(2).replace('.', ',')} €`;
-            cls = 'debit';
+            // Facturation provisoire : orange tant que l'ecriture GVV reelle
+            // n'est pas remontee (rouge = debit definitif).
+            cls = source === 'Facturation temporaire' ? 'attente' : 'debit';
             arrow = '&#8595;';
         } else if (credit > 0) {
             montant = `+${credit.toFixed(2).replace('.', ',')} €`;
@@ -645,6 +647,7 @@ async function getSoldePilote(piloteNom, inclureEnAttente = true) {
         const gvv = await fetchSoldeGvv(piloteNom);
         let soldeInterne = 0;
         let enAttente = 0;
+        let temporaire = 0;
         records.forEach(r => {
             const f = r.fields || {};
             const statut = f['Statut'] || 'Validé';
@@ -654,11 +657,14 @@ async function getSoldePilote(piloteNom, inclureEnAttente = true) {
             if (statut === 'En attente' && source === 'Saisie pilote' && credit > 0) { enAttente += credit; return; }
             if (statut !== 'Validé') return;
             soldeInterne += credit - debit;
+            if (source === 'Facturation temporaire') temporaire += debit - credit;
         });
         // La synchro GVV est la source de vérité ; la table interne sert de repli.
+        // Les facturations provisoires se deduisent du solde GVV en attendant
+        // l'ecriture reelle.
         let solde = soldeInterne;
         if (gvv && gvv['Solde'] !== undefined && gvv['Solde'] !== null && gvv['Solde'] !== '') {
-            solde = Number(gvv['Solde']) || 0;
+            solde = (Number(gvv['Solde']) || 0) - temporaire;
         }
         return solde + (inclureEnAttente ? enAttente : 0);
     } catch (err) {
