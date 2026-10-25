@@ -33,7 +33,10 @@ const VALIDITES = [
     { label: 'Instructeur ULM', field: MEMBRE_FIELDS.INSTRUCTEUR_ULM, dataLabel: 'Instructeur ULM', suiviLabels: ['Instructeur ULM'] }
 ];
 
-const TYPES_DOCUMENTS = ['Médical', 'SEP', 'Instructeur avion', 'Instructeur ULM', 'Autorisation parentale', 'Autre'];
+const TYPES_DOCUMENTS = ['Médical', 'SEP', 'Instructeur avion', 'Instructeur ULM', 'Autorisation parentale',
+    'VIULM - Evaluation initiale', 'VIULM - Evaluation récurrente', 'VIULM - Formation FH', 'Autre'];
+// Types sans fin de validite obligatoire (attestations permanentes).
+const TYPES_DOCS_DATE_OPTIONNELLE = ['Autre', 'VIULM - Evaluation initiale', 'VIULM - Formation FH'];
 // Type de document -> champ de date de validite de la fiche membre.
 const DOC_TYPE_VERS_CHAMP = {
     'Médical': 'Médical',
@@ -1036,7 +1039,7 @@ async function uploaderDocumentMembre(e) {
     const file = inputFichier ? inputFichier.files[0] : null;
     if (!type) { alert('Veuillez choisir un type de document.'); return; }
     if (estAutre && !titre) { alert('Veuillez indiquer le nom du document.'); return; }
-    if (!estAutre && !dateValidite) { alert('La date de fin de validité est requise pour ce type de document.'); return; }
+    if (!TYPES_DOCS_DATE_OPTIONNELLE.includes(type) && !dateValidite) { alert('La date de fin de validité est requise pour ce type de document.'); return; }
     if (!file) { alert('Veuillez choisir un fichier.'); return; }
     if (typeof uploaderFichierDocument !== 'function') { alert('Uploader non disponible.'); return; }
     if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours...'; }
@@ -1232,7 +1235,7 @@ function attacherListenersAccueil() {
         const t = document.getElementById('accueil-doc-titre');
         if (t) t.style.display = selTypeDoc.value === 'Autre' ? '' : 'none';
         const opt = document.getElementById('accueil-doc-validite-opt');
-        if (opt) opt.textContent = selTypeDoc.value === 'Autre' ? '(facultatif)' : '(requis)';
+        if (opt) opt.textContent = TYPES_DOCS_DATE_OPTIONNELLE.includes(selTypeDoc.value) ? '(facultatif)' : '(requis)';
     });
 
     const btnBilanAccueil = document.getElementById('btn-bilan-validites-accueil');
