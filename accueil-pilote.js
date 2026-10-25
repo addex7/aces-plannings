@@ -20,13 +20,16 @@ async function chargerAccueilPilote() {
     }
     container.innerHTML = '<p class="carnet-empty">Chargement du tableau de bord...</p>';
 
-    const [resas, solde, signalements, validites, vols, messagesClub] = await Promise.all([
+    const [resas, solde, signalements, validites, vols, messagesClub, gvvSolde] = await Promise.all([
         chargerProchaineJournee().catch(() => ({ text: '-', date: null, label: 'Aucune inscription' })),
         chargerSoldeAccueil().catch(() => 0),
         chargerSignalementsAccueil().catch(() => []),
         chargerValiditesAccueil().catch(() => null),
         chargerDernierVol().catch(() => null),
-        chargerMessagesClub().catch(() => [])
+        chargerMessagesClub().catch(() => []),
+        (typeof fetchSoldeGvv === 'function'
+            ? fetchSoldeGvv(`${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim())
+            : Promise.resolve(null)).catch(() => null)
     ]);
 
     const piloteNom = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() || 'Prénom NOM';
@@ -66,6 +69,10 @@ async function chargerAccueilPilote() {
     const soldeDot = solde >= 0 ? 'pastille-verte' : (solde >= -300 ? 'pastille-orange' : 'pastille-rouge');
     const soldeText = solde.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
+    const gvvSoldeTxt = (gvvSolde && gvvSolde['Solde'] !== undefined && gvvSolde['Solde'] !== null && gvvSolde['Solde'] !== '')
+        ? `<div style="font-size:12px; font-weight:500; opacity:0.85; margin-top:3px;">Solde officiel GVV (fait foi) : ${Number(gvvSolde['Solde']).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>`
+        : '';
+
     const htmlSolde = `
         <div class="ap-card ${soldeClasse}">
             <div class="ap-card-header">
@@ -73,7 +80,8 @@ async function chargerAccueilPilote() {
                 <div class="ap-card-icon">💳</div>
             </div>
             <div class="ap-card-label">Solde corrigé de mon compte pilote</div>
-            <button type="button" id="accueil-btn-compte" class="btn-primary" style="width:100%;">Consulter mon compte</button>
+            ${gvvSoldeTxt}
+            <button type="button" id="accueil-btn-compte" class="btn-primary" style="width:100%; margin-top:8px;">Consulter mon compte</button>
         </div>`;
 
     const sigRows = signalements.map(s => `
