@@ -365,16 +365,21 @@ function calculerExperiencesPilote(records, cpl = false) {
     if (laplBlocages.length) {
         const b1 = laplBlocages[0];
         const b2 = laplBlocages.length > 1 && (laplBlocages[1].ech - b1.ech) <= 31 * 24 * 3600 * 1000 ? laplBlocages[1] : null;
-        laplEcheanceTxt = ` — valide jusqu'au ${formaterDateFr(b1.ech.toISOString())} : pour rester valide après, ${actionBlocage(b1)}${b2 ? ` ; puis ${actionBlocage(b2)} avant le ${formaterDateFr(b2.ech.toISOString())}` : ''}`;
+        laplEcheanceTxt = `Valide jusqu'au ${formaterDateFr(b1.ech.toISOString())} — pour le rester : ${actionBlocage(b1)}${b2 ? `, puis ${actionBlocage(b2)} avant le ${formaterDateFr(b2.ech.toISOString())}` : ''}`;
     } else {
-        laplEcheanceTxt = ' — conditions non remplies : ' + [
+        laplEcheanceTxt = 'Conditions non remplies : ' + [
             (minutes24m + minutes24mUlmCdb) < 12 * 60 ? 'heures' : null,
             (decollages24m + decollages24mUlm) < 12 ? 'décollages' : null,
             (atterrissages24m + atterrissages24mUlm) < 12 ? 'atterrissages' : null,
             !instruction1h ? 'heure instructeur' : null,
         ].filter(Boolean).join(', ');
     }
-    const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00${minutes24mUlmCdb ? ` (+${h24U}h${String(m24U).padStart(2, '0')} ULM)` : ''} — ${totDec24} décollages / 12 — ${totAtt24} atterrissages / 12${decollages24mUlm ? ` dont ${decollages24mUlm} déc./${atterrissages24mUlm} att. ULM` : ''} — 1h instructeur (avion) : ${instruction1h ? 'oui' : 'non'}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}` + laplEcheanceTxt;
+    const laplDetail = [
+        `${h24}h${String(m24).padStart(2, '0')} / 12h00${minutes24mUlmCdb ? ` (dont ${h24U}h${String(m24U).padStart(2, '0')} ULM)` : ''}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}`,
+        `${totDec24} décollages / 12 — ${totAtt24} atterrissages / 12${decollages24mUlm ? ` (dont ${decollages24mUlm} déc. / ${atterrissages24mUlm} att. ULM)` : ''}`,
+        `1 h instructeur avion : ${instruction1h ? 'oui' : 'non'}`,
+        laplEcheanceTxt
+    ].join('\n');
 
     const initiation = passager && (cpl || minutes12m >= 25 * 60);
     const initiationDetail = cpl
