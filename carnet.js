@@ -18,8 +18,11 @@ function lignesParPageCarnet() {
     if (!container) return 12;
     const tbody = container.querySelector('tbody');
     const thead = container.querySelector('thead');
-    const rows = tbody ? tbody.querySelectorAll('tr:not(.carnet-empty)') : [];
-    const rowH = rows.length ? tbody.getBoundingClientRect().height / rows.length : 37;
+    // Hauteur de ligne mesuree sur une ligne de vol normale : les lignes de
+    // maintenance (plus hautes) ne doivent pas faire varier la pagination
+    // d'un appel a l'autre.
+    const rowRef = tbody ? tbody.querySelector('tr:not(.carnet-empty):not(.carnet-row-maintenance)') : null;
+    const rowH = rowRef ? rowRef.getBoundingClientRect().height : 37;
     const theadH = thead ? thead.getBoundingClientRect().height : 0;
     const reserve = 115; // tfoot + pagination + paddings bas
     const dispo = window.innerHeight - container.getBoundingClientRect().top - theadH - reserve;
