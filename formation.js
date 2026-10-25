@@ -1797,6 +1797,28 @@ function ajouterBlocMini(zoneId, html) {
     zone.appendChild(div.firstElementChild);
 }
 
+// Piocher un document de la bibliotheque : insere une ligne lien+titre
+// dans la documentation de la formation.
+async function piocherDocumentBibliotheque() {
+    let records = [];
+    try {
+        records = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Documents')}?sort[0][field]=Titre&sort[0][direction]=asc&pageSize=100`, { headers });
+    } catch (e) { alert('Bibliothèque indisponible : ' + e.message); return; }
+    const docs = records.map(r => r.fields || {})
+        .filter(f => (f['Lien'] || '').toString().trim() && !f['Archivé'])
+        .map((f, i) => ({
+            id: String(i),
+            label: `${f['Dossier'] ? f['Dossier'] + ' / ' : ''}${f['Titre'] || f['Lien']}`,
+            titre: (f['Titre'] || '').toString(),
+            lien: (f['Lien'] || '').toString()
+        }));
+    if (!docs.length) { alert('Aucun document avec un lien dans la bibliothèque.'); return; }
+    const choix = await choisirDansListe('Piocher dans la bibliothèque', docs);
+    if (!choix) return;
+    const doc = docs.find(d => d.id === choix);
+    if (doc) ajouterBlocMini('editeur-ressources', blocRessourceHtml({ titre: doc.titre, lien: doc.lien }));
+}
+
 // Canevas officiel du livret de progression PPL(A) (phases, exercices,
 // modules theoriques, prerequis, minimas 45h/25DC/10 solo).
 const CANEVAS_PPL = {
@@ -2374,6 +2396,8 @@ function initFormation() {
     if (btnPre) btnPre.addEventListener('click', () => ajouterBlocMini('editeur-prerequis', blocPrerequisHtml({})));
     const btnRes = document.getElementById('btn-formation-ressource-add');
     if (btnRes) btnRes.addEventListener('click', () => ajouterBlocMini('editeur-ressources', blocRessourceHtml({})));
+    const btnBiblio = document.getElementById('btn-formation-ressource-biblio');
+    if (btnBiblio) btnBiblio.addEventListener('click', piocherDocumentBibliotheque);
     const btnMod = document.getElementById('btn-formation-module-add');
     if (btnMod) btnMod.addEventListener('click', () => ajouterBlocMini('editeur-modules', blocModuleHtml({})));
     [['btn-formation-canevas-ppl', CANEVAS_PPL], ['btn-formation-canevas-lapl', CANEVAS_LAPL],
