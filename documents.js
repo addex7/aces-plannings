@@ -854,6 +854,7 @@ function docsCarteMachineHtml(r, machine, canEdit, aujourdhui, dans3mois, contex
             <p style="margin:0 0 10px; font-size:13px; color:#475569; min-height:1.2em;">${dateTxt}</p>
             <div style="margin-top:auto;">
                 ${lien}
+                ${window.biblioPickCb && f['Lien'] ? `<button type="button" class="btn-primary" style="margin-top:8px;padding:5px 10px;font-size:12px;" onclick="piocherDocBiblio('${r.id}')">Choisir ce document</button>` : ''}
                 ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
                     <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" data-docbib-action="modifier" data-rid="${escapeHtml(r.id)}" data-machine="${docsEscAttr(machine)}">Modifier</button>
                     <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" data-docbib-action="supprimer" data-rid="${escapeHtml(r.id)}" data-machine="${docsEscAttr(machine)}">Supprimer</button>
@@ -1151,5 +1152,5 @@ function piocherDocBiblio(id) {
     const f = (rec && rec.fields) || {};
     const cb = window.biblioPickCb;
     fermerPickBibliotheque();
-    if (cb) cb((f['Titre'] || f['Type'] || f['Nom libre'] || '').toString(), (f['Lien'] || '').toString(), rec ? rec.id : '');
+    if (cb) cb((f['Titre'] || f['Type de document'] || f['Type'] || f['Nom libre'] || '').toString(), (f['Lien'] || '').toString(), rec ? rec.id : '');
 }
