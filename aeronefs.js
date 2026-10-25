@@ -1214,9 +1214,13 @@ function creerModaleDocumentsAeronef() {
     modal.id = 'documents-aeronef-modal';
     modal.className = 'modal';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
+        <div class="modal-content" style="max-width: 900px; width: 94%; max-height: 85vh; overflow-y: auto;">
             <span class="close-documents-aeronef">&times;</span>
             <h3 id="documents-aeronef-modal-title">Documents machine</h3>
+            <div class="form-actions" style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" id="btn-nouveau-doc-aeronef" class="btn-primary">+ Ajouter</button>
+                <button type="button" id="btn-bilan-docs-aeronef" class="btn-primary">Bilan</button>
+            </div>
             <div id="documents-aeronef-list-modal" style="margin: 15px 0;"></div>
             <form id="form-document-aeronef" style="display:none; margin-top:15px; border-top:1px solid #e2e8f0; padding-top:15px;">
                 <input type="hidden" id="doc-aeronef-id">
@@ -1254,10 +1258,6 @@ function creerModaleDocumentsAeronef() {
                     <button type="button" id="doc-aeronef-cancel" class="btn-toggle">Annuler</button>
                 </div>
             </form>
-            <div class="form-actions" style="margin-top:15px; display:flex; gap:8px; flex-wrap:wrap;">
-                <button type="button" id="btn-nouveau-doc-aeronef" class="btn-primary">+ Ajouter un document</button>
-                <button type="button" id="btn-bilan-docs-aeronef" class="btn-secondary">📋 Bilan toutes machines</button>
-            </div>
         </div>
     `;
     document.body.appendChild(modal);
@@ -1615,10 +1615,12 @@ function afficherListeDocumentsAeronef(machine) {
     const peutModifier = peutGererDocumentsAeronef();
     const records = (documentsAeronefsParMachine[machine] || []).sort((a, b) => (a.fields['Type de document'] || '').localeCompare(b.fields['Type de document'] || ''));
     if (records.length === 0) {
+        list.style.display = 'block';
         list.innerHTML = '<p style="color:#64748b;">Aucun document enregistré pour cette machine.</p>';
         return;
     }
     if (!peutModifier) {
+        list.style.display = 'block';
         const now = new Date();
         const dans3mois = new Date();
         dans3mois.setMonth(dans3mois.getMonth() + 3);
@@ -1631,6 +1633,9 @@ function afficherListeDocumentsAeronef(machine) {
         if (btnNouveauRO) btnNouveauRO.style.display = 'none';
         return;
     }
+    list.style.display = 'grid';
+    list.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+    list.style.gap = '8px';
     list.innerHTML = records.map(r => {
         const f = r.fields || {};
         const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === f['Type de document']) || { nom: f['Type de document'], dateRequise: false };
@@ -1647,7 +1652,7 @@ function afficherListeDocumentsAeronef(machine) {
             </div>
         ` : '';
         return `
-            <div style="padding:10px; border-bottom:1px solid #e2e8f0;">
+            <div style="padding:10px; border:1px solid #e2e8f0; border-radius:8px; min-width:0;">
                 <div style="font-size:13px;">
                     <strong>${escapeHtml(type.nom)}</strong>
                     ${dateTxt}
