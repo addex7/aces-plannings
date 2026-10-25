@@ -276,12 +276,11 @@ function normNomGvv(s) {
 }
 
 async function chargerEcrituresGvv() {
-    if (clesGvvVols) return;
     if (gvvEnCours) return gvvEnCours;
     gvvEnCours = (async () => {
         try {
             const url = `${API_BASE}/${encodeURIComponent('Vols GVV')}?pageSize=100`;
-            const records = await fetchTousRecordsCache(url, { headers });
+            const records = await fetchTousRecordsCache(url, { headers }, 0, true);
             clesGvvVols = records.map(r => {
                 const f = r.fields || {};
                 return {
@@ -295,6 +294,10 @@ async function chargerEcrituresGvv() {
         } catch (e) {
             console.warn('Vols GVV:', e);
             clesGvvVols = [];
+        } finally {
+            // Pas de verrou « charge » : chaque affichage du carnet relance le
+            // fetch (la table grossit a chaque synchro quotidienne).
+            gvvEnCours = null;
         }
     })();
     return gvvEnCours;
