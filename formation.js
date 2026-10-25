@@ -1820,7 +1820,7 @@ async function piocherDocumentBibliotheque() {
     const docsPlats = [];
     recDocs.forEach(r => {
         const f = r.fields || {};
-        if (f['Archivé']) return;
+        if (f['Archivé'] || f['Description'] === 'Justificatif membre') return;
         const p = [(f['Catégorie'] || 'Autre').trim() || 'Autre', ...(f['Sous-dossier'] || '').split('/').filter(Boolean)];
         const d = { titre: (f['Titre'] || '').toString(), lien: (f['Lien'] || '').toString() };
         noeud(p).docs.push(d);
