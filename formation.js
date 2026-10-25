@@ -352,15 +352,15 @@ async function renderDetailSuivi() {
         <h5 class="formation-phase-titre" style="display:flex;align-items:center;justify-content:space-between;">📚 Documentation de la formation
             ${ressourcesEdit ? `<button class="btn-secondary" style="padding:2px 8px;font-size:11px;" title="Ajouter un document ou un lien" data-formation-action="res-add" data-sid="${suivi.id}">＋</button>` : ''}
         </h5>
-        <div class="formation-docs">${ressources.map((r, i) => {
-            const lien = urlSure(r.lien || '');
+        <div class="formation-docs">${(await Promise.all(ressources.map(async (r, i) => {
+            const lien = urlSure(await lienRessource(r));
             return `<div class="formation-doc doc-bloc"><div class="doc-ligne">
                 <span class="doc-titre">${lien
-                    ? `<a href="${lien}" target="_blank" rel="noopener">🔗 ${escapeHtml(r.titre || r.lien)}</a>`
+                    ? `<a href="${lien}" target="_blank" rel="noopener">🔗 ${escapeHtml(r.titre || lien)}</a>`
                     : `<span>🔗 ${escapeHtml(r.titre || '')}</span>`}</span>
                 ${ressourcesEdit ? `<span class="doc-actions"><button class="btn-secondary" style="padding:2px 7px;font-size:11px;" title="Retirer cette ressource" data-formation-action="res-del" data-sid="${suivi.id}" data-ridx="${i}">✕</button></span>` : ''}
             </div></div>`;
-        }).join('') || '<div class="formation-vide">Aucune documentation.</div>'}</div>` : '';
+        }))).join('') || '<div class="formation-vide">Aucune documentation.</div>'}</div>` : '';
     const docsHtml = docs.length
         ? `<div class="formation-docs">${docs.map(d => renderDoc(suivi, d, instructeur, gele)).join('')}</div>`
         : '<div class="formation-vide">Aucun document demandé.</div>';
@@ -1786,6 +1786,7 @@ function blocRessourceHtml(r) {
     return `<div class="formation-mini-edit" style="display:grid;grid-template-columns:1fr 1.4fr auto auto;gap:6px;margin-bottom:6px;align-items:center;">
         <input type="text" class="ressource-titre" placeholder="Titre du lien" value="${escapeHtml(r.titre || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
         <input type="text" class="ressource-lien" placeholder="https://… ou /uploads/…" value="${escapeHtml(r.lien || '')}" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;">
+        <input type="hidden" class="ressource-docid" value="${escapeHtml(r.docId || '')}">
         <label class="btn-secondary" style="padding:4px 8px;font-size:12px;cursor:pointer;white-space:nowrap;" title="${escapeHtml(nomFichier || 'Joindre un fichier (uploadé au moment de l’enregistrement)')}">📎<input type="file" class="ressource-fichier" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.odt,.txt" style="display:none;"></label>
         <button type="button" class="btn-secondary" style="padding:4px 8px;color:#b91c1c;" data-formation-action="mini-suppr">✕</button>
     </div>`;
@@ -1797,13 +1798,28 @@ function ajouterBlocMini(zoneId, html) {
     zone.appendChild(div.firstElementChild);
 }
 
+// Lien courant d'une ressource : si la ressource refere un document de la
+// bibliotheque (docId), le lien est resolu en base — un fichier remplace
+// met automatiquement a jour le lien dans les formations.
+async function lienRessource(r) {
+    if (!r.docId) return r.lien || '';
+    for (const table of ['Documents', 'Documents Aéronefs']) {
+        try {
+            const recs = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(table)}?pageSize=100`, { headers });
+            const rec = (recs || []).find(x => x.id === r.docId);
+            if (rec && rec.fields && rec.fields['Lien']) return rec.fields['Lien'];
+        } catch (e) {}
+    }
+    return r.lien || '';
+}
+
 // Piocher un document de la bibliotheque : ouvre LA VRAIE vue
 // Bibliotheque dans une modale (meme interface que le bouton sidebar)
 // et insere une ligne lien+titre dans la documentation de la formation.
 async function piocherDocumentBibliotheque() {
     if (typeof ouvrirPickBibliotheque === 'function') {
-        ouvrirPickBibliotheque((titre, lien) =>
-            ajouterBlocMini('editeur-ressources', blocRessourceHtml({ titre, lien })));
+        ouvrirPickBibliotheque((titre, lien, docId) =>
+            ajouterBlocMini('editeur-ressources', blocRessourceHtml({ titre, lien, docId })));
     } else {
         alert('Bibliothèque indisponible.');
     }
@@ -2002,7 +2018,8 @@ async function enregistrerFormationEdit(e) {
             catch (err) { alert(`Échec de l'envoi de « ${fichier.name} » : ${err.message}`); return; }
             if (!titre) titre = fichier.name;
         }
-        if (titre || lien) ressources.push({ titre, lien });
+        const docId = (b.querySelector('.ressource-docid') || {}).value || '';
+        if (titre || lien) ressources.push(docId ? { titre, lien, docId } : { titre, lien });
     }
     const fields = {
         'Titre': titre,

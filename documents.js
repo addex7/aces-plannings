@@ -1151,5 +1151,5 @@ function piocherDocBiblio(id) {
     const f = (rec && rec.fields) || {};
     const cb = window.biblioPickCb;
     fermerPickBibliotheque();
-    if (cb) cb((f['Titre'] || f['Type'] || f['Nom libre'] || '').toString(), (f['Lien'] || '').toString());
+    if (cb) cb((f['Titre'] || f['Type'] || f['Nom libre'] || '').toString(), (f['Lien'] || '').toString(), rec ? rec.id : '');
 }
