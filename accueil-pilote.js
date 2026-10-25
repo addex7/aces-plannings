@@ -509,8 +509,12 @@ async function chargerValiditesAccueil() {
         const initiationActive = estSuivi('Pilote vol initiation avion');
         const recentActive = estSuivi('1 vol / 3 mois');
         const passagerActive = estSuivi('Emport de passager');
+        const viulmActive = estSuivi('Pilote vol initiation ULM');
 
         const experiences = await chargerExperiencesAccueil(!!f['Pilote CPL']);
+        const viulm = viulmActive && typeof evaluerPiloteVIULM === 'function'
+            ? await evaluerPiloteVIULM({ prenom: currentUser.prenom, nom: currentUser.nom, fields: f }, experiences.brut || {})
+            : null;
 
         return {
             items: [
@@ -522,6 +526,7 @@ async function chargerValiditesAccueil() {
                 { label: 'Emport de passager avion (3 décollages / 3 atterrissages)', ok: passagerActive ? experiences.passager : null, bientot: !!experiences.passagerBientot, detail: experiences.passagerDetail, actif: passagerActive },
                 { label: 'LAPL', ok: laplActive ? experiences.lapl : null, detail: experiences.laplDetail, actif: laplActive },
                 { label: 'Vol d\'initiation', ok: initiationActive ? experiences.initiation : null, detail: experiences.initiationDetail, actif: initiationActive },
+                { label: 'Vol d\'initiation ULM', ok: viulmActive ? (viulm ? viulm.ok : null) : null, detail: viulm && !viulm.ok ? viulm.manques.join(' · ') : '', actif: viulmActive },
             ],
             solde: await chargerSoldeAccueil()
         };
@@ -536,6 +541,7 @@ async function chargerExperiencesAccueil(cpl = false) {
         const records = await chargerVolsPilote(currentUser.prenom, currentUser.nom);
         const exp = calculerExperiencesPilote(records, cpl);
         return {
+            brut: exp,
             recent: exp.recent, recentBientot: exp.recentBientot, recentDetail: exp.recentDetail,
             passager: exp.passager, passagerBientot: exp.passagerBientot, passagerDetail: exp.passagerDetail,
             lapl: exp.lapl, laplDetail: exp.laplDetail,

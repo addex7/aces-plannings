@@ -404,6 +404,7 @@ function renderAccueilMembre(fields) {
     const cpl = fields[MEMBRE_FIELDS.CPL] === true;
     const actifLAPL = estActif('LAPL');
     const actifInitiation = estActif('Pilote vol initiation avion');
+    const actifVIULM = estActif('Pilote vol initiation ULM');
     const actifRecent = estActif('1 vol / 3 mois');
     const actifPassager = estActif('Emport de passager');
     let grid = VALIDITES.map(item => {
@@ -495,6 +496,13 @@ function renderAccueilMembre(fields) {
                     <label class="activer-suivi"><input type="checkbox" class="validite-input" data-field="${MEMBRE_FIELDS.CPL}" ${cpl ? 'checked' : ''}> Pilote CPL</label>` : ''}
                     ${!peutEditer && cpl ? '<span class="pastille pastille-verte">Pilote CPL</span>' : ''}
                 </div>` : ''}
+                ${peutEditer || actifVIULM ? `
+                <div class="experience-row ${actifVIULM ? '' : 'suivi-inactif'}" data-exp="viulm">
+                    <span class="experience-titre">Pilote vol d'initiation ULM (âge, évaluations, formation FH, expérience ULM)</span>
+                    <span class="validite-pill" id="accueil-exp-viulm">${pastille(false, null, 'Chargement...')}</span>
+                    <span class="validite-date" id="accueil-exp-viulm-detail"></span>
+                    ${peutEditer ? `<label class="activer-suivi"><input type="checkbox" class="activer-suivi-cb" data-label="Pilote vol initiation ULM" ${actifVIULM ? 'checked' : ''}> Suivi actif</label>` : ''}
+                </div>` : ''}
             </div>
         </div>
         ${docForm}
@@ -545,6 +553,18 @@ async function chargerExperiences() {
 
         // Initiation avion
         updatePill(elInitiation, exp.initiation ? 'pastille-verte' : 'pastille-rouge', (exp.initiation ? '✓ À jour — ' : '✕ Non à jour — ') + exp.initiationDetail);
+
+        // Pilote vol d'initiation ULM : controle reglementaire complet.
+        const elVIULM = document.getElementById('accueil-exp-viulm');
+        const elVIULMDet = document.getElementById('accueil-exp-viulm-detail');
+        if (elVIULM && typeof evaluerPiloteVIULM === 'function') {
+            const viulm = await evaluerPiloteVIULM(membreSelectionne, exp);
+            updatePill(elVIULM, viulm.ok ? 'pastille-verte' : 'pastille-rouge',
+                viulm.ok ? '✓ À jour' : `✕ ${viulm.manques.length} condition(s) manquante(s)`);
+            if (elVIULMDet) elVIULMDet.innerHTML = viulm.lignes.map(l =>
+                `<div style="font-size:12px; color:${l.ok ? '#166534' : '#b91c1c'};">${l.ok ? '✓' : '✕'} ${escapeHtml(l.label)}${l.detail ? ` — ${escapeHtml(l.detail)}` : ''}</div>`
+            ).join('');
+        }
     } catch (err) {
         console.error('Erreur chargement expériences:', err);
         if (elRecent) elRecent.innerHTML = pastille(false, null, 'Erreur de chargement');

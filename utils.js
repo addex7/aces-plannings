@@ -121,6 +121,7 @@ function calculerExperiencesPilote(records, cpl = false) {
 
     let dernierVol = null;
     let decollages3m = 0, atterrissages3m = 0;
+    let decollages3mUlm = 0, atterrissages3mUlm = 0;
     let minutes24m = 0, decollages24m = 0, atterrissages24m = 0, instruction1h = false;
     let minutes12m = 0;
 
@@ -134,6 +135,9 @@ function calculerExperiencesPilote(records, cpl = false) {
         if (/^F-J/.test(machine)) return false;
         return MOTORISES.includes(machine) || f['Monomoteur'] === true;
     };
+    // ULM (immat serie F-J…, ex. F-JVIO) : comptage separe pour le suivi
+    // « Pilote vol d'initiation ULM » (3 dec/att sur 90 jours, ULM seul).
+    const estVolUlm = f => /^F-J/i.test((f['Machine'] || f['Immatriculation'] || '').toString().trim());
 
     records.forEach(r => {
         const f = r.fields || {};
@@ -141,7 +145,9 @@ function calculerExperiencesPilote(records, cpl = false) {
         const d = new Date(f['Date']);
         if (d < limite24m) return;
         if (!dernierVol || d > dernierVol) dernierVol = d;
-        if (!estVolAvion(f)) return;
+        const avion = estVolAvion(f);
+        const ulm = estVolUlm(f);
+        if (!avion && !ulm) return;
         const duree = dureeVolMinutes(f);
         // Champ absent = vol normal (1) ; un 0 saisi reste 0 (ex. vol passager).
         const dec = parseInt(f['Décollages'], 10);
@@ -149,6 +155,11 @@ function calculerExperiencesPilote(records, cpl = false) {
         const decN = isNaN(dec) ? 1 : dec;
         const attN = isNaN(att) ? 1 : att;
 
+        if (ulm && d >= limite3m) {
+            decollages3mUlm += decN;
+            atterrissages3mUlm += attN;
+        }
+        if (!avion) return;
         if (d >= limite3m) {
             decollages3m += decN;
             atterrissages3m += attN;
@@ -196,7 +207,7 @@ function calculerExperiencesPilote(records, cpl = false) {
         : `${h12}h${String(m12).padStart(2, '0')} / 25h00 sur 12 mois — emport passager : ${passager ? 'oui' : 'non'}`;
 
     return {
-        dernierVol, decollages3m, atterrissages3m,
+        dernierVol, decollages3m, atterrissages3m, decollages3mUlm, atterrissages3mUlm,
         minutes24m, decollages24m, atterrissages24m, instruction1h, minutes12m,
         recent, recentBientot, recentDetail,
         passager, passagerBientot, passagerDetail,
