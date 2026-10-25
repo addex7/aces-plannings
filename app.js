@@ -94,6 +94,28 @@ document.addEventListener('DOMContentLoaded', () => {
     initGestionnaireModale();
     initNavigationTabs();
     initGestionnaireVolsInitiation();
+    // Boutons precedente/suivante du navigateur : revenir a la vue
+    // Glide 2000 enregistree dans l'historique (pushState dans activerTab).
+    window.addEventListener('popstate', (e) => {
+        let tabId = e.state && e.state.tabId;
+        if (!tabId && location.hash.length > 1) {
+            const h = location.hash.slice(1).replace(/^view-/, '');
+            tabId = 'tab-' + (h === 'accueil-pilote' ? 'accueil' : h);
+        }
+        const t = tabId ? document.getElementById(tabId) : null;
+        if (t) { window._navRetourHistorique = true; t.click(); }
+    });
+    // Lien profond : #view-xxx (ou #xxx) ouvre directement la vue.
+    if (location.hash.length > 1) {
+        const h = location.hash.slice(1).replace(/^view-/, '');
+        const tabId = 'tab-' + (h === 'accueil-pilote' ? 'accueil' : h);
+        const t = document.getElementById(tabId);
+        if (t) {
+            window._navRetourHistorique = true;
+            t.click();
+            try { history.replaceState({ tabId }, '', location.hash); } catch (e) {}
+        }
+    }
     initGestionCreneauxVI();
     initCarnetRoute();
     initSidebarToggle();
