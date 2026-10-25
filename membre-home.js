@@ -208,6 +208,8 @@ function ouvrirModaleUrgence() {
         `<div id="urgence-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;"><button type="button" class="btn-primary" id="urgence-save">💾 Enregistrer</button></div>`, '📞');
     const modal = document.getElementById('planning-alert-modal');
     if (!modal) return;
+    const content = modal.querySelector('.modal-content');
+    if (content) { content.style.width = '560px'; content.style.maxWidth = '92vw'; }
     // Le « Fermer » du gabarit devient « Annuler » a cote d'Enregistrer.
     const closeBtn = modal.querySelector('#planning-alert-close');
     const actions = modal.querySelector('#urgence-actions');
@@ -699,7 +701,7 @@ function membreConfirmerEnregistrement(nom, listeHtml, mdpSaisi) {
         overlay.style.zIndex = '20000';
         const nomEsc = typeof docsEscAttr === 'function' ? docsEscAttr(nom) : nom;
         overlay.innerHTML = `
-            <div class="modal-content" style="max-width: 480px; text-align: left;">
+            <div class="modal-content" style="width: 640px; max-width: 92vw; text-align: left;">
                 <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
                 <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;">
                     <span style="font-size:28px;">✏️</span>
