@@ -342,16 +342,20 @@ function volExisteDansGvvGroupe(f, recordsData) {
     const jour = recordsData.map(d => d.f || {})
         .filter(x => (x['Date'] || '') === date
             && (x['Machine'] || '').toString().trim().toUpperCase() === immat
-            && !x['GVV ID']
+            && !x['GVV ID'] && !x['Saisi dans GVV']
             && !isNaN(parse(x['Horamètre départ'])) && !isNaN(parse(x['Horamètre arrivée'])))
         .sort((a, b) => parse(a['Horamètre départ']) - parse(b['Horamètre départ']));
     const idx = jour.indexOf(f);
     if (idx < 0) return false;
     const deb = x => parse(x['Horamètre départ']);
     const fin = x => parse(x['Horamètre arrivée']);
+    // La chaine ne groupe que les lignes du MEME pilote : les horametres
+    // s'enchainent d'un vol a l'autre, sans quoi on fusionnerait des vols
+    // de pilotes differents (erreur constatee : pas de match GVV global).
+    const piloteOk = x => nomsGvvCompatibles(x['Pilote'], f['Pilote']);
     let l = idx, r = idx;
-    while (l > 0 && Math.abs(fin(jour[l - 1]) - deb(jour[l])) <= 0.005) l--;
-    while (r < jour.length - 1 && Math.abs(deb(jour[r + 1]) - fin(jour[r])) <= 0.005) r++;
+    while (l > 0 && piloteOk(jour[l - 1]) && Math.abs(fin(jour[l - 1]) - deb(jour[l])) <= 0.005) l--;
+    while (r < jour.length - 1 && piloteOk(jour[r + 1]) && Math.abs(deb(jour[r + 1]) - fin(jour[r])) <= 0.005) r++;
     if (l === r) return false;
     const groupe = jour.slice(l, r + 1);
     const gDeb = deb(groupe[0]);
