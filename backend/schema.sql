@@ -179,3 +179,10 @@ CREATE TABLE IF NOT EXISTS formations_seances (
     fields      JSONB NOT NULL DEFAULT '{}',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Fiches d'information passager VLO/VLD (ULM) : conservees 3 mois minimum.
+CREATE TABLE IF NOT EXISTS fiches_vlo (
+    id          TEXT PRIMARY KEY,
+    fields      JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
