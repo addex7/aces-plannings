@@ -1596,7 +1596,12 @@ async function chargerCarnetRoute() {
     const btnOptionsCarnet = document.getElementById('btn-options-carnet');
     if (btnOptionsCarnet) btnOptionsCarnet.style.display =
         (typeof peutVoirOptionsAeronef === 'function' && peutVoirOptionsAeronef()) ? 'inline-block' : 'none';
-    if (!CATEGORIES_CARNET[machineCarnetSelectionnee]) await chargerEcrituresGvv();
+    if (!CATEGORIES_CARNET[machineCarnetSelectionnee]) {
+        await chargerEcrituresGvv();
+        // Retire les facturations temporaires couvertes par une ecriture GVV.
+        apiFetch(`${API_BASE}/facturations-tempo-sweep`, { method: 'POST', headers, body: '{}' })
+            .catch(() => {});
+    }
     if (CATEGORIES_CARNET[machineCarnetSelectionnee]) {
         genererGrillesPlaneur(machineCarnetSelectionnee);
         if (tableContainer) tableContainer.style.display = 'none';
@@ -1823,6 +1828,14 @@ async function soumettreCarnetRoute(event) {
         });
         const result = await response.json();
         if (response.ok) {
+            // Facturation temporaire cote serveur : ecriture provisoire sur
+            // le compte du pilote tant que le vol n'est pas remonte dans GVV.
+            const volId = idCarnetEnEdition || (result && result.id) || (result && result.records && result.records[0] && result.records[0].id);
+            if (volId) {
+                apiFetch(`${API_BASE}/vol-facturation-tempo`, {
+                    method: 'POST', headers, body: JSON.stringify({ recordId: volId })
+                }).catch(() => {});
+            }
             if (idCarnetEnEdition && ancienRecord && ancienRecord.fields) {
                 const af = ancienRecord.fields;
                 if (af['Machine'] && af['Date'] && af['Horamètre arrivée'] !== undefined && af['Horamètre arrivée'] !== null && af['Horamètre arrivée'] !== '') {

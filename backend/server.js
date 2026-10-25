@@ -1048,6 +1048,132 @@ app.post('/v0/:base/gvv-vol', async (req, res) => {
     }
 });
 
+// --- FACTURATION TEMPORAIRE DES VOLS (en attendant l'ecriture GVV) ---
+// A la saisie d'un vol facture (Prix du vol > 0), le front appelle
+// /vol-facturation-tempo : une ecriture « Facturation temporaire » est creee
+// sur le compte du pilote. Quand la synchro GVV remonte le vol, le sweep
+// la retire pour laisser la place a l'ecriture reelle GVV.
+const SOURCE_FACT_TEMP = 'Facturation temporaire';
+const MACHINES_FACTURATION = new Set(['F-BLIO', 'F-GASB', 'F-JVIO']);
+
+function gvvNomTokens(s) {
+    return (s || '').toString().toLowerCase().normalize('NFD')
+        .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ')
+        .split(' ').filter(Boolean).sort();
+}
+function gvvNomsOk(a, b) {
+    const ta = gvvNomTokens(a), tb = gvvNomTokens(b);
+    if (ta.join(' ') === tb.join(' ')) return true;
+    return ta.length === tb.length && ta.every((t, i) => t === tb[i] || tb[i].startsWith(t) || t.startsWith(tb[i]));
+}
+const parseCpt = x => parseFloat(String(x).replace(',', '.'));
+
+// Meme regle que cote front : pilote(equipage) + date + immat + compteurs
+// debut/fin ±0,005 h — y compris un seul vol GVV couvrant plusieurs lignes
+// contigues du meme pilote (navigation, remorquage+refuel).
+function volDansGvv(f, volsGvv, carnetJour) {
+    const hd = parseCpt(f['Horamètre départ']), ha = parseCpt(f['Horamètre arrivée']);
+    if (isNaN(hd) || isNaN(ha)) return false;
+    const date = f['Date'] || '';
+    const immat = (f['Machine'] || '').toString().trim().toUpperCase();
+    const equipage = x => [x['Pilote'], x['Instructeur'], x['Passager'], x['Élève']]
+        .filter(n => (n || '').toString().trim());
+    const hit = (e, deb, fin, eq) => eq.some(n => gvvNomsOk(n, e.pilote))
+        && e.date === date && e.immat === immat
+        && Math.abs(e.deb - deb) <= 0.005 && Math.abs(e.fin - fin) <= 0.005;
+    if (volsGvv.some(e => hit(e, hd, ha, equipage(f)))) return true;
+    const jour = (carnetJour || [])
+        .filter(x => (x['Date'] || '') === date
+            && (x['Machine'] || '').toString().trim().toUpperCase() === immat
+            && !x['GVV ID'] && !x['Saisi dans GVV']
+            && !isNaN(parseCpt(x['Horamètre départ'])) && !isNaN(parseCpt(x['Horamètre arrivée'])))
+        .sort((a, b) => parseCpt(a['Horamètre départ']) - parseCpt(b['Horamètre départ']));
+    const idx = jour.indexOf(f);
+    if (idx < 0) return false;
+    const deb = x => parseCpt(x['Horamètre départ']);
+    const fin = x => parseCpt(x['Horamètre arrivée']);
+    const piloteOk = x => gvvNomsOk(x['Pilote'], f['Pilote']);
+    let l = idx, r = idx;
+    while (l > 0 && piloteOk(jour[l - 1]) && Math.abs(fin(jour[l - 1]) - deb(jour[l])) <= 0.005) l--;
+    while (r < jour.length - 1 && piloteOk(jour[r + 1]) && Math.abs(deb(jour[r + 1]) - fin(jour[r])) <= 0.005) r++;
+    if (l === r) return false;
+    const g = jour.slice(l, r + 1);
+    const eq = [...new Set(g.flatMap(equipage))];
+    return volsGvv.some(e => hit(e, deb(g[0]), fin(g[g.length - 1]), eq));
+}
+
+// Cree ou retire la facturation temporaire d'un vol donne.
+app.post('/v0/:base/vol-facturation-tempo', async (req, res) => {
+    if (req.publicAccess || !req.user) return erreur(res, 403, 'Réservé aux membres');
+    const recordId = String((req.body || {}).recordId || '');
+    if (!recordId) return erreur(res, 400, 'recordId requis');
+    try {
+        const { rows } = await pool.query('SELECT fields FROM carnet_route_pilotes WHERE id = $1', [recordId]);
+        const f = rows[0] && rows[0].fields;
+        const { rows: exist } = await pool.query(
+            `SELECT id FROM comptes_pilotes WHERE fields->>'Source' = $1 AND fields->>'Vol' = $2`,
+            [SOURCE_FACT_TEMP, recordId]);
+        const prix = f ? parseFloat(f['Prix du vol']) : 0;
+        const pilote = f ? (f['Pilote'] || '').toString().trim() : '';
+        const ok = !!(f && prix > 0 && pilote
+            && MACHINES_FACTURATION.has((f['Machine'] || '').toString().trim().toUpperCase())
+            && !f['GVV ID'] && !f['Saisi dans GVV']);
+        if (!ok) {
+            if (exist.length) await pool.query('DELETE FROM comptes_pilotes WHERE id = ANY($1)', [exist.map(r => r.id)]);
+            return res.json({ ok: true, facturee: false });
+        }
+        const champs = {
+            'Pilote': pilote,
+            'Date': f['Date'] || '',
+            'Description': `Vol ${f['Machine'] || ''} du ${f['Date'] || ''} — facturation provisoire en attente GVV`,
+            'Référence': f['Machine'] || '',
+            'Prix': prix, 'Quantité': 1, 'Débit': prix, 'Crédit': 0,
+            'Source': SOURCE_FACT_TEMP, 'Statut': 'Temporaire', 'Vol': recordId
+        };
+        if (exist.length) {
+            await pool.query('UPDATE comptes_pilotes SET fields = $1 WHERE id = $2', [JSON.stringify(champs), exist[0].id]);
+        } else {
+            await pool.query('INSERT INTO comptes_pilotes (id, fields) VALUES ($1, $2)', [nouvelId(), JSON.stringify(champs)]);
+        }
+        res.json({ ok: true, facturee: true });
+    } catch (e) {
+        console.error('Facturation temporaire:', e);
+        erreur(res, 500, e.message);
+    }
+});
+
+// Retire les facturations temporaires des vols remontes dans GVV (ou
+// orphelines, vol supprime). Appele a chaque affichage du carnet.
+app.post('/v0/:base/facturations-tempo-sweep', async (req, res) => {
+    if (req.publicAccess || !req.user) return erreur(res, 403, 'Réservé aux membres');
+    try {
+        const [{ rows: temp }, { rows: volsGvv }, { rows: carnet }] = await Promise.all([
+            pool.query(`SELECT id, fields FROM comptes_pilotes WHERE fields->>'Source' = $1`, [SOURCE_FACT_TEMP]),
+            pool.query(`SELECT fields FROM gvv_vols`),
+            pool.query(`SELECT id, fields FROM carnet_route_pilotes`)
+        ]);
+        const gvv = volsGvv.map(r => r.fields || {}).map(f => ({
+            pilote: f['Pilote'] || '', date: f['Date'] || '',
+            immat: (f['Machine'] || '').toString().trim().toUpperCase(),
+            deb: parseCpt(f['Compteur début']), fin: parseCpt(f['Compteur fin'])
+        })).filter(v => !isNaN(v.deb) && !isNaN(v.fin));
+        const carnetFields = carnet.map(r => r.fields || {});
+        const aSupprimer = [];
+        for (const t of temp) {
+            const volId = (t.fields || {})['Vol'];
+            const rec = carnet.find(r => r.id === volId);
+            if (!rec) { aSupprimer.push(t.id); continue; } // orpheline (vol supprime)
+            const f = rec.fields || {};
+            if (f['GVV ID'] || f['Saisi dans GVV'] || volDansGvv(f, gvv, carnetFields)) aSupprimer.push(t.id);
+        }
+        if (aSupprimer.length) await pool.query('DELETE FROM comptes_pilotes WHERE id = ANY($1)', [aSupprimer]);
+        res.json({ ok: true, supprimees: aSupprimer.length });
+    } catch (e) {
+        console.error('Sweep facturations temporaires:', e);
+        erreur(res, 500, e.message);
+    }
+});
+
 app.get('/v0/:base/:table', async (req, res) => {
     const table = tableSql(req, res);
     if (!table) return;

@@ -16,3 +16,7 @@ osascript -e 'display notification "Résumé court de ce qui a été fait." with
 - Les cache-busters `?v=` dans `index.html` et `reserver-vi.html` sont régénérés automatiquement (hash du contenu) — ne pas les éditer à la main.
 - Committer en local à chaque changement terminé.
 - Ne PAS pousser sur GitHub sauf demande explicite de l'utilisateur.
+
+## Backend (VPS)
+- Sync backend : `rsync -azv --rsync-path="sudo rsync"` — JAMAIS `--delete` (supprime `.env` : DB_PASSWORD/API_TOKEN/GVV). Copier les fichiers cibles explicitement.
+- Rebuild : `cd /opt/glide2000/backend && sudo docker compose build api && sudo docker compose up -d api`
