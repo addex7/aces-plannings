@@ -281,14 +281,19 @@ async function chargerEcrituresGvv() {
             const formula = `FIND('sur F-', {Description}) > 0`;
             const url = `${API_BASE}/${encodeURIComponent('Écritures GVV')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
             const records = await fetchTousRecordsCache(url, { headers });
-            clesGvvVols = new Set(records.map(r => {
+            clesGvvVols = records.map(r => {
                 const f = r.fields || {};
                 const immat = ((f['Description'] || '').match(/F-[A-Z0-9]+/i) || [''])[0].toUpperCase();
-                return `${normNomGvv(f['Compte'])}|${f['Date'] || ''}|${immat}`;
-            }));
+                return {
+                    compte: normNomGvv(f['Compte']),
+                    date: f['Date'] || '',
+                    immat,
+                    q: parseFloat(f['Quantité']) || 0
+                };
+            });
         } catch (e) {
             console.warn('Écritures GVV:', e);
-            clesGvvVols = new Set();
+            clesGvvVols = [];
         }
     })();
     return gvvEnCours;
@@ -296,8 +301,17 @@ async function chargerEcrituresGvv() {
 
 function volExisteDansGvv(f) {
     if (!clesGvvVols || f['GVV ID']) return false;
-    const cle = `${normNomGvv(f['Pilote'])}|${f['Date'] || ''}|${(f['Machine'] || '').toString().trim().toUpperCase()}`;
-    return clesGvvVols.has(cle);
+    // Certitude horametre : delta carnet == Quantite GVV a 0.05 h (3 min) pres,
+    // ce qui evite les faux positifs entre vols du meme jour/meme pilote.
+    const hd = parseFloat(String(f['Horamètre départ']).replace(',', '.'));
+    const ha = parseFloat(String(f['Horamètre arrivée']).replace(',', '.'));
+    if (isNaN(hd) || isNaN(ha)) return false;
+    const duree = Math.abs(ha - hd);
+    const compte = normNomGvv(f['Pilote']);
+    const date = f['Date'] || '';
+    const immat = (f['Machine'] || '').toString().trim().toUpperCase();
+    return clesGvvVols.some(e =>
+        e.compte === compte && e.date === date && e.immat === immat && Math.abs(e.q - duree) <= 0.05);
 }
 
 function badgeGvvCarnet(f) {
