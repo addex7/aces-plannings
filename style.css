@@ -2533,6 +2533,13 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     order: 0;
     margin: 0;
 }
+/* Espace membre : le bandeau se place entre le titre et les boutons. */
+#view-accueil-membre .header { gap: 8px 20px; }
+#view-accueil-membre .header .bandeau-informatif {
+    flex: 1 1 340px;
+    order: 0;
+    margin: 0;
+}
 .validite-label {
     font-size: 13px;
     font-weight: 600;
