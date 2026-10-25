@@ -329,9 +329,45 @@ function volExisteDansGvv(f) {
         && Math.abs(e.deb - hd) <= 0.005 && Math.abs(e.fin - ha) <= 0.005);
 }
 
-function badgeGvvCarnet(f) {
+// Vols groupes : plusieurs lignes contigues du carnet (navigation aller/retour,
+// remorquage avec refuel) correspondent a UN seul vol GVV dont le compteur
+// debut = depart de la 1re ligne et le compteur fin = arrivee de la derniere.
+function volExisteDansGvvGroupe(f, recordsData) {
+    if (!clesGvvVols || f['GVV ID'] || !recordsData) return false;
+    const parse = x => parseFloat(String(x).replace(',', '.'));
+    const hd = parse(f['Horamètre départ']), ha = parse(f['Horamètre arrivée']);
+    if (isNaN(hd) || isNaN(ha)) return false;
+    const date = f['Date'] || '';
+    const immat = (f['Machine'] || '').toString().trim().toUpperCase();
+    const jour = recordsData.map(d => d.f || {})
+        .filter(x => (x['Date'] || '') === date
+            && (x['Machine'] || '').toString().trim().toUpperCase() === immat
+            && !x['GVV ID']
+            && !isNaN(parse(x['Horamètre départ'])) && !isNaN(parse(x['Horamètre arrivée'])))
+        .sort((a, b) => parse(a['Horamètre départ']) - parse(b['Horamètre départ']));
+    const idx = jour.indexOf(f);
+    if (idx < 0) return false;
+    const deb = x => parse(x['Horamètre départ']);
+    const fin = x => parse(x['Horamètre arrivée']);
+    let l = idx, r = idx;
+    while (l > 0 && Math.abs(fin(jour[l - 1]) - deb(jour[l])) <= 0.005) l--;
+    while (r < jour.length - 1 && Math.abs(deb(jour[r + 1]) - fin(jour[r])) <= 0.005) r++;
+    if (l === r) return false;
+    const groupe = jour.slice(l, r + 1);
+    const gDeb = deb(groupe[0]);
+    const gFin = fin(groupe[groupe.length - 1]);
+    const equipage = [...new Set(groupe.flatMap(x =>
+        [x['Pilote'], x['Instructeur'], x['Passager'], x['Élève']]
+            .filter(n => (n || '').toString().trim())))];
+    return clesGvvVols.some(e =>
+        equipage.some(n => nomsGvvCompatibles(n, e.pilote)) && e.date === date && e.immat === immat
+        && Math.abs(e.deb - gDeb) <= 0.005 && Math.abs(e.fin - gFin) <= 0.005);
+}
+
+function badgeGvvCarnet(f, recordsData) {
     if (f['GVV ID']) return ` <span class="badge-gvv" title="Envoyé à GVV (#${f['GVV ID']})">GVV</span>`;
     if (volExisteDansGvv(f)) return ' <span class="badge-gvv badge-gvv-bleu" title="Vol déjà saisi dans GVV (hors de l\'application)">GVV</span>';
+    if (volExisteDansGvvGroupe(f, recordsData)) return ' <span class="badge-gvv badge-gvv-bleu" title="Vol déjà saisi dans GVV en une seule écriture couvrant plusieurs lignes du carnet">GVV</span>';
     return '';
 }
 
@@ -1319,7 +1355,7 @@ function afficherCarnet(records) {
             `;
         } else if (isJVIO) {
             tr.innerHTML = `
-                <td>${dateStr}${badgeGvvCarnet(f)}</td>
+                <td>${dateStr}${badgeGvvCarnet(f, recordsData)}</td>
                 <td>${escHtml(formatEquipageCourt(f['Pilote'])) || '-'}</td>
                 <td>${escHtml(formatEquipageCourt(f['Instructeur'])) || '-'}</td>
                 <td>${escHtml(f['Fonction']) || '-'}</td>
@@ -1340,7 +1376,7 @@ function afficherCarnet(records) {
             const huile = [formaterNombre(f['Huile départ']), formaterNombre(f['Huile arrivée'])].filter(v => v !== '').join(' / ') || '-';
             const horametre = [formaterNombre(f['Horamètre départ']), formaterNombre(f['Horamètre arrivée'])].filter(v => v !== '').join(' / ') || '-';
             tr.innerHTML = `
-                <td>${dateStr}${badgeGvvCarnet(f)}</td>
+                <td>${dateStr}${badgeGvvCarnet(f, recordsData)}</td>
                 <td>${escHtml(equipage)}</td>
                 <td>${escHtml(f['Fonction']) || '-'}</td>
                 <td>${escHtml(f['Départ']) || '-'}</td>
@@ -2020,7 +2056,7 @@ function initCarnetRoute() {
                 <div class="legende-ligne"><span class="legende-pastille" style="background:#fffbeb; border-left-color:#d97706;"></span><span>Ligne de maintenance</span></div>
                 ${item('background:#dc2626;', 'Écart d\'horamètre (continuité à vérifier)')}
                 <div class="legende-ligne"><span style="display:inline-block; padding:1px 6px; font-size:10px; font-weight:700; color:#166534; background:#dcfce7; border:1px solid #86efac; border-radius:8px;">GVV</span><span>Vol envoyé vers GVV (compta)</span></div>
-                <div class="legende-ligne"><span style="display:inline-block; padding:1px 6px; font-size:10px; font-weight:700; color:#1d4ed8; background:#dbeafe; border:1px solid #93c5fd; border-radius:8px;">GVV</span><span>Vol déjà saisi dans GVV (même pilote, date, machine et horamètres)</span></div>
+                <div class="legende-ligne"><span style="display:inline-block; padding:1px 6px; font-size:10px; font-weight:700; color:#1d4ed8; background:#dbeafe; border:1px solid #93c5fd; border-radius:8px;">GVV</span><span>Vol déjà saisi dans GVV (pilote, date, machine et horamètres identiques — y compris un seul vol GVV couvrant plusieurs lignes du carnet)</span></div>
                 ${titre('📋 Statuts d\'une observation')}
                 ${rond('#dc2626', 'Non prise en compte')}
                 ${rond('#d97706', 'Prise en compte')}
