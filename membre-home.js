@@ -1018,6 +1018,7 @@ async function gererDocFormationMembre(action, suiviId, docId) {
             if (typeof suiviOuvertId !== 'undefined' && suiviOuvertId === suiviId && typeof renderDetailSuivi === 'function') renderDetailSuivi();
         }
         await chargerDocumentsMembre();
+        chargerExperiences();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la mise à jour : ' + (err.message || ''));
@@ -1072,6 +1073,7 @@ async function uploaderDocumentMembre(e) {
         }
         e.target.reset();
         await chargerDocumentsMembre();
+        chargerExperiences();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'upload : ' + (err.message || err));
@@ -1098,6 +1100,7 @@ async function basculerArchiveDocumentMembre(id, archive) {
         });
         if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur Airtable');
         await chargerDocumentsMembre();
+        chargerExperiences();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'archivage : ' + (err.message || ''));
@@ -1118,6 +1121,7 @@ async function renommerDocumentMembre(id, titreActuel) {
         });
         if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur Airtable');
         await chargerDocumentsMembre();
+        chargerExperiences();
     } catch (err) {
         console.error(err);
         alert('Erreur lors du renommage : ' + (err.message || ''));
@@ -1140,6 +1144,7 @@ async function supprimerDocumentMembre(id, titre) {
         if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur Airtable');
         await retirerDocMembreDesFormations(id, lienDoc);
         await chargerDocumentsMembre();
+        chargerExperiences();
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la suppression : ' + (err.message || ''));
