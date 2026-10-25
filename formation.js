@@ -1797,114 +1797,16 @@ function ajouterBlocMini(zoneId, html) {
     zone.appendChild(div.firstElementChild);
 }
 
-// Piocher un document de la bibliotheque : arbre dossiers + documents
-// (meme disposition que la page Bibliotheque), insere une ligne
-// lien+titre dans la documentation de la formation.
+// Piocher un document de la bibliotheque : ouvre LA VRAIE vue
+// Bibliotheque dans une modale (meme interface que le bouton sidebar)
+// et insere une ligne lien+titre dans la documentation de la formation.
 async function piocherDocumentBibliotheque() {
-    let recDocs = [], recDossiers = [], recDocsAero = [];
-    try {
-        [recDocs, recDossiers, recDocsAero] = await Promise.all([
-            fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Documents')}?pageSize=100`, { headers }),
-            fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Dossiers')}?pageSize=100`, { headers }),
-            fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Documents Aéronefs')}?pageSize=100`, { headers })
-        ]);
-    } catch (e) { alert('Bibliothèque indisponible : ' + e.message); return; }
-
-    // Arbre : dossiers (Nom + Parent = chemin) ; documents a
-    // [Catégorie, ...Sous-dossier] — meme logique que construireArbreDocs.
-    const arbre = {};
-    const noeud = p => p.reduce((n, s) => (n[s] = n[s] || { docs: [] }), arbre);
-    recDossiers.forEach(r => {
-        const f = r.fields || {}, nom = (f['Nom'] || '').trim();
-        if (nom) noeud((f['Parent'] || '').trim() ? [...f['Parent'].split('/'), nom] : [nom]);
-    });
-    const docsPlats = [];
-    recDocs.forEach(r => {
-        const f = r.fields || {};
-        if (f['Archivé'] || f['Description'] === 'Justificatif membre') return;
-        const p = [(f['Catégorie'] || 'Autre').trim() || 'Autre', ...(f['Sous-dossier'] || '').split('/').filter(Boolean)];
-        const d = { titre: (f['Titre'] || '').toString(), lien: (f['Lien'] || '').toString() };
-        noeud(p).docs.push(d);
-        docsPlats.push(d);
-    });
-    // Documents machines : dossier « ⚙️ Immat » par aéronef, comme dans la
-    // bibliothèque (seuls les docs activés et avec un lien).
-    recDocsAero.forEach(r => {
-        const f = r.fields || {};
-        if (f['Activé'] === false) return;
-        const machine = (f['Machine'] || '').toString().trim() || 'Sans machine';
-        const d = {
-            titre: (f['Nom libre'] || f['Titre'] || f['Type'] || '').toString(),
-            lien: (f['Lien'] || '').toString()
-        };
-        noeud(['⚙️ ' + machine]).docs.push(d);
-        docsPlats.push(d);
-    });
-    if (!docsPlats.length) { alert('Bibliothèque vide.'); return; }
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal';
-    overlay.style.display = 'flex';
-    overlay.style.zIndex = '20000';
-    overlay.innerHTML = `
-        <div class="modal-content" style="width:720px;max-width:94vw;max-height:82vh;display:flex;flex-direction:column;">
-            <h3 style="margin-top:0;color:#1e3d59;">📚 Piocher dans la bibliothèque</h3>
-            <input type="search" class="biblio-pick-rech" placeholder="Rechercher un document…" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;margin-bottom:10px;">
-            <div class="biblio-pick-arbre" style="overflow-y:auto;flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:6px;"></div>
-            <div style="display:flex;justify-content:flex-end;margin-top:12px;">
-                <button type="button" class="nr-btn-cancel" id="biblio-pick-cancel">Annuler</button>
-            </div>
-        </div>`;
-    const fermer = () => overlay.remove();
-    const choisir = d => {
-        ajouterBlocMini('editeur-ressources', blocRessourceHtml({ titre: d.titre, lien: d.lien }));
-        fermer();
-    };
-    const btnDoc = (d, pad) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.style.cssText = `display:block;width:100%;text-align:left;padding:5px ${pad}px;border:none;background:none;border-radius:6px;cursor:pointer;font-size:13px;color:${d.lien ? '#1e3d59' : '#94a3b8'};`;
-        b.textContent = '📄 ' + (d.titre || d.lien || '(sans titre)');
-        if (!d.lien) { b.disabled = true; b.title = 'Document sans lien'; }
-        else {
-            b.title = d.lien;
-            b.addEventListener('click', () => choisir(d));
-            b.addEventListener('mouseenter', () => b.style.background = '#eff6ff');
-            b.addEventListener('mouseleave', () => b.style.background = 'none');
-        }
-        return b;
-    };
-    const rendreNoeud = (parentEl, n, prof) => {
-        Object.keys(n).filter(k => k !== 'docs').sort((a, b) => a.localeCompare(b, 'fr')).forEach(k => {
-            const noe = n[k];
-            const det = document.createElement('details');
-            det.open = prof < 2;
-            const som = document.createElement('summary');
-            som.style.cssText = `cursor:pointer;padding:5px ${6 + prof * 16}px;border-radius:6px;font-weight:600;color:#1e3d59;list-style:none;font-size:13px;`;
-            som.textContent = '📁 ' + k;
-            som.addEventListener('mouseenter', () => som.style.background = '#f1f5f9');
-            som.addEventListener('mouseleave', () => som.style.background = 'none');
-            det.appendChild(som);
-            noe.docs.slice().sort((a, b) => a.titre.localeCompare(b.titre, 'fr'))
-                .forEach(d => det.appendChild(btnDoc(d, 26 + prof * 16)));
-            rendreNoeud(det, noe, prof + 1);
-            parentEl.appendChild(det);
-        });
-    };
-    const arb = overlay.querySelector('.biblio-pick-arbre');
-    const afficheTout = () => { arb.innerHTML = ''; rendreNoeud(arb, arbre, 0); };
-    afficheTout();
-    overlay.querySelector('.biblio-pick-rech').addEventListener('input', e => {
-        const q = e.target.value.trim().toLowerCase();
-        arb.innerHTML = '';
-        if (!q) { afficheTout(); return; }
-        docsPlats.filter(d => d.titre.toLowerCase().includes(q))
-            .sort((a, b) => a.titre.localeCompare(b.titre, 'fr'))
-            .forEach(d => arb.appendChild(btnDoc(d, 10)));
-    });
-    overlay.querySelector('#biblio-pick-cancel').addEventListener('click', fermer);
-    overlay.addEventListener('click', e => { if (e.target === overlay) fermer(); });
-    document.body.appendChild(overlay);
+    if (typeof ouvrirPickBibliotheque === 'function') {
+        ouvrirPickBibliotheque((titre, lien) =>
+            ajouterBlocMini('editeur-ressources', blocRessourceHtml({ titre, lien })));
+    } else {
+        alert('Bibliothèque indisponible.');
+    }
 }
 
 // Canevas officiel du livret de progression PPL(A) (phases, exercices,

@@ -929,6 +929,7 @@ function creerCarteDocument(rec, contexte = '') {
             ${validiteTxt ? `<p style="margin:0 0 10px; font-size:13px; color:#475569;">${validiteTxt}</p>` : ''}
             <div style="margin-top:auto;">
                 <a href="${escapeHtml(urlSure(f['Lien']))}" target="_blank" rel="noopener" style="color:#166534; text-decoration:underline; font-size:13px; word-break:break-all;">Ouvrir le document ↗</a>
+                ${window.biblioPickCb && f['Lien'] ? `<button type="button" class="btn-primary" style="margin-top:8px;padding:5px 10px;font-size:12px;" onclick="piocherDocBiblio('${rec.id}')">Choisir ce document</button>` : ''}
                 ${canEdit ? `<div style="margin-top:10px; display:flex; gap:6px;">
                     <button type="button" class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="ouvrirFormDocument('${rec.id}')">Modifier</button>
                     <button type="button" class="btn-delete" style="padding:4px 10px; font-size:12px;" onclick="supprimerDocument('${rec.id}')">Supprimer</button>
@@ -1097,3 +1098,58 @@ async function supprimerDocument(id) {
 }
 
 document.addEventListener('DOMContentLoaded', initDocuments);
+
+// --- Mode « piocher » : la vraie vue Bibliotheque embarquee dans une modale ---
+let biblioPickOverlay = null;
+let biblioPickParent = null;
+let biblioPickVue = null;
+
+function ouvrirPickBibliotheque(cb) {
+    const vue = document.getElementById('view-documents');
+    if (!vue) return;
+    window.biblioPickCb = cb;
+    biblioPickVue = vue;
+    biblioPickParent = vue.parentNode;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal';
+    overlay.style.cssText = 'display:flex;z-index:20000;';
+    overlay.innerHTML = `
+        <div class="modal-content" style="width:920px;max-width:96vw;height:86vh;display:flex;flex-direction:column;padding:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #e2e8f0;">
+                <h3 style="margin:0;color:#1e3d59;">📚 Bibliothèque — cliquez « Choisir » sur un document</h3>
+                <button type="button" class="nr-btn-cancel" id="biblio-pick-quit">Annuler</button>
+            </div>
+            <div class="biblio-pick-zone" style="overflow-y:auto;flex:1;padding:12px 16px;"></div>
+        </div>`;
+    overlay.querySelector('.biblio-pick-zone').appendChild(vue);
+    document.body.appendChild(overlay);
+    biblioPickOverlay = overlay;
+    vue.style.display = 'block';
+    if (typeof chargerDocuments === 'function') chargerDocuments();
+    overlay.querySelector('#biblio-pick-quit').addEventListener('click', fermerPickBibliotheque);
+}
+
+function fermerPickBibliotheque() {
+    window.biblioPickCb = null;
+    if (biblioPickVue && biblioPickParent) {
+        biblioPickParent.appendChild(biblioPickVue);
+        biblioPickVue.style.display = 'none';
+    }
+    if (biblioPickOverlay) biblioPickOverlay.remove();
+    biblioPickOverlay = biblioPickParent = biblioPickVue = null;
+}
+
+// Appele par le bouton « Choisir » des cartes (creerCarteDocument) en mode piocher.
+function piocherDocBiblio(id) {
+    let rec = (documentsCache || []).find(r => r.id === id);
+    if (!rec) {
+        for (const m of Object.keys(documentsAeronefsBibliothequeCache || {})) {
+            rec = (documentsAeronefsBibliothequeCache[m] || []).find(r => r.id === id);
+            if (rec) break;
+        }
+    }
+    const f = (rec && rec.fields) || {};
+    const cb = window.biblioPickCb;
+    fermerPickBibliotheque();
+    if (cb) cb((f['Titre'] || f['Type'] || f['Nom libre'] || '').toString(), (f['Lien'] || '').toString());
+}
