@@ -342,11 +342,30 @@ function calculerExperiencesPilote(records, cpl = false) {
     const totDec24 = decollages24m + decollages24mUlm, totAtt24 = atterrissages24m + atterrissages24mUlm;
     // Echeance = blocage le plus proche ; si un second blocage tombe a
     // moins d'un mois, on le signale aussi (un peu plus de temps).
+    // Action a faire pour rester valide apres la date butoir : ce qui
+    // manquera dans la fenetre de 24 mois a cette date, a refaire avant.
+    const actionBlocage = b => {
+        const seuil = new Date(b.ech); seuil.setMonth(seuil.getMonth() - 24);
+        if (b.nom === '12 h de vol') {
+            const reste = listes24.h.filter(v => v.d > seuil).reduce((s, v) => s + v.v, 0);
+            const manque = 12 * 60 - reste;
+            return `encore ${Math.floor(manque / 60)}h${String(Math.floor(manque % 60)).padStart(2, '0')} de vol`;
+        }
+        if (b.nom === '12 décollages') {
+            const manque = 12 - listes24.dec.filter(v => v.d > seuil).length;
+            return manque > 0 ? `${manque} décollage${manque > 1 ? 's' : ''} de plus` : '';
+        }
+        if (b.nom === '12 atterrissages') {
+            const manque = 12 - listes24.att.filter(v => v.d > seuil).length;
+            return manque > 0 ? `${manque} atterrissage${manque > 1 ? 's' : ''} de plus` : '';
+        }
+        return '1 h de vol avec un instructeur sur avion';
+    };
     let laplEcheanceTxt = '';
     if (laplBlocages.length) {
         const b1 = laplBlocages[0];
         const b2 = laplBlocages.length > 1 && (laplBlocages[1].ech - b1.ech) <= 31 * 24 * 3600 * 1000 ? laplBlocages[1] : null;
-        laplEcheanceTxt = ` — valide jusqu'au ${formaterDateFr(b1.ech.toISOString())} (bloque en 1er : ${b1.nom})${b2 ? `, puis ${b2.nom} vers le ${formaterDateFr(b2.ech.toISOString())}` : ''}`;
+        laplEcheanceTxt = ` — valide jusqu'au ${formaterDateFr(b1.ech.toISOString())} : pour rester valide après, ${actionBlocage(b1)}${b2 ? ` ; puis ${actionBlocage(b2)} avant le ${formaterDateFr(b2.ech.toISOString())}` : ''}`;
     } else {
         laplEcheanceTxt = ' — conditions non remplies : ' + [
             (minutes24m + minutes24mUlmCdb) < 12 * 60 ? 'heures' : null,
