@@ -1219,9 +1219,8 @@ function creerModaleDocumentsAeronef() {
             <h3 id="documents-aeronef-modal-title">Documents machine</h3>
             <div class="form-actions" style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
                 <button type="button" id="btn-nouveau-doc-aeronef" class="btn-primary">+ Ajouter</button>
-                <button type="button" id="btn-bilan-docs-aeronef" class="btn-primary">Bilan</button>
+                <button type="button" id="btn-bilan-docs-aeronef" class="btn-primary">📋 Bilan</button>
             </div>
-            <div id="documents-aeronef-list-modal" style="margin: 15px 0;"></div>
             <form id="form-document-aeronef" style="display:none; margin-top:15px; border-top:1px solid #e2e8f0; padding-top:15px;">
                 <input type="hidden" id="doc-aeronef-id">
                 <input type="hidden" id="doc-aeronef-machine">
@@ -1258,6 +1257,7 @@ function creerModaleDocumentsAeronef() {
                     <button type="button" id="doc-aeronef-cancel" class="btn-toggle">Annuler</button>
                 </div>
             </form>
+            <div id="documents-aeronef-list-modal" style="margin: 15px 0;"></div>
         </div>
     `;
     document.body.appendChild(modal);
