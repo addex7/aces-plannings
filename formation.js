@@ -1861,7 +1861,7 @@ async function piocherDocumentBibliotheque() {
         return b;
     };
     const rendreNoeud = (parentEl, n, prof) => {
-        Object.keys(n).sort((a, b) => a.localeCompare(b, 'fr')).forEach(k => {
+        Object.keys(n).filter(k => k !== 'docs').sort((a, b) => a.localeCompare(b, 'fr')).forEach(k => {
             const noe = n[k];
             const det = document.createElement('details');
             det.open = prof < 2;
