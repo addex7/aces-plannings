@@ -200,6 +200,7 @@ async function ouvrirListeFichesVLO() {
                 </div>
                 <button type="button" class="btn-primary" style="font-size:12px; padding:6px 10px;" data-vlo-ouvrir="${r.id}">Ouvrir</button>
                 <button type="button" class="btn-primary" style="font-size:12px; padding:6px 10px;" data-vlo-print="${r.id}" title="Imprimer la fiche">🖨</button>
+                <button type="button" style="font-size:12px; padding:6px 10px; background:#ef4444; color:#fff; border:none; border-radius:6px; cursor:pointer;" data-vlo-del="${r.id}" title="Supprimer la fiche">🗑</button>
             </div>`;
         }).join('');
         contenu.querySelectorAll('[data-vlo-ouvrir]').forEach(b => b.addEventListener('click', () => {
@@ -209,6 +210,25 @@ async function ouvrirListeFichesVLO() {
         contenu.querySelectorAll('[data-vlo-print]').forEach(b => b.addEventListener('click', () => {
             const rec = records.find(x => x.id === b.dataset.vloPrint);
             if (rec) imprimerFicheVLO(rec.fields || {});
+        }));
+        contenu.querySelectorAll('[data-vlo-del]').forEach(b => b.addEventListener('click', async () => {
+            const rec = records.find(x => x.id === b.dataset.vloDel);
+            if (!rec) return;
+            const f = rec.fields || {};
+            const passager = `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim() || 'ce passager';
+            const ok = typeof confirmerSuppression === 'function'
+                ? await confirmerSuppression(`Supprimer la fiche VLO de ${passager} ?`)
+                : confirm(`Supprimer la fiche VLO de ${passager} ?`);
+            if (!ok) return;
+            try {
+                const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(VLO_TABLE)}/${rec.id}`, { method: 'DELETE', headers });
+                if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur serveur');
+                if (typeof viderApiCache === 'function') viderApiCache();
+                ouvrirListeFichesVLO();
+            } catch (e) {
+                console.error('Suppression fiche VLO:', e);
+                alert('Erreur lors de la suppression : ' + (e.message || ''));
+            }
         }));
     } catch (e) {
         console.error('Liste fiches VLO:', e);
