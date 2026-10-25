@@ -357,11 +357,16 @@ function cvLignesFiltrees() {
     const annee = document.getElementById('carnet-vol-annee-select')?.value || '';
     const dDeb = document.getElementById('carnet-vol-date-debut')?.value || '';
     const dFin = document.getElementById('carnet-vol-date-fin')?.value || '';
+    const fonc = document.getElementById('carnet-vol-fonction-select')?.value || '';
     return cvLignesCourantes.filter(l =>
         (!filtre || (l.immat || '').toUpperCase() === filtre)
         && (!annee || (l.date || '').slice(0, 4) === annee)
         && (!dDeb || (l.date || '') >= dDeb)
-        && (!dFin || (l.date || '') <= dFin));
+        && (!dFin || (l.date || '') <= dFin)
+        && (!fonc
+            || (fonc === 'cdb' && l.cdbMin > 0)
+            || (fonc === 'dc' && l.dcMin > 0)
+            || (fonc === 'instr' && l.instrMin > 0)));
 }
 
 function cvRendreLignes() {
@@ -641,7 +646,7 @@ function initCarnetVol() {
 
     const filtreMachine = document.getElementById('carnet-vol-machine-select');
     if (filtreMachine) filtreMachine.addEventListener('change', cvRendreLignes);
-    ['carnet-vol-annee-select', 'carnet-vol-date-debut', 'carnet-vol-date-fin'].forEach(id => {
+    ['carnet-vol-annee-select', 'carnet-vol-date-debut', 'carnet-vol-date-fin', 'carnet-vol-fonction-select'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', cvRendreLignes);
     });
