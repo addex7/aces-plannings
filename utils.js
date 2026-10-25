@@ -328,6 +328,7 @@ function calculerExperiencesPilote(records, cpl = false) {
     const echDec = (() => { const t = [...listes24.dec].sort((a, b) => b.d - a.d); return t.length >= 12 ? plus24(t[11].d) : null; })();
     const echAtt = (() => { const t = [...listes24.att].sort((a, b) => b.d - a.d); return t.length >= 12 ? plus24(t[11].d) : null; })();
     const echInst = (() => { const t = [...listes24.inst].sort((a, b) => b.d - a.d); return t.length ? plus24(t[0].d) : null; })();
+    const dernierInst = [...listes24.inst].sort((a, b) => b.d - a.d)[0]?.d || null;
     const laplBlocages = [
         { nom: '12 h de vol', ech: echHeures },
         { nom: '12 décollages', ech: echDec },
@@ -349,35 +350,38 @@ function calculerExperiencesPilote(records, cpl = false) {
         if (b.nom === '12 h de vol') {
             const reste = listes24.h.filter(v => v.d > seuil).reduce((s, v) => s + v.v, 0);
             const manque = 12 * 60 - reste;
-            return `encore ${Math.floor(manque / 60)}h${String(Math.floor(manque % 60)).padStart(2, '0')} de vol`;
+            return `${Math.floor(manque / 60)}h${String(Math.floor(manque % 60)).padStart(2, '0')} de vol`;
         }
         if (b.nom === '12 décollages') {
             const manque = 12 - listes24.dec.filter(v => v.d > seuil).length;
-            return manque > 0 ? `${manque} décollage${manque > 1 ? 's' : ''} de plus` : '';
+            return manque > 0 ? `${manque} décollage${manque > 1 ? 's' : ''}` : '';
         }
         if (b.nom === '12 atterrissages') {
             const manque = 12 - listes24.att.filter(v => v.d > seuil).length;
-            return manque > 0 ? `${manque} atterrissage${manque > 1 ? 's' : ''} de plus` : '';
+            return manque > 0 ? `${manque} atterrissage${manque > 1 ? 's' : ''}` : '';
         }
-        return '1 h de vol avec un instructeur sur avion';
+        return '1 h avec un instructeur sur avion';
     };
     let laplEcheanceTxt = '';
     if (laplBlocages.length) {
         const b1 = laplBlocages[0];
         const b2 = laplBlocages.length > 1 && (laplBlocages[1].ech - b1.ech) <= 31 * 24 * 3600 * 1000 ? laplBlocages[1] : null;
-        laplEcheanceTxt = `Valide jusqu'au ${formaterDateFr(b1.ech.toISOString())} — pour le rester : ${actionBlocage(b1)}${b2 ? `, puis ${actionBlocage(b2)} avant le ${formaterDateFr(b2.ech.toISOString())}` : ''}`;
+        laplEcheanceTxt = [`- Prochaine limite de validité : ${formaterDateFr(b1.ech.toISOString())} ⇒ faire ${actionBlocage(b1)}`];
+        if (b2) laplEcheanceTxt.push(`- Limite de validité suivante : ${formaterDateFr(b2.ech.toISOString())} ⇒ faire ${actionBlocage(b2)}`);
+        laplEcheanceTxt = laplEcheanceTxt.join('\n');
     } else {
-        laplEcheanceTxt = 'Conditions non remplies : ' + [
+        laplEcheanceTxt = '- Conditions non remplies : ' + [
             (minutes24m + minutes24mUlmCdb) < 12 * 60 ? 'heures' : null,
             (decollages24m + decollages24mUlm) < 12 ? 'décollages' : null,
             (atterrissages24m + atterrissages24mUlm) < 12 ? 'atterrissages' : null,
             !instruction1h ? 'heure instructeur' : null,
         ].filter(Boolean).join(', ');
     }
+    const totMin24 = minutes24m + minutes24mUlmCdb;
     const laplDetail = [
-        `${h24}h${String(m24).padStart(2, '0')} / 12h00${minutes24mUlmCdb ? ` (dont ${h24U}h${String(m24U).padStart(2, '0')} ULM)` : ''}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}`,
-        `${totDec24} décollages / 12 — ${totAtt24} atterrissages / 12${decollages24mUlm ? ` (dont ${decollages24mUlm} déc. / ${atterrissages24mUlm} att. ULM)` : ''}`,
-        `1 h instructeur avion : ${instruction1h ? 'oui' : 'non'}`,
+        `- ${Math.floor(totMin24 / 60)}h${String(Math.floor(totMin24 % 60)).padStart(2, '0')} / 12 h de vol${minutes24mUlmCdb ? ` (dont ${h24U}h${String(m24U).padStart(2, '0')} ULM)` : ''}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}`,
+        `- ${totDec24} / 12 décollages — ${totAtt24} / 12 atterrissages${decollages24mUlm ? ` (dont ${decollages24mUlm} déc. / ${atterrissages24mUlm} att. ULM)` : ''}`,
+        `- 1 h avec instructeur avion : ${instruction1h && dernierInst ? `faite le ${formaterDateFr(dernierInst.toISOString())}` : 'à faire'}`,
         laplEcheanceTxt
     ].join('\n');
 

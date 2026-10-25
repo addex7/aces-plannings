@@ -6378,3 +6378,6 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     white-space: pre-line;
     line-height: 1.45;
 }
+
+/* Retours a la ligne dans les pastilles de statut (detail LAPL multiligne) */
+.pastille { white-space: pre-line; }
