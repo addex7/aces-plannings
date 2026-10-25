@@ -407,7 +407,7 @@ function renderAccueilMembre(fields) {
     const cpl = fields[MEMBRE_FIELDS.CPL] === true;
     const actifLAPL = estActif('LAPL');
     const actifInitiation = estActif('Pilote vol initiation avion');
-    const actifVIULM = estActif('Pilote vol initiation ULM');
+    const actifVIULM = estActif('Pilote VLD') || estActif('Pilote vol initiation ULM');
     const actifRecent = estActif('1 vol / 3 mois');
     const actifPassager = estActif('Emport de passager');
     let grid = VALIDITES.map(item => {
@@ -501,10 +501,10 @@ function renderAccueilMembre(fields) {
                 </div>` : ''}
                 ${peutEditer || actifVIULM ? `
                 <div class="experience-row ${actifVIULM ? '' : 'suivi-inactif'}" data-exp="viulm">
-                    <span class="experience-titre">Pilote vol d'initiation ULM (âge, évaluations, formation FH, expérience ULM)</span>
+                    <span class="experience-titre">Pilote VLD — vol de découverte ULM (âge, évaluations, formation FH, expérience ULM)</span>
                     <span class="validite-pill" id="accueil-exp-viulm">${pastille(false, null, 'Chargement...')}</span>
                     <span class="validite-date" id="accueil-exp-viulm-detail"></span>
-                    ${peutEditer ? `<label class="activer-suivi"><input type="checkbox" class="activer-suivi-cb" data-label="Pilote vol initiation ULM" ${actifVIULM ? 'checked' : ''}> Suivi actif</label>` : ''}
+                    ${peutEditer ? `<label class="activer-suivi"><input type="checkbox" class="activer-suivi-cb" data-label="Pilote VLD" ${actifVIULM ? 'checked' : ''}> Suivi actif</label>` : ''}
                 </div>` : ''}
             </div>
         </div>

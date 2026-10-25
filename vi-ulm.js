@@ -1,15 +1,16 @@
 /* ==========================================================================
-   SUIVI « PILOTE VOL D'INITIATION ULM » (VLD/VLO)
+   SUIVI « PILOTE VLD » — VOL DE DECOUVERTE ULM (VLD/VLO)
    Evalue les conditions reglementaires pour le pilote :
    - plus de 18 ans (et certificat medical si plus de 60 ans)
    - evaluation initiale + evaluation recurrente tous les 3 ans
      (l'initiale couvre les 3 premieres annees) — attestations jointes
-   - formation FH — attestation jointe
+   - formation FH — attestation jointe, dispensee pour les
+     instructeurs ULM (role ou validite instructeur ULM en cours)
    - experience recente ULM : 3 decollages + 3 atterrissages / 90 jours
    - attestations conservees 3 ans minimum (documents du membre)
    ========================================================================== */
 
-const VIULM_SUIVI_LABEL = 'Pilote vol initiation ULM';
+const VIULM_SUIVI_LABEL = 'Pilote VLD';
 
 function viulmNorm(s) {
     return (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -70,7 +71,13 @@ async function evaluerPiloteVIULM(membre, exp) {
     const recValable = recurrente.some(viulmDocValable3ans);
     const initJeune = initiale.some(viulmDocValable3ans);
     const recurrenteOk = recValable || initJeune;
-    const fhOk = fh.length > 0;
+    // Instructeur ULM (role ou validite en cours) : formation FH reputee
+    // acquise — pas d'attestation a fournir.
+    const rolesM = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
+    const dvInstr = f['Date de validité instructeur ULM'];
+    const instrUlm = rolesM.includes('Instructeur ULM')
+        || (!!dvInstr && new Date(dvInstr + 'T00:00:00') >= auj);
+    const fhOk = fh.length > 0 || instrUlm;
     const ageOk = age !== null && age >= 18;
     const medRequis = age !== null && age > 60;
     const medOk = !medRequis || medical.length > 0;
@@ -81,7 +88,7 @@ async function evaluerPiloteVIULM(membre, exp) {
         { label: 'Âge ≥ 18 ans', ok: ageOk, detail: age === null ? 'date de naissance manquante' : `${age} ans` },
         { label: 'Évaluation initiale (attestation jointe)', ok: evalInitialeOk, detail: evalInitialeOk ? '' : 'document introuvable' },
         { label: 'Évaluation récurrente (< 3 ans, attestation jointe)', ok: recurrenteOk, detail: recurrenteOk ? '' : 'absente ou > 3 ans' },
-        { label: 'Formation FH (attestation jointe)', ok: fhOk, detail: fhOk ? '' : 'document introuvable' },
+        { label: 'Formation FH (attestation jointe)', ok: fhOk, detail: fh.length ? '' : (instrUlm ? 'dispensée — instructeur ULM' : 'document introuvable') },
         { label: 'Expérience récente ULM (3 décollages / 3 atterrissages sur 90 j)', ok: recentOk, detail: `${exp.decollages3mUlm || 0} décollages, ${exp.atterrissages3mUlm || 0} atterrissages` },
     ];
     if (medRequis) lignes.push({ label: 'Certificat médical (> 60 ans, attestation jointe)', ok: medical.length > 0, detail: medical.length ? '' : 'document introuvable' });
