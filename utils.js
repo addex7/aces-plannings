@@ -379,8 +379,8 @@ function calculerExperiencesPilote(records, cpl = false) {
     }
     const totMin24 = minutes24m + minutes24mUlmCdb;
     const laplDetail = [
-        `- ${Math.floor(totMin24 / 60)}h${String(Math.floor(totMin24 % 60)).padStart(2, '0')} / 12 h de vol${minutes24mUlmCdb ? ` (dont ${h24U}h${String(m24U).padStart(2, '0')} ULM)` : ''}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}`,
-        `- ${totDec24} / 12 décollages — ${totAtt24} / 12 atterrissages${decollages24mUlm ? ` (dont ${decollages24mUlm} déc. / ${atterrissages24mUlm} att. ULM)` : ''}`,
+        `- ${Math.floor(totMin24 / 60)}h${String(Math.floor(totMin24 % 60)).padStart(2, '0')} / 12 h de vol${minutes24mUlmCdb ? ` (dont ${h24U}h${String(m24U).padStart(2, '0')} ULM)` : ''}`,
+        `- ${totDec24} / 12 décollages — ${totAtt24} / 12 atterrissages`,
         `- 1 h avec instructeur avion : ${instruction1h && dernierInst ? `faite le ${formaterDateFr(dernierInst.toISOString())}` : 'à faire'}`,
         laplEcheanceTxt
     ].join('\n');
