@@ -320,8 +320,12 @@ function volExisteDansGvv(f) {
     if (isNaN(hd) || isNaN(ha)) return false;
     const date = f['Date'] || '';
     const immat = (f['Machine'] || '').toString().trim().toUpperCase();
+    // Le « pilote » cote GVV est en fait le payeur du vol : il peut etre le
+    // pilote, l'instructeur ou le passager cote carnet — on teste l'equipage.
+    const equipage = [f['Pilote'], f['Instructeur'], f['Passager'], f['Élève']]
+        .filter(n => (n || '').toString().trim());
     return clesGvvVols.some(e =>
-        nomsGvvCompatibles(f['Pilote'], e.pilote) && e.date === date && e.immat === immat
+        equipage.some(n => nomsGvvCompatibles(n, e.pilote)) && e.date === date && e.immat === immat
         && Math.abs(e.deb - hd) <= 0.005 && Math.abs(e.fin - ha) <= 0.005);
 }
 
