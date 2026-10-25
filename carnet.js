@@ -262,6 +262,50 @@ function estSuperAdminCarnet() {
     return roles.includes('Super admin') || roles.includes('Super Admin');
 }
 
+// Rapprochement GVV : vols saisis directement dans GVV (hors de l'app) →
+// pastille « GVV » bleue sur la ligne du carnet (verte = envoyé depuis l'app).
+let clesGvvVols = null;
+let gvvEnCours = null;
+
+function normNomGvv(s) {
+    return (s || '').toString().toLowerCase().normalize('NFD')
+        .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ')
+        .split(' ').filter(Boolean).sort().join(' ');
+}
+
+async function chargerEcrituresGvv() {
+    if (clesGvvVols) return;
+    if (gvvEnCours) return gvvEnCours;
+    gvvEnCours = (async () => {
+        try {
+            const formula = `FIND('sur F-', {Description}) > 0`;
+            const url = `${API_BASE}/${encodeURIComponent('Écritures GVV')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+            const records = await fetchTousRecordsCache(url, { headers });
+            clesGvvVols = new Set(records.map(r => {
+                const f = r.fields || {};
+                const immat = ((f['Description'] || '').match(/F-[A-Z0-9]+/i) || [''])[0].toUpperCase();
+                return `${normNomGvv(f['Compte'])}|${f['Date'] || ''}|${immat}`;
+            }));
+        } catch (e) {
+            console.warn('Écritures GVV:', e);
+            clesGvvVols = new Set();
+        }
+    })();
+    return gvvEnCours;
+}
+
+function volExisteDansGvv(f) {
+    if (!clesGvvVols || f['GVV ID']) return false;
+    const cle = `${normNomGvv(f['Pilote'])}|${f['Date'] || ''}|${(f['Machine'] || '').toString().trim().toUpperCase()}`;
+    return clesGvvVols.has(cle);
+}
+
+function badgeGvvCarnet(f) {
+    if (f['GVV ID']) return ` <span class="badge-gvv" title="Envoyé à GVV (#${f['GVV ID']})">GVV</span>`;
+    if (volExisteDansGvv(f)) return ' <span class="badge-gvv badge-gvv-bleu" title="Vol déjà saisi dans GVV (hors de l\'application)">GVV</span>';
+    return '';
+}
+
 // Bouton "⇒ GVV" (super admin, machines moteur) ou badge si deja envoye
 function majBoutonGvvCarnet(record) {
     const btn = document.getElementById('btn-gvv-carnet');
@@ -1246,7 +1290,7 @@ function afficherCarnet(records) {
             `;
         } else if (isJVIO) {
             tr.innerHTML = `
-                <td>${dateStr}${f['GVV ID'] ? ' <span class="badge-gvv" title="Envoyé à GVV (#' + f['GVV ID'] + ')">GVV</span>' : ''}</td>
+                <td>${dateStr}${badgeGvvCarnet(f)}</td>
                 <td>${escHtml(formatEquipageCourt(f['Pilote'])) || '-'}</td>
                 <td>${escHtml(formatEquipageCourt(f['Instructeur'])) || '-'}</td>
                 <td>${escHtml(f['Fonction']) || '-'}</td>
@@ -1267,7 +1311,7 @@ function afficherCarnet(records) {
             const huile = [formaterNombre(f['Huile départ']), formaterNombre(f['Huile arrivée'])].filter(v => v !== '').join(' / ') || '-';
             const horametre = [formaterNombre(f['Horamètre départ']), formaterNombre(f['Horamètre arrivée'])].filter(v => v !== '').join(' / ') || '-';
             tr.innerHTML = `
-                <td>${dateStr}${f['GVV ID'] ? ' <span class="badge-gvv" title="Envoyé à GVV (#' + f['GVV ID'] + ')">GVV</span>' : ''}</td>
+                <td>${dateStr}${badgeGvvCarnet(f)}</td>
                 <td>${escHtml(equipage)}</td>
                 <td>${escHtml(f['Fonction']) || '-'}</td>
                 <td>${escHtml(f['Départ']) || '-'}</td>
@@ -1446,6 +1490,7 @@ async function chargerCarnetRoute() {
     const btnOptionsCarnet = document.getElementById('btn-options-carnet');
     if (btnOptionsCarnet) btnOptionsCarnet.style.display =
         (typeof peutVoirOptionsAeronef === 'function' && peutVoirOptionsAeronef()) ? 'inline-block' : 'none';
+    if (!CATEGORIES_CARNET[machineCarnetSelectionnee]) await chargerEcrituresGvv();
     if (CATEGORIES_CARNET[machineCarnetSelectionnee]) {
         genererGrillesPlaneur(machineCarnetSelectionnee);
         if (tableContainer) tableContainer.style.display = 'none';
