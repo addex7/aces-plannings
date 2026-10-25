@@ -6327,3 +6327,31 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* Boutons « Tout : » d'en-tete de lecon (seance de formation) */
+.seance-lecon-titre {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+.seance-tout {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 6px;
+}
+.seance-tout-label {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 500;
+}
+.seance-tout .ts-btn {
+    padding: 2px 8px;
+    font-size: 10px;
+    opacity: 0.75;
+}
+.seance-tout .ts-btn:hover { opacity: 1; }
+.seance-tout .ts-btn.ts-on { opacity: 1; }

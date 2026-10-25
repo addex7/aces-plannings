@@ -933,7 +933,7 @@ function suiviFige(suivi) {
 }
 // Actions interdites sur un suivi gele (modifications et suppressions).
 const ACTIONS_FIGEES = new Set([
-    'seance', 'item-etat', 'seance-save', 'seance-edit', 'seance-del',
+    'seance', 'item-etat', 'lecon-etat', 'seance-save', 'seance-edit', 'seance-del',
     'doc-fourni', 'doc-add', 'doc-pick-membre', 'doc-rename', 'doc-del',
     'module-valide', 'credit-add', 'credit-edit', 'credit-del',
     'suppr-suivi', 'signer'
@@ -970,6 +970,7 @@ document.addEventListener('click', (e) => {
     else if (a === 'gerer-catalogue') ouvrirGestionCatalogue();
     else if (a === 'seance') ouvrirPageSeance(sid);
     else if (a === 'item-etat') basculerEtatItem(el);
+    else if (a === 'lecon-etat') basculerEtatLecon(el);
     else if (a === 'seance-save') enregistrerPageSeance();
     else if (a === 'seance-edit') ouvrirPageSeance(sid, el.dataset.seid);
     else if (a === 'seance-del') supprimerSeance(el.dataset.seid);
@@ -2140,7 +2141,12 @@ async function ouvrirPageSeance(suiviId, seanceId) {
                 </span>
             </div>`;
         }).join('');
-        return `${entete}<div class="seance-lecon-bloc"><strong>Leçon ${idx + 1} — ${escapeHtml(l.titre || '')}</strong><div class="seance-lecon-items">${items}</div></div>`;
+        const tout = `<span class="seance-tout"><span class="seance-tout-label">Tout :</span>
+            <button type="button" class="ts-btn ts-arefaire" data-formation-action="lecon-etat" data-etat="arefaire" title="Tout mettre « À refaire » dans cette leçon">À refaire</button>
+            <button type="button" class="ts-btn ts-encours" data-formation-action="lecon-etat" data-etat="encours" title="Tout mettre « En cours » dans cette leçon">En cours</button>
+            <button type="button" class="ts-btn ts-acquis" data-formation-action="lecon-etat" data-etat="acquis" title="Tout mettre « Acquis » dans cette leçon">Acquis</button>
+        </span>`;
+        return `${entete}<div class="seance-lecon-bloc"><div class="seance-lecon-titre"><strong>Leçon ${idx + 1} — ${escapeHtml(l.titre || '')}</strong>${tout}</div><div class="seance-lecon-items">${items}</div></div>`;
     }).join('');
 
     zone.innerHTML = `
@@ -2240,6 +2246,22 @@ function basculerEtatItem(btn) {
     if (seanceEtats.get(cle) === etat) seanceEtats.delete(cle);
     else seanceEtats.set(cle, etat);
     row.querySelectorAll('.ts-btn').forEach(b => b.classList.toggle('ts-on', seanceEtats.get(cle) === b.dataset.etat));
+}
+
+// Applique un etat a tous les items d'une lecon (reclic quand tout est
+// deja a cet etat = tout deselectionner).
+function basculerEtatLecon(btn) {
+    const bloc = btn.closest('.seance-lecon-bloc');
+    if (!bloc) return;
+    const etat = btn.dataset.etat;
+    const rows = [...bloc.querySelectorAll('.seance-item-row')];
+    const tousDeja = rows.length > 0 && rows.every(r => seanceEtats.get(r.dataset.cle) === etat);
+    rows.forEach(r => {
+        const cle = r.dataset.cle;
+        if (tousDeja) seanceEtats.delete(cle); else seanceEtats.set(cle, etat);
+        r.querySelectorAll('.ts-btn').forEach(b => b.classList.toggle('ts-on', seanceEtats.get(cle) === b.dataset.etat));
+    });
+    bloc.querySelectorAll('.seance-tout .ts-btn').forEach(b => b.classList.toggle('ts-on', !tousDeja && b.dataset.etat === etat));
 }
 
 // Pre-remplit la fiche seance depuis le vol choisi : HDV reparties selon la
