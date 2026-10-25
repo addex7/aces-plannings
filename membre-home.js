@@ -1351,6 +1351,8 @@ function initAccueilMembre() {
             ${item('#ffedd5', 'Renouvelable — échéance dans moins de 3 mois')}
             ${item('#fee2e2', 'Non à jour — échéance dépassée ou date non renseignée')}
             ${item('#f1f5f9', 'Suivi désactivé (pastille grisée)')}
+            ${titre('📊 Expérience')}
+            <div class="legende-ligne"><span style="font-size:13px;">🧮</span><span>Les compteurs (heures, décollages, atterrissages) combinent les lignes du carnet et les vols importés de GVV — le détail affiche « dont … importés de GVV »</span></div>
         `, 'ℹ️');
     });
 }

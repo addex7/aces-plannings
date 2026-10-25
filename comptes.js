@@ -47,6 +47,7 @@ function initComptesPilotes() {
                     <div><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fef2f2; border:1px solid #dc2626; vertical-align:middle; margin-right:6px;"></span><strong>Rouge ↓</strong> : débit (dépense).</div>
                     <div><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#f0fdf4; border:1px solid #16a34a; vertical-align:middle; margin-right:6px;"></span><strong>Vert ↑</strong> : crédit validé.</div>
                     <div><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fffbeb; border:1px solid #f59e0b; vertical-align:middle; margin-right:6px;"></span><strong>Orange ↑</strong> : versement déclaré, en attente de validation du trésorier.</div>
+                    <div><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fffbeb; border:1px solid #f59e0b; vertical-align:middle; margin-right:6px;"></span><strong>Orange ↓</strong> : facturation provisoire d'un vol avec prix — retirée automatiquement quand l'écriture réelle remonte de GVV.</div>
                     <div>« Exporter en CSV » télécharge la liste des transactions.</div>
                 </div>
                 <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin-bottom:6px;">🛠️ Actions</div>

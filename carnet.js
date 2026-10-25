@@ -2113,7 +2113,10 @@ function initCarnetRoute() {
                 <div class="legende-ligne"><span class="legende-pastille" style="background:#fffbeb; border-left-color:#d97706;"></span><span>Ligne de maintenance</span></div>
                 ${item('background:#dc2626;', 'Écart d\'horamètre (continuité à vérifier)')}
                 <div class="legende-ligne"><span style="display:inline-block; padding:1px 6px; font-size:10px; font-weight:700; color:#166534; background:#dcfce7; border:1px solid #86efac; border-radius:8px;">GVV</span><span>Vol envoyé vers GVV (compta)</span></div>
-                <div class="legende-ligne"><span style="display:inline-block; padding:1px 6px; font-size:10px; font-weight:700; color:#1d4ed8; background:#dbeafe; border:1px solid #93c5fd; border-radius:8px;">GVV</span><span>Vol déjà saisi dans GVV (pilote, date, machine et horamètres identiques — y compris un seul vol GVV couvrant plusieurs lignes du carnet)</span></div>
+                <div class="legende-ligne"><span style="display:inline-block; padding:1px 6px; font-size:10px; font-weight:700; color:#1d4ed8; background:#dbeafe; border:1px solid #93c5fd; border-radius:8px;">GVV</span><span>Vol déjà saisi dans GVV (pilote, date, machine et horamètres identiques — y compris un seul vol GVV couvrant plusieurs lignes du carnet, ou marqué manuellement « ✓ Déjà dans GVV »)</span></div>
+                ${titre('🛠️ Boutons (modifier un vol)')}
+                <div class="legende-ligne"><strong style="min-width:110px; color:#1e3d59;">⇒ GVV</strong><span>envoyer le vol vers la comptabilité GVV</span></div>
+                <div class="legende-ligne"><strong style="min-width:110px; color:#1e3d59;">✓ Déjà dans GVV</strong><span>marquer le vol comme déjà saisi dans GVV (badge bleu, blocage de l'envoi en doublon)</span></div>
                 ${titre('📋 Statuts d\'une observation')}
                 ${rond('#dc2626', 'Non prise en compte')}
                 ${rond('#d97706', 'Prise en compte')}

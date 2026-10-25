@@ -660,9 +660,14 @@ function initCarnetVol() {
                 ${titre('🏷️ Origine des lignes')}
                 <div class="legende-ligne"><span class="cv-badge cv-badge-club">Club</span><span>vol saisi automatiquement depuis un carnet de route machine</span></div>
                 <div class="legende-ligne"><span class="cv-badge cv-badge-manuel">Manuel</span><span>vol extérieur saisi à la main par le pilote</span></div>
+                <div class="legende-ligne"><span class="cv-badge cv-badge-gvv">GVV</span><span>vol importé de la comptabilité GVV — données limitées (payeur = pilote, ou instructeur via son trigramme)</span></div>
+                ${titre('🔍 Filtres')}
+                <div class="legende-ligne"><span style="font-size:13px;">🛩️</span><span>machine — ne voir que les vols d'un aéronef</span></div>
+                <div class="legende-ligne"><span style="font-size:13px;">📅</span><span>année + plage « Du / Au » — combinables ; l'export PDF reprend le filtre en cours</span></div>
                 ${titre('🖱️ Actions')}
                 <div class="legende-ligne"><span class="cv-badge cv-badge-manuel">Manuel</span><span>cliquer sur la ligne pour modifier ou supprimer le vol</span></div>
                 <div class="legende-ligne"><span class="cv-badge cv-badge-club">Club</span><span>cliquer pour être redirigé vers le carnet de route</span></div>
+                <div class="legende-ligne"><span class="cv-badge cv-badge-gvv">GVV</span><span>non cliquable — vol non présent dans le carnet de route</span></div>
                 <div class="legende-ligne"><span style="font-size:15px;">📝</span><span>cliquer pour lire l'observation du vol</span></div>
             `, 'ℹ️');
         });
