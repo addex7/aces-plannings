@@ -50,7 +50,8 @@ class GvvClient {
     async getRaw(path) {
         const res = await fetch(`${GVV_BASE}${path}`, {
             headers: { Cookie: this.cookieHeader() },
-            redirect: 'manual'
+            redirect: 'manual',
+            signal: AbortSignal.timeout(30000)
         });
         this.storeCookies(res);
         return res;
@@ -75,7 +76,8 @@ class GvvClient {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: corpsForm(fields),
-            redirect: 'manual'
+            redirect: 'manual',
+            signal: AbortSignal.timeout(30000)
         });
         this.storeCookies(res);
         return res;
