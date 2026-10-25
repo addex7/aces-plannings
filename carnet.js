@@ -1443,6 +1443,9 @@ async function chargerCarnetRoute() {
 
     const rechercheInput = document.getElementById('carnet-recherche');
     if (rechercheInput) rechercheInput.style.display = CATEGORIES_CARNET[machineCarnetSelectionnee] ? 'none' : '';
+    const btnOptionsCarnet = document.getElementById('btn-options-carnet');
+    if (btnOptionsCarnet) btnOptionsCarnet.style.display =
+        (typeof peutVoirOptionsAeronef === 'function' && peutVoirOptionsAeronef()) ? 'inline-block' : 'none';
     if (CATEGORIES_CARNET[machineCarnetSelectionnee]) {
         genererGrillesPlaneur(machineCarnetSelectionnee);
         if (tableContainer) tableContainer.style.display = 'none';
@@ -1923,6 +1926,13 @@ function initCarnetRoute() {
         if (typeof ouvrirBilanDocumentsAeronefs === 'function') {
             if (typeof creerModaleBilanDocuments === 'function') creerModaleBilanDocuments();
             ouvrirBilanDocumentsAeronefs();
+        }
+    });
+    const btnOptionsCarnet = document.getElementById('btn-options-carnet');
+    if (btnOptionsCarnet) btnOptionsCarnet.addEventListener('click', () => {
+        if (typeof window.ouvrirOptionsAeronef === 'function') {
+            const idPref = typeof idAeronefDepuisImmat === 'function' ? idAeronefDepuisImmat(machineCarnetSelectionnee) : null;
+            window.ouvrirOptionsAeronef(idPref);
         }
     });
     const btnLegendeCarnet = document.getElementById('btn-legende-carnet');

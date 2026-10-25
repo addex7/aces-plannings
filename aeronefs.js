@@ -459,13 +459,7 @@ async function chargerSuiviAeronef() {
 
         if (machineActuelle) avionTarifId = machineActuelle.id;
         const btnOptions = document.getElementById('btn-aeronef-options');
-        if (btnOptions) {
-            const roles = (typeof currentUser !== 'undefined' && currentUser && currentUser.roles) || [];
-            const visible = roles.includes('Super admin') || roles.includes('Super Admin')
-                || roles.includes('Trésorier') || roles.includes('Mécanicien') || roles.includes('Mecanicien')
-                || roles.some(r => (r || '').toString().toLowerCase().includes('instructeur'));
-            btnOptions.style.display = visible ? '' : 'none';
-        }
+        if (btnOptions) btnOptions.style.display = peutVoirOptionsAeronef() ? '' : 'none';
 
         const horametreActuelAeronef = (machineActuelle && machineActuelle.fields && machineActuelle.fields['Horamètre actuel'] !== undefined && machineActuelle.fields['Horamètre actuel'] !== null && machineActuelle.fields['Horamètre actuel'] !== '')
             ? parseFloat(String(machineActuelle.fields['Horamètre actuel']).replace(',', '.')) || 0
@@ -1132,7 +1126,8 @@ const TYPES_DOCUMENTS_AERONEFS = [
     { code: 'CEN', nom: 'Certificat d\'Examen de Navigabilité', dateRequise: true },
     { code: 'Assurance', nom: 'Assurance', dateRequise: true },
     { code: 'Accusé', nom: 'Accusé de réception de la déclaration d\'aptitude au vol d\'un ULM', dateRequise: true },
-    { code: 'Autre', nom: 'Autre', dateRequise: false }
+    { code: 'VA', nom: 'VA (Visite annuelle)', dateRequise: true },
+    { code: 'Autre', nom: 'Autre (titre libre)', dateRequise: false }
 ];
 let documentsAeronefsParMachine = {};
 let avionTarifId = null;
@@ -1149,6 +1144,25 @@ function peutGererDocumentsAeronef() {
     if (peutGererMaintenance()) return true;
     const roles = currentUser.roles || [];
     return roles.includes('Documentaliste');
+}
+
+// Bouton « Options » aéronef : super admin, trésorier, mécanicien, instructeurs.
+// Utilise sur la page Aéronefs et sur le carnet de route.
+function peutVoirOptionsAeronef() {
+    const roles = (typeof currentUser !== 'undefined' && currentUser && currentUser.roles) || [];
+    return roles.includes('Super admin') || roles.includes('Super Admin')
+        || roles.includes('Trésorier') || roles.includes('Mécanicien') || roles.includes('Mecanicien')
+        || roles.some(r => (r || '').toString().toLowerCase().includes('instructeur'));
+}
+
+// Id de l'aéronef (hors planeur) correspondant a une immat — sert a
+// preselectionner la machine dans la modale Options.
+function idAeronefDepuisImmat(immat) {
+    const cible = (immat || '').toString().trim().toUpperCase();
+    const m = (listeAvionsCache || []).find(r => r.fields
+        && (r.fields['Immatriculation'] || '').toString().trim().toUpperCase() === cible
+        && String(r.fields['Type'] || '').toLowerCase() !== 'planeur');
+    return m ? m.id : null;
 }
 
 // Mécanicien, super admin et instructeurs peuvent faire avancer le statut
@@ -1175,7 +1189,7 @@ function initSuiviDocumentsAeronefs() {
         const btn = document.createElement('button');
         btn.id = 'btn-documents-aeronef';
         btn.className = 'btn-primary aeronef-ctl';
-        btn.textContent = 'Suivi documentation machine';
+        btn.textContent = 'Suivi machine';
         btn.addEventListener('click', () => ouvrirModaleDocumentsAeronef());
         btnOptions.parentNode.insertBefore(btn, btnOptions.nextSibling);
     }
@@ -1219,16 +1233,16 @@ function creerModaleDocumentsAeronef() {
                     <input type="text" id="doc-aeronef-autre-nom" placeholder="Nom du document" style="width:100%;">
                 </div>
                 <div class="form-group">
-                    <label for="doc-aeronef-date">Date de validité</label>
+                    <label for="doc-aeronef-date">Date de validité (utilisable sans document)</label>
                     <input type="date" id="doc-aeronef-date">
                 </div>
                 <div class="form-group">
-                    <label for="doc-aeronef-fichier">Fichier</label>
+                    <label for="doc-aeronef-fichier">Fichier (facultatif)</label>
                     <input type="file" id="doc-aeronef-fichier" style="padding:6px; border:1px solid #cbd5e1; border-radius:6px; width:100%; box-sizing:border-box;">
                     <span id="doc-aeronef-upload-status" style="font-size:12px; color:#64748b;"></span>
                 </div>
                 <div class="form-group">
-                    <label for="doc-aeronef-lien">Lien / Référence</label>
+                    <label for="doc-aeronef-lien">Lien / Référence (facultatif)</label>
                     <input type="text" id="doc-aeronef-lien" placeholder="https://... ou fichier importé" style="width:100%;">
                 </div>
                 <div class="form-group" style="display:flex; align-items:center; gap:8px;">
@@ -1266,10 +1280,7 @@ function creerModaleDocumentsAeronef() {
     if (selectType) selectType.addEventListener('change', (e) => {
         const type = TYPES_DOCUMENTS_AERONEFS.find(t => t.code === e.target.value);
         const dateInput = document.getElementById('doc-aeronef-date');
-        if (dateInput) {
-            dateInput.required = type ? type.dateRequise : false;
-            dateInput.style.opacity = type && !type.dateRequise ? '0.5' : '1';
-        }
+        if (dateInput) dateInput.required = type ? type.dateRequise : false;
         const autreGroup = document.getElementById('doc-aeronef-autre-group');
         const autreInput = document.getElementById('doc-aeronef-autre-nom');
         if (autreGroup && autreInput) {
@@ -1638,7 +1649,7 @@ function afficherListeDocumentsAeronef(machine) {
         return `
             <div style="padding:10px; border-bottom:1px solid #e2e8f0;">
                 <div style="font-size:13px;">
-                    <strong>${type.nom}</strong>
+                    <strong>${escapeHtml(type.nom)}</strong>
                     ${dateTxt}
                     ${lien ? `<div>${lien}</div>` : ''}
                 </div>
@@ -1840,12 +1851,12 @@ function initGestionTarifAeronefs() {
         });
     };
 
-    btnOptions.addEventListener('click', () => {
+    const ouvrirModaleOptions = (machineIdPref) => {
         machineHidden.value = '';
         populerMachinesChips('options-machine-group', 'aeronef-options-machine-id', remplirPourMachine,
             m => String(m.fields['Type'] || '').toLowerCase() !== 'planeur');
-        const init = (avionTarifId && machinesOptions().some(m => m.id === avionTarifId))
-            ? avionTarifId
+        const init = (machineIdPref && machinesOptions().some(m => m.id === machineIdPref)) ? machineIdPref
+            : (avionTarifId && machinesOptions().some(m => m.id === avionTarifId)) ? avionTarifId
             : (machinesOptions()[0] && machinesOptions()[0].id);
         if (init) {
             machineHidden.value = init;
@@ -1855,7 +1866,10 @@ function initGestionTarifAeronefs() {
             remplirPourMachine(init);
         }
         modal.style.display = 'flex';
-    });
+    };
+    // Exposee pour le bouton « Options » du carnet de route.
+    window.ouvrirOptionsAeronef = ouvrirModaleOptions;
+    btnOptions.addEventListener('click', () => ouvrirModaleOptions());
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
