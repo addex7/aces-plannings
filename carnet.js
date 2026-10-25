@@ -1875,7 +1875,7 @@ function genererGrillesPlaneur(categorie) {
                 <h3>${formaterImmatPlaneur(immat)}</h3>
                 <div class="planeur-box-btns">
                     <button type="button" class="btn-doc-planeur btn-remarque" title="Ajouter une remarque mécanique">Remarque</button>
-                    <button type="button" class="btn-doc-planeur" title="Consulter les documents">Docs</button>
+                    <button type="button" class="btn-doc-planeur" title="Suivi machine — documents et échéances">Suivi</button>
                 </div>
             `;
             const btnRemarque = box.querySelector('.btn-remarque');
