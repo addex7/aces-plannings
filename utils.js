@@ -298,13 +298,64 @@ function calculerExperiencesPilote(records, cpl = false) {
     const passagerBientot = !passager && (decollages3m > 0 || atterrissages3m > 0);
     const passagerDetail = `${decollages3m} décollages, ${atterrissages3m} atterrissages / 3${(gvvDec3m || gvvAtt3m) ? ` — dont ${gvvDec3m} déc./${gvvAtt3m} att. importés de GVV` : ''}`;
 
+    // Echeance de chaque exigence LAPL : la fenetre glissante de 24 mois
+    // tient tant que le vol « charniere » reste dedans — echeance =
+    // date de ce vol + 24 mois.
+    const listes24 = { h: [], dec: [], att: [], inst: [] };
+    records.forEach(r => {
+        const f = r.fields || {};
+        if (!f['Date']) return;
+        const d = new Date(f['Date']);
+        if (d < limite24m || isNaN(d)) return;
+        const avion = estVolAvion(f), ulm = estVolUlm(f);
+        if (!avion && !ulm) return;
+        const duree = dureeVolMinutes(f);
+        const decN = isNaN(parseInt(f['Décollages'], 10)) ? 1 : parseInt(f['Décollages'], 10);
+        const attN = isNaN(parseInt(f['Atterrissages'], 10)) ? 1 : parseInt(f['Atterrissages'], 10);
+        listes24.h.push({ d, v: duree });
+        for (let i = 0; i < decN; i++) listes24.dec.push({ d });
+        for (let i = 0; i < attN; i++) listes24.att.push({ d });
+        const inst = (f['Instructeur'] || '').toString().trim();
+        if (avion && inst && !r._volCommeInstructeur && duree >= 60) listes24.inst.push({ d });
+    });
+    const plus24 = d => { const x = new Date(d); x.setMonth(x.getMonth() + 24); return x; };
+    const echHeures = (() => {
+        const t = [...listes24.h].sort((a, b) => b.d - a.d);
+        let s = 0;
+        for (const v of t) { s += v.v; if (s >= 12 * 60) return plus24(v.d); }
+        return null;
+    })();
+    const echDec = (() => { const t = [...listes24.dec].sort((a, b) => b.d - a.d); return t.length >= 12 ? plus24(t[11].d) : null; })();
+    const echAtt = (() => { const t = [...listes24.att].sort((a, b) => b.d - a.d); return t.length >= 12 ? plus24(t[11].d) : null; })();
+    const echInst = (() => { const t = [...listes24.inst].sort((a, b) => b.d - a.d); return t.length ? plus24(t[0].d) : null; })();
+    const laplBlocages = [
+        { nom: '12 h de vol', ech: echHeures },
+        { nom: '12 décollages', ech: echDec },
+        { nom: '12 atterrissages', ech: echAtt },
+        { nom: '1 h instructeur (avion)', ech: echInst },
+    ].filter(b => b.ech).sort((a, b) => a.ech - b.ech);
     const lapl = (minutes24m + minutes24mUlmCdb) >= 12 * 60
         && (decollages24m + decollages24mUlm) >= 12
         && (atterrissages24m + atterrissages24mUlm) >= 12
         && instruction1h;
     const h24U = Math.floor(minutes24mUlmCdb / 60), m24U = Math.floor(minutes24mUlmCdb % 60);
     const totDec24 = decollages24m + decollages24mUlm, totAtt24 = atterrissages24m + atterrissages24mUlm;
-    const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00${minutes24mUlmCdb ? ` (+${h24U}h${String(m24U).padStart(2, '0')} ULM)` : ''} — ${totDec24} décollages / 12 — ${totAtt24} atterrissages / 12${decollages24mUlm ? ` dont ${decollages24mUlm} déc./${atterrissages24mUlm} att. ULM` : ''} — 1h instructeur (avion) : ${instruction1h ? 'oui' : 'non'}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}`;
+    // Echeance = blocage le plus proche ; si un second blocage tombe a
+    // moins d'un mois, on le signale aussi (un peu plus de temps).
+    let laplEcheanceTxt = '';
+    if (laplBlocages.length) {
+        const b1 = laplBlocages[0];
+        const b2 = laplBlocages.length > 1 && (laplBlocages[1].ech - b1.ech) <= 31 * 24 * 3600 * 1000 ? laplBlocages[1] : null;
+        laplEcheanceTxt = ` — valide jusqu'au ${formaterDateFr(b1.ech.toISOString())} (bloque en 1er : ${b1.nom})${b2 ? `, puis ${b2.nom} vers le ${formaterDateFr(b2.ech.toISOString())}` : ''}`;
+    } else {
+        laplEcheanceTxt = ' — conditions non remplies : ' + [
+            (minutes24m + minutes24mUlmCdb) < 12 * 60 ? 'heures' : null,
+            (decollages24m + decollages24mUlm) < 12 ? 'décollages' : null,
+            (atterrissages24m + atterrissages24mUlm) < 12 ? 'atterrissages' : null,
+            !instruction1h ? 'heure instructeur' : null,
+        ].filter(Boolean).join(', ');
+    }
+    const laplDetail = `${h24}h${String(m24).padStart(2, '0')} / 12h00${minutes24mUlmCdb ? ` (+${h24U}h${String(m24U).padStart(2, '0')} ULM)` : ''} — ${totDec24} décollages / 12 — ${totAtt24} atterrissages / 12${decollages24mUlm ? ` dont ${decollages24mUlm} déc./${atterrissages24mUlm} att. ULM` : ''} — 1h instructeur (avion) : ${instruction1h ? 'oui' : 'non'}${gvvMin24 ? ` — dont ${Math.floor(gvvMin24 / 60)}h${String(Math.floor(gvvMin24 % 60)).padStart(2, '0')} importées de GVV` : ''}` + laplEcheanceTxt;
 
     const initiation = passager && (cpl || minutes12m >= 25 * 60);
     const initiationDetail = cpl
