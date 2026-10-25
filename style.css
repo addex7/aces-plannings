@@ -5131,14 +5131,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #dbeafe;
     border-color: #93c5fd;
 }
-#btn-gvv-carnet {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #93c5fd;
-}
-#btn-gvv-carnet:hover {
-    background: #dbeafe;
-}
+#carnet-gvv-statut {
 #carnet-gvv-statut {
     font-size: 12px;
     font-weight: 600;

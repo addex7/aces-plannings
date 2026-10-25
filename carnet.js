@@ -366,6 +366,7 @@ function volExisteDansGvvGroupe(f, recordsData) {
 
 function badgeGvvCarnet(f, recordsData) {
     if (f['GVV ID']) return ` <span class="badge-gvv" title="Envoyé à GVV (#${f['GVV ID']})">GVV</span>`;
+    if (f['Saisi dans GVV']) return ' <span class="badge-gvv badge-gvv-bleu" title="Marqué comme saisi manuellement dans GVV">GVV</span>';
     if (volExisteDansGvv(f)) return ' <span class="badge-gvv badge-gvv-bleu" title="Vol déjà saisi dans GVV (hors de l\'application)">GVV</span>';
     if (volExisteDansGvvGroupe(f, recordsData)) return ' <span class="badge-gvv badge-gvv-bleu" title="Vol déjà saisi dans GVV en une seule écriture couvrant plusieurs lignes du carnet">GVV</span>';
     return '';
@@ -379,10 +380,46 @@ function majBoutonGvvCarnet(record) {
     const gvvId = f && f['GVV ID'];
     const machine = f ? (f['Machine'] || '') : '';
     const eligible = !!(f && record && record.id && estSuperAdminCarnet() && MACHINES_MOTEURS.includes(machine));
-    if (btn) btn.style.display = (eligible && !gvvId) ? 'inline-block' : 'none';
+    const saisiManuel = !!(f && f['Saisi dans GVV']);
+    if (btn) btn.style.display = (eligible && !gvvId && !saisiManuel) ? 'inline-block' : 'none';
+    const btnManuel = document.getElementById('btn-gvv-manuel-carnet');
+    if (btnManuel) btnManuel.style.display = (eligible && !gvvId && !saisiManuel) ? 'inline-block' : 'none';
     if (statut) {
-        statut.style.display = gvvId ? 'inline-block' : 'none';
-        statut.textContent = gvvId ? `✓ Envoyé à GVV (#${gvvId})` : '';
+        statut.style.display = (gvvId || saisiManuel) ? 'inline-block' : 'none';
+        statut.textContent = gvvId ? `✓ Envoyé à GVV (#${gvvId})` : (saisiManuel ? '✓ Saisi dans GVV' : '');
+    }
+}
+
+// Marque le vol comme saisi manuellement dans GVV (pastille bleue permanente,
+// bloque un futur envoi ⇒ GVV qui creerait un doublon).
+async function marquerVolSaisiGvv() {
+    if (!idCarnetEnEdition) return;
+    const record = listeVolsCarnetCache.find(r => r.id === idCarnetEnEdition);
+    const f = record && record.fields ? record.fields : {};
+    if (!estSuperAdminCarnet()) {
+        alert('Action réservée aux super admin.');
+        return;
+    }
+    const d = f['Date'] ? new Date(f['Date']).toLocaleDateString('fr-FR') : '?';
+    const recap = `${f['Pilote'] || '?'} — ${f['Machine'] || '?'} — ${d}`;
+    if (!(await confirmerAction(`Marquer ce vol comme saisi manuellement dans GVV ?\n\n${recap}\n\nLa pastille « GVV » bleue s'affichera sur la ligne et l'envoi ⇒ GVV sera bloqué.`, { okLabel: 'Marquer', icone: '✓', danger: false }))) return;
+    const btn = document.getElementById('btn-gvv-manuel-carnet');
+    try {
+        if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_CARNET_ROUTE)}/${idCarnetEnEdition}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ fields: { 'Saisi dans GVV': true } })
+        });
+        if (!res.ok) throw new Error((await res.json()).error?.message || 'Erreur serveur');
+        f['Saisi dans GVV'] = true;
+        majBoutonGvvCarnet(record);
+        chargerCarnetRoute();
+    } catch (e) {
+        console.error(e);
+        alert('Erreur : ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '✓ Déjà dans GVV'; }
     }
 }
 
@@ -2074,6 +2111,8 @@ function initCarnetRoute() {
     if (btnDelete) btnDelete.addEventListener('click', supprimerCarnetRoute);
     const btnGvv = document.getElementById('btn-gvv-carnet');
     if (btnGvv) btnGvv.addEventListener('click', envoyerVolVersGvv);
+    const btnGvvManuel = document.getElementById('btn-gvv-manuel-carnet');
+    if (btnGvvManuel) btnGvvManuel.addEventListener('click', marquerVolSaisiGvv);
     const rechercheInput = document.getElementById('carnet-recherche');
     if (rechercheInput) {
         rechercheInput.addEventListener('input', () => {
