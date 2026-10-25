@@ -929,6 +929,12 @@ function initNavigationTabs() {
         document.querySelectorAll('.nav-group:not(.nav-group-standalone)').forEach(g => g.classList.remove('open'));
         const groupe = tab ? tab.closest('.nav-group') : null;
         if (groupe) groupe.classList.add('open');
+        // Historique navigateur : chaque vue pousse une entree, le bouton
+        // « precedent » revient alors a la vue Glide 2000 precedente.
+        if (tab && vue && !window._navRetourHistorique) {
+            try { history.pushState({ tabId: tab.id }, '', '#' + vue.id); } catch (e) {}
+        }
+        window._navRetourHistorique = false;
     }
 
     if (tabPlanning) {
