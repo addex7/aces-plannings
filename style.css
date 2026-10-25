@@ -2525,6 +2525,14 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .bandeau-informatif strong {
     color: #78350f;
 }
+/* Accueil pilote : pas de boutons en en-tete — le bandeau se place a
+   droite du titre et s'etire jusqu'au bord de la carte, avec un espace. */
+#view-accueil-pilote .header { gap: 8px 20px; }
+#view-accueil-pilote .header .bandeau-informatif {
+    flex: 1 1 340px;
+    order: 0;
+    margin: 0;
+}
 .validite-label {
     font-size: 13px;
     font-weight: 600;
