@@ -44,8 +44,9 @@ function aeralClasseAge(u, finAnnee, ulm) {
 
 function aeralGenre(u) {
     const g = ((u && u.fields && (u.fields['Genre'] || u.fields['Civilité'])) || '').toString().trim().toLowerCase();
-    if (/^f|mme|madame|femme/.test(g)) return 'femme';
-    if (/^m(?!me)|monsieur|homme/.test(g)) return 'homme';
+    if (/f[ée]minin|mme|madame|femme|^f$/.test(g)) return 'femme';
+    if (/pr[ée]f[èe]re/i.test(g)) return null;
+    if (/masculin|monsieur|homme|^m(?!me)/.test(g)) return 'homme';
     return null;
 }
 
@@ -200,15 +201,12 @@ async function ouvrirRapportAeral() {
             <button id="aeral-generer" class="btn-primary">Générer</button>
             <button id="aeral-print" class="btn-secondary">🖨️ Imprimer</button>
         </div>
-        <div id="aeral-contenu" style="max-height:70vh; overflow:auto;"><p class="carnet-empty">Choisir l'année puis « Générer ».</p></div>`;
-    if (typeof afficherModaleAlerte === 'function') {
-        afficherModaleAlerte('📊 Rapport AERAL — compte-rendu annuel', corps, '📊', { large: true });
-    } else {
-        const m = document.createElement('div');
-        m.className = 'modal'; m.style.display = 'flex';
-        m.innerHTML = `<div class="modal-contenu" style="max-width:900px; width:92%;"><div class="modal-titre">📊 Rapport AERAL<button class="modal-fermer" onclick="this.closest('.modal').remove()">×</button></div>${corps}</div>`;
-        document.body.appendChild(m);
-    }
+        <div id="aeral-contenu" style="max-height:78vh; overflow:auto;"><p class="carnet-empty">Choisir l'année puis « Générer ».</p></div>`;
+    // Grande modale dédiée (quasi plein écran pour lire les tableaux).
+    const m = document.createElement('div');
+    m.className = 'modal'; m.style.display = 'flex';
+    m.innerHTML = `<div class="modal-contenu" style="max-width:1120px; width:96%; max-height:94vh; overflow:auto;"><div class="modal-titre" style="display:flex; justify-content:space-between; align-items:center;">📊 Rapport AERAL — compte-rendu annuel<button class="modal-fermer" onclick="this.closest('.modal').remove()" style="font-size:22px; line-height:1;">×</button></div>${corps}</div>`;
+    document.body.appendChild(m);
     const gen = async () => {
         const zone = document.getElementById('aeral-contenu');
         const a = parseInt(document.getElementById('aeral-annee').value, 10) || anneeDefaut;

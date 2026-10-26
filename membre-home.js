@@ -298,6 +298,9 @@ function renderAccueilMembre(fields) {
         const ligne = (label, cle, val, type) => editable
             ? `<div class="accueil-info"><span class="accueil-info-label">${label}</span><input type="${type}" class="accueil-info-input" data-field="${cle}" value="${esc(val)}"></div>`
             : `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val">${val ? escapeHtml(val) : '—'}</span></div>`;
+        const ligneSelect = (label, cle, val, options) => editable
+            ? `<div class="accueil-info"><span class="accueil-info-label">${label}</span><select class="accueil-info-input" data-field="${cle}">${options.map(o => `<option value="${esc(o)}"${(val || '') === o ? ' selected' : ''}>${o || '—'}</option>`).join('')}</select></div>`
+            : `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val">${val ? escapeHtml(val) : '—'}</span></div>`;
         const ligneLecture = (label, val, id = '') =>
             `<div class="accueil-info"><span class="accueil-info-label">${label}</span><span class="accueil-info-val"${id ? ` id="${id}"` : ''}>${val ? escapeHtml(val) : '—'}</span></div>`;
         const d0 = fields['Date de naissance'] ? new Date(fields['Date de naissance']) : null;
@@ -320,7 +323,7 @@ function renderAccueilMembre(fields) {
             ligneLecture('Âge', age, 'accueil-age-val') +
             ligne('Lieu de naissance', 'Lieu de naissance', fields['Lieu de naissance'], 'text') +
             ligne('Adresse', 'Adresse', fields['Adresse'], 'text') +
-            ligne('Genre', 'Genre', fields['Genre'], 'text') +
+            ligneSelect('Genre', 'Genre', fields['Genre'], ['', 'Masculin', 'Féminin', 'Je préfère ne pas le dire']) +
             ligne('Trigramme', 'Trigramme', fields['Trigramme'], 'text') +
             ligne('Licence FFA', 'Numéro licence FFA', fields['Numéro licence FFA'], 'text') +
             ligne('Licence FFVP', 'Numéro licence FFVP', fields['Numéro licence FFVP'], 'text') +
