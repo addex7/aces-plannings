@@ -186,7 +186,7 @@ function aeralRapportHtml(vols, annee) {
             <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}<td>Dont voltige</td><td class="aeral-num">—</td></tr>
             <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td>Dont vol BIA</td><td class="aeral-num">—</td></tr>
             <tr><td>IFR</td><td class="aeral-num">0,00</td><td class="aeral-num">0</td><td class="aeral-num">00</td><td>Dont hydravion</td><td class="aeral-num">—</td></tr>
-            <tr><td>Vol d'initiation</td>${cellH(c('vi'))}<td colspan="2"></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td>Dont vols de découverte</td>${cellH(c('vi'))}</tr>
             <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="2"></td></tr>
         </table>
         ${demoTable(list)}`;
