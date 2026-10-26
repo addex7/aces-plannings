@@ -135,10 +135,23 @@ function aeralRapportHtml(vols, annee) {
         return sexe ? `${sexe === 'femme' ? 'f' : 'h'}-${age}` : `?-${age}`;
     };
     const demoTable = list => {
-        const b = { 'f-adulte': 0, 'f-jeune': 0, 'h-adulte': 0, 'h-jeune': 0, '?-adulte': 0, '?-jeune': 0 };
-        list.forEach(v => { b[demo(list, v)] += v.duree; });
+        const b = { 'f-adulte': 0, 'f-jeune': 0, 'h-adulte': 0, 'h-jeune': 0, nf: 0, ng: 0 };
+        const nomsIntrouvables = new Set();
+        list.forEach(v => {
+            const m = aeralTrouverMembre(v.eleve || v.instructeur, u);
+            if (!m) { b.nf += v.duree; nomsIntrouvables.add((v.eleve || v.instructeur || '').trim()); return; }
+            const sexe = aeralGenre(m);
+            if (!sexe) { b.ng += v.duree; return; }
+            const age = aeralClasseAge(m, finAnnee, v.ulm);
+            b[`${sexe === 'femme' ? 'f' : 'h'}-${age}`] += v.duree;
+        });
+        const nr = b.nf + b.ng;
+        const raisons = [
+            b.nf ? `${cent(b.nf)} h : membre introuvable dans l'annuaire (${[...nomsIntrouvables].slice(0, 4).join(', ')}${nomsIntrouvables.size > 4 ? '…' : ''})` : '',
+            b.ng ? `${cent(b.ng)} h : genre non renseigné sur la fiche` : ''
+        ].filter(Boolean).join(' · ');
         return `<table class="aeral-table"><tr><th>Femmes adultes</th><th>Femmes jeunes</th><th>Hommes adultes</th><th>Hommes jeunes</th><th>Non renseigné</th></tr>
-            <tr><td class="aeral-num">${cent(b['f-adulte'])}</td><td class="aeral-num">${cent(b['f-jeune'])}</td><td class="aeral-num">${cent(b['h-adulte'])}</td><td class="aeral-num">${cent(b['h-jeune'])}</td><td class="aeral-num">${cent(b['?-adulte'] + b['?-jeune'])}</td></tr></table>`;
+            <tr><td class="aeral-num">${cent(b['f-adulte'])}</td><td class="aeral-num">${cent(b['f-jeune'])}</td><td class="aeral-num">${cent(b['h-adulte'])}</td><td class="aeral-num">${cent(b['h-jeune'])}</td><td class="aeral-num">${cent(nr)}${nr ? `<div style="font-size:10px; color:#94a3b8; text-align:left; font-weight:400;">${raisons}</div>` : ''}</td></tr></table>`;
     };
 
     // Heures par instructeur : DC (EP/I ou /I) + eleves solo supervises (EP seul)
