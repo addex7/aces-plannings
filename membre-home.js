@@ -336,7 +336,7 @@ function renderAccueilMembre(fields) {
             const originales = {};
             const modifs = {};
             const majActions = () => { const a = document.getElementById('accueil-infos-actions'); if (a) a.style.display = Object.keys(modifs).length ? 'flex' : 'none'; };
-            infosEl.querySelectorAll('input').forEach(inp => {
+            infosEl.querySelectorAll('input, select').forEach(inp => {
                 const champ = inp.dataset.field;
                 originales[champ] = inp.value;
                 if (champ === 'Trigramme') {
@@ -354,7 +354,7 @@ function renderAccueilMembre(fields) {
             const btnAnnuler = document.getElementById('accueil-infos-annuler');
             const btnSauver = document.getElementById('accueil-infos-sauver');
             if (btnAnnuler) btnAnnuler.addEventListener('click', () => {
-                infosEl.querySelectorAll('input').forEach(inp => { inp.value = originales[inp.dataset.field] ?? ''; });
+                infosEl.querySelectorAll('input, select').forEach(inp => { inp.value = originales[inp.dataset.field] ?? ''; });
                 Object.keys(modifs).forEach(c => delete modifs[c]);
                 majActions();
             });
