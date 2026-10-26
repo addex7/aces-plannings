@@ -204,8 +204,12 @@ async function ouvrirRapportAeral() {
         <div id="aeral-contenu" style="max-height:78vh; overflow:auto;"><p class="carnet-empty">Choisir l'année puis « Générer ».</p></div>`;
     // Grande modale dédiée (quasi plein écran pour lire les tableaux).
     const m = document.createElement('div');
-    m.className = 'modal'; m.style.display = 'flex';
-    m.innerHTML = `<div class="modal-contenu" style="max-width:1120px; width:96%; max-height:94vh; overflow:auto;"><div class="modal-titre" style="display:flex; justify-content:space-between; align-items:center;">📊 Rapport AERAL — compte-rendu annuel<button class="modal-fermer" onclick="this.closest('.modal').remove()" style="font-size:22px; line-height:1;">×</button></div>${corps}</div>`;
+    m.className = 'modal'; m.style.display = 'flex'; m.style.zIndex = '20000';
+    m.innerHTML = `<div class="modal-content" style="max-width:1120px; width:96%;">
+        <span class="close-modal" style="font-size:22px; cursor:pointer;">&times;</span>
+        <h3 style="display:flex; align-items:center; gap:10px; color:#1e3d59; margin-top:0;"><span style="font-size:28px;">📊</span><span>Rapport AERAL — compte-rendu annuel</span></h3>
+        ${corps}</div>`;
+    m.querySelector('.close-modal').addEventListener('click', () => m.remove());
     document.body.appendChild(m);
     const gen = async () => {
         const zone = document.getElementById('aeral-contenu');
