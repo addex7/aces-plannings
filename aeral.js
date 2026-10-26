@@ -168,8 +168,8 @@ function aeralRapportHtml(vols, annee) {
     const lignesInstr = Object.entries(parInstr).sort((a, b) => a[0].localeCompare(b[0]))
         .map(([n, t]) => `<tr><td>${n}</td><td class="aeral-num">${cent(t.dc)}</td><td class="aeral-num">${cent(t.ss)}</td><td class="aeral-num">${cent(t.avion)}</td><td class="aeral-num">${cent(t.ulm)}</td></tr>`).join('');
 
-    const blocAvion = (list, titre) => `
-        <h4>${titre}</h4>
+    const blocVol = (list, titre) => `
+        <h5 style="margin:10px 0 4px; font-size:13px; color:#475569;">${titre}</h5>
         <table class="aeral-table"><tr><th>Catégorie</th><th>Heures</th></tr>
         ${ligne('VFR jour local', somme(list.filter(v => catVol(v) === 'local')))}
         ${ligne('VFR jour navigation', somme(list.filter(v => catVol(v) === 'nav')))}
@@ -192,13 +192,12 @@ function aeralRapportHtml(vols, annee) {
         <h3>Activité ${annee} — heures de vol</h3>
         <h4>Heures d'instruction par instructeur (double commande / élèves solo supervisés)</h4>
         <table class="aeral-table"><tr><th>Instructeur</th><th>Double commande</th><th>Élèves solo sup.</th><th>Heures avion</th><th>Heures ULM</th></tr>${lignesInstr}</table>
-        ${blocAvion(avion.filter(v => v.estInstruction), 'Avion — EN INSTRUCTION')}
-        ${blocAvion(avion.filter(v => !v.estInstruction), 'Avion — HORS INSTRUCTION')}
-        <h4>ULM (classe 3 multiaxes)</h4>
-        <table class="aeral-table"><tr><th></th><th>En instruction</th><th>Hors instruction</th><th>Total</th></tr>
-        <tr><td>Heures</td><td class="aeral-num">${cent(somme(ulm.filter(v => v.estInstruction)))}</td><td class="aeral-num">${cent(somme(ulm.filter(v => !v.estInstruction)))}</td><td class="aeral-num">${cent(somme(ulm))}</td></tr></table>
-        <div class="aeral-sub">Répartition — en instruction :</div>${demoTable(ulm.filter(v => v.estInstruction))}
-        <div class="aeral-sub">Répartition — hors instruction :</div>${demoTable(ulm.filter(v => !v.estInstruction))}
+        <h4>Activité en instruction</h4>
+        ${blocVol(avion.filter(v => v.estInstruction), '✈️ Avion')}
+        ${blocVol(ulm.filter(v => v.estInstruction), '🪂 ULM (classe 3 multiaxes)')}
+        <h4>Activité hors instruction</h4>
+        ${blocVol(avion.filter(v => !v.estInstruction), '✈️ Avion')}
+        ${blocVol(ulm.filter(v => !v.estInstruction), '🪂 ULM (classe 3 multiaxes)')}
         <h4>Heures par machine</h4>
         <table class="aeral-table"><tr><th>Machine</th><th>Hors remorquage</th><th>Remorquage</th><th>Total</th></tr>${lignesMach}</table>
         <p class="aeral-note">Sources : carnets de route + vols GVV non couverts. « Non renseigné » = membre sans genre ou hors annuaire — renseignez le champ Genre de la fiche membre.</p>
