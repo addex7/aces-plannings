@@ -86,10 +86,15 @@ function aeralNormaliser(records, source, utilisateurs) {
         const estNuit = /nuit/i.test(txt);
         const estNavigation = /navigation|voyage/i.test(txt);
         const estInstruction = /instruction/i.test(txt) || fonction.includes('EP') || fonction.includes('/I') || fonction.includes('FI');
+        const att = parseInt(f['Atterrissages'] ?? f['Attero'], 10) || 1;
+        const dec = parseInt(f['Décollages'], 10) || att;
         return {
             date: f['Date'] || '', ulm, duree, fonction, instructeur, eleve,
             estRemorquage, estInitiation, estNuit, estNavigation, estInstruction,
             machine: (f['Machine'] || '').toString().trim().toUpperCase(),
+            dec, att,
+            dep: (f['Départ'] || '').toString().trim(),
+            arr: source === 'gvv' ? (f['Lieu'] || '').toString().trim() : (f['Arrivée'] || '').toString().trim(),
         };
     }).filter(v => v.date && v.duree > 0);
 }
@@ -213,6 +218,25 @@ function aeralRapportHtml(vols, annee) {
         ${blocVol(ulm.filter(v => !v.estInstruction), '🪂 ULM (classe 3 multiaxes)')}
         <h4>Heures par machine</h4>
         <table class="aeral-table"><tr><th>Machine</th><th>Hors remorquage</th><th>Remorquage</th><th>Total</th></tr>${lignesMach}</table>
+        <h4>Nombre de mouvements sur la plate-forme LFOY (Le Havre – Saint-Romain)</h4>
+        ${(function () {
+            const estLfoy = s => !s || /lfoy|saint.?romain/i.test(s);
+            let dec = 0, att = 0, rem = 0;
+            vols.forEach(v => {
+                if (v.estRemorquage) { rem += 1; return; }
+                if (estLfoy(v.dep)) dec += v.dec;
+                if (estLfoy(v.arr)) att += v.att;
+            });
+            const mvtRem = rem * 2;
+            return `<table class="aeral-table">
+                <tr><th></th><th>Nombre</th><th>Détail</th></tr>
+                <tr><td>Décollages</td><td class="aeral-num">${dec}</td><td>1 décollage = 1 mouvement</td></tr>
+                <tr><td>Atterrissages (dont touchés)</td><td class="aeral-num">${att}</td><td>1 atterrissage ou touché = 1 mouvement</td></tr>
+                <tr><td>Remorquages</td><td class="aeral-num">${mvtRem}</td><td>${rem} remorquage(s) × 2 mouvements (décollage + atterrissage)</td></tr>
+                <tr><td><strong>Total mouvements</strong></td><td class="aeral-num"><strong>${dec + att + mvtRem}</strong></td><td></td></tr>
+            </table>
+            <p class="aeral-note">⚠️ Ajouter à ce total les mouvements des planeurs remorqués (décollage + atterrissage du planeur, non comptabilisés dans le carnet avion/ULM).</p>`;
+        })()}
         <p class="aeral-note">Sources : carnets de route + vols GVV non couverts. « Non renseigné » = membre sans genre ou hors annuaire — renseignez le champ Genre de la fiche membre.</p>
     </div>`;
 }
