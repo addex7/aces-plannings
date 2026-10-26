@@ -320,6 +320,7 @@ function renderAccueilMembre(fields) {
             ligneLecture('Âge', age, 'accueil-age-val') +
             ligne('Lieu de naissance', 'Lieu de naissance', fields['Lieu de naissance'], 'text') +
             ligne('Adresse', 'Adresse', fields['Adresse'], 'text') +
+            ligne('Genre', 'Genre', fields['Genre'], 'text') +
             ligne('Trigramme', 'Trigramme', fields['Trigramme'], 'text') +
             ligne('Licence FFA', 'Numéro licence FFA', fields['Numéro licence FFA'], 'text') +
             ligne('Licence FFVP', 'Numéro licence FFVP', fields['Numéro licence FFVP'], 'text') +

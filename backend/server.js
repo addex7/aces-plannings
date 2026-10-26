@@ -338,7 +338,7 @@ const DROITS_ECRITURE = {
 // Auto-edition : un membre peut modifier SA fiche, uniquement ces champs
 // (jamais Rôles, Actif, validités — reservés aux admins).
 const CHAMPS_SELF_UTILISATEUR = new Set([
-    'Mail', 'Identifiant', 'Mot de passe', 'Téléphone', 'Date de naissance',
+    'Mail', 'Identifiant', 'Mot de passe', 'Téléphone', 'Date de naissance', 'Genre',
     'Lieu de naissance', 'Adresse', 'Trigramme', 'Photo', 'Fiche vérifiée',
     'Contact urgence nom', 'Contact urgence téléphone', 'Contact urgence email',
     'Numéro licence FFA', 'Numéro licence FFVP', 'Numéro licence FFPLUM',

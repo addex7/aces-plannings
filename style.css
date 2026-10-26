@@ -6381,3 +6381,13 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 
 /* Retours a la ligne dans les pastilles de statut (detail LAPL multiligne) */
 .pastille { white-space: pre-line; }
+
+/* Rapport AERAL */
+.aeral-rapport h3 { margin: 0 0 12px; }
+.aeral-rapport h4 { margin: 16px 0 6px; font-size: 14px; color: #1e3d59; }
+.aeral-table { border-collapse: collapse; margin: 4px 0 12px; font-size: 13px; }
+.aeral-table td, .aeral-table th { border: 1px solid #cbd5e1; padding: 4px 10px; }
+.aeral-table th { background: #f1f5f9; text-align: left; }
+.aeral-num { text-align: right; font-variant-numeric: tabular-nums; }
+.aeral-sub { font-size: 11px; color: #64748b; margin-top: 8px; text-transform: uppercase; letter-spacing: .5px; }
+.aeral-note { font-size: 11px; color: #94a3b8; margin-top: 14px; }
