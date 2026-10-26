@@ -127,7 +127,7 @@ function aeralRapportHtml(vols, annee) {
 
     const avion = vols.filter(v => !v.ulm);
     const ulm = vols.filter(v => v.ulm);
-    const catVol = v => v.estRemorquage ? 'rem' : v.estInitiation ? 'vi' : v.estNuit ? 'nuit' : v.estNavigation ? 'nav' : 'local';
+    const catVol = v => v.estInitiation ? 'vi' : v.estNuit ? 'nuit' : v.estNavigation ? 'nav' : 'local';
     const demo = (list, vol) => {
         const m = aeralTrouverMembre(vol.eleve || vol.instructeur, u);
         const age = aeralClasseAge(m, finAnnee, vol.ulm);
@@ -175,7 +175,6 @@ function aeralRapportHtml(vols, annee) {
         ${ligne('VFR jour navigation', somme(list.filter(v => catVol(v) === 'nav')))}
         ${ligne('VFR nuit', somme(list.filter(v => catVol(v) === 'nuit')))}
         ${ligne('Vol d\'initiation', somme(list.filter(v => catVol(v) === 'vi')))}
-        ${ligne('Remorquage', somme(list.filter(v => catVol(v) === 'rem')))}
         ${ligne('Total', somme(list))}</table>
         <div class="aeral-sub">Répartition élèves/pilotes :</div>${demoTable(list)}`;
 
