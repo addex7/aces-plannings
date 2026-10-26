@@ -134,6 +134,9 @@ function aeralRapportHtml(vols, annee) {
         const sexe = aeralGenre(m);
         return sexe ? `${sexe === 'femme' ? 'f' : 'h'}-${age}` : `?-${age}`;
     };
+    const hhmm = v => { const t = Math.round(v * 60); return [Math.floor(t / 60), t % 60]; };
+    const cellH = v => { const [h, m] = hhmm(v); return `<td class="aeral-num">${cent(v)}</td><td class="aeral-num">${h}</td><td class="aeral-num">${String(m).padStart(2, '0')}</td>`; };
+
     const demoTable = list => {
         const b = { 'f-adulte': 0, 'f-jeune': 0, 'h-adulte': 0, 'h-jeune': 0, nf: 0, ng: 0 };
         const nomsIntrouvables = new Set();
@@ -150,8 +153,13 @@ function aeralRapportHtml(vols, annee) {
             b.nf ? `${cent(b.nf)} h : membre introuvable dans l'annuaire (${[...nomsIntrouvables].slice(0, 4).join(', ')}${nomsIntrouvables.size > 4 ? '…' : ''})` : '',
             b.ng ? `${cent(b.ng)} h : genre non renseigné sur la fiche` : ''
         ].filter(Boolean).join(' · ');
-        return `<table class="aeral-table"><tr><th>Femmes adultes</th><th>Femmes jeunes</th><th>Hommes adultes</th><th>Hommes jeunes</th><th>Non renseigné</th></tr>
-            <tr><td class="aeral-num">${cent(b['f-adulte'])}</td><td class="aeral-num">${cent(b['f-jeune'])}</td><td class="aeral-num">${cent(b['h-adulte'])}</td><td class="aeral-num">${cent(b['h-jeune'])}</td><td class="aeral-num">${cent(nr)}${nr ? `<div style="font-size:10px; color:#94a3b8; text-align:left; font-weight:400;">${raisons}</div>` : ''}</td></tr></table>`;
+        return `<table class="aeral-table">
+            <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th></th><th>Centièmes</th><th>HH</th><th>MM</th></tr>
+            <tr><td>Jeunes hommes</td>${cellH(b['h-jeune'])}<td>Jeunes femmes</td>${cellH(b['f-jeune'])}</tr>
+            <tr><td>Hommes adultes</td>${cellH(b['h-adulte'])}<td>Femmes adultes</td>${cellH(b['f-adulte'])}</tr>
+            <tr><td><strong>Total hommes</strong></td>${cellH(b['h-jeune'] + b['h-adulte'])}<td><strong>Total femmes</strong></td>${cellH(b['f-jeune'] + b['f-adulte'])}</tr>
+            <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4">${nr ? `<span style="font-size:10px; color:#94a3b8;">Non renseigné : ${cent(nr)} h — ${raisons}</span>` : ''}</td></tr>
+        </table>`;
     };
 
     // Heures par instructeur : DC (EP/I ou /I) + eleves solo supervises (EP seul)
@@ -168,15 +176,21 @@ function aeralRapportHtml(vols, annee) {
     const lignesInstr = Object.entries(parInstr).sort((a, b) => a[0].localeCompare(b[0]))
         .map(([n, t]) => `<tr><td>${n}</td><td class="aeral-num">${cent(t.dc)}</td><td class="aeral-num">${cent(t.ss)}</td><td class="aeral-num">${cent(t.avion)}</td><td class="aeral-num">${cent(t.ulm)}</td></tr>`).join('');
 
-    const blocVol = (list, titre) => `
+    const blocVol = (list, titre) => {
+        const c = k => somme(list.filter(v => catVol(v) === k));
+        return `
         <h5 style="margin:10px 0 4px; font-size:13px; color:#475569;">${titre}</h5>
-        <table class="aeral-table"><tr><th>Catégorie</th><th>Heures</th></tr>
-        ${ligne('VFR jour local', somme(list.filter(v => catVol(v) === 'local')))}
-        ${ligne('VFR jour navigation', somme(list.filter(v => catVol(v) === 'nav')))}
-        ${ligne('VFR nuit', somme(list.filter(v => catVol(v) === 'nuit')))}
-        ${ligne('Vol d\'initiation', somme(list.filter(v => catVol(v) === 'vi')))}
-        ${ligne('Total', somme(list))}</table>
-        <div class="aeral-sub">Répartition élèves/pilotes :</div>${demoTable(list)}`;
+        <table class="aeral-table">
+            <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th></th></tr>
+            <tr><td>VFR Jour local</td>${cellH(c('local'))}<td>Dont vol en montagne</td><td class="aeral-num">—</td></tr>
+            <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}<td>Dont voltige</td><td class="aeral-num">—</td></tr>
+            <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td>Dont vol BIA</td><td class="aeral-num">—</td></tr>
+            <tr><td>IFR</td><td class="aeral-num">0,00</td><td class="aeral-num">0</td><td class="aeral-num">00</td><td>Dont hydravion</td><td class="aeral-num">—</td></tr>
+            <tr><td>Vol d'initiation</td>${cellH(c('vi'))}<td colspan="2"></td></tr>
+            <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="2"></td></tr>
+        </table>
+        ${demoTable(list)}`;
+    };
 
     // Par machine : total + remorquage seul
     const machines = [...new Set(vols.map(v => v.machine))].sort();
