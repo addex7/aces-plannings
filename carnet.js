@@ -123,7 +123,7 @@ function ouvrirLegendeCodeJVIO(type) {
             ${ligne('EP', 'Élève pilote')}
             ${ligne('I', 'Instructeur')}
             ${ligne('EX', 'Examinateur')}
-            <div style="margin-top:8px; font-size:12px; color:#64748b;">Couples autorisés : P+PAX · P+I · P+EX · EP+I · EP+EX (P ou EP seuls = vol solo)</div>
+            <div style="margin-top:8px; font-size:12px; color:#64748b;">Couples autorisés : P+PAX · P+I · P+EX · EP+I · EP+EX · PAX+I · PAX+EX (un seul rôle seul = solo)</div>
         `, '👤');
     } else {
         afficherModaleAlerte('Nature du vol — codes utilisés', `
@@ -1029,20 +1029,16 @@ const CARNET_JVIO_FONCTIONS = [
 ];
 
 // ULM (F-J…) : seuls ces couples sont permis — P+PAX, P+I, P+EX,
-// EP+I, EP/EX (P ou EP seuls : vol solo / élève solo supervisé).
-const FONCTIONS_EXCLUSIVES_ULM = [['P', 'EP'], ['PAX', 'I', 'EX']];
+// EP+I, EP+EX, PAX+I, PAX+EX (un seul role seul possible aussi :
+// vol solo / élève solo supervisé). Toute autre combinaison est
+// refusee en decochant la derniere case cochee.
+const PAIRES_ULM = [['P', 'PAX'], ['P', 'I'], ['P', 'EX'], ['EP', 'I'], ['EP', 'EX'], ['PAX', 'I'], ['PAX', 'EX']];
 function appliquerExclusiviteFonctionsUlm(cb) {
     if (!cb.checked) return;
-    FONCTIONS_EXCLUSIVES_ULM.forEach(groupe => {
-        if (!groupe.includes(cb.value)) return;
-        document.querySelectorAll('input[name="carnet-fonction"]').forEach(o => {
-            if (o !== cb && groupe.includes(o.value)) o.checked = false;
-        });
-    });
-    // EP+PAX interdit : un élève n'emporte qu'un instructeur/examinateur.
-    const ep = document.querySelector('input[name="carnet-fonction"][value="EP"]');
-    const pax = document.querySelector('input[name="carnet-fonction"][value="PAX"]');
-    if (ep && pax && ep.checked && pax.checked) pax.checked = false;
+    const coches = Array.from(document.querySelectorAll('input[name="carnet-fonction"]:checked')).map(o => o.value);
+    const ok = coches.length <= 1
+        || (coches.length === 2 && PAIRES_ULM.some(p => p.includes(coches[0]) && p.includes(coches[1])));
+    if (!ok) cb.checked = false;
 }
 
 const EMOJIS_NATURE_JVIO = {
