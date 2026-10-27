@@ -128,20 +128,16 @@ function aeralRapportHtml(vols, annee) {
     const u = aeralUtilisateurs || [];
     const cent = v => v.toFixed(2).replace('.', ',');
     const somme = list => list.reduce((s, v) => s + v.duree, 0);
-    const ligne = (label, val) => `<tr><td>${label}</td><td class="aeral-num">${cent(val)}</td></tr>`;
+    const hhmm = v => { const t = Math.round(v * 60); return [Math.floor(t / 60), t % 60]; };
+    const cellH = v => { const [h, m] = hhmm(v); return `<td class="aeral-num">${cent(v)}</td><td class="aeral-num">${h}</td><td class="aeral-num">${String(m).padStart(2, '0')}</td>`; };
+    const roles = u0 => (((u0.fields || {})['Rôles']) || []).join(' ');
+    const nfed = u0 => { const f = u0.fields || {}; return f['Numéro licence FFA'] || f['Numéro licence FFPLUM'] || f['Numéro licence FFVP'] || ''; };
 
     const avion = vols.filter(v => !v.ulm);
     const ulm = vols.filter(v => v.ulm);
     const catVol = v => v.estInitiation ? 'vi' : v.estNuit ? 'nuit' : v.estNavigation ? 'nav' : 'local';
-    const demo = (list, vol) => {
-        const m = aeralTrouverMembre(vol.eleve || vol.instructeur, u);
-        const age = aeralClasseAge(m, finAnnee, vol.ulm);
-        const sexe = aeralGenre(m);
-        return sexe ? `${sexe === 'femme' ? 'f' : 'h'}-${age}` : `?-${age}`;
-    };
-    const hhmm = v => { const t = Math.round(v * 60); return [Math.floor(t / 60), t % 60]; };
-    const cellH = v => { const [h, m] = hhmm(v); return `<td class="aeral-num">${cent(v)}</td><td class="aeral-num">${h}</td><td class="aeral-num">${String(m).padStart(2, '0')}</td>`; };
 
+    // --- Tableau demographique (format officiel 2 colonnes) -----------------
     const demoTable = list => {
         const b = { 'f-adulte': 0, 'f-jeune': 0, 'h-adulte': 0, 'h-jeune': 0, nf: 0, ng: 0 };
         const nomsIntrouvables = new Set();
@@ -167,76 +163,138 @@ function aeralRapportHtml(vols, annee) {
         </table>`;
     };
 
-    // Heures par instructeur : DC (EP/I ou /I) + eleves solo supervises (EP seul)
+    // --- Tableau categories AVION (format officiel) --------------------------
+    const blocAvion = list => {
+        const c = k => somme(list.filter(v => catVol(v) === k));
+        return `<table class="aeral-table">
+            <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th colspan="3"></th></tr>
+            <tr><td>VFR Jour local</td>${cellH(c('local'))}<td>Dont vol en montagne</td><td colspan="3" class="aeral-num">—</td></tr>
+            <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}<td>Dont voltige</td><td colspan="3" class="aeral-num">—</td></tr>
+            <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td>Dont vol BIA</td><td colspan="3" class="aeral-num">—</td></tr>
+            <tr><td>IFR</td><td class="aeral-num">0,00</td><td class="aeral-num">0</td><td class="aeral-num">00</td><td>Dont hydravion</td><td colspan="3" class="aeral-num">—</td></tr>
+            <tr><td></td><td></td><td></td><td></td><td>Dont vols de découverte</td>${cellH(c('vi'))}</tr>
+            <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4"></td></tr>
+        </table>`;
+    };
+
+    // --- Tableau categories ULM par classes (format officiel) ----------------
+    const blocUlm = list => {
+        const classe = n => n === 3 ? somme(list) : 0;
+        return `<table class="aeral-table">
+            <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th></th></tr>
+            <tr><td>Classe 1 - paramoteur</td>${cellH(0)}<td rowspan="6" style="vertical-align:middle;">Dont vol BIA</td><td rowspan="6" class="aeral-num" style="vertical-align:middle;">—</td></tr>
+            <tr><td>Classe 2 - pendulaire</td>${cellH(0)}</tr>
+            <tr><td>Classe 3 - multiaxes</td>${cellH(classe(3))}</tr>
+            <tr><td>Classe 4 - autogire</td>${cellH(0)}</tr>
+            <tr><td>Classe 5 - aérostat ultra-léger</td>${cellH(0)}</tr>
+            <tr><td>Classe 6 - hélicoptère</td>${cellH(0)}</tr>
+            <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="2"></td></tr>
+        </table>`;
+    };
+
+    // --- Instructeurs (format officiel) --------------------------------------
     const parInstr = {};
     vols.forEach(v => {
         if (!v.estInstruction) return;
-        const nom = v.instructeur ? ((aeralTrouverMembre(v.instructeur, u) || {}).fields || {}) : null;
-        const cle = nom ? `${nom['Prénom'] || ''} ${nom['Nom'] || ''}`.trim() : (v.instructeur || 'Non attribué');
-        parInstr[cle] = parInstr[cle] || { dc: 0, ss: 0, avion: 0, ulm: 0 };
-        const dc = v.fonction.includes('/I') || v.fonction.includes('FI');
-        if (dc) parInstr[cle].dc += v.duree; else parInstr[cle].ss += v.duree;
+        const m = v.instructeur ? aeralTrouverMembre(v.instructeur, u) : null;
+        const cle = m ? m.id : (v.instructeur || 'Non attribué');
+        parInstr[cle] = parInstr[cle] || { h: 0, avion: 0, ulm: 0 };
+        parInstr[cle].h += v.duree;
         (v.ulm ? parInstr[cle].ulm += v.duree : parInstr[cle].avion += v.duree);
     });
-    const lignesInstr = Object.entries(parInstr).sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([n, t]) => `<tr><td>${n}</td><td class="aeral-num">${cent(t.dc)}</td><td class="aeral-num">${cent(t.ss)}</td><td class="aeral-num">${cent(t.avion)}</td><td class="aeral-num">${cent(t.ulm)}</td></tr>`).join('');
+    // Tous les membres avec un role Instructeur*, meme a 0 h
+    const instrMembres = u.filter(m => /instructeur/i.test(roles(m)));
+    instrMembres.forEach(m => { if (!parInstr[m.id]) parInstr[m.id] = { h: 0, avion: 0, ulm: 0 }; });
+    const croix = (m, motif) => (m && new RegExp(motif, 'i').test(roles(m))) ? 'X' : '';
+    const nomDe = m => `${((m.fields || {})['Nom'] || '')} ${((m.fields || {})['Prénom'] || '')}`.trim().toUpperCase();
+    const lignesInstr = Object.entries(parInstr).map(([cle, t]) => {
+        const m = u.find(x => x.id === cle);
+        return `<tr><td>${m ? nomDe(m) : cle}</td>
+            <td class="aeral-num">${croix(m, 'chef.?pilote')}</td>
+            <td class="aeral-num">${croix(m, 'responsable p[ée]dagogique') && !/adjoint/i.test(roles(m)) ? 'X' : ''}</td>
+            <td class="aeral-num">${/adjoint/i.test(roles(m)) ? 'X' : ''}</td>
+            <td class="aeral-num">${m ? nfed(m) : ''}</td>
+            <td>Bénévole</td>
+            <td class="aeral-num">${cent(t.h)}</td></tr>`;
+    }).sort((a, b) => a.localeCompare(b)).join('');
+    const totInstr = Object.values(parInstr).reduce((s, t) => s + t.h, 0);
+    const totInstrAvion = Object.values(parInstr).reduce((s, t) => s + t.avion, 0);
+    const totInstrUlm = Object.values(parInstr).reduce((s, t) => s + t.ulm, 0);
 
-    const blocVol = (list, titre) => {
-        const c = k => somme(list.filter(v => catVol(v) === k));
-        return `
-        <h5 style="margin:10px 0 4px; font-size:13px; color:#475569;">${titre}</h5>
-        <table class="aeral-table">
-            <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th></th></tr>
-            <tr><td>VFR Jour local</td>${cellH(c('local'))}<td>Dont vol en montagne</td><td class="aeral-num">—</td></tr>
-            <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}<td>Dont voltige</td><td class="aeral-num">—</td></tr>
-            <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td>Dont vol BIA</td><td class="aeral-num">—</td></tr>
-            <tr><td>IFR</td><td class="aeral-num">0,00</td><td class="aeral-num">0</td><td class="aeral-num">00</td><td>Dont hydravion</td><td class="aeral-num">—</td></tr>
-            <tr><td></td><td></td><td></td><td></td><td>Dont vols de découverte</td>${cellH(c('vi'))}</tr>
-            <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="2"></td></tr>
-        </table>
-        ${demoTable(list)}`;
-    };
-
-    // Par machine : total + remorquage seul
+    // --- Machines + mouvements ----------------------------------------------
     const machines = [...new Set(vols.map(v => v.machine))].sort();
     const lignesMach = machines.map(m => {
         const lv = vols.filter(v => v.machine === m);
         const rem = lv.filter(v => v.estRemorquage);
         return `<tr><td>${m}</td><td class="aeral-num">${cent(somme(lv) - somme(rem))}</td><td class="aeral-num">${cent(somme(rem))}</td><td class="aeral-num">${cent(somme(lv))}</td></tr>`;
     }).join('');
+    const estLfoy = s => !s || /lfoy|saint.?romain/i.test(s);
+    let mDec = 0, mAtt = 0, mRem = 0;
+    vols.forEach(v => {
+        if (v.estRemorquage) { mRem += 1; return; }
+        if (estLfoy(v.dep)) mDec += v.dec;
+        if (estLfoy(v.arr)) mAtt += v.att;
+    });
+    const mvtRem = mRem * 2;
 
     return `
     <div class="aeral-rapport">
-        <h3>Activité ${annee} — heures de vol</h3>
-        <h4>Heures d'instruction par instructeur (double commande / élèves solo supervisés)</h4>
-        <table class="aeral-table"><tr><th>Instructeur</th><th>Double commande</th><th>Élèves solo sup.</th><th>Heures avion</th><th>Heures ULM</th></tr>${lignesInstr}</table>
+        <h3>Compte-rendu annuel ${annee} — heures de vol</h3>
+
+        <h4>Instructeurs de l'aéroclub</h4>
+        <div class="aeral-duo">
+            <table class="aeral-table">
+                <tr><th>Statut</th><th>Heures</th></tr>
+                <tr><td>Plein temps</td><td class="aeral-num">—</td></tr>
+                <tr><td>Temps partiel</td><td class="aeral-num">—</td></tr>
+                <tr><td>Indépendant</td><td class="aeral-num">—</td></tr>
+                <tr><td>Bénévole</td><td class="aeral-num">${cent(totInstr)}</td></tr>
+                <tr><td>Autre</td><td class="aeral-num">—</td></tr>
+                <tr><td><strong>Heures d'instruction dans l'année</strong></td><td class="aeral-num"><strong>${cent(totInstr)}</strong></td></tr>
+            </table>
+            <table class="aeral-table">
+                <tr><th>Activité</th><th>Heures</th></tr>
+                <tr><td>Avion</td><td class="aeral-num">${cent(totInstrAvion)}</td></tr>
+                <tr><td>Hélicoptère</td><td class="aeral-num">—</td></tr>
+                <tr><td>ULM</td><td class="aeral-num">${cent(totInstrUlm)}</td></tr>
+                <tr><td>Aérostation</td><td class="aeral-num">—</td></tr>
+                <tr><td>Planeur</td><td class="aeral-num">—</td></tr>
+                <tr><td><strong>Heures d'instruction dans l'année</strong></td><td class="aeral-num"><strong>${cent(totInstr)}</strong></td></tr>
+            </table>
+        </div>
+        <table class="aeral-table">
+            <tr><th>Nom de l'instructeur</th><th>Chef pilote</th><th>Responsable pédagogique</th><th>Adjoint resp. pédagogique</th><th>N° fédéral</th><th>Statut</th><th>Total heures d'instruction</th></tr>
+            ${lignesInstr}
+        </table>
+
         <h4>Activité en instruction</h4>
-        ${blocVol(avion.filter(v => v.estInstruction), '✈️ Avion')}
-        ${blocVol(ulm.filter(v => v.estInstruction), '🪂 ULM (classe 3 multiaxes)')}
+        <h5 style="margin:10px 0 4px; font-size:13px; color:#475569;">✈️ Avion</h5>
+        ${blocAvion(avion.filter(v => v.estInstruction))}
+        ${demoTable(avion.filter(v => v.estInstruction))}
+        <h5 style="margin:10px 0 4px; font-size:13px; color:#475569;">🪂 ULM</h5>
+        ${blocUlm(ulm.filter(v => v.estInstruction))}
+        ${demoTable(ulm.filter(v => v.estInstruction))}
+
         <h4>Activité hors instruction</h4>
-        ${blocVol(avion.filter(v => !v.estInstruction), '✈️ Avion')}
-        ${blocVol(ulm.filter(v => !v.estInstruction), '🪂 ULM (classe 3 multiaxes)')}
+        <h5 style="margin:10px 0 4px; font-size:13px; color:#475569;">✈️ Avion</h5>
+        ${blocAvion(avion.filter(v => !v.estInstruction))}
+        ${demoTable(avion.filter(v => !v.estInstruction))}
+        <h5 style="margin:10px 0 4px; font-size:13px; color:#475569;">🪂 ULM</h5>
+        ${blocUlm(ulm.filter(v => !v.estInstruction))}
+        ${demoTable(ulm.filter(v => !v.estInstruction))}
+
         <h4>Heures par machine</h4>
         <table class="aeral-table"><tr><th>Machine</th><th>Hors remorquage</th><th>Remorquage</th><th>Total</th></tr>${lignesMach}</table>
+
         <h4>Nombre de mouvements sur la plate-forme LFOY (Le Havre – Saint-Romain)</h4>
-        ${(function () {
-            const estLfoy = s => !s || /lfoy|saint.?romain/i.test(s);
-            let dec = 0, att = 0, rem = 0;
-            vols.forEach(v => {
-                if (v.estRemorquage) { rem += 1; return; }
-                if (estLfoy(v.dep)) dec += v.dec;
-                if (estLfoy(v.arr)) att += v.att;
-            });
-            const mvtRem = rem * 2;
-            return `<table class="aeral-table">
-                <tr><th></th><th>Nombre</th><th>Détail</th></tr>
-                <tr><td>Décollages</td><td class="aeral-num">${dec}</td><td>1 décollage = 1 mouvement</td></tr>
-                <tr><td>Atterrissages (dont touchés)</td><td class="aeral-num">${att}</td><td>1 atterrissage ou touché = 1 mouvement</td></tr>
-                <tr><td>Remorquages</td><td class="aeral-num">${mvtRem}</td><td>${rem} remorquage(s) × 2 mouvements (décollage + atterrissage)</td></tr>
-                <tr><td><strong>Total mouvements</strong></td><td class="aeral-num"><strong>${dec + att + mvtRem}</strong></td><td></td></tr>
-            </table>
-            <p class="aeral-note">⚠️ Ajouter à ce total les mouvements des planeurs remorqués (décollage + atterrissage du planeur, non comptabilisés dans le carnet avion/ULM).</p>`;
-        })()}
+        <table class="aeral-table">
+            <tr><th></th><th>Nombre</th><th>Détail</th></tr>
+            <tr><td>Décollages</td><td class="aeral-num">${mDec}</td><td>1 décollage = 1 mouvement</td></tr>
+            <tr><td>Atterrissages (dont touchés)</td><td class="aeral-num">${mAtt}</td><td>1 atterrissage ou touché = 1 mouvement</td></tr>
+            <tr><td>Remorquages</td><td class="aeral-num">${mvtRem}</td><td>${mRem} remorquage(s) × 2 mouvements (décollage + atterrissage)</td></tr>
+            <tr><td><strong>Total mouvements</strong></td><td class="aeral-num"><strong>${mDec + mAtt + mvtRem}</strong></td><td></td></tr>
+        </table>
+        <p class="aeral-note">⚠️ Ajouter à ce total les mouvements des planeurs remorqués (décollage + atterrissage du planeur, non comptabilisés dans le carnet avion/ULM).</p>
         <p class="aeral-note">Sources : carnets de route + vols GVV non couverts. « Non renseigné » = membre sans genre ou hors annuaire — renseignez le champ Genre de la fiche membre.</p>
     </div>`;
 }

@@ -6391,3 +6391,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 .aeral-num { text-align: right; font-variant-numeric: tabular-nums; }
 .aeral-sub { font-size: 11px; color: #64748b; margin-top: 8px; text-transform: uppercase; letter-spacing: .5px; }
 .aeral-note { font-size: 11px; color: #94a3b8; margin-top: 14px; }
+
+/* Rapport AERAL — en-tete instructeurs en deux colonnes */
+.aeral-duo { display: flex; gap: 24px; flex-wrap: wrap; }
+.aeral-duo .aeral-table { flex: 1; min-width: 320px; }
