@@ -119,13 +119,11 @@ function ouvrirLegendeCodeJVIO(type) {
     if (type === 'fonction') {
         afficherModaleAlerte('Fonction — codes utilisés', `
             ${ligne('P', 'Pilote')}
-            ${ligne('PCdB', 'Pilote + Commandant de bord')}
             ${ligne('PAX', 'Passager')}
             ${ligne('EP', 'Élève pilote')}
             ${ligne('I', 'Instructeur')}
-            ${ligne('ICdB', 'Instructeur + Commandant de bord')}
             ${ligne('EX', 'Examinateur')}
-            <div style="margin-top:8px; font-size:12px; color:#64748b;">Combinaisons possibles, ex. P/EP</div>
+            <div style="margin-top:8px; font-size:12px; color:#64748b;">Couples autorisés : P+PAX · P+I · P+EX · EP+I · EP+EX (P ou EP seuls = vol solo)</div>
         `, '👤');
     } else {
         afficherModaleAlerte('Nature du vol — codes utilisés', `
@@ -1024,13 +1022,28 @@ function majVerrouillageVolInitiation() {
 
 const CARNET_JVIO_FONCTIONS = [
     { value: 'P', label: 'P = Pilote', emoji: '🧑‍✈️' },
-    { value: 'PCdB', label: 'PCdB = PIL.+CdB', emoji: '🛩️' },
     { value: 'PAX', label: 'PAX = Passager', emoji: '👤' },
     { value: 'EP', label: 'EP = Élève pilote', emoji: '🎓' },
     { value: 'I', label: 'I = Instructeur', emoji: '👨‍🏫' },
-    { value: 'ICdB', label: 'ICdB = Instr.+CdB', emoji: '✈️' },
     { value: 'EX', label: 'EX = Examinateur', emoji: '📋' }
 ];
+
+// ULM (F-J…) : seuls ces couples sont permis — P+PAX, P+I, P+EX,
+// EP+I, EP/EX (P ou EP seuls : vol solo / élève solo supervisé).
+const FONCTIONS_EXCLUSIVES_ULM = [['P', 'EP'], ['PAX', 'I', 'EX']];
+function appliquerExclusiviteFonctionsUlm(cb) {
+    if (!cb.checked) return;
+    FONCTIONS_EXCLUSIVES_ULM.forEach(groupe => {
+        if (!groupe.includes(cb.value)) return;
+        document.querySelectorAll('input[name="carnet-fonction"]').forEach(o => {
+            if (o !== cb && groupe.includes(o.value)) o.checked = false;
+        });
+    });
+    // EP+PAX interdit : un élève n'emporte qu'un instructeur/examinateur.
+    const ep = document.querySelector('input[name="carnet-fonction"][value="EP"]');
+    const pax = document.querySelector('input[name="carnet-fonction"][value="PAX"]');
+    if (ep && pax && ep.checked && pax.checked) pax.checked = false;
+}
 
 const EMOJIS_NATURE_JVIO = {
     'local': '🏠',
@@ -1122,6 +1135,7 @@ function cocherFonctionParDefaut() {
 
 function adapterFormulaireCarnet(machine) {
     const isJVIO = machine === 'F-JVIO';
+    const isUlm = /^F-J/i.test(machine || '');
     const isBLIO = machine === 'F-BLIO';
     const isMoteur = MACHINES_MOTEURS.includes(machine);
     const modal = document.getElementById('carnet-modal');
@@ -1218,13 +1232,14 @@ function adapterFormulaireCarnet(machine) {
     syncMachineChips();
 
     if (fonctionGroup) {
-        const fonctions = isJVIO ? CARNET_JVIO_FONCTIONS : (isMoteur ? CARNET_MOTEUR_FONCTIONS : CARNET_STD_FONCTIONS);
+        const fonctions = isUlm ? CARNET_JVIO_FONCTIONS : (isMoteur ? CARNET_MOTEUR_FONCTIONS : CARNET_STD_FONCTIONS);
         fonctionGroup.innerHTML = fonctions.map(f =>
             `<label class="checkbox-option">${f.emoji ? f.emoji + ' ' : ''}<input type="checkbox" name="carnet-fonction" value="${f.value}"> ${f.label}</label>`
         ).join('');
         fonctionGroup.querySelectorAll('input[name="carnet-fonction"]').forEach(cb => {
             cb.addEventListener('change', () => {
-                if (isMoteur && !isJVIO) appliquerExclusiviteFonctions(cb);
+                if (isUlm) appliquerExclusiviteFonctionsUlm(cb);
+                else if (isMoteur && !isJVIO) appliquerExclusiviteFonctions(cb);
                 mettreAJourNatureParFonction();
             });
         });
