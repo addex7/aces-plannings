@@ -311,6 +311,16 @@ function initFicheVLO() {
         btn.addEventListener('click', () => ouvrirFicheVLO(null));
         actions.appendChild(btn);
     }
+    if (!document.getElementById('btn-depart-vip')) {
+        const btn = document.createElement('button');
+        btn.id = 'btn-depart-vip';
+        btn.className = 'btn-primary';
+        btn.type = 'button';
+        btn.textContent = '🛫 Départ VIP';
+        btn.title = 'Déclaration de départ VIP — plateforme HEVA FFVP (nouvel onglet)';
+        btn.addEventListener('click', () => window.open('https://public.heva.ffvp.fr/club/237602/z6SJ11hCqleK3aXC3T-NCFs4Bp7fuZYnNn3AwRv3uJubkWeChEx1', '_blank'));
+        actions.appendChild(btn);
+    }
     if (!document.getElementById('btn-fiches-vlo')) {
         const btn = document.createElement('button');
         btn.id = 'btn-fiches-vlo';
