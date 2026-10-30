@@ -306,7 +306,7 @@ function initFicheVLO() {
         btn.id = 'btn-depart-viulm';
         btn.className = 'btn-primary';
         btn.type = 'button';
-        btn.textContent = '🛫 Départ VIULM';
+        btn.textContent = '🛫 Départ VLD ULM';
         btn.title = 'Fiche d\'information passager VLO/VLD — à faire signer avant le départ';
         btn.addEventListener('click', () => ouvrirFicheVLO(null));
         actions.appendChild(btn);
@@ -316,7 +316,7 @@ function initFicheVLO() {
         btn.id = 'btn-fiches-vlo';
         btn.className = 'btn-primary';
         btn.type = 'button';
-        btn.textContent = 'Fiches VLO';
+        btn.textContent = 'Fiches VLD';
         btn.title = 'Fiches passager VLO/VLD conservées (3 derniers mois)';
         btn.addEventListener('click', ouvrirListeFichesVLO);
         actions.appendChild(btn);
