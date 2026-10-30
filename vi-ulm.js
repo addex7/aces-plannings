@@ -71,8 +71,11 @@ async function evaluerPiloteVIULM(membre, exp) {
     // qualification IULM a jour tient lieu d'attestations.
     const rolesM = Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean);
     const dvInstr = f['Date de validité instructeur ULM'];
-    const instrUlm = rolesM.includes('Instructeur ULM')
-        || (!!dvInstr && new Date(dvInstr + 'T00:00:00') >= auj);
+    // Instructeur ULM A JOUR : role present ou validite renseignee, et si une
+    // date de validite existe elle ne doit pas etre expiree — sinon les
+    // attestations (evals + FH) redeviennent exigees.
+    const instrUlm = (rolesM.includes('Instructeur ULM') || !!dvInstr)
+        && (!dvInstr || new Date(dvInstr + 'T00:00:00') >= auj);
     const evalInitialeOk = initiale.length > 0 || instrUlm;
     // Recurrente : une eval recurrente valable (<3 ans), ou l'initiale si elle
     // a moins de 3 ans (les 3 premieres annees elle tient lieu de recurrente).
@@ -90,7 +93,7 @@ async function evaluerPiloteVIULM(membre, exp) {
         { label: 'Âge ≥ 18 ans', ok: ageOk, detail: age === null ? 'date de naissance manquante' : `${age} ans` },
         { label: 'Évaluation initiale (attestation jointe)', ok: evalInitialeOk, detail: initiale.length ? '' : (instrUlm ? 'dispensée — instructeur ULM à jour' : 'document introuvable') },
         { label: 'Évaluation récurrente (< 3 ans, attestation jointe)', ok: recurrenteOk, detail: (recValable || initJeune) ? '' : (instrUlm ? 'dispensée — instructeur ULM à jour' : 'absente ou > 3 ans') },
-        { label: 'Formation FH (attestation jointe)', ok: fhOk, detail: fh.length ? '' : (instrUlm ? 'dispensée — instructeur ULM' : 'document introuvable') },
+        { label: 'Formation FH (attestation jointe)', ok: fhOk, detail: fh.length ? '' : (instrUlm ? 'dispensée — instructeur ULM à jour' : 'document introuvable') },
         { label: 'Expérience récente ULM (3 décollages / 3 atterrissages sur 90 j)', ok: recentOk, detail: `${exp.decollages3mUlm || 0} décollages, ${exp.atterrissages3mUlm || 0} atterrissages` },
     ];
     if (medRequis) lignes.push({ label: 'Certificat médical (> 60 ans, attestation jointe)', ok: medical.length > 0, detail: medical.length ? '' : 'document introuvable' });
