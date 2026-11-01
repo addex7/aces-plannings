@@ -3251,7 +3251,16 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     .header { gap: 8px 12px; }
     .header h2 { font-size: 18px; }
     .planning-titre-groupe { min-width: 0; gap: 8px; flex-shrink: 1; }
-    .header-actions { gap: 6px; flex-wrap: nowrap; flex-shrink: 0; }
+    /* Boutons d'en-tete : defilement horizontal au doigt quand ils
+       debordent — ainsi ils restent TOUS accessibles sur tablette au
+       lieu de sortir de l'ecran a droite. */
+    .header-actions {
+        gap: 6px; flex-wrap: nowrap; flex-shrink: 0;
+        overflow-x: auto; max-width: 100%;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .header-actions::-webkit-scrollbar { display: none; }
     /* Harmonisation : tous les boutons d'en-tete partagent la meme
        taille, la meme police et la meme couleur (bleu nuit) */
     .header .btn-primary,
