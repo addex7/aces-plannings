@@ -1549,7 +1549,8 @@ async function ouvrirModaleAttribuer() {
         membres = await fetchTousRecordsCache(url, { headers });
     }
     membresFormationCache = membres;
-    const actifs = membres.filter(m => m.fields && m.fields['Actif'] !== false && `${m.fields['Prénom'] || ''}${m.fields['Nom'] || ''}`.trim());
+    // Tous les membres inscrits — y compris comptes pas encore actives (Actif=false).
+    const actifs = membres.filter(m => m.fields && `${m.fields['Prénom'] || ''}${m.fields['Nom'] || ''}`.trim());
     actifs.sort((a, b) => `${a.fields['Prénom']} ${a.fields['Nom']}`.localeCompare(`${b.fields['Prénom']} ${b.fields['Nom']}`));
     selEleve.innerHTML = '<option value="">— Choisir un élève —</option>' +
         actifs.map(m => `<option value="${m.id}">${escapeHtml(`${m.fields['Prénom'] || ''} ${m.fields['Nom'] || ''}`.trim())}</option>`).join('');
