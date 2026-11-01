@@ -870,7 +870,7 @@ async function ouvrirExamULM() {
                 'Heure fin': hm(eMin),
                 'Pilote': nomPilote,
                 'Statut': 'Réservé',
-                'Type': 'VIULM',
+                'Type': "Exam'ULM",
                 'Nom': "Exam'ULM",
                 'Commentaire': "Exam'ULM — examen théorique ULM"
             } }] })
