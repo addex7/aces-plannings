@@ -144,6 +144,9 @@ async function modifierCommentaire(recordId, tableName, commentaireActuel, nom =
 let presencesClubGen = 0;
 
 async function chargerPresencesClub() {
+    const btnExam = document.getElementById('btn-exam-ulm');
+    if (btnExam) btnExam.style.display = roleAutorise(['Instructeur ULM', 'Super admin']) ? '' : 'none';
+
     const gen = ++presencesClubGen;
     if (typeof chargerListeMembresCache === 'function') await chargerListeMembresCache();
     const listAtelier = document.getElementById('list-atelier');
@@ -818,3 +821,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 afficherBoutonsInscrireAutre();
+
+
+// --- EXAM'ULM — session d'examens theoriques ULM ---------------------------
+// Reserve aux instructeurs ULM : cree la reservation de la Salle Ernest Meyer
+// (Presences Club) ET l'evenement visible sur le planning (~2 h).
+
+async function ouvrirExamULM() {
+    if (!roleAutorise(['Instructeur ULM', 'Super admin'])) {
+        alert("Réservé aux instructeurs ULM.");
+        return;
+    }
+    const saisie = await demanderSaisie("Horaires de la session Exam'ULM", '', { placeholder: "ex : 14-16, 14h30-16h30 (en général 2h)" });
+    if (saisie === null || !saisie.trim()) return;
+    const intervalles = parseDureesCommentaire(saisie);
+    if (!intervalles || !intervalles.length) {
+        alert("Je n'ai pas reconnu d'horaires.\nExemples : 14-16, 14h30-16h30");
+        return;
+    }
+    const dateStr = dateAffichee.toISOString().split('T')[0];
+    const nomPilote = typeof nomCompletCourant === 'function'
+        ? nomCompletCourant()
+        : `${(currentUser || {}).prenom || ''} ${(currentUser || {}).nom || ''}`.trim();
+    const [s, e] = intervalles[0];
+    const eMin = e >= 1440 ? 1439 : e;
+    const hm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    try {
+        // 1. Reservation de la salle (visible dans Presences Club)
+        const res = await cachedFetch(`${API_BASE}/${encodeURIComponent('Présences Club')}`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ records: [{ fields: {
+                'Nom du pilote': nomPilote,
+                'Lieu': 'Salle Ernest Meyer',
+                'Date': dateStr,
+                'Heure début': hm(s),
+                'Heure fin': hm(eMin),
+                'Commentaire': "Exam'ULM"
+            } }] })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        // 2. Creneau bloque sur le planning via un evenement (~2 h affiches)
+        const F = (typeof FIELDS !== 'undefined') ? FIELDS
+            : { TITRE: 'Titre', DESCRIPTION: 'Description', DATE_DEBUT: 'Date début', DATE_FIN: 'Date de fin', HEURE_DEBUT: 'Heure début', HEURE_FIN: 'Heure fin', AJOUTE_PAR: 'Ajouté par' };
+        const res2 = await cachedFetch(`${API_BASE}/${encodeURIComponent(typeof TABLE_EVENEMENTS !== 'undefined' ? TABLE_EVENEMENTS : 'Événements')}`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ records: [{ fields: {
+                [F.TITRE]: "Exam'ULM",
+                [F.DESCRIPTION]: `Session d'examens théoriques ULM — instructeur : ${nomPilote} — Salle Ernest Meyer`,
+                [F.DATE_DEBUT]: dateStr,
+                [F.DATE_FIN]: dateStr,
+                [F.HEURE_DEBUT]: hm(s),
+                [F.HEURE_FIN]: hm(eMin),
+                [F.AJOUTE_PAR]: nomPilote
+            } }] })
+        });
+        if (!res2.ok) console.warn("Événement Exam'ULM :", await res2.text());
+        if (typeof enregistrerAudit === 'function') {
+            await enregistrerAudit("Exam'ULM", nomPilote, `Salle Ernest Meyer | ${dateStr} | ${hm(s)}–${hm(eMin)}`, 'Instructeur');
+        }
+        if (typeof chargerPresencesClub === 'function') await chargerPresencesClub();
+        if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+        if (typeof chargerEvenementsJour === 'function') chargerEvenementsJour();
+    } catch (err) {
+        console.error(err);
+        alert("Erreur lors de la création de la session Exam'ULM.");
+    }
+}
