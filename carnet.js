@@ -1035,10 +1035,16 @@ const CARNET_JVIO_FONCTIONS = [
 const PAIRES_ULM = [['P', 'PAX'], ['P', 'I'], ['P', 'EX'], ['EP', 'I'], ['EP', 'EX'], ['PAX', 'I'], ['PAX', 'EX']];
 function appliquerExclusiviteFonctionsUlm(cb) {
     if (!cb.checked) return;
-    const coches = Array.from(document.querySelectorAll('input[name="carnet-fonction"]:checked')).map(o => o.value);
-    const ok = coches.length <= 1
-        || (coches.length === 2 && PAIRES_ULM.some(p => p.includes(coches[0]) && p.includes(coches[1])));
-    if (!ok) cb.checked = false;
+    // La nouvelle case reste : on decoche les AUTRES cases tant que la
+    // combinaison n'est pas permise (changer de role = l'ancien se decoche).
+    const valide = () => {
+        const coches = Array.from(document.querySelectorAll('input[name="carnet-fonction"]:checked')).map(o => o.value);
+        return coches.length <= 1
+            || (coches.length === 2 && PAIRES_ULM.some(p => p.includes(coches[0]) && p.includes(coches[1])));
+    };
+    document.querySelectorAll('input[name="carnet-fonction"]:checked').forEach(o => {
+        if (o !== cb && !valide()) o.checked = false;
+    });
 }
 
 const EMOJIS_NATURE_JVIO = {
