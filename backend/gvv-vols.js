@@ -180,8 +180,10 @@ async function envoyerVolAvion(fields, aliasCompteGvv, pool) {
 
     // Categorie / nature
     const nature = `${f['Nature'] || ''} ${f['Précision activité'] || ''}`.toLowerCase();
+    const estUlm = /^F-J/i.test((f['Machine'] || '').toString().trim());
     let vacategorie = '0';
-    if (/initiation/.test(nature)) vacategorie = '1';
+    // Un VLD sur ULM est un vol d'initiation aux yeux de GVV.
+    if (/initiation/.test(nature) || (estUlm && /vld/.test(nature))) vacategorie = '1';
     else if (/remorquage|\brem\b/.test(nature)) vacategorie = '3';
     const fonction = (f['Fonction'] || '').toString();
     const doubleCommande = !!instructeurLogin || /\bEP\b|\bFI\b/.test(fonction);
