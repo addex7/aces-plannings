@@ -575,6 +575,11 @@ function construireArbreDocs(recordsVisibles) {
         const sous = (f['Sous-dossier'] || '').split('/').filter(Boolean);
         docsAssurerNoeud(arbre, [cat].concat(sous)).docs.push(rec);
     });
+    // Tri naturel des documents dans chaque noeud : BSV-1, BSV-2, …,
+    // BSV-9, BSV-10 (le tri alphabetique API placait BSV-10 avant BSV-2).
+    const triNaturel = (a, b) => (((a.fields || {})['Titre']) || '').localeCompare((((b.fields || {})['Titre']) || ''), 'fr', { numeric: true });
+    const trierNoeud = n => { n.docs.sort(triNaturel); Object.values(n.sous).forEach(trierNoeud); };
+    Object.values(arbre).forEach(trierNoeud);
     return arbre;
 }
 
