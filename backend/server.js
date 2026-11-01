@@ -1122,12 +1122,18 @@ app.post('/v0/:base/vol-facturation-tempo', async (req, res) => {
             if (exist.length) await pool.query('DELETE FROM comptes_pilotes WHERE id = ANY($1)', [exist.map(r => r.id)]);
             return res.json({ ok: true, facturee: false });
         }
+        // Vol d'initiation : paye par le passager — la ligne s'affiche au
+        // compte du pilote mais sans debit (« Précision activité » contient
+        // « Vol d'initiation », ex : « Local + Vol d'initiation »).
+        const estVI = (f['Précision activité'] || '').toString().toLowerCase().includes('initiation');
         const champs = {
             'Pilote': pilote,
             'Date': f['Date'] || '',
-            'Description': `Vol ${f['Machine'] || ''} du ${f['Date'] || ''} — facturation provisoire en attente GVV`,
+            'Description': estVI
+                ? `Vol ${f['Machine'] || ''} du ${f['Date'] || ''} — vol d'initiation payé par le passager`
+                : `Vol ${f['Machine'] || ''} du ${f['Date'] || ''} — facturation provisoire en attente GVV`,
             'Référence': f['Machine'] || '',
-            'Prix': prix, 'Quantité': 1, 'Débit': prix, 'Crédit': 0,
+            'Prix': prix, 'Quantité': 1, 'Débit': estVI ? 0 : prix, 'Crédit': 0,
             // Statut « Validé » : compte dans le solde du pilote tant que
             // l'ecriture GVV reelle n'est pas remontee (la Description
             // signale le caractere provisoire).
