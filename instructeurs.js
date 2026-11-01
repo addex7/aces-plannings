@@ -501,7 +501,7 @@ function afficherLignesInstructeurs(rowsContainer, soleil, disposFournis, reserv
                 }
             } else if (isCreneau || (f['Type'] && !isInstruction)) {
                 barresDiv.classList.add('vi-avec-pilote');
-                libelleEntete = type === "Exam'ULM" ? "🎯 Exam'ULM" : (piloteFormate ? `🎯 ${type} (${piloteFormate})` : `🎯 ${type} DISPONIBLE`);
+                libelleEntete = typesVol.includes("Exam'ULM") ? "🎯 Exam'ULM" : (piloteFormate ? `🎯 ${type} (${piloteFormate})` : `🎯 ${type} DISPONIBLE`);
             }
             barresDiv.style.left = `${positionHeure(heureDebut)}%`;
             barresDiv.style.width = `${positionHeure(heureFin) - positionHeure(heureDebut)}%`;
