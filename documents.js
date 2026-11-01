@@ -826,7 +826,7 @@ function docsAllerA(index) {
 
 function docsHtmlCartes(recs) {
     if (!recs.length) return '<p style="color:#94a3b8; font-size:13px;">Dossier vide.</p>';
-    return `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${recs.map(creerCarteDocument).join('')}</div>`;
+    return `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">${recs.map(r => creerCarteDocument(r)).join('')}</div>`;
 }
 
 function docsCarteMachineHtml(r, machine, canEdit, aujourdhui, dans3mois, contexte = false) {
