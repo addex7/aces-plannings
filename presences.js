@@ -856,7 +856,7 @@ async function ouvrirExamULM() {
                 'Date': dateStr,
                 'Heure début': hm(s),
                 'Heure fin': hm(eMin),
-                'Commentaire': "Exam'ULM"
+                'Commentaire': `Exam'ULM — ${hm(s)}–${hm(eMin)}`
             } }] })
         });
         if (!res.ok) throw new Error(await res.text());
@@ -870,7 +870,7 @@ async function ouvrirExamULM() {
                 'Heure fin': hm(eMin),
                 'Pilote': nomPilote,
                 'Statut': 'Réservé',
-                'Type': "Exam'ULM",
+                'Type': 'VIULM',
                 'Nom': "Exam'ULM",
                 'Commentaire': "Exam'ULM — examen théorique ULM"
             } }] })
