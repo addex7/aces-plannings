@@ -236,6 +236,32 @@ async function desinscrireClub(recordId) {
                 const date = rec.fields?.['Date'] || '';
                 await enregistrerAudit('Désinscription Club', lieu, `Pilote : ${pilote} | Date : ${date}`, 'Présences');
             }
+            // Une presence « Exam'ULM » a aussi cree un creneau reserve sur le
+            // planning (ligne instructeur) : on le supprime en meme temps.
+            const comm = (rec.fields?.['Commentaire'] || '').toString();
+            const datePres = rec.fields?.['Date'];
+            if (comm.includes("Exam'ULM") && datePres && nomInscrit) {
+                try {
+                    const formula = `AND(DATETIME_FORMAT({Date}, 'YYYY-MM-DD')='${datePres}', {Statut}='Réservé')`;
+                    const cren = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`, { headers }, 0, true);
+                    const aSupprimer = cren.filter(c => {
+                        const cf = c.fields || {};
+                        const cComm = (cf['Commentaire'] || '').toString();
+                        if (cf['Type'] !== "Exam'ULM" && !cComm.includes("Exam'ULM")) return false;
+                        const memePilote = typeof correspondanceNom === 'function'
+                            ? correspondanceNom(cf['Pilote'], nomInscrit)
+                            : cf['Pilote'] === nomInscrit;
+                        if (!memePilote) return false;
+                        const hd = rec.fields['Heure début'], hf = rec.fields['Heure fin'];
+                        if (hd && hf && (cf['Heure début'] !== hd || cf['Heure fin'] !== hf)) return false;
+                        return true;
+                    });
+                    for (const c of aSupprimer) {
+                        await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}?records[]=${c.id}`, { method: 'DELETE', headers });
+                    }
+                    if (aSupprimer.length && typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, false);
+                } catch (e) { console.warn("Suppression créneau Exam'ULM :", e); }
+            }
             await chargerPresencesClub();
         }
     } catch (error) {
