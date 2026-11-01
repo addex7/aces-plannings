@@ -860,22 +860,22 @@ async function ouvrirExamULM() {
             } }] })
         });
         if (!res.ok) throw new Error(await res.text());
-        // 2. Creneau bloque sur le planning via un evenement (~2 h affiches)
-        const F = (typeof FIELDS !== 'undefined') ? FIELDS
-            : { TITRE: 'Titre', DESCRIPTION: 'Description', DATE_DEBUT: 'Date début', DATE_FIN: 'Date de fin', HEURE_DEBUT: 'Heure début', HEURE_FIN: 'Heure fin', AJOUTE_PAR: 'Ajouté par' };
-        const res2 = await cachedFetch(`${API_BASE}/${encodeURIComponent(typeof TABLE_EVENEMENTS !== 'undefined' ? TABLE_EVENEMENTS : 'Événements')}`, {
+        // 2. Reservation sur la ligne instructeur du planning :
+        // un creneau « Réservé » affiche Exam'ULM sur le creneau choisi.
+        const res2 = await cachedFetch(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, {
             method: 'POST', headers,
             body: JSON.stringify({ records: [{ fields: {
-                [F.TITRE]: "Exam'ULM",
-                [F.DESCRIPTION]: `Session d'examens théoriques ULM — instructeur : ${nomPilote} — Salle Ernest Meyer`,
-                [F.DATE_DEBUT]: dateStr,
-                [F.DATE_FIN]: dateStr,
-                [F.HEURE_DEBUT]: hm(s),
-                [F.HEURE_FIN]: hm(eMin),
-                [F.AJOUTE_PAR]: nomPilote
+                'Date': dateStr,
+                'Heure début': hm(s),
+                'Heure fin': hm(eMin),
+                'Pilote': nomPilote,
+                'Statut': 'Réservé',
+                'Type': "Exam'ULM",
+                'Nom': "Exam'ULM",
+                'Commentaire': "Exam'ULM — examen théorique ULM"
             } }] })
         });
-        if (!res2.ok) console.warn("Événement Exam'ULM :", await res2.text());
+        if (!res2.ok) console.warn("Créneau Exam'ULM :", await res2.text());
         if (typeof enregistrerAudit === 'function') {
             await enregistrerAudit("Exam'ULM", nomPilote, `Salle Ernest Meyer | ${dateStr} | ${hm(s)}–${hm(eMin)}`, 'Instructeur');
         }
