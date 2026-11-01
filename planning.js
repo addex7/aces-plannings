@@ -934,20 +934,21 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                     }
                 };
             }
+            const estExamUlm = type === "Exam'ULM";
             const avionId = type === 'VIULM' ? avionIdJVIO : (type === 'VIA' ? avionIdGASB : null);
-            if (!avionId || nom === 'DISPONIBLE') return null;
+            if ((!avionId && !estExamUlm) || nom === 'DISPONIBLE') return null;
             creneauxVIMotor.push({
                 id: vol.id,
                 _table: 'VI Créneaux',
                 _typeVI: type,
                 fields: {
-                    'Type de vol': ['VI Moteur'],
+                    'Type de vol': estExamUlm ? ["Exam'ULM"] : ['VI Moteur'],
                     'Passager': nom,
                     'Pilote': pilote,
                     'Téléphone': f['Téléphone'] || '',
                     'Email': f['Email'] || '',
                     'Token': f['Token'] || '',
-                    'Machine': [avionId],
+                    'Machine': [estExamUlm ? avionIdJVIO : avionId],
                     'Date de début': dateRaw + 'T' + (f['Heure début'] || '00:00') + ':00',
                     'Date de fin': dateRaw + 'T' + (f['Heure fin'] || '00:00') + ':00',
                     'Commentaires VI': f['Commentaire'] || '',
@@ -1039,7 +1040,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                 const dateFin = new Date(finRaw);
                 return dateVol < dayEnd && dateFin > dayStart;
             });
-            const creneauxMotorAvion = creneauxVIMotor.filter(c => (c.fields['Machine'] || []).includes(avionId));
+            const creneauxMotorAvion = creneauxVIMotor.filter(c => c._typeVI !== "Exam'ULM" && (c.fields['Machine'] || []).includes(avionId));
             volsAvion = volsAvion.concat(creneauxMotorAvion);
             const immatBadge = avionNom.toString().trim().toUpperCase();
             const horaCarnet = (carnetsPilotesTous || []).reduce((max, c) => {
@@ -1175,6 +1176,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const isVIMoteur = typesVol.includes('VI Moteur');
                         const isAncienVI = typesVol.includes("Vol d'Initiation") || typesVol.includes("Vol d'Initiation (VI)");
                         const isCreneau = vol._table === 'VI Créneaux';
+                        const isExamUlm = typesVol.includes("Exam'ULM");
                         const isInstruction = typesVol.includes('Instruction');
                         const isRemorquage = typesVol.includes('Remorquage');
                         const estMoi = estUtilisateurCourant(piloteNom) || estUtilisateurCourant(instructeurNom);
@@ -1187,7 +1189,10 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                             const trigramme = trouverTrigrammeInstructeur(instructeurNom);
                             if (trigramme) libelleEntete += ` — ${trigramme}`;
                         }
-                        if (isVIMoteur || isAncienVI) {
+                        if (isExamUlm) {
+                            barresDiv.classList.add('vi-avec-pilote');
+                            libelleEntete = "🎯 Exam'ULM";
+                        } else if (isVIMoteur || isAncienVI) {
                             if (!piloteNom || piloteNom.trim() === "") {
                                 barresDiv.classList.add('vi-sans-pilote');
                                 const suffix = passagerNom || 'dispo';
