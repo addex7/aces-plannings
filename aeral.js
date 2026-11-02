@@ -167,10 +167,10 @@ function aeralRapportHtml(vols, annee) {
     const blocAvion = (list, avecDecouverte = false) => {
         const c = k => somme(list.filter(v => catVol(v) === k));
         return `<table class="aeral-table">
-            <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th colspan="3"></th></tr>
-            <tr><td>VFR Jour local</td>${cellH(c('local'))}<td colspan="4"></td></tr>
+            <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th colspan="3" style="border:none; background:none;"></th></tr>
+            <tr><td>VFR Jour local</td>${cellH(c('local'))}<td>Dont vol BIA</td><td colspan="3" class="aeral-num">—</td></tr>
             <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}<td colspan="4"></td></tr>
-            <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td>Dont vol BIA</td><td colspan="3" class="aeral-num">—</td></tr>
+            <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td colspan="4"></td></tr>
             ${avecDecouverte ? `<tr><td></td><td></td><td></td><td></td><td>Dont vols de découverte (VIA)</td>${cellH(c('vi'))}</tr>` : ''}
             <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4"></td></tr>
         </table>`;
