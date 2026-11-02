@@ -169,9 +169,9 @@ function aeralRapportHtml(vols, annee) {
         return `<table class="aeral-table">
             <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th colspan="3" style="border:none; background:none;"></th></tr>
             <tr><td>VFR Jour local</td>${cellH(c('local'))}<td class="aeral-hors">Dont vol BIA</td><td colspan="3" class="aeral-num aeral-hors">—</td></tr>
-            <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}${avecDecouverte ? `<td class="aeral-hors">Dont vols de découverte (VIA)</td>${cellH(c('vi'), 'aeral-hors')}` : '<td colspan="4"></td>'}</tr>
-            <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td colspan="4"></td></tr>
-            <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4"></td></tr>
+            <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}${avecDecouverte ? `<td class="aeral-hors">Dont vols de découverte (VIA)</td>${cellH(c('vi'), 'aeral-hors')}` : '<td colspan="4" class="aeral-hors"></td>'}</tr>
+            <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td colspan="4" class="aeral-hors"></td></tr>
+            <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4" class="aeral-hors"></td></tr>
         </table>`;
     };
 
