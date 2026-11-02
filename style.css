@@ -6481,3 +6481,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 #reservation-modal .nr-datetime input {
     width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;
 }
+
+/* Edge : l'icone calendrier elargit les champs datetime — on la masque */
+#reservation-modal input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+#reservation-modal input[type="date"]::-webkit-calendar-picker-indicator,
+#reservation-modal input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+}
