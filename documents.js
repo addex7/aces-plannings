@@ -11,7 +11,7 @@ let documentsAeronefsBibliothequeCache = {};
 function isDocumentaliste() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     const roles = currentUser.roles || [];
-    return roles.includes('Documentaliste') || roles.includes('Super admin');
+    return roles.includes('Documentaliste') || roles.includes('Délégué SGS') || roles.includes('Super admin');
 }
 
 function estDocumentMembre(rec) {

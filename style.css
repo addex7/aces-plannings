@@ -6404,3 +6404,15 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 /* Rapport AERAL — en-tete instructeurs en deux colonnes */
 .aeral-duo { display: flex; gap: 24px; flex-wrap: wrap; }
 .aeral-duo .aeral-table { flex: 1; min-width: 320px; }
+
+/* Bandeau d'information SGS sur le planning (vol de drone, lâché de ballon) */
+#bandeau-sgs { display:none; flex-direction:column; gap:6px; margin:0 0 8px; }
+.bandeau-sgs {
+    display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    background:#fff7ed; border:1px solid #fdba74; border-left:4px solid #f97316;
+    color:#9a3412; border-radius:8px; padding:8px 12px; font-size:13px; line-height:1.45;
+}
+.bandeau-sgs-sup {
+    background:none; border:none; color:#9a3412; cursor:pointer;
+    font-size:14px; font-weight:700; padding:0 2px; flex-shrink:0;
+}

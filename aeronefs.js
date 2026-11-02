@@ -1150,7 +1150,7 @@ function peutGererDocumentsAeronef() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     if (peutGererMaintenance()) return true;
     const roles = currentUser.roles || [];
-    return roles.includes('Documentaliste');
+    return roles.includes('Documentaliste') || roles.includes('Délégué SGS');
 }
 
 // Bouton « Options » aéronef : super admin, trésorier, mécanicien, instructeurs.

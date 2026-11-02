@@ -58,7 +58,8 @@ const TABLES = {
     'Formations': 'formations',
     'Formations Suivis': 'formations_suivis',
     'Formations Séances': 'formations_seances',
-    'Fiches VLO': 'fiches_vlo'
+    'Fiches VLO': 'fiches_vlo',
+    'Informations SGS': 'informations_sgs'
 };
 
 const pool = new Pool({ connectionString: DATABASE_URL });
@@ -104,7 +105,7 @@ pool.query(`CREATE TABLE IF NOT EXISTS erreurs_client (
 )`).catch(e => console.error('Init table erreurs_client:', e.message));
 
 // Module Formation : catalogue de programmes, suivis eleves et seances de vol.
-for (const t of ['formations', 'formations_suivis', 'formations_seances', 'fiches_vlo', 'gvv_vols']) {
+for (const t of ['formations', 'formations_suivis', 'formations_seances', 'fiches_vlo', 'gvv_vols', 'informations_sgs']) {
     pool.query(`CREATE TABLE IF NOT EXISTS ${t} (
         id TEXT PRIMARY KEY,
         fields JSONB NOT NULL DEFAULT '{}',

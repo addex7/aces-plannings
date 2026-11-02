@@ -130,7 +130,7 @@ function ouvrirModaleRolesMembre() {
     if (!membreSelectionne || typeof afficherModaleAlerte !== 'function') return;
     const nom = `${membreSelectionne.prenom || ''} ${membreSelectionne.nom || ''}`.trim() || 'Membre';
     const roles = membreSelectionne.roles || [];
-    const liste = (typeof ROLES_MEMBRES !== 'undefined' ? ROLES_MEMBRES : ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier']);
+    const liste = (typeof ROLES_MEMBRES !== 'undefined' ? ROLES_MEMBRES : ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Pilote planeur', 'Documentaliste', 'Délégué SGS', 'Super admin', 'Trésorier']);
     const descRole = r => (typeof DESCRIPTIONS_ROLES !== 'undefined' && DESCRIPTIONS_ROLES[r])
         ? `<div style="font-size:12px; color:#64748b; margin-top:2px; white-space:pre-line;">${DESCRIPTIONS_ROLES[r]}</div>`
         : '';

@@ -197,6 +197,7 @@
                         <button id="btn-legende-couleurs" class="btn-legende-couleurs" type="button" title="Légende des couleurs">i</button>
                     </div>
                     <div class="header-actions">
+                        <button id="btn-sgs-info" class="btn-primary" style="display:none;" type="button">📢 Faire une information</button>
                         <div class="date-navigation">
                             <button id="btn-prev" class="btn-nav" title="Jour précédent">◀</button>
                             <span id="current-date">Chargement de la date...</span>
@@ -206,6 +207,10 @@
                         <button id="btn-toggle-vi-planeur" class="btn-toggle" title="Afficher/Masquer les VI Planeur">VI Planeur</button>
                     </div>
                 </header>
+
+                <!-- Bandeau d'information SGS (drone, lâché de ballon…) : affiché
+                     entre le titre de la page et le haut du planning -->
+                <div id="bandeau-sgs" style="display:none;"></div>
 
                 <!-- Conteneur de la Frise Chronologique / Timeline -->
                 <section class="timeline-container">
@@ -1861,11 +1866,59 @@
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
     <script src="formation.js?v=e64c4b474a"></script>
-    <script src="version.js?v=20261102114541"></script>
+    <script src="version.js?v=20261102140341"></script>
     <script src="app.js?v=367b94f080"></script>
     <script src="utils.js?v=fd5c16cb31"></script>
     <script src="presences.js?v=9d4a8243b1"></script>
+    <!-- Modale : Information SGS (drone, lâché de ballon…) -->
+    <div id="modale-sgs-info" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:480px; width:100%;">
+            <div class="modal-titre">
+                <h3>📢 Faire une information</h3>
+                <button type="button" class="close-modal" id="sgs-info-close">×</button>
+            </div>
+            <form id="form-sgs-info" style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1;margin-bottom:0;">
+                        <label for="sgs-date-debut">Date début *</label>
+                        <input type="date" id="sgs-date-debut" required>
+                    </div>
+                    <div class="form-group" style="flex:1;margin-bottom:0;">
+                        <label for="sgs-date-fin">Date fin</label>
+                        <input type="date" id="sgs-date-fin">
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1;margin-bottom:0;">
+                        <label for="sgs-heure-debut">Heure début</label>
+                        <input type="time" id="sgs-heure-debut">
+                    </div>
+                    <div class="form-group" style="flex:1;margin-bottom:0;">
+                        <label for="sgs-heure-fin">Heure fin</label>
+                        <input type="time" id="sgs-heure-fin">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="sgs-position">Position du vol *</label>
+                    <input type="text" id="sgs-position" placeholder="ex : LFOY, vert sud-est du terrain" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="sgs-altitude">Altitude maximale *</label>
+                    <input type="text" id="sgs-altitude" placeholder="ex : 400 ft AGL" required>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="sgs-description">Description (optionnel)</label>
+                    <textarea id="sgs-description" rows="3" placeholder="ex : vol de drone, lâché de ballon…"></textarea>
+                </div>
+                <div class="form-actions" style="margin-top:10px;">
+                    <button type="submit" class="btn-submit">Publier l'information</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="planning.js?v=e776ddcaca"></script>
+    <script src="sgs-info.js"></script>
     <script src="calendrier.js?v=0fcaca55bd"></script>
     <script src="comptes.js?v=7af9f60d4a"></script>
     <script src="aeronefs.js?v=d3493500da"></script>

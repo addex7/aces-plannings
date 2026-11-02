@@ -351,7 +351,7 @@ async function envoyerReset() {
     }
 }
 
-const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Pilote planeur', 'Documentaliste', 'Super admin', 'Trésorier'];
+const ROLES_MEMBRES = ['Mécanicien', 'Gestion VI', 'Pilote VI', 'Instructeur planeur', 'Instructeur avion', 'Instructeur ULM', 'Pilote planeur', 'Documentaliste', 'Délégué SGS', 'Super admin', 'Trésorier'];
 
 // Ce que chaque role donne reellement comme acces (verifie contre le code).
 // Une entree par ligne : les \n s'affichent dans l'infobulle native (title).
