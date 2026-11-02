@@ -1509,9 +1509,13 @@ function estProprietaireReservation(record) {
     if (currentUser.id && piloteIds.some(id => id === currentUser.id)) return true;
     const pilote = piloteIds.join(' ').toString().trim();
     const moi = `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim();
-    return (typeof correspondanceNom === 'function' && correspondanceNom(pilote, moi))
-        || (typeof correspondanceNom === 'function' && correspondanceNom(nomPiloteCourant(), pilote))
-        || pilote.trim().toLowerCase() === nomPiloteCourant().toLowerCase();
+    // Champ pilote vide ou nom de l utilisateur inconnu : pas proprietaire
+    // ('' === '' rendait n importe quel pilote lambda proprietaire).
+    const npc = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+    if (!pilote || (!moi && !npc)) return false;
+    return (moi && typeof correspondanceNom === 'function' && correspondanceNom(pilote, moi))
+        || (npc && typeof correspondanceNom === 'function' && correspondanceNom(npc, pilote))
+        || (npc && pilote.toLowerCase() === npc.toLowerCase());
 }
 
 async function peuplerPiloteSelect(piloteSelectionne = null) {
@@ -2772,6 +2776,16 @@ function initGestionnaireModale() {
             if (cbMaintSubmit && cbMaintSubmit.checked) {
                 await enregistrerMaintenanceDepuisPlanning();
                 return;
+            }
+            // Controle des droits en edition : seuls le pilote proprietaire
+            // de la resa ou les roles autorises peuvent la modifier.
+            if (idReservationEnEdition) {
+                const cacheR = Array.isArray(listeReservationsCache) ? listeReservationsCache : (listeReservationsCache.records || []);
+                const resaOrig = cacheR.find(r => r.id === idReservationEnEdition);
+                if (resaOrig && !peutBougerReservations(resaOrig, 'Réservations') && !estProprietaireReservation(resaOrig)) {
+                    alert("Tu n'as pas le droit de modifier cette réservation.");
+                    return;
+                }
             }
             const typesVol = getTypeVolSelectionne();
             const besoinInstructeur = typesVol.includes('Instruction') && !typesVol.includes('VI Moteur') && !typesVol.includes('VI Planeur');
