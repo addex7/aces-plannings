@@ -8,8 +8,7 @@
 const TABLE_SGS_INFOS = 'Informations SGS';
 
 function peutGererSgs() {
-    const roles = (currentUser && currentUser.fields && currentUser.fields['Rôles']) || [];
-    return roles.includes('Délégué SGS') || roles.includes('Super admin');
+    return roleAutorise(['Délégué SGS', 'Super admin']);
 }
 
 // --- Bandeau au-dessus du planning ----------------------------------------
