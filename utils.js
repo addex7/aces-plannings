@@ -974,6 +974,13 @@ function rendreSelectRecherchable(select, allowCustom = false) {
     const ouvrir = () => { panel.style.display = 'block'; search.value = ''; renderList(); if (!sansRecherche) setTimeout(() => search.focus(), 0); };
     const fermer = () => { panel.style.display = 'none'; };
 
+    // Quand la modale contenant le select se ferme, le panneau se ferme
+    // aussi — sinon il reapparait deja ouvert a la reouverture.
+    const modalParent = select.closest('.modal');
+    if (modalParent) new MutationObserver(() => {
+        if (modalParent.style.display === 'none') fermer();
+    }).observe(modalParent, { attributes: true, attributeFilter: ['style'] });
+
     btn.addEventListener('click', (e) => { e.stopPropagation(); panel.style.display === 'none' ? ouvrir() : fermer(); });
     search.addEventListener('input', () => renderList(search.value));
     search.addEventListener('keydown', (e) => {
