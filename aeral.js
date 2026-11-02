@@ -164,13 +164,14 @@ function aeralRapportHtml(vols, annee) {
     };
 
     // --- Tableau categories AVION (format officiel) --------------------------
-    const blocAvion = list => {
+    const blocAvion = (list, avecDecouverte = false) => {
         const c = k => somme(list.filter(v => catVol(v) === k));
         return `<table class="aeral-table">
             <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th colspan="3"></th></tr>
             <tr><td>VFR Jour local</td>${cellH(c('local'))}<td colspan="4"></td></tr>
             <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}<td colspan="4"></td></tr>
             <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td>Dont vol BIA</td><td colspan="3" class="aeral-num">—</td></tr>
+            ${avecDecouverte ? `<tr><td></td><td></td><td></td><td></td><td>Dont vols de découverte (VIA)</td>${cellH(c('vi'))}</tr>` : ''}
             <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4"></td></tr>
         </table>`;
     };
@@ -247,7 +248,7 @@ function aeralRapportHtml(vols, annee) {
 
         <h4>Activité hors instruction</h4>
         <h5 style="margin:10px 0 4px; font-size:13px; color:#475569;">✈️ Avion</h5>
-        ${blocAvion(avion.filter(v => !v.estInstruction))}
+        ${blocAvion(avion.filter(v => !v.estInstruction), true)}
         ${demoTable(avion.filter(v => !v.estInstruction))}
         <h5 style="margin:10px 0 4px; font-size:13px; color:#475569;">🪂 ULM</h5>
         ${blocUlm(ulm.filter(v => !v.estInstruction))}
