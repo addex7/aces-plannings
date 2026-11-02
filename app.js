@@ -564,6 +564,12 @@ function rafraichirVueCourante() {
     if (!fn || saisieEnCours(vue)) return;
     dernierRefreshAuto = Date.now();
     if (typeof viderApiCache === 'function') viderApiCache();
+    // Seules les vues temps reel meritent un re-rendu periodique (resas qui
+    // changent sous les yeux). Ailleurs on rafraichit juste les donnees en
+    // cache : la page ne bouge JAMAIS — la vue se mettra a jour a la
+    // prochaine navigation ou action de l'utilisateur.
+    const VUES_TEMPS_REEL = new Set(['view-planning', 'view-initiation']);
+    if (!VUES_TEMPS_REEL.has(vue.id)) return;
     const htmlAvant = vue.innerHTML;
     const snapshot = creerSnapshotVue(vue);
     // Positions de scroll a conserver : ancetres (persistants, par reference)
