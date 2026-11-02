@@ -971,7 +971,19 @@ function rendreSelectRecherchable(select, allowCustom = false) {
         if (!count) list.innerHTML = '<div data-empty="1" style="padding:10px 12px; color:#94a3b8; font-size:13px;">Aucun résultat</div>';
     };
 
-    const ouvrir = () => { panel.style.display = 'block'; search.value = ''; renderList(); if (!sansRecherche) setTimeout(() => search.focus(), 0); };
+    // Le panneau sort de son conteneur (position:fixed sur body) pour se
+    // superposer a la modale au lieu de rester clippe dedans.
+    const ouvrir = () => {
+        if (panel.parentElement !== document.body) document.body.appendChild(panel);
+        const r = btn.getBoundingClientRect();
+        panel.style.position = 'fixed';
+        panel.style.top = `${r.bottom + 4}px`;
+        panel.style.left = `${r.left}px`;
+        panel.style.minWidth = `${r.width}px`;
+        panel.style.display = 'block';
+        search.value = ''; renderList();
+        if (!sansRecherche) setTimeout(() => search.focus(), 0);
+    };
     const fermer = () => { panel.style.display = 'none'; };
 
     // Quand la modale contenant le select se ferme, le panneau se ferme
@@ -991,7 +1003,7 @@ function rendreSelectRecherchable(select, allowCustom = false) {
             if (first && !first.dataset.empty) first.click();
         }
     });
-    document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) fermer(); });
+    document.addEventListener('click', (e) => { if (!wrap.contains(e.target) && !panel.contains(e.target)) fermer(); });
     select.addEventListener('change', majBtn);
     select.addEventListener('maj-affichage', majBtn);
     new MutationObserver(() => {
