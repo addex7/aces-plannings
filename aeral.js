@@ -159,8 +159,8 @@ function aeralRapportHtml(vols, annee) {
             <tr><td>Jeunes hommes</td>${cellH(b['h-jeune'])}<td>Jeunes femmes</td>${cellH(b['f-jeune'])}</tr>
             <tr><td>Hommes adultes</td>${cellH(b['h-adulte'])}<td>Femmes adultes</td>${cellH(b['f-adulte'])}</tr>
             <tr><td><strong>Total hommes</strong></td>${cellH(b['h-jeune'] + b['h-adulte'])}<td><strong>Total femmes</strong></td>${cellH(b['f-jeune'] + b['f-adulte'])}</tr>
-            <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4">${nr ? `<span style="font-size:10px; color:#94a3b8;">Non renseigné : ${cent(nr)} h — ${raisons}</span>` : ''}</td></tr>
-        </table>`;
+            <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4"></td></tr>
+        </table>${nr ? `<div class="aeral-note" style="margin-top:-8px; margin-bottom:10px;">Non renseigné : ${cent(nr)} h — ${raisons}</div>` : ''}`;
     };
 
     // --- Tableau categories AVION (format officiel) --------------------------
