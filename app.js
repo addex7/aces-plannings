@@ -564,6 +564,7 @@ function rafraichirVueCourante() {
     if (!fn || saisieEnCours(vue)) return;
     dernierRefreshAuto = Date.now();
     if (typeof viderApiCache === 'function') viderApiCache();
+    const htmlAvant = vue.innerHTML;
     const snapshot = creerSnapshotVue(vue);
     // Positions de scroll a conserver : ancetres (persistants, par reference)
     // + elements internes (recrees, retrouves par cle tag#id.classe + rang).
@@ -599,16 +600,22 @@ function rafraichirVueCourante() {
         });
     };
     let retire = false;
-    const retirer = () => {
+    const retirer = (immediat = false) => {
         if (retire) return;
         retire = true;
+        if (immediat) { snapshot.remove(); return; }
         setTimeout(() => snapshot.remove(), 400);
     };
     Promise.resolve().then(fn).then(() => {
         restaurerScroll();
         // 2e passe apres le paint : rattrape un re-rendu tardif ou un reset de scroll.
         requestAnimationFrame(() => setTimeout(restaurerScroll, 120));
-        retirer();
+        // Contenu identique (cas le plus courant) : rien n'a change —
+        // on retire le cache tout de suite pour ne pas figer la page.
+        const vueCourante = vue.isConnected
+            ? vue
+            : [...document.querySelectorAll('.view-section')].find(v => v.style.display !== 'none') || vue;
+        retirer(vueCourante.innerHTML === htmlAvant);
     }).catch(e => { console.warn('Actualisation auto:', e); retirer(); });
     // Filet de securite : ne jamais laisser le masque plus de 10 s
     setTimeout(retirer, 10000);
