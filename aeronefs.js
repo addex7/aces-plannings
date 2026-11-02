@@ -428,6 +428,30 @@ async function chargerSuiviAeronef() {
             fetchTousRecords(`${API_BASE}/${encodeURIComponent('Carnet de route Pilotes')}?pageSize=100`, { headers })
         ]);
 
+        // Les VI Moteur (VIA/VIULM) vivent dans VI Créneaux, pas dans
+        // Réservations — on les injecte au format réservation pour le
+        // prévisionnel (duree estimee 1 h comme sur le planning).
+        const reservationsAvecVI = [...reservationsToutes];
+        try {
+            const creneauxVI = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('VI Créneaux')}`, { headers });
+            const immatParType = { 'VIA': 'F-GASB', 'VIULM': 'F-JVIO' };
+            creneauxVI.forEach(v => {
+                const f = v.fields || {};
+                const immat = immatParType[f['Type']];
+                const date = (f['Date'] || '').toString().slice(0, 10);
+                if (!immat || !date || f['Statut'] !== 'Réservé') return;
+                reservationsAvecVI.push({ id: v.id, fields: {
+                    'Machine': [immat],
+                    'Date de début': `${date}T${f['Heure début'] || '00:00'}:00`,
+                    'Date de fin': `${date}T${f['Heure fin'] || '00:00'}:00`,
+                    'Temps estimé': 1,
+                    'Type de vol': ['VI Moteur'],
+                    'Pilote': f['Pilote'] || '',
+                    'Passager': `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim()
+                }});
+            });
+        } catch (e) { console.warn('Créneaux VI pour prévisionnel:', e); }
+
         const piloteMap = pilotesTous.reduce((acc, p) => {
             const nom = `${p.fields['Prénom'] || ''} ${p.fields['Nom'] || ''}`.trim();
             if (p.id) acc[p.id] = nom;
@@ -501,7 +525,7 @@ async function chargerSuiviAeronef() {
         const dateDepartMinuit = new Date(dateDepart.getFullYear(), dateDepart.getMonth(), dateDepart.getDate());
         const dateFin14 = new Date(dateDepartMinuit);
         dateFin14.setDate(dateDepartMinuit.getDate() + 14);
-        const tousLesVolsSorte = reservationsToutes.filter(res => {
+        const tousLesVolsSorte = reservationsAvecVI.filter(res => {
             if (!res.fields || !res.fields['Machine'] || !res.fields['Date de début'] || !res.fields['Date de fin']) return false;
 
             const machinesLiees = Array.isArray(res.fields['Machine']) ? res.fields['Machine'] : [res.fields['Machine']];
