@@ -536,7 +536,22 @@ function rendreLigneActivite(tr, dateJour, disposJour, reservationsJour, discipl
     tdDate.textContent = dateJour.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
     tr.appendChild(tdDate);
 
-    const instructeurs = instructeursPourDiscipline(discipline);
+    const discLow = (discipline || '').toLowerCase();
+    let instructeurs = instructeursPourDiscipline(discipline);
+    // Un compte non privilegie peut recevoir des entrees reduites ou un
+    // pseudo-instructeur nomme comme la discipline — on les filtre.
+    instructeurs = instructeurs.filter(u => (u.nomComplet || '').toLowerCase() !== discLow);
+    if (!instructeurs.length) {
+        // Compte non privilegie : la liste des membres peut etre
+        // inaccessible — on derive les noms depuis les dispos du jour.
+        const noms = new Set();
+        disposJour.forEach(d => {
+            const f = d.fields || {};
+            const n = (f['Instructeur'] || '').toString().trim();
+            if (n && n.toLowerCase() !== discLow) noms.add(n);
+        });
+        instructeurs = [...noms].sort().map(n => ({ nomComplet: n, prenom: n }));
+    }
     const nbLignes = Math.max(1, instructeurs.length);
     const tdCell = document.createElement('td');
     tdCell.style.cssText = `padding: 4px; height: ${Math.max(46, nbLignes * 20)}px; vertical-align: middle;`;
@@ -548,7 +563,6 @@ function rendreLigneActivite(tr, dateJour, disposJour, reservationsJour, discipl
     const stack = document.createElement('div');
     stack.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; z-index:2;';
 
-    const discLow = (discipline || '').toLowerCase();
     if (!instructeurs.length) {
         const ligne = document.createElement('div');
         ligne.style.cssText = 'position:relative; height:100%; display:flex; align-items:center; color:#94a3b8; font-size:11px; padding-left:8px;';
