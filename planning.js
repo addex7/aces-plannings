@@ -2711,14 +2711,6 @@ function initGestionnaireModale() {
         if (document.getElementById('form-estimation')) document.getElementById('form-estimation').value = '1.0';
         if (typeof peuplerInstructeursSelect === 'function') await peuplerInstructeursSelect();
         if (typeof peuplerPiloteSelect === 'function') await peuplerPiloteSelect();
-        // Nouvelle réservation : l'instructeur repart a « -- Aucun -- » —
-        // sinon la valeur affichee pouvait rester d'une saisie precedente
-        // alors que le select etait vide (alerte instructeur obligatoire).
-        const selInstReset = document.getElementById('form-instructeur');
-        if (selInstReset) {
-            selInstReset.value = '';
-            selInstReset.dispatchEvent(new Event('maj-affichage'));
-        }
         if (options.type === 'VI Planeur') {
             const sel = document.getElementById('form-pilote');
             if (sel) {
@@ -2741,6 +2733,14 @@ function initGestionnaireModale() {
                 if (match) sel.value = match.value;
                 sel.dispatchEvent(new Event('maj-affichage'));
             }
+        }
+        // Nouvelle réservation : l'instructeur repart a « -- Aucun -- » —
+        // sinon la valeur affichee pouvait rester d'une saisie precedente
+        // alors que le select etait vide (alerte instructeur obligatoire).
+        const selInstReset = document.getElementById('form-instructeur');
+        if (selInstReset) {
+            selInstReset.value = '';
+            selInstReset.dispatchEvent(new Event('maj-affichage'));
         }
         appliquerEtatFormulaire();
         console.log('[PLANNING] modal', modal);
