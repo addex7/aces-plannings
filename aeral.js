@@ -210,11 +210,8 @@ function aeralRapportHtml(vols, annee) {
     const lignesInstr = Object.entries(parInstr).map(([cle, t]) => {
         const m = u.find(x => x.id === cle);
         return `<tr><td>${m ? nomDe(m) : cle}</td>
-            <td class="aeral-num">${croix(m, 'chef.?pilote')}</td>
-            <td class="aeral-num">${croix(m, 'responsable p[ée]dagogique') && !/adjoint/i.test(roles(m)) ? 'X' : ''}</td>
-            <td class="aeral-num">${/adjoint/i.test(roles(m)) ? 'X' : ''}</td>
-            <td class="aeral-num">${m ? nfed(m) : ''}</td>
-            <td>Bénévole</td>
+            <td class="aeral-num">${t.avion ? cent(t.avion) : '—'}</td>
+            <td class="aeral-num">${t.ulm ? cent(t.ulm) : '—'}</td>
             <td class="aeral-num">${cent(t.h)}</td></tr>`;
     }).sort((a, b) => a.localeCompare(b)).join('');
     const totInstr = Object.values(parInstr).reduce((s, t) => s + t.h, 0);
@@ -242,28 +239,8 @@ function aeralRapportHtml(vols, annee) {
         <h3>Compte-rendu annuel ${annee} — heures de vol</h3>
 
         <h4>Instructeurs de l'aéroclub</h4>
-        <div class="aeral-duo">
-            <table class="aeral-table">
-                <tr><th>Statut</th><th>Heures</th></tr>
-                <tr><td>Plein temps</td><td class="aeral-num">—</td></tr>
-                <tr><td>Temps partiel</td><td class="aeral-num">—</td></tr>
-                <tr><td>Indépendant</td><td class="aeral-num">—</td></tr>
-                <tr><td>Bénévole</td><td class="aeral-num">${cent(totInstr)}</td></tr>
-                <tr><td>Autre</td><td class="aeral-num">—</td></tr>
-                <tr><td><strong>Heures d'instruction dans l'année</strong></td><td class="aeral-num"><strong>${cent(totInstr)}</strong></td></tr>
-            </table>
-            <table class="aeral-table">
-                <tr><th>Activité</th><th>Heures</th></tr>
-                <tr><td>Avion</td><td class="aeral-num">${cent(totInstrAvion)}</td></tr>
-                <tr><td>Hélicoptère</td><td class="aeral-num">—</td></tr>
-                <tr><td>ULM</td><td class="aeral-num">${cent(totInstrUlm)}</td></tr>
-                <tr><td>Aérostation</td><td class="aeral-num">—</td></tr>
-                <tr><td>Planeur</td><td class="aeral-num">—</td></tr>
-                <tr><td><strong>Heures d'instruction dans l'année</strong></td><td class="aeral-num"><strong>${cent(totInstr)}</strong></td></tr>
-            </table>
-        </div>
         <table class="aeral-table">
-            <tr><th>Nom de l'instructeur</th><th>Chef pilote</th><th>Responsable pédagogique</th><th>Adjoint resp. pédagogique</th><th>N° fédéral</th><th>Statut</th><th>Total heures d'instruction</th></tr>
+            <tr><th>Nom de l'instructeur</th><th>Avion</th><th>ULM</th><th>Total heures d'instruction</th></tr>
             ${lignesInstr}
         </table>
 
