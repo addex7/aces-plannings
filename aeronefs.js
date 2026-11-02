@@ -444,7 +444,7 @@ async function chargerSuiviAeronef() {
                     'Machine': [immat],
                     'Date de début': `${date}T${f['Heure début'] || '00:00'}:00`,
                     'Date de fin': `${date}T${f['Heure fin'] || '00:00'}:00`,
-                    'Temps estimé': 1,
+                    'Temps estimé': 0.5,
                     'Type de vol': ['VI Moteur'],
                     'Pilote': f['Pilote'] || '',
                     'Passager': `${f['Prénom'] || ''} ${f['Nom'] || ''}`.trim()
