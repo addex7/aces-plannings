@@ -565,13 +565,38 @@ function rafraichirVueCourante() {
     dernierRefreshAuto = Date.now();
     if (typeof viderApiCache === 'function') viderApiCache();
     const snapshot = creerSnapshotVue(vue);
+    // Positions de scroll a conserver : ancetres (persistants, par reference)
+    // + elements internes (recrees, retrouves par cle tag#id.classe + rang).
+    const ancetresScroll = [];
+    for (let anc = vue.parentElement; anc; anc = anc.parentElement) {
+        if (anc.scrollTop || anc.scrollLeft) ancetresScroll.push({ el: anc, top: anc.scrollTop, left: anc.scrollLeft });
+    }
+    const clesScroll = new Map();
+    const cleEl = el => `${el.tagName}#${el.id || ''}.${typeof el.className === 'string' ? el.className : ''}`;
+    const compteurs = {};
+    vue.querySelectorAll('*').forEach(el => {
+        if (!(el.scrollTop || el.scrollLeft)) return;
+        const base = cleEl(el);
+        const n = compteurs[base] = (compteurs[base] || 0) + 1;
+        clesScroll.set(`${base}|${n}`, { top: el.scrollTop, left: el.scrollLeft });
+    });
+    const restaurerScroll = () => {
+        ancetresScroll.forEach(p => { p.el.scrollTop = p.top; p.el.scrollLeft = p.left; });
+        const cpts = {};
+        vue.querySelectorAll('*').forEach(el => {
+            const base = cleEl(el);
+            const n = cpts[base] = (cpts[base] || 0) + 1;
+            const p = clesScroll.get(`${base}|${n}`);
+            if (p) { el.scrollTop = p.top; el.scrollLeft = p.left; }
+        });
+    };
     let retire = false;
     const retirer = () => {
         if (retire) return;
         retire = true;
         setTimeout(() => snapshot.remove(), 400);
     };
-    Promise.resolve().then(fn).then(retirer).catch(e => { console.warn('Actualisation auto:', e); retirer(); });
+    Promise.resolve().then(fn).then(() => { restaurerScroll(); retirer(); }).catch(e => { console.warn('Actualisation auto:', e); retirer(); });
     // Filet de securite : ne jamais laisser le masque plus de 10 s
     setTimeout(retirer, 10000);
 }
