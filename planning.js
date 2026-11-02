@@ -2778,11 +2778,16 @@ function initGestionnaireModale() {
                 return;
             }
             // Controle des droits en edition : seuls le pilote proprietaire
-            // de la resa ou les roles autorises peuvent la modifier.
+            // de la resa ou les roles autorises peuvent la modifier. On
+            // verifie sur la resa stockee a l'ouverture (les creneaux VI ne
+            // sont pas dans listeReservationsCache — ex. page Aeronefs).
             if (idReservationEnEdition) {
                 const cacheR = Array.isArray(listeReservationsCache) ? listeReservationsCache : (listeReservationsCache.records || []);
-                const resaOrig = cacheR.find(r => r.id === idReservationEnEdition);
-                if (resaOrig && !peutBougerReservations(resaOrig, 'Réservations') && !estProprietaireReservation(resaOrig)) {
+                const resaOrig = (window.resaEnEditionCourante && window.resaEnEditionCourante.id === idReservationEnEdition)
+                    ? window.resaEnEditionCourante
+                    : cacheR.find(r => r.id === idReservationEnEdition);
+                const tableOrig = (resaOrig && resaOrig._table) || 'Réservations';
+                if (resaOrig && !peutBougerReservations(resaOrig, tableOrig) && !estProprietaireReservation(resaOrig)) {
                     alert("Tu n'as pas le droit de modifier cette réservation.");
                     return;
                 }
@@ -3196,6 +3201,7 @@ async function ouvrirModaleEdition(vol, avionIdOuImmat) {
         return;
     }
     idReservationEnEdition = vol.id;
+    window.resaEnEditionCourante = vol;
     if (titleModal) titleModal.textContent = "Modifier la Réservation";
     if (btnDelete) btnDelete.style.display = 'block';
     if (listeAvionsCache.length > 0) {
