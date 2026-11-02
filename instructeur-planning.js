@@ -671,7 +671,15 @@ async function chargerSuiviInstructeur() {
 
     const sel = document.getElementById('select-instructeur-suivi');
     const selAct = document.getElementById('select-activite-suivi');
-    const activite = selAct ? selAct.value : activiteSelectionnee;
+    let activite = selAct ? selAct.value : activiteSelectionnee;
+    // Le selecteur peut afficher une activite (__act:avion) sans que le
+    // change ait ete declenche (selection par defaut du navigateur) —
+    // on l'interpole plutot que de traiter « __act:avion » comme un nom.
+    if (!activite) {
+        const selVal = sel ? sel.value : '';
+        if (selVal.startsWith('__act:')) activite = selVal.slice(6);
+        else if (instructeurSelectionne.startsWith('__act:')) activite = instructeurSelectionne.slice(6);
+    }
     activiteSelectionnee = activite;
     if (!activite) {
         if (!instructeurSelectionne && sel && sel.value) instructeurSelectionne = sel.value;
