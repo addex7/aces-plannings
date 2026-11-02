@@ -6416,3 +6416,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background:none; border:none; color:#9a3412; cursor:pointer;
     font-size:14px; font-weight:700; padding:0 2px; flex-shrink:0;
 }
+
+/* Carnet de vol : le titre garde sa place, les controles passent a la ligne */
+#view-carnet-vol .header > div:first-child { flex-shrink: 0; min-width: 0; }
+#view-carnet-vol .header > div:first-child h2 { white-space: nowrap; }
+#view-carnet-vol .carnet-header-controls { flex-wrap: wrap; justify-content: flex-end; }

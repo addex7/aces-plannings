@@ -85,6 +85,24 @@ function cvFormaterMinutes(mins) {
 // - atterrissages jour/nuit et temps de nuit selon la nature du vol
 // - temps "pilote en fonction" : P/PCdB => CdB, EP/EX/FE => double commande,
 //   I/ICdB/FI => instructeur, PAX => passager (pas de temps comptable)
+// ULM (F-J*) : les horaires saisis au carnet de route sont en heure LOCALE —
+// le carnet de vol affiche tout en UTC (heures avion deja UTC, pas de
+// conversion). Conversion heure locale Europe/Paris -> UTC (DST compris).
+const _dtfParisCV = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+function cvHeureULMVersUTC(dateStr, heure) {
+    const m = String(heure || '').match(/(\d{1,2}):(\d{2})/);
+    if (!m || !dateStr) return heure;
+    const [y, mo, j] = dateStr.split('-').map(Number);
+    const utc = Date.UTC(y, mo - 1, j, +m[1], +m[2]);
+    const p = _dtfParisCV.formatToParts(new Date(utc)).reduce((o, x) => (o[x.type] = x.value, o), {});
+    const t = new Date(utc - (Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - utc));
+    return `${String(t.getUTCHours()).padStart(2, '0')}:${String(t.getUTCMinutes()).padStart(2, '0')}`;
+}
+function cvConvHeuresUTC(dateStr, hDep, hArr, immat) {
+    if (!/^F-J/i.test(immat || '')) return { hDep, hArr };
+    return { hDep: cvHeureULMVersUTC(dateStr, hDep), hArr: cvHeureULMVersUTC(dateStr, hArr) };
+}
+
 function cvDeriveVolClub(r, piloteNomComplet) {
     const f = r.fields || {};
     const machine = (f['Machine'] || '').toString().trim();
@@ -125,8 +143,8 @@ function cvDeriveVolClub(r, piloteNomComplet) {
         obs: f['Observations'] || '',
         recId: r.id,
         date: f['Date'] || '',
-        lieuDep: f['Départ'] || '', hDep: f['Heure départ'] || '',
-        lieuArr: f['Arrivée'] || '', hArr: f['Heure arrivée'] || '',
+        lieuDep: f['Départ'] || '', hDep: cvConvHeuresUTC(f['Date'], f['Heure départ'], f['Heure arrivée'], machine).hDep,
+        lieuArr: f['Arrivée'] || '', hArr: cvConvHeuresUTC(f['Date'], f['Heure départ'], f['Heure arrivée'], machine).hArr,
         modele: aero.modele || '',
         immat: machine,
         mono,
@@ -157,9 +175,9 @@ function cvDeriveVolManuel(r) {
         obs: f['Observations'] || '',
         date: f['Date'] || '',
         lieuDep: f['Départ'] || f['Lieu départ'] || '',
-        hDep: f['Heure départ'] || '',
+        hDep: cvConvHeuresUTC(f['Date'], f['Heure départ'], f['Heure arrivée'], f['Immatriculation']).hDep,
         lieuArr: f['Arrivée'] || f['Lieu arrivée'] || '',
-        hArr: f['Heure arrivée'] || '',
+        hArr: cvConvHeuresUTC(f['Date'], f['Heure départ'], f['Heure arrivée'], f['Immatriculation']).hArr,
         modele: f['Modèle'] || '',
         immat: (f['Immatriculation'] || '').toString(),
         mono: !!f['Monomoteur'],
