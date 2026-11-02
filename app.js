@@ -627,7 +627,10 @@ function rafraichirVueCourante() {
     setTimeout(retirer, 10000);
 }
 
-setInterval(rafraichirVueCourante, REFRESH_AUTO_INTERVAL_MS);
+// Pas de refresh periodique : chaque onglet recharge ses donnees au clic,
+// donc l'actualisation est masquee par la transition entre les vues.
+// Au retour sur l'onglet du navigateur, seul le planning se re-rend —
+// les autres vues ne recoivent qu'une invalidation de cache silencieuse.
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden && Date.now() - dernierRefreshAuto > REFRESH_AUTO_MIN_ECART_MS) rafraichirVueCourante();
 });

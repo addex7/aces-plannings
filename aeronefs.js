@@ -940,6 +940,7 @@ function initNavigationTabs() {
     if (tabPlanning) {
         tabPlanning.addEventListener('click', () => {
             activerTab(tabPlanning, viewPlanning);
+            if (typeof chargerDonneesPlanning === 'function') chargerDonneesPlanning(true, true, true);
         });
     }
 
