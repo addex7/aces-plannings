@@ -2676,7 +2676,16 @@ function initGestionnaireModale() {
             if (e.target && e.target.closest && e.target.closest('#reservation-modal .nr-stepper')) setTimeout(verifierAlertesReservation, 0);
         }, true);
         new MutationObserver(() => {
-            if (modal.style.display === 'flex') alerteInstructeurDemandee = false;
+            if (modal.style.display === 'flex') {
+                alerteInstructeurDemandee = false;
+                // Filet ultime : toute OUVERTURE en nouvelle réservation
+                // remet l'instructeur a « -- Aucun -- » (apres ouverture,
+                // donc au-dessus de tout pre-remplissage restant).
+                if (!idReservationEnEdition) {
+                    const si = document.getElementById('form-instructeur');
+                    if (si) { si.value = ''; si.dispatchEvent(new Event('maj-affichage')); }
+                }
+            }
         }).observe(modal, { attributes: true, attributeFilter: ['style'] });
     }
     window.ouvrirModaleNouvelleReservation = async function(options = {}) {
