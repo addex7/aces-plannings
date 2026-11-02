@@ -580,10 +580,18 @@ function rafraichirVueCourante() {
         const n = compteurs[base] = (compteurs[base] || 0) + 1;
         clesScroll.set(`${base}|${n}`, { top: el.scrollTop, left: el.scrollLeft });
     });
+    const scrollWin = { x: window.scrollX, y: window.scrollY };
     const restaurerScroll = () => {
-        ancetresScroll.forEach(p => { p.el.scrollTop = p.top; p.el.scrollLeft = p.left; });
+        window.scrollTo(scrollWin.x, scrollWin.y);
+        ancetresScroll.forEach(p => {
+            if (p.el.isConnected) { p.el.scrollTop = p.top; p.el.scrollLeft = p.left; }
+        });
+        // La section a pu etre recreee : on re-cible la vue actuellement visible.
+        const vueCourante = vue.isConnected
+            ? vue
+            : [...document.querySelectorAll('.view-section')].find(v => v.style.display !== 'none') || vue;
         const cpts = {};
-        vue.querySelectorAll('*').forEach(el => {
+        vueCourante.querySelectorAll('*').forEach(el => {
             const base = cleEl(el);
             const n = cpts[base] = (cpts[base] || 0) + 1;
             const p = clesScroll.get(`${base}|${n}`);
@@ -596,7 +604,12 @@ function rafraichirVueCourante() {
         retire = true;
         setTimeout(() => snapshot.remove(), 400);
     };
-    Promise.resolve().then(fn).then(() => { restaurerScroll(); retirer(); }).catch(e => { console.warn('Actualisation auto:', e); retirer(); });
+    Promise.resolve().then(fn).then(() => {
+        restaurerScroll();
+        // 2e passe apres le paint : rattrape un re-rendu tardif ou un reset de scroll.
+        requestAnimationFrame(() => setTimeout(restaurerScroll, 120));
+        retirer();
+    }).catch(e => { console.warn('Actualisation auto:', e); retirer(); });
     // Filet de securite : ne jamais laisser le masque plus de 10 s
     setTimeout(retirer, 10000);
 }
