@@ -1870,7 +1870,7 @@
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
     <script src="formation.js?v=e64c4b474a"></script>
-    <script src="version.js?v=20261102201808"></script>
+    <script src="version.js?v=20261102202259"></script>
     <script src="app.js?v=367b94f080"></script>
     <script src="utils.js?v=9754589c25"></script>
     <script src="presences.js?v=9d4a8243b1"></script>
@@ -1913,6 +1913,16 @@
                 <div class="form-group" style="margin-bottom:0;">
                     <label for="sgs-description">Description (optionnel)</label>
                     <textarea id="sgs-description" rows="3" placeholder="ex : vol de drone, lâché de ballon…"></textarea>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1;margin-bottom:0;">
+                        <label for="sgs-pj-nom">Pièce jointe — nom (optionnel)</label>
+                        <input type="text" id="sgs-pj-nom" placeholder="ex : Carte de la zone">
+                    </div>
+                    <div class="form-group" style="flex:1;margin-bottom:0;">
+                        <label for="sgs-pj-fichier">Fichier</label>
+                        <input type="file" id="sgs-pj-fichier" style="font-size:13px;">
+                    </div>
                 </div>
                 <div class="form-actions" style="margin-top:10px;">
                     <button type="submit" class="btn-submit">Publier l'information</button>

@@ -38,7 +38,8 @@ async function chargerBandeauSgs() {
                 f['Position'] ? `📍 ${escapeHtml(f['Position'])}` : '',
                 f['Altitude max'] ? `⬆️ max ${escapeHtml(String(f['Altitude max']))}` : '',
                 horaires ? `🕐 ${horaires}` : '',
-                f['Description'] ? escapeHtml(f['Description']) : ''
+                f['Description'] ? escapeHtml(f['Description']) : '',
+                f['Pièce jointe'] ? `📎 <a href="${escapeHtml(f['Pièce jointe'])}" target="_blank" rel="noopener" style="color:#9a3412; text-decoration:underline;">${escapeHtml(f['Nom PJ'] || 'Pièce jointe')}</a>` : ''
             ].filter(Boolean).join(' · ');
             return `<div class="bandeau-sgs">
                 <span>📢 <strong>Information</strong>${periode} — ${infos}</span>
@@ -85,6 +86,35 @@ function initSgsInfo() {
 
     form.addEventListener('submit', async e => {
         e.preventDefault();
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        // Piece jointe : upload + enregistrement dans la bibliotheque
+        // (« Notes d'information ») puis lien sur le bandeau.
+        const pjNom = document.getElementById('sgs-pj-nom').value.trim();
+        const pjFile = (document.getElementById('sgs-pj-fichier').files || [])[0];
+        let pjLien = '';
+        if (pjFile) {
+            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Envoi du fichier…'; }
+            try {
+                if (typeof uploaderFichierDocument !== 'function') throw new Error('Upload indisponible');
+                pjLien = await uploaderFichierDocument(pjFile);
+                const docFields = {
+                    'Titre': pjNom || pjFile.name,
+                    'Catégorie': "Notes d'information",
+                    'Lien': pjLien,
+                    'Description': 'Pièce jointe d\'une information SGS publiée sur le planning',
+                    'Auteur': typeof nomCompletCourant === 'function' ? nomCompletCourant() : ''
+                };
+                const resDoc = await cachedFetch(`${API_BASE}/${encodeURIComponent('Documents')}`, {
+                    method: 'POST', headers, body: JSON.stringify({ records: [{ fields: docFields }] })
+                });
+                if (!resDoc.ok) throw new Error(await resDoc.text());
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de l'envoi de la pièce jointe : " + (err && err.message ? err.message : err));
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = "Publier l'information"; }
+                return;
+            }
+        }
         const fields = {
             'Date début': document.getElementById('sgs-date-debut').value,
             'Date fin': document.getElementById('sgs-date-fin').value || '',
@@ -93,7 +123,9 @@ function initSgsInfo() {
             'Position': document.getElementById('sgs-position').value.trim(),
             'Altitude max': document.getElementById('sgs-altitude').value.trim(),
             'Description': document.getElementById('sgs-description').value.trim(),
-            'Créé par': typeof nomCompletCourant === 'function' ? nomCompletCourant() : ''
+            'Créé par': typeof nomCompletCourant === 'function' ? nomCompletCourant() : '',
+            'Pièce jointe': pjLien,
+            'Nom PJ': pjLien ? (pjNom || pjFile.name) : ''
         };
         try {
             const res = await cachedFetch(`${API_BASE}/${encodeURIComponent(TABLE_SGS_INFOS)}`, {
