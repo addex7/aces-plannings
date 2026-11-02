@@ -6436,3 +6436,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 #view-carnet-vol .carnet-header-controls .btn-primary {
     font-size: 12px; padding: 6px 10px; height: 32px; white-space: nowrap;
 }
+
+/* Carnet de vol : champs date assortis aux boutons navy */
+#view-carnet-vol .carnet-header-controls .cv-date-filtre {
+    width: auto; height: 38px; font-size: 13px; font-weight: 600;
+    background: #1e3d59; color: #fff; border: none; border-radius: 6px;
+    padding: 0 8px; box-sizing: border-box; color-scheme: dark;
+}
