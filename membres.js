@@ -882,12 +882,14 @@ async function supprimerMembreDepuisListe(recordId, nomComplet = '') {
 }
 
 function initMembres() {
-    const loginBtn = document.getElementById('btn-login');
-    if (loginBtn) loginBtn.addEventListener('click', seConnecter);
+    // Les champs sont dans un <form> : le submit (bouton + Entree) declenche
+    // la connexion — contexte form requis par Safari pour l'autofill id+MDP.
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.addEventListener('submit', (e) => { e.preventDefault(); seConnecter(); });
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) logoutBtn.addEventListener('click', seDeconnecter);
-    const setupBtn = document.getElementById('btn-setup');
-    if (setupBtn) setupBtn.addEventListener('click', validerSetup);
+    const setupForm = document.getElementById('setup-form');
+    if (setupForm) setupForm.addEventListener('submit', (e) => { e.preventDefault(); validerSetup(); });
     const form = document.getElementById('membres-form');
     if (form) form.addEventListener('submit', ajouterUtilisateur);
     const editForm = document.getElementById('membre-edit-form');

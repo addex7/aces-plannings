@@ -49,15 +49,17 @@
         <h1 style="margin: 0 24px 24px; padding: 0 16px; font-size: 32px; font-weight: 700; text-align: center; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.5); max-width: calc(100% - 48px); box-sizing: border-box;">Bienvenue sur le site de réservation de l'ACES</h1>
         <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 360px; color: #1e3d59;">
             <h2 style="margin-top:0; color:#1e3d59;">Connexion</h2>
-            <div class="form-group">
-                <label for="login-identifiant">Identifiant ou Email</label>
-                <input type="text" id="login-identifiant" autocomplete="username" required>
-            </div>
-            <div class="form-group">
-                <label for="login-password">Mot de passe</label>
-                <input type="password" id="login-password" autocomplete="current-password" required>
-            </div>
-            <button id="btn-login" class="btn-primary" style="width:100%; margin-top:10px;">Se connecter</button>
+            <form id="login-form" autocomplete="on">
+                <div class="form-group">
+                    <label for="login-identifiant">Identifiant ou Email</label>
+                    <input type="text" id="login-identifiant" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Mot de passe</label>
+                    <input type="password" id="login-password" autocomplete="current-password" required>
+                </div>
+                <button id="btn-login" type="submit" class="btn-primary" style="width:100%; margin-top:10px;">Se connecter</button>
+            </form>
             <div style="text-align:center; margin-top:10px;">
                 <a href="#" id="link-forgot" style="font-size:13px; color:#1e3d59; text-decoration:underline;">Mot de passe oublié ?</a>
             </div>
@@ -76,19 +78,21 @@
         <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 360px;">
             <h2 style="margin-top:0; color:#1e3d59;">Créer mon compte</h2>
             <p>Bienvenue <span id="setup-name">...</span></p>
-            <div class="form-group">
-                <label for="setup-identifiant">Identifiant</label>
-                <input type="text" id="setup-identifiant" autocomplete="username" required>
-            </div>
-            <div class="form-group">
-                <label for="setup-password">Mot de passe</label>
-                <input type="password" id="setup-password" autocomplete="new-password" required>
-            </div>
-            <div class="form-group">
-                <label for="setup-confirm">Confirmer le mot de passe</label>
-                <input type="password" id="setup-confirm" autocomplete="new-password" required>
-            </div>
-            <button id="btn-setup" class="btn-primary" style="width:100%; margin-top:10px;">Activer mon compte</button>
+            <form id="setup-form" autocomplete="on">
+                <div class="form-group">
+                    <label for="setup-identifiant">Identifiant</label>
+                    <input type="text" id="setup-identifiant" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="setup-password">Mot de passe</label>
+                    <input type="password" id="setup-password" autocomplete="new-password" required>
+                </div>
+                <div class="form-group">
+                    <label for="setup-confirm">Confirmer le mot de passe</label>
+                    <input type="password" id="setup-confirm" autocomplete="new-password" required>
+                </div>
+                <button id="btn-setup" type="submit" class="btn-primary" style="width:100%; margin-top:10px;">Activer mon compte</button>
+            </form>
         </div>
     </div>
 
@@ -1866,7 +1870,7 @@
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
     <script src="formation.js?v=e64c4b474a"></script>
-    <script src="version.js?v=20261102164833"></script>
+    <script src="version.js?v=20261102165053"></script>
     <script src="app.js?v=367b94f080"></script>
     <script src="utils.js?v=095d6963e3"></script>
     <script src="presences.js?v=9d4a8243b1"></script>
