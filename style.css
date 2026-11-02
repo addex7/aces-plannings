@@ -6474,3 +6474,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     flex: 1 1 auto; min-width: 0; white-space: nowrap;
 }
 #reservation-modal .nr-btn-save { flex: 1.4 1 auto; font-size: 13px; padding: 10px 14px; }
+
+/* Modale reservation : les champs date/heure ne debordent plus sur Edge */
+#reservation-modal .nr-datetimes { display: flex; gap: 10px; }
+#reservation-modal .nr-datetime { flex: 1 1 0; min-width: 0; }
+#reservation-modal .nr-datetime input {
+    width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;
+}
