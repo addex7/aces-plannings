@@ -8,7 +8,8 @@
 const TABLE_SGS_INFOS = 'Informations SGS';
 
 function peutGererSgs() {
-    return roleAutorise(['Délégué SGS', 'Super admin']);
+    return (typeof roleAutorise === 'function' && roleAutorise(['Délégué SGS', 'Super admin']))
+        || (typeof isSuperAdmin === 'function' && isSuperAdmin());
 }
 
 // --- Bandeau au-dessus du planning ----------------------------------------
