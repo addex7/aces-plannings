@@ -168,11 +168,9 @@ function aeralRapportHtml(vols, annee) {
         const c = k => somme(list.filter(v => catVol(v) === k));
         return `<table class="aeral-table">
             <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th colspan="3"></th></tr>
-            <tr><td>VFR Jour local</td>${cellH(c('local'))}<td>Dont vol en montagne</td><td colspan="3" class="aeral-num">—</td></tr>
-            <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}<td>Dont voltige</td><td colspan="3" class="aeral-num">—</td></tr>
+            <tr><td>VFR Jour local</td>${cellH(c('local'))}<td colspan="4"></td></tr>
+            <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}<td colspan="4"></td></tr>
             <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td>Dont vol BIA</td><td colspan="3" class="aeral-num">—</td></tr>
-            <tr><td>IFR</td><td class="aeral-num">0,00</td><td class="aeral-num">0</td><td class="aeral-num">00</td><td>Dont hydravion</td><td colspan="3" class="aeral-num">—</td></tr>
-            <tr><td></td><td></td><td></td><td></td><td>Dont vols de découverte</td>${cellH(c('vi'))}</tr>
             <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4"></td></tr>
         </table>`;
     };
@@ -182,12 +180,7 @@ function aeralRapportHtml(vols, annee) {
         const classe = n => n === 3 ? somme(list) : 0;
         return `<table class="aeral-table">
             <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th></th></tr>
-            <tr><td>Classe 1 - paramoteur</td>${cellH(0)}<td rowspan="6" style="vertical-align:middle;">Dont vol BIA</td><td rowspan="6" class="aeral-num" style="vertical-align:middle;">—</td></tr>
-            <tr><td>Classe 2 - pendulaire</td>${cellH(0)}</tr>
-            <tr><td>Classe 3 - multiaxes</td>${cellH(classe(3))}</tr>
-            <tr><td>Classe 4 - autogire</td>${cellH(0)}</tr>
-            <tr><td>Classe 5 - aérostat ultra-léger</td>${cellH(0)}</tr>
-            <tr><td>Classe 6 - hélicoptère</td>${cellH(0)}</tr>
+            <tr><td>Classe 3 - multiaxes</td>${cellH(classe(3))}<td style="vertical-align:middle;">Dont vol BIA</td><td class="aeral-num" style="vertical-align:middle;">—</td></tr>
             <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="2"></td></tr>
         </table>`;
     };
