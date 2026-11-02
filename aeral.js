@@ -180,7 +180,7 @@ function aeralRapportHtml(vols, annee) {
     const blocUlm = list => {
         const classe = n => n === 3 ? somme(list) : 0;
         return `<table class="aeral-table">
-            <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th></th></tr>
+            <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th style="border:none; background:none;"></th></tr>
             <tr><td>Classe 3 - multiaxes</td>${cellH(classe(3))}<td style="vertical-align:middle;">Dont vol BIA</td><td class="aeral-num" style="vertical-align:middle;">—</td></tr>
             <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="2"></td></tr>
         </table>`;
