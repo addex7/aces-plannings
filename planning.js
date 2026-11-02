@@ -3769,7 +3769,10 @@ function ouvrirActionsVI(vol) {
     const titre = document.getElementById('vi-actions-titre');
     const info = document.getElementById('vi-actions-info');
     if (titre) titre.textContent = `${volActionsVI.type} — ${volActionsVI.passager || 'Passager non renseigné'}`;
-    if (info) info.textContent = `${volActionsVI.dateStr} • ${volActionsVI.heureDebut} - ${volActionsVI.heureFin}${volActionsVI.pilote ? ' • Pilote : ' + formaterNomPilote(volActionsVI.pilote) : ' • À pourvoir'}`;
+    if (info) {
+        const base = `${volActionsVI.dateStr} • ${volActionsVI.heureDebut} - ${volActionsVI.heureFin}${volActionsVI.pilote ? ' • Pilote : ' + formaterNomPilote(volActionsVI.pilote) : ' • À pourvoir'}`;
+        info.innerHTML = escapeHtml(base) + (volActionsVI.commentaire ? `<br><span style="color:#64748b;">💬 ${escapeHtml(volActionsVI.commentaire)}</span>` : '');
+    }
     const aPourvoir = !volActionsVI.pilote;
     const gestionVI = hasRoleGestionVI();
     const elInscrire = document.getElementById('vi-act-inscrire');
