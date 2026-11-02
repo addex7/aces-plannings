@@ -3196,7 +3196,17 @@ async function ouvrirModaleEdition(vol, avionIdOuImmat) {
     if (!modal) return;
     const typesVolEdit = Array.isArray(vol.fields?.['Type de vol']) ? vol.fields['Type de vol'] : [vol.fields?.['Type de vol']].filter(Boolean);
     const estVI = typesVolEdit.some(t => ['VI Moteur', 'VI Planeur', "Vol d'Initiation", "Vol d'Initiation (VI)"].includes(t));
-    if (!estVI && !peutBougerReservations() && !estProprietaireReservation(vol)) {
+    // Pour les VI : seuls Gestion VI / admin, le pilote VI assigne ou le
+    // proprietaire ouvrent l'edition — sinon la modale info s'affiche.
+    const piloteDuVol = (vol.fields?.['Pilote'] || vol.pilote || '').toString().trim();
+    const peutGererCeVI = estVI && (
+        hasRoleGestionVI()
+        || (hasRolePiloteVI() && piloteDuVol && typeof estUtilisateurCourant === 'function' && estUtilisateurCourant(piloteDuVol))
+    );
+    const autoriseEdit = estVI
+        ? (peutGererCeVI || peutBougerReservations() || estProprietaireReservation(vol))
+        : (peutBougerReservations() || estProprietaireReservation(vol));
+    if (!autoriseEdit) {
         ouvrirModaleInformation(vol);
         return;
     }
