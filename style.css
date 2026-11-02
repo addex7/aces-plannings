@@ -6465,3 +6465,12 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     border: none !important; background: transparent !important;
     font-weight: 400; color: #475569;
 }
+
+/* Modale reservation : boutons du pied — texte sur une ligne, tailles souples */
+#reservation-modal .nr-footer {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+}
+#reservation-modal .nr-footer > button {
+    flex: 1 1 auto; min-width: 0; white-space: nowrap;
+}
+#reservation-modal .nr-btn-save { flex: 1.4 1 auto; font-size: 13px; padding: 10px 14px; }
