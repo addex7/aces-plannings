@@ -691,7 +691,7 @@ async function ouvrirModaleEditionVIPlaneur(vol) {
     document.getElementById('form-vi-debut').value = formaterPourInput(new Date(vol.fields['Date de début']));
     document.getElementById('form-vi-fin').value = formaterPourInput(new Date(vol.fields['Date de fin']));
     await peuplerSelectPilotesVI((vol.fields['Pilote'] || '').toString().trim(), 'form-vi-pilote', 'VIP');
-    document.getElementById('form-vi-commentaire').value = (vol.fields['Commentaire'] || '').toString().trim();
+    document.getElementById('form-vi-commentaire').value = (vol.fields['Commentaire'] || vol.fields['Commentaires VI'] || '').toString().trim();
     modal.style.display = 'flex';
 }
 
@@ -715,7 +715,7 @@ async function ouvrirModaleEditionVICreneau(vol) {
     document.getElementById('form-vi-debut').value = formaterPourInput(new Date(vol.debut));
     document.getElementById('form-vi-fin').value = formaterPourInput(new Date(vol.fin));
     await peuplerSelectPilotesVI((vol.pilote || '').toString().trim(), 'form-vi-pilote', vol.type);
-    document.getElementById('form-vi-commentaire').value = (vol.commentaire || '').toString().trim();
+    document.getElementById('form-vi-commentaire').value = (vol.commentaire || vol.fields['Commentaire'] || vol.fields['Commentaires VI'] || '').toString().trim();
     modal.style.display = 'flex';
 }
 
@@ -1206,7 +1206,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         const finStr = convertirHeureEnHHMM(heureFin);
                         const enConflitPilote = conflitsPilotesJour.has(vol.id);
                         if (isCreneau) {
-                            barresDiv.setAttribute('data-tooltip', (vol.fields['Commentaires VI'] || '') + (passagerNom ? '\nPassager : ' + passagerNom : ''));
+                            barresDiv.setAttribute('data-tooltip', (vol.fields['Commentaires VI'] || vol.fields['Commentaire'] || '') + (passagerNom ? '\nPassager : ' + passagerNom : ''));
                         } else {
                             barresDiv.setAttribute('data-tooltip', [
                                 `Type : ${Array.isArray(typeVol) ? typeVol.join(', ') : typeVol}`,
@@ -1255,7 +1255,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                                         telephone: vol.fields['Téléphone'] || '',
                                         debut: vol.fields['Date de début'],
                                         fin: vol.fields['Date de fin'],
-                                        commentaire: vol.fields['Commentaires VI'] || '',
+                                        commentaire: vol.fields['Commentaires VI'] || vol.fields['Commentaire'] || '',
                                         machineName: (avion.fields['Immatriculation'] || '').toString().trim(),
                                         type: vol._typeVI || 'VI Moteur'
                                     });
@@ -1275,7 +1275,7 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                                     telephone: vol.fields['Téléphone'] || '',
                                     debut: vol.fields['Date de début'],
                                     fin: vol.fields['Date de fin'],
-                                    commentaire: vol.fields['Commentaires VI'] || '',
+                                    commentaire: vol.fields['Commentaires VI'] || vol.fields['Commentaire'] || '',
                                     token: vol.fields['Token'] || '',
                                     type: vol._typeVI || 'VI Moteur'
                                 });
@@ -3245,7 +3245,7 @@ async function ouvrirModaleEdition(vol, avionIdOuImmat) {
     if (idTargetMachine) {
         selectionnerMachine(idTargetMachine);
     }
-    document.getElementById('form-commentaires').value = vol.fields['Commentaires VI'] || '';
+    document.getElementById('form-commentaires').value = vol.fields['Commentaires VI'] || vol.fields['Commentaire'] || vol.fields['Commentaires'] || '';
     const nomCompletPassager = (vol.fields['Passager'] || '').toString().trim();
     const partiesPassager = nomCompletPassager.split(/\s+/).filter(Boolean);
     if (document.getElementById('form-prenom-passager')) document.getElementById('form-prenom-passager').value = partiesPassager.length > 1 ? partiesPassager[0] : '';
@@ -3338,7 +3338,7 @@ async function ouvrirModaleInformation(vol) {
     const debut = f['Date de début'] ? formaterDateHeureAffichage(new Date(f['Date de début'])) : '—';
     const fin = f['Date de fin'] ? formaterDateHeureAffichage(new Date(f['Date de fin'])) : '—';
     const duree = f['Temps estimé'] || '—';
-    const commentaires = f['Commentaires'] || f['Commentaires VI'] || '';
+    const commentaires = f['Commentaires'] || f['Commentaires VI'] || f['Commentaire'] || '';
     const membreInstructeur = instructeur !== '—' ? trouverMembreParField(instructeur) : null;
     const contactHtml = (membre) => {
         const mf = (membre && membre.fields) || {};
