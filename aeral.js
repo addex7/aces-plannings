@@ -304,7 +304,7 @@ async function ouvrirRapportAeral() {
     document.getElementById('aeral-print').addEventListener('click', () => {
         const zone = document.getElementById('aeral-contenu');
         const w = window.open('', '_blank');
-        w.document.write(`<html><head><title>Rapport AERAL</title><style>body{font-family:sans-serif;font-size:12px}h3{border-bottom:2px solid #333}h4{margin:14px 0 4px}.aeral-table{border-collapse:collapse;margin:4px 0 12px}.aeral-table td,.aeral-table th{border:1px solid #999;padding:4px 8px}.aeral-num{text-align:right;font-variant-numeric:tabular-nums}.aeral-sub{font-size:11px;color:#555;margin-top:8px}.aeral-note{font-size:10px;color:#777;margin-top:14px}</style></head><body>${zone.innerHTML}</body></html>`);
+        w.document.write(`<html><head><title>Rapport AERAL</title><style>body{font-family:sans-serif;font-size:12px}h3{color:#1e3d59;border-bottom:2px solid #1e3d59;padding-bottom:6px}h4{margin:14px 0 4px;color:#1e3d59;border-left:4px solid #2f80ed;padding-left:8px}.aeral-table{border-collapse:collapse;margin:4px 0 12px}.aeral-table td,.aeral-table th{border:1px solid #cbd5e1;padding:5px 9px}.aeral-table th{background:#1e3d59;color:#fff;text-align:left}.aeral-num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}.aeral-sub{font-size:11px;color:#555;margin-top:8px}.aeral-note{font-size:10px;color:#777;margin-top:14px}</style></head><body>${zone.innerHTML}</body></html>`);
         w.document.close(); w.print();
     });
     gen();
