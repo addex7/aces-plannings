@@ -6459,3 +6459,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     background: #1e3d59; color: #fff; border: none; border-radius: 6px;
     padding: 0 8px; box-sizing: border-box; color-scheme: dark;
 }
+
+/* AERAL : cellules « Dont … » hors du tableau — texte simple a droite */
+.aeral-table td.aeral-hors, .aeral-table tr td.aeral-hors,
+.aeral-table tr:nth-child(even) td.aeral-hors {
+    border: none !important; background: transparent !important;
+    font-weight: 400; color: #475569;
+}

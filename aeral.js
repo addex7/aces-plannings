@@ -129,7 +129,7 @@ function aeralRapportHtml(vols, annee) {
     const cent = v => v.toFixed(2).replace('.', ',');
     const somme = list => list.reduce((s, v) => s + v.duree, 0);
     const hhmm = v => { const t = Math.round(v * 60); return [Math.floor(t / 60), t % 60]; };
-    const cellH = v => { const [h, m] = hhmm(v); return `<td class="aeral-num">${cent(v)}</td><td class="aeral-num">${h}</td><td class="aeral-num">${String(m).padStart(2, '0')}</td>`; };
+    const cellH = (v, cls = '') => { const [h, m] = hhmm(v); return `<td class="aeral-num ${cls}">${cent(v)}</td><td class="aeral-num ${cls}">${h}</td><td class="aeral-num ${cls}">${String(m).padStart(2, '0')}</td>`; };
     const roles = u0 => (((u0.fields || {})['Rôles']) || []).join(' ');
     const nfed = u0 => { const f = u0.fields || {}; return f['Numéro licence FFA'] || f['Numéro licence FFPLUM'] || f['Numéro licence FFVP'] || ''; };
 
@@ -168,8 +168,8 @@ function aeralRapportHtml(vols, annee) {
         const c = k => somme(list.filter(v => catVol(v) === k));
         return `<table class="aeral-table">
             <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th colspan="3" style="border:none; background:none;"></th></tr>
-            <tr><td>VFR Jour local</td>${cellH(c('local'))}<td>Dont vol BIA</td><td colspan="3" class="aeral-num">—</td></tr>
-            <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}${avecDecouverte ? `<td>Dont vols de découverte (VIA)</td>${cellH(c('vi'))}` : '<td colspan="4"></td>'}</tr>
+            <tr><td>VFR Jour local</td>${cellH(c('local'))}<td class="aeral-hors">Dont vol BIA</td><td colspan="3" class="aeral-num aeral-hors">—</td></tr>
+            <tr><td>VFR Jour Navigation (distance &gt; 50 NM)</td>${cellH(c('nav'))}${avecDecouverte ? `<td class="aeral-hors">Dont vols de découverte (VIA)</td>${cellH(c('vi'), 'aeral-hors')}` : '<td colspan="4"></td>'}</tr>
             <tr><td>VFR Nuit</td>${cellH(c('nuit'))}<td colspan="4"></td></tr>
             <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="4"></td></tr>
         </table>`;
@@ -180,7 +180,7 @@ function aeralRapportHtml(vols, annee) {
         const classe = n => n === 3 ? somme(list) : 0;
         return `<table class="aeral-table">
             <tr><th></th><th>Centièmes</th><th>HH</th><th>MM</th><th style="border:none; background:none;"></th><th style="border:none; background:none;"></th></tr>
-            <tr><td>Classe 3 - multiaxes</td>${cellH(classe(3))}<td style="vertical-align:middle;">Dont vol BIA</td><td class="aeral-num" style="vertical-align:middle;">—</td></tr>
+            <tr><td>Classe 3 - multiaxes</td>${cellH(classe(3))}<td class="aeral-hors" style="vertical-align:middle;">Dont vol BIA</td><td class="aeral-num aeral-hors" style="vertical-align:middle;">—</td></tr>
             <tr><td><strong>Total des heures de vol</strong></td>${cellH(somme(list))}<td colspan="2"></td></tr>
         </table>`;
     };
