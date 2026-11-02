@@ -807,7 +807,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                     `Pilote : ${formaterNomPilote(pilote) || '—'}`,
                     `Horaires : ${debutStr} - ${finStr}`,
                     `Téléphone : ${vol.fields['Téléphone'] || '—'}`,
-                    `Commentaire : ${vol.fields['Commentaire'] || '—'}`,
+                    `Commentaire : ${vol.fields['Commentaire'] || vol.fields['Commentaires VI'] || '—'}`,
                     ...(enConflitPilote ? ['⚠️ Pilote déjà réservé aux mêmes horaires'] : [])
                 ].join('\n'));
                 barresDiv.removeAttribute('title');
@@ -844,7 +844,7 @@ function afficherLigneVIPlaneur(volsVIP, rowsContainer, soleil, hMin = 0, hMax =
                         telephone: vol.fields['Téléphone'] || '',
                         debut: vol.fields['Date de début'],
                         fin: vol.fields['Date de fin'],
-                        commentaire: vol.fields['Commentaire'] || '',
+                        commentaire: vol.fields['Commentaire'] || vol.fields['Commentaires VI'] || '',
                         token: vol.fields['Token'] || '',
                         type: type
                     });
