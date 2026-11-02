@@ -1665,17 +1665,7 @@ async function chargerCarnetRoute() {
         const volsMachine = listeVolsCarnetCache.filter(r => {
             const f = r.fields || {};
             return !machineCarnetSelectionnee || f['Machine'] === machineCarnetSelectionnee;
-        }).sort((a, b) => {
-            const fa = a.fields || {}, fb = b.fields || {};
-            if (isJVIO) return cleDateHeureCarnet(a) - cleDateHeureCarnet(b);
-            const da = fa['Date'] || '', db = fb['Date'] || '';
-            if (da !== db) return da < db ? 1 : -1;
-            const ha = fa['Heure départ'] || '', hb = fb['Heure départ'] || '';
-            if (ha !== hb) return ha < hb ? 1 : -1;
-            const xa = parseFloat(String(fa['Horamètre arrivée'] || '').replace(',', '.')) || 0;
-            const xb = parseFloat(String(fb['Horamètre arrivée'] || '').replace(',', '.')) || 0;
-            return xb - xa;
-        });
+        }).sort((a, b) => cleDateHeureCarnet(a) - cleDateHeureCarnet(b));
         if (isJVIO) {
             try {
                 const recordsMaint = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent('Maintenance')}?filterByFormula=${encodeURIComponent("{Machine}='F-JVIO'")}`, { headers });
@@ -1684,8 +1674,10 @@ async function chargerCarnetRoute() {
                 });
                 volsMachine.sort((a, b) => cleDateHeureCarnet(a) - cleDateHeureCarnet(b));
             } catch (e) { console.warn('Maintenance JVIO indisponible:', e); }
-            carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / lignesParPageCarnet()));
         }
+        // Toutes machines : ouverture sur la derniere page — vols les plus
+        // recents en bas, les nouvelles saisies s'ajoutent a la fin.
+        carnetPageJVIO = Math.max(1, Math.ceil(volsMachine.length / lignesParPageCarnet()));
         afficherCarnet(volsMachine);
         afficherAlarmeObservation(volsMachine);
         await synchroniserHorametreAeronef(machineCarnetSelectionnee, volsMachine);
