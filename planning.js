@@ -1208,12 +1208,14 @@ async function chargerDonneesPlanning(forceRefresh = false, autoActiverVIP = tru
                         if (isCreneau) {
                             barresDiv.setAttribute('data-tooltip', (vol.fields['Commentaires VI'] || vol.fields['Commentaire'] || '') + (passagerNom ? '\nPassager : ' + passagerNom : ''));
                         } else {
+                            const commBarre = vol.fields['Commentaires VI'] || vol.fields['Commentaire'] || '';
                             barresDiv.setAttribute('data-tooltip', [
                                 `Type : ${Array.isArray(typeVol) ? typeVol.join(', ') : typeVol}`,
                                 `Pilote : ${piloteFormate || '—'}`,
                                 `Passager : ${passagerNom || '—'}`,
                                 `Instructeur : ${instructeurNom || '—'}`,
-                                `Horaires : ${debutStr} - ${finStr}`
+                                `Horaires : ${debutStr} - ${finStr}`,
+                                ...(commBarre ? [`Commentaire : ${commBarre}`] : [])
                             ].join('\n'));
                         }
                         if (enConflitPilote) {
@@ -2277,7 +2279,9 @@ function appliquerEtatFormulaire() {
         inputPilote.required = true;
     }
     if (labelCommentaires) labelCommentaires.textContent = 'COMMENTAIRES';
-    if (groupCommentaires) groupCommentaires.style.display = 'none';
+    // Le commentaire est offert sur tous les types de vol (lisible au clic
+    // sur la resa et dans le tooltip), pas seulement les VI.
+    if (groupCommentaires) groupCommentaires.style.display = 'block';
     if (inputEstimation) inputEstimation.required = true;
 }
 
