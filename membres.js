@@ -364,6 +364,7 @@ const DESCRIPTIONS_ROLES = {
     'Instructeur ULM': "• Déclare ses disponibilités ULM\n• Supprime les réservations d'autres pilotes\n• Saisit des vols pour n'importe quel membre au carnet\n• Pilote VI ULM\n• Bilan des validités des membres\n• Présences du club",
     'Pilote planeur': "• Peut s'inscrire pilote aux journées planeur",
     'Documentaliste': "• Gère la bibliothèque de documents (ajout, modification, suppression)\n• Suivi documentaire des aéronefs",
+    'Délégué SGS': "• Gère la bibliothèque de documents (ajout, modification, suppression)\n• Suivi documentaire des aéronefs\n• Publie des informations SGS sur le planning (vol de drone, lâché de ballon…)",
     'Super admin': "• Accès total à toutes les fonctions\n• Gestion des membres et des rôles\n• Options et prix des aéronefs\n• Envoi des vols vers GVV\n• Comptes pilotes\n• Journal d'audit\n• Bilans de validités\n• Suppression de toute réservation ou événement",
     'Trésorier': "• Vue Comptes pilotes (soldes et écritures GVV)\n• Prix et options des aéronefs"
 };
