@@ -6698,3 +6698,6 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     .ap-signalement-machine { min-width: 0; white-space: normal; }
     .ap-signalement-count { white-space: normal; text-align: right; }
 }
+
+/* Signalements deroules en place : la liste s'ouvre sans popup */
+.ap-signalements-list.ouverte { max-height: none; overflow: visible; }
