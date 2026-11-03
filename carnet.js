@@ -901,7 +901,44 @@ function mettreAJourHeureArrivee() {
     const minutes = dureeHorametreMinutes(machine, hDep, hArr);
     if (minutes === null || !heureDepart) return;
     const arr = ajouterMinutes(heureDepart, minutes);
-    if (arr !== null) input.value = arr;
+    if (arr !== null && (input.dataset.auto === '1' || !input.value)) {
+        input.value = arr;
+        input.dataset.auto = '1';
+    }
+    mettreAJourPrixDuVol();
+}
+
+// Sens inverse : heure depart + heure arrivee saisies -> horametre arrivee.
+// Ne reecrit jamais une valeur saisie manuellement (dataset.auto).
+function mettreAJourHorametreArrivee() {
+    const machine = document.getElementById('carnet-machine').value;
+    const input = document.getElementById('carnet-horametre-arrivee');
+    if (!input || !machine || machine === 'F-BLIO' || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
+    if (input.value && input.dataset.auto !== '1') return;
+    const heureDepart = document.getElementById('carnet-heure-depart').value;
+    const heureArrivee = document.getElementById('carnet-heure-arrivee').value;
+    const hDep = document.getElementById('carnet-horametre-depart').value;
+    if (!heureDepart || !heureArrivee || !hDep) return;
+    const [hD, mD] = heureDepart.split(':').map(Number);
+    const [hA, mA] = heureArrivee.split(':').map(Number);
+    if (isNaN(hD) || isNaN(mD) || isNaN(hA) || isNaN(mA)) return;
+    let minutes = (hA * 60 + mA) - (hD * 60 + mD);
+    if (minutes < 0) minutes += 24 * 60;
+    let val;
+    if (machine === 'F-JVIO') {
+        const depMin = horametreVersMinutes(hDep);
+        if (depMin === null) return;
+        const tot = depMin + minutes;
+        val = `${Math.floor(tot / 60)},${String(tot % 60).padStart(2, '0')}`;
+    } else {
+        const dep = parseFloat(String(hDep).replace(',', '.'));
+        if (isNaN(dep)) return;
+        val = (dep + minutes / 60).toFixed(2).replace('.', ',');
+    }
+    if (input.value !== val) {
+        input.value = val;
+        input.dataset.auto = '1';
+    }
     mettreAJourPrixDuVol();
 }
 
@@ -2213,12 +2250,16 @@ function initCarnetRoute() {
         if (el) {
             el.addEventListener('input', () => {
                 mettreAJourHeureArrivee();
+                mettreAJourHorametreArrivee();
                 mettreAJourPrixDuVol();
             });
         }
     });
     const elHeureArrivee = document.getElementById('carnet-heure-arrivee');
-    if (elHeureArrivee) elHeureArrivee.addEventListener('input', mettreAJourPrixDuVol);
+    if (elHeureArrivee) elHeureArrivee.addEventListener('input', () => {
+        mettreAJourHorametreArrivee();
+        mettreAJourPrixDuVol();
+    });
     // Saisie d'un vol dans le passe : l'horametre/terrain de depart se
     // raffinent sur le vol precedent la date+heure choisies (creation
     // seulement, et tant que l'utilisateur n'a pas retouche les champs).
@@ -2230,7 +2271,7 @@ function initCarnetRoute() {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', raffinerDepart);
     });
-    ['carnet-horametre-depart', 'carnet-depart'].forEach(id => {
+    ['carnet-horametre-depart', 'carnet-depart', 'carnet-heure-arrivee', 'carnet-horametre-arrivee'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', () => { delete el.dataset.auto; });
     });
