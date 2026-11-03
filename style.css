@@ -6699,3 +6699,13 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     .ap-signalement-count { white-space: normal; text-align: right; }
 }
 
+
+/* Scintillement a la bordure basse du popup signalements : les coins
+   arrondis laissent passer le hover vers la carte Messages club dessous.
+   Une couche invisible etend la zone de capture de 8px autour du popup. */
+.ap-signalements-pop::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    z-index: -1;
+}
