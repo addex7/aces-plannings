@@ -916,7 +916,7 @@ async function mettreAJourPrixDuVol() {
 function mettreAJourStyleChampsAuto(machine) {
     const heureArrivee = document.getElementById('carnet-heure-arrivee');
     const horametreDepart = document.getElementById('carnet-horametre-depart');
-    const isMoteur = MACHINES_MOTEURS.includes(machine);
+    const isMoteur = machine && machine !== 'F-BLIO' && !MACHINES_PLANEUR_REMOQUE.includes(machine);
     if (heureArrivee) {
         heureArrivee.classList.toggle('carnet-champ-auto', isMoteur);
     }
@@ -931,7 +931,7 @@ function mettreAJourHeureArrivee() {
     const hDep = document.getElementById('carnet-horametre-depart').value;
     const hArr = document.getElementById('carnet-horametre-arrivee').value;
     const input = document.getElementById('carnet-heure-arrivee');
-    if (!input || !machine || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
+    if (!input || !machine || machine === 'F-BLIO' || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
     if (document.activeElement === input) return; // jamais decraser le champ en cours de saisie
     const minutes = dureeHorametreMinutes(machine, hDep, hArr);
     console.log('[carnet-calc] heureArr:', { machine, hDep, hArr, heureDepart, minutes });
