@@ -6626,8 +6626,11 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
        sidebar s'appliquait encore au-dela de 1024 px (paysage tablette). */
     #carnet-modal { left: 0 !important; width: 100% !important; }
     /* La barre Safari masque le bas du contenu : marge de scroll en plus
+       + hauteur dynamique (dvh tient compte des barres du navigateur)
        pour que les boutons Annuler/Enregistrer soient visibles. */
-    #carnet-modal .modal-content { padding-bottom: 100px; }
+    #carnet-modal .modal-content { padding-bottom: 140px; max-height: 100dvh; }
+    /* Prix du vol : meme hauteur que la zone remarques a cote */
+    #carnet-form.carnet-form-jvio .prix-group input { flex: 1 1 auto; }
     /* Champs heure iOS plus larges que leur cellule : la taille intrinseque
        imposee par WebKit (min-inline-size) resiste a width/min-width — on la
        neutralise puis on rogne le depassement a chaque niveau. */
@@ -6662,4 +6665,11 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
         min-inline-size: 0; inline-size: 100%;
     }
     .accueil-doc-form .btn-primary { align-self: end; width: 100%; }
+    /* Champ « Fin de validite » trop haut et rogne a droite : le controle
+       date iOS retrecit avec la police -> il rentre dans sa cellule. */
+    #accueil-doc-validite {
+        font-size: 11px !important;
+        padding: 4px 6px !important;
+        min-height: 0;
+    }
 }
