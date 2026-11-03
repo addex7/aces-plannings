@@ -6710,13 +6710,6 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     z-index: -1;
 }
 
-/* Coins bas carres : la zone arrondie transparente laissait le hover
-   atteindre la carte Messages club -> scintillement a la jonction */
-.ap-signalements-pop {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
 /* Popup signalements ouvert : inhibe le soulevement au hover des cartes
    — la carte Messages club sous la bordure du popup bougeait en boucle */
 .sig-pop-ouverte .ap-card:hover { transform: none; }
