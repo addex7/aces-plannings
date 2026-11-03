@@ -6494,3 +6494,24 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     font-size: 12px !important; padding: 8px 6px !important;
     letter-spacing: 0;
 }
+
+/* Ecran mobile non supporte : visible uniquement sur telephone
+   (ecran etroit + tactile, pas sur desktop redimensionne ni tablette) */
+#mobile-unsupported { display: none; }
+@media (max-width: 600px) and (hover: none) {
+    #mobile-unsupported {
+        display: flex; position: fixed; inset: 0; z-index: 99999;
+        align-items: center; justify-content: center;
+        background: linear-gradient(135deg,#14293e,#1e3d59);
+        padding: 24px; box-sizing: border-box;
+    }
+}
+#mobile-unsupported .mu-card {
+    background: #fff; border-radius: 16px; padding: 36px 28px;
+    max-width: 400px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+#mobile-unsupported .mu-card img { max-height: 64px; margin-bottom: 16px; }
+#mobile-unsupported .mu-card h1 { margin: 0 0 10px; color: #1e3d59; font-size: 20px; }
+#mobile-unsupported .mu-card p { color: #475569; font-size: 14px; line-height: 1.6; margin: 0 0 18px; }
+#mobile-unsupported .mu-card a { font-size: 13px; color: #94a3b8; }
