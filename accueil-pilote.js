@@ -19,16 +19,41 @@ async function machineRetourDeVol() {
             const d = new Date(String(s).replace(' ', 'T'));
             return isNaN(d) ? null : d;
         };
-        const estMien = r => typeof estProprietaireReservation !== 'function' || estProprietaireReservation(r);
+        const npc = typeof nomPiloteCourant === 'function' ? nomPiloteCourant() : '';
+        const moi = `${currentUser?.prenom || ''} ${currentUser?.nom || ''}`.trim();
+        const nomPiloteResa = r => {
+            const p = r.fields && r.fields['Pilote'];
+            const brut = Array.isArray(p) ? p.join(' ') : (p || '');
+            // 'Pilote' peut stocker un id membre : on tente la resolution en nom
+            const resolu = (typeof nomUtilisateurDepuisId === 'function' && typeof listeMembresCache !== 'undefined')
+                ? (nomUtilisateurDepuisId(p, listeMembresCache) || '') : '';
+            return resolu || brut;
+        };
+        const memeNom = (a, b) => a && b && (a.toLowerCase() === b.toLowerCase()
+            || (typeof correspondanceNom === 'function' && correspondanceNom(a, b)));
+        const estMien = r => {
+            if (typeof estProprietaireReservation === 'function' && estProprietaireReservation(r)) return true;
+            const nom = nomPiloteResa(r).toString().trim();
+            return memeNom(nom, npc) || memeNom(nom, moi);
+        };
         const dansCreneau = (deb, fin) => deb && fin && deb <= now && now <= fin;
+        const machineDe = r => {
+            const m = r.fields && r.fields['Machine'];
+            return (Array.isArray(m) ? m[0] : m) || null;
+        };
 
         // 1. Reservations classiques du jour
         const fResa = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${jour}',DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${jour}')`;
         const urlResa = `${API_BASE}/${encodeURIComponent(ACCUEIL_TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(fResa)}&pageSize=100`;
         const resas = await fetchTousRecordsCache(urlResa, { headers }, 0, true);
+        console.log('[RetourVol] resas du jour :', resas.map(r => ({
+            pilote: nomPiloteResa(r), mien: estMien(r),
+            deb: r.fields && r.fields['Date de début'], fin: r.fields && r.fields['Date de fin'],
+            machine: machineDe(r)
+        })));
         const resa = resas.find(r => estMien(r) &&
             dansCreneau(parseD(r.fields && r.fields['Date de début']), parseD(r.fields && r.fields['Date de fin'])));
-        if (resa && resa.fields['Machine']) return resa.fields['Machine'];
+        if (resa && machineDe(resa)) return machineDe(resa);
 
         // 2. Creneaux VI reserves du jour (VIULM -> F-JVIO, VIA -> F-GASB)
         const fVI = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')='${jour}',{Statut}='Réservé')`;
