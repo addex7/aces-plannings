@@ -907,7 +907,9 @@ function mettreAJourHeureArrivee() {
     const hArr = document.getElementById('carnet-horametre-arrivee').value;
     const input = document.getElementById('carnet-heure-arrivee');
     if (!input || !machine || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
+    if (document.activeElement === input) return; // jamais decraser le champ en cours de saisie
     const minutes = dureeHorametreMinutes(machine, hDep, hArr);
+    console.log('[carnet-calc] heureArr:', { machine, hDep, hArr, heureDepart, minutes });
     if (minutes === null || !heureDepart) return;
     const arr = ajouterMinutes(heureDepart, minutes);
     if (arr !== null && (input.dataset.auto === '1' || !input.value)) {
@@ -923,10 +925,12 @@ function mettreAJourHorametreArrivee() {
     const machine = document.getElementById('carnet-machine').value;
     const input = document.getElementById('carnet-horametre-arrivee');
     if (!input || !machine || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
+    if (document.activeElement === input) return; // jamais decraser le champ en cours de saisie
     if (input.value && input.dataset.auto !== '1') return;
     const heureDepart = document.getElementById('carnet-heure-depart').value;
     const heureArrivee = document.getElementById('carnet-heure-arrivee').value;
     const hDep = document.getElementById('carnet-horametre-depart').value;
+    console.log('[carnet-calc] horametreArr:', { machine, heureDepart, heureArrivee, hDep });
     if (!heureDepart || !heureArrivee || !hDep) return;
     const [hD, mD] = heureDepart.split(':').map(Number);
     const [hA, mA] = heureArrivee.split(':').map(Number);
@@ -2253,22 +2257,34 @@ function initCarnetRoute() {
             chargerCarnetRoute();
         });
     }
-    const champsCalculHeureArrivee = ['carnet-machine', 'carnet-horametre-depart', 'carnet-horametre-arrivee', 'carnet-heure-depart'];
-    champsCalculHeureArrivee.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('input', () => {
-                mettreAJourHeureArrivee();
-                mettreAJourHorametreArrivee();
-                mettreAJourPrixDuVol();
-            });
-        }
-    });
-    const elHeureArrivee = document.getElementById('carnet-heure-arrivee');
-    if (elHeureArrivee) elHeureArrivee.addEventListener('input', () => {
+    // Le champ en cours de saisie n'est jamais recalcule : horametre-arrivee
+    // est la cible du calcul horaire, heure-arrivee la cible du calcul horametre.
+    const calculArrivee = () => {
+        mettreAJourHeureArrivee();
         mettreAJourHorametreArrivee();
         mettreAJourPrixDuVol();
+    };
+    ['carnet-machine', 'carnet-horametre-depart', 'carnet-heure-depart'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', calculArrivee);
+            el.addEventListener('change', calculArrivee); // type=time : Safari ne tire pas toujours input
+        }
     });
+    const elHorametreArr = document.getElementById('carnet-horametre-arrivee');
+    if (elHorametreArr) elHorametreArr.addEventListener('input', () => {
+        mettreAJourHeureArrivee();
+        mettreAJourPrixDuVol();
+    });
+    const elHeureArrivee = document.getElementById('carnet-heure-arrivee');
+    if (elHeureArrivee) {
+        const calcHorametre = () => {
+            mettreAJourHorametreArrivee();
+            mettreAJourPrixDuVol();
+        };
+        elHeureArrivee.addEventListener('input', calcHorametre);
+        elHeureArrivee.addEventListener('change', calcHorametre);
+    }
     // Saisie d'un vol dans le passe : l'horametre/terrain de depart se
     // raffinent sur le vol precedent la date+heure choisies (creation
     // seulement, et tant que l'utilisateur n'a pas retouche les champs).
