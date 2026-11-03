@@ -495,7 +495,7 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null, options 
     if (btnDelete) btnDelete.style.display = (recordId && !lectureSeule) ? 'inline-block' : 'none';
     majBoutonGvvCarnet(recordEdit);
     if (dateInput) dateInput.value = new Date().toLocaleDateString('en-CA');
-    if (departInput) departInput.value = 'LFOY';
+    if (departInput) { departInput.value = 'LFOY'; departInput.dataset.auto = '1'; }
     if (arriveeInput) arriveeInput.value = 'LFOY';
 
     const record = recordEdit;
@@ -882,7 +882,7 @@ async function mettreAJourPrixDuVol() {
 function mettreAJourStyleChampsAuto(machine) {
     const heureArrivee = document.getElementById('carnet-heure-arrivee');
     const horametreDepart = document.getElementById('carnet-horametre-depart');
-    const isMoteur = machine && machine !== 'F-BLIO' && !MACHINES_PLANEUR_REMOQUE.includes(machine);
+    const isMoteur = MACHINES_MOTEURS.includes(machine);
     if (heureArrivee) {
         heureArrivee.classList.toggle('carnet-champ-auto', isMoteur);
     }
@@ -897,7 +897,7 @@ function mettreAJourHeureArrivee() {
     const hDep = document.getElementById('carnet-horametre-depart').value;
     const hArr = document.getElementById('carnet-horametre-arrivee').value;
     const input = document.getElementById('carnet-heure-arrivee');
-    if (!input || !machine || machine === 'F-BLIO' || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
+    if (!input || !machine || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
     const minutes = dureeHorametreMinutes(machine, hDep, hArr);
     if (minutes === null || !heureDepart) return;
     const arr = ajouterMinutes(heureDepart, minutes);
@@ -913,7 +913,7 @@ function mettreAJourHeureArrivee() {
 function mettreAJourHorametreArrivee() {
     const machine = document.getElementById('carnet-machine').value;
     const input = document.getElementById('carnet-horametre-arrivee');
-    if (!input || !machine || machine === 'F-BLIO' || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
+    if (!input || !machine || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
     if (input.value && input.dataset.auto !== '1') return;
     const heureDepart = document.getElementById('carnet-heure-depart').value;
     const heureArrivee = document.getElementById('carnet-heure-arrivee').value;
