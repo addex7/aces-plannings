@@ -7,26 +7,42 @@ const ACCUEIL_TABLE_SIGN = 'Signalements';
 const ACCUEIL_TABLE_AERONEFS = 'Aéronefs';
 
 // Machine de la reservation du pilote couvrant l'heure actuelle (pour
-// preselectionner le carnet de route au « Retour de vol »). null si aucune.
+// preselectionner le carnet de route au « Retour de vol »). Cherche dans les
+// reservations classiques ET les creneaux VI (VIULM -> F-JVIO, VIA -> F-GASB).
+// null si aucune.
 async function machineRetourDeVol() {
     try {
         const now = new Date();
         const jour = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const formula = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${jour}',DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${jour}')`;
-        const url = `${API_BASE}/${encodeURIComponent(ACCUEIL_TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
-        const resas = await fetchTousRecordsCache(url, { headers });
         const parseD = s => {
             if (!s) return null;
             const d = new Date(String(s).replace(' ', 'T'));
             return isNaN(d) ? null : d;
         };
-        const resa = resas.find(r => {
-            if (typeof estProprietaireReservation === 'function' && !estProprietaireReservation(r)) return false;
-            const deb = parseD(r.fields && r.fields['Date de début']);
-            const fin = parseD(r.fields && r.fields['Date de fin']);
-            return deb && fin && deb <= now && now <= fin;
+        const estMien = r => typeof estProprietaireReservation !== 'function' || estProprietaireReservation(r);
+        const dansCreneau = (deb, fin) => deb && fin && deb <= now && now <= fin;
+
+        // 1. Reservations classiques du jour
+        const fResa = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${jour}',DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${jour}')`;
+        const urlResa = `${API_BASE}/${encodeURIComponent(ACCUEIL_TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(fResa)}&pageSize=100`;
+        const resas = await fetchTousRecordsCache(urlResa, { headers }, 0, true);
+        const resa = resas.find(r => estMien(r) &&
+            dansCreneau(parseD(r.fields && r.fields['Date de début']), parseD(r.fields && r.fields['Date de fin'])));
+        if (resa && resa.fields['Machine']) return resa.fields['Machine'];
+
+        // 2. Creneaux VI reserves du jour (VIULM -> F-JVIO, VIA -> F-GASB)
+        const fVI = `AND(DATETIME_FORMAT({Date},'YYYY-MM-DD')='${jour}',{Statut}='Réservé')`;
+        const urlVI = `${API_BASE}/${encodeURIComponent('VI Créneaux')}?filterByFormula=${encodeURIComponent(fVI)}&pageSize=100`;
+        const creneaux = await fetchTousRecordsCache(urlVI, { headers }, 0, true);
+        const MACHINE_PAR_TYPE_VI = { 'VIULM': 'F-JVIO', 'VIA': 'F-GASB', "Exam'ULM": 'F-JVIO' };
+        const creneau = creneaux.find(r => {
+            const f = r.fields || {};
+            if (!estMien(r)) return false;
+            const deb = parseD(`${f['Date']}T${f['Heure début']}:00`);
+            const fin = parseD(`${f['Date']}T${f['Heure fin']}:00`);
+            return dansCreneau(deb, fin) && MACHINE_PAR_TYPE_VI[f['Type']];
         });
-        return resa ? (resa.fields['Machine'] || null) : null;
+        return creneau ? MACHINE_PAR_TYPE_VI[creneau.fields['Type']] : null;
     } catch (e) {
         console.error('machineRetourDeVol:', e);
         return null;
