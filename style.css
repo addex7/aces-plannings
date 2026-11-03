@@ -6665,11 +6665,14 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
         min-inline-size: 0; inline-size: 100%;
     }
     .accueil-doc-form .btn-primary { align-self: end; width: 100%; }
-    /* Champ « Fin de validite » trop haut et rogne a droite : le controle
-       date iOS retrecit avec la police -> il rentre dans sa cellule. */
+    /* Champ « Fin de validite » rogne a droite : le controle date iOS refuse
+       de retrecir -> appearance none, comme les champs heure du carnet. */
     #accueil-doc-validite {
-        font-size: 11px !important;
-        padding: 4px 6px !important;
-        min-height: 0;
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-inline-size: 0 !important;
+        box-sizing: border-box;
     }
 }
