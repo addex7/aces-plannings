@@ -3887,6 +3887,9 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22);
     padding: 16px 20px;
     z-index: 30000;
+    /* Couche de composition dediee : evite le scintillement a la jonction
+       avec la carte Messages club situee en dessous */
+    transform: translateZ(0);
     max-height: 70vh;
     overflow-y: auto;
 }
