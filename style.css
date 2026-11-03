@@ -6709,3 +6709,10 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     inset: -8px;
     z-index: -1;
 }
+
+/* Coins bas carres : la zone arrondie transparente laissait le hover
+   atteindre la carte Messages club -> scintillement a la jonction */
+.ap-signalements-pop {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
