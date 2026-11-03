@@ -6676,3 +6676,14 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
         box-sizing: border-box;
     }
 }
+
+/* Saisir un vol : hauteur uniforme des champs mono-ligne (le champ date
+   Safari etait plus haut que les selects a cote) */
+#carnet-form .form-group input:not([type="checkbox"]),
+#carnet-form .form-group select,
+#carnet-form .select-recherche > button {
+    height: 34px;
+    box-sizing: border-box;
+}
+/* Prix du vol : meme hauteur que la zone remarques a cote */
+#carnet-form.carnet-form-jvio .prix-group input { flex: 1 1 auto; height: auto; }
