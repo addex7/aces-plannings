@@ -6641,6 +6641,8 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
         min-width: 0 !important;
         max-width: 100% !important;
         display: block;
+        -webkit-appearance: none;
+        appearance: none;
         background: #fff;
         color: #1e3d59;
         text-align: right;
@@ -6653,8 +6655,11 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         align-items: end;
     }
-    .accueil-doc-form .form-group { min-width: 0 !important; }
+    .accueil-doc-form .form-group { min-width: 0 !important; overflow: hidden; }
     .accueil-doc-form input,
-    .accueil-doc-form select { min-width: 0; width: 100%; box-sizing: border-box; }
+    .accueil-doc-form select {
+        min-width: 0; width: 100%; box-sizing: border-box;
+        min-inline-size: 0; inline-size: 100%;
+    }
     .accueil-doc-form .btn-primary { align-self: end; width: 100%; }
 }
