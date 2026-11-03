@@ -6628,20 +6628,33 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     /* La barre Safari masque le bas du contenu : marge de scroll en plus
        pour que les boutons Annuler/Enregistrer soient visibles. */
     #carnet-modal .modal-content { padding-bottom: 100px; }
-    /* Champs heure iOS plus larges que leur cellule : on rogne le depassement
-       pour que le bord droit s'aligne sur les autres lignes du formulaire. */
-    #carnet-form .form-group { overflow: hidden; }
+    /* Champs heure iOS plus larges que leur cellule : la taille intrinseque
+       imposee par WebKit (min-inline-size) resiste a width/min-width — on la
+       neutralise puis on rogne le depassement a chaque niveau. */
+    #carnet-form .form-group,
+    #carnet-form .form-col,
+    #carnet-form .form-row { overflow: hidden; }
     #carnet-form input[type="time"] {
+        inline-size: 100% !important;
+        min-inline-size: 0 !important;
+        width: 100% !important;
+        min-width: 0 !important;
         max-width: 100% !important;
+        display: block;
         background: #fff;
         color: #1e3d59;
         text-align: right;
     }
 
-    /* Espace membre — formulaire documents : le bouton Ajouter chevauchait
-       le champ date (largeur intrinseque iOS). Champs contraints. */
-    .accueil-doc-form .form-group { min-width: 0 !important; flex: 1 1 170px; }
+    /* Espace membre — formulaire documents : grille 2 x 2 —
+       ligne 1 : Type + Fichier, ligne 2 : Fin de validite + Ajouter. */
+    .accueil-doc-form {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: end;
+    }
+    .accueil-doc-form .form-group { min-width: 0 !important; }
     .accueil-doc-form input,
     .accueil-doc-form select { min-width: 0; width: 100%; box-sizing: border-box; }
-    .accueil-doc-form .btn-primary { flex-shrink: 0; }
+    .accueil-doc-form .btn-primary { align-self: end; width: 100%; }
 }
