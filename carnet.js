@@ -470,7 +470,7 @@ async function envoyerVolVersGvv() {
     }
 }
 
-async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
+async function ouvrirModaleCarnet(recordId = null, machineImmat = null, options = {}) {
     const modal = document.getElementById('carnet-modal');
     const form = document.getElementById('carnet-form');
     const titre = modal ? modal.querySelector('h3') : null;
@@ -524,10 +524,12 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null) {
         setTimeout(() => { if (obs) obs.focus(); }, 50);
     } else {
         form.dataset.mode = 'vol';
-        if (selectMachine && selectFiltre && selectMachine.querySelector(`option[value="${selectFiltre.value}"]`)) {
-            selectMachine.value = selectFiltre.value;
+        const machineVoulue = (options && options.machine) || (selectFiltre ? selectFiltre.value : '');
+        if (selectMachine && machineVoulue && selectMachine.querySelector(`option[value="${machineVoulue}"]`)) {
+            selectMachine.value = machineVoulue;
         }
         if (selectMachine) adapterFormulaireCarnet(selectMachine.value);
+        if (selectMachine) syncMachineChips();
         mettreAJourStyleChampsAuto(selectMachine ? selectMachine.value : 'F-GASB');
         if (!recordId) cocherFonctionParDefaut();
     }

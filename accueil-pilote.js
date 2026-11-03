@@ -6,6 +6,33 @@ const ACCUEIL_TABLE_RESERVATIONS = 'Réservations';
 const ACCUEIL_TABLE_SIGN = 'Signalements';
 const ACCUEIL_TABLE_AERONEFS = 'Aéronefs';
 
+// Machine de la reservation du pilote couvrant l'heure actuelle (pour
+// preselectionner le carnet de route au « Retour de vol »). null si aucune.
+async function machineRetourDeVol() {
+    try {
+        const now = new Date();
+        const jour = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const formula = `AND(DATETIME_FORMAT({Date de début},'YYYY-MM-DD')<='${jour}',DATETIME_FORMAT({Date de fin},'YYYY-MM-DD')>='${jour}')`;
+        const url = `${API_BASE}/${encodeURIComponent(ACCUEIL_TABLE_RESERVATIONS)}?filterByFormula=${encodeURIComponent(formula)}&pageSize=100`;
+        const resas = await fetchTousRecordsCache(url, { headers });
+        const parseD = s => {
+            if (!s) return null;
+            const d = new Date(String(s).replace(' ', 'T'));
+            return isNaN(d) ? null : d;
+        };
+        const resa = resas.find(r => {
+            if (typeof estProprietaireReservation === 'function' && !estProprietaireReservation(r)) return false;
+            const deb = parseD(r.fields && r.fields['Date de début']);
+            const fin = parseD(r.fields && r.fields['Date de fin']);
+            return deb && fin && deb <= now && now <= fin;
+        });
+        return resa ? (resa.fields['Machine'] || null) : null;
+    } catch (e) {
+        console.error('machineRetourDeVol:', e);
+        return null;
+    }
+}
+
 function initAccueilPilote() {
     const tab = document.getElementById('tab-accueil');
     if (tab) tab.addEventListener('click', chargerAccueilPilote);
@@ -148,10 +175,11 @@ async function chargerAccueilPilote() {
     });
 
     const btnCarnetRetour = document.getElementById('accueil-btn-carnet-retour');
-    if (btnCarnetRetour) btnCarnetRetour.addEventListener('click', () => {
+    if (btnCarnetRetour) btnCarnetRetour.addEventListener('click', async () => {
         const t = document.getElementById('tab-carnet');
         if (t) t.click();
-        if (typeof ouvrirModaleCarnet === 'function') ouvrirModaleCarnet();
+        const machine = await machineRetourDeVol();
+        if (typeof ouvrirModaleCarnet === 'function') ouvrirModaleCarnet(null, null, { machine });
     });
 
     const btnCompte = document.getElementById('accueil-btn-compte');
