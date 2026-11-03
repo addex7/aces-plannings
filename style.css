@@ -6488,3 +6488,9 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 #reservation-modal input[type="time"]::-webkit-calendar-picker-indicator {
     display: none;
 }
+
+/* Edge : texte date/heure tronque — police et padding reduits */
+#reservation-modal .nr-datetime input {
+    font-size: 12px !important; padding: 8px 6px !important;
+    letter-spacing: 0;
+}
