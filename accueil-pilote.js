@@ -37,9 +37,23 @@ async function machineRetourDeVol() {
             return memeNom(nom, npc) || memeNom(nom, moi);
         };
         const dansCreneau = (deb, fin) => deb && fin && deb <= now && now <= fin;
+
+        // 'Machine' stocke un id d'enregistrement aeronef (ex. "recR1nH…") :
+        // on le resout en immatriculation via la table Aeronefs.
+        let aeronefsById = {};
+        try {
+            const aeronefs = await fetchTousRecordsCache(`${API_BASE}/${encodeURIComponent(ACCUEIL_TABLE_AERONEFS)}?pageSize=100`, { headers });
+            aeronefs.forEach(a => {
+                const imm = a.fields && (a.fields['Immatriculation'] || a.fields['Immat'] || a.fields['Machine'] || '');
+                if (imm) aeronefsById[a.id] = String(imm).trim();
+            });
+        } catch (e) { console.error('machineRetourDeVol aeronefs:', e); }
         const machineDe = r => {
-            const m = r.fields && r.fields['Machine'];
-            return (Array.isArray(m) ? m[0] : m) || null;
+            let m = r.fields && r.fields['Machine'];
+            m = Array.isArray(m) ? m[0] : m;
+            if (!m) return null;
+            const s = String(m).trim();
+            return (s.startsWith('rec') && aeronefsById[s]) ? aeronefsById[s] : s;
         };
 
         // 1. Reservations classiques du jour
