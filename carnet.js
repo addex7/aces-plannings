@@ -1964,6 +1964,12 @@ async function soumettreCarnetRoute(event) {
             }
             await synchroniserVolMaintenance(machine, date, pilote, fields['Horamètre arrivée']);
             fermerModaleCarnet();
+            // Afficher le carnet de la machine du vol qui vient d'etre enregistre
+            if (machine) {
+                machineCarnetSelectionnee = machine;
+                const filtre = document.getElementById('carnet-machine-filtre');
+                if (filtre && filtre.querySelector(`option[value="${machine}"]`)) filtre.value = machine;
+            }
             chargerCarnetRoute();
         } else {
             console.error(result);
