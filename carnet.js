@@ -916,7 +916,11 @@ async function mettreAJourPrixDuVol() {
 function mettreAJourStyleChampsAuto(machine) {
     const heureArrivee = document.getElementById('carnet-heure-arrivee');
     const horametreDepart = document.getElementById('carnet-horametre-depart');
-    const isMoteur = machine && machine !== 'F-BLIO' && !MACHINES_PLANEUR_REMOQUE.includes(machine);
+    // F-BLIO : grise (auto) sauf en remorquage — la saisie est alors manuelle.
+    const remorquage = !!document.querySelector('input[name="carnet-nature-base"][value="Remorquage"]:checked');
+    const isMoteur = machine === 'F-BLIO'
+        ? !remorquage
+        : (machine && !MACHINES_PLANEUR_REMOQUE.includes(machine));
     if (heureArrivee) {
         heureArrivee.classList.toggle('carnet-champ-auto', isMoteur);
     }
@@ -931,7 +935,9 @@ function mettreAJourHeureArrivee() {
     const hDep = document.getElementById('carnet-horametre-depart').value;
     const hArr = document.getElementById('carnet-horametre-arrivee').value;
     const input = document.getElementById('carnet-heure-arrivee');
-    if (!input || !machine || machine === 'F-BLIO' || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
+    // F-BLIO : heure d'arrivee manuelle uniquement en remorquage — sinon auto.
+    const remorquageBLIO = machine === 'F-BLIO' && document.querySelector('input[name="carnet-nature-base"][value="Remorquage"]:checked');
+    if (!input || !machine || remorquageBLIO || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
     if (document.activeElement === input) return; // jamais decraser le champ en cours de saisie
     const minutes = dureeHorametreMinutes(machine, hDep, hArr);
     console.log('[carnet-calc] heureArr:', { machine, hDep, hArr, heureDepart, minutes });
@@ -1277,11 +1283,15 @@ function adapterFormulaireCarnet(machine) {
                 });
             });
         } else if (isMoteur) {
+            // F-BLIO (avion de remorquage) : pas de VFR Nuit ni de Vol d'initiation.
+            const extrasNatures = isBLIO
+                ? CARNET_STD_NATURES_EXTRA.filter(v => v !== 'VFR Nuit' && v !== "Vol d'initiation")
+                : CARNET_STD_NATURES_EXTRA;
             natureChips.innerHTML =
                 CARNET_STD_NATURES_BASE.map(v =>
                     `<label class="checkbox-option"><input type="radio" name="carnet-nature-base" value="${v}"> ${EMOJIS_NATURE_STD[v] || ''} ${v}</label>`
                 ).join('') +
-                CARNET_STD_NATURES_EXTRA.map(v =>
+                extrasNatures.map(v =>
                     `<label class="checkbox-option"><input type="checkbox" name="carnet-nature-extra" value="${v}"> ${EMOJIS_NATURE_STD[v] || ''} ${v}</label>`
                 ).join('') +
                 CARNET_STD_NATURES_QUAL.map(v =>
@@ -1291,6 +1301,14 @@ function adapterFormulaireCarnet(machine) {
                 cb.addEventListener('change', () => {
                     majVerrouillageVolInitiation();
                     mettreAJourActiviteParticuliere();
+                    mettreAJourPrixDuVol();
+                });
+            });
+            // Remorquage sur F-BLIO : heure d'arrivee repasse manuelle/grisee.
+            natureChips.querySelectorAll('input[name="carnet-nature-base"]').forEach(rb => {
+                rb.addEventListener('change', () => {
+                    mettreAJourStyleChampsAuto(document.getElementById('carnet-machine')?.value || '');
+                    mettreAJourHeureArrivee();
                     mettreAJourPrixDuVol();
                 });
             });
