@@ -3886,7 +3886,7 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
     border-radius: 10px;
     box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22);
     padding: 16px 20px;
-    z-index: 60;
+    z-index: 30000;
     max-height: 70vh;
     overflow-y: auto;
 }
