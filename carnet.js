@@ -475,6 +475,15 @@ async function ouvrirModaleCarnet(recordId = null, machineImmat = null, options 
     const form = document.getElementById('carnet-form');
     const titre = modal ? modal.querySelector('h3') : null;
     if (!modal || !form) return;
+    // Le carnet peut ne pas etre charge (ex. ouverture via « Retour de vol »
+    // avant la fin du chargement) : l'horametre de depart et le terrain de
+    // depart s'appuient dessus -> on le charge si le cache est vide.
+    if (!listeVolsCarnetCache || !listeVolsCarnetCache.length) {
+        try {
+            const url = `${API_BASE}/${encodeURIComponent(TABLE_CARNET_ROUTE)}?sort[0][field]=Date&sort[0][direction]=asc&pageSize=100`;
+            listeVolsCarnetCache = await fetchTousRecords(url, { headers });
+        } catch (e) { console.error('ouvrirModaleCarnet chargement vols:', e); }
+    }
     form.reset();
     definirLectureSeuleCarnet(false);
     idCarnetEnEdition = recordId || null;
