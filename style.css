@@ -6687,3 +6687,11 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 /* Prix du vol : meme hauteur que la zone remarques a cote */
 #carnet-form.carnet-form-jvio .prix-group input { flex: 1 1 auto; height: auto; }
+
+/* Tablette : lignes de signalements — autoriser le retour a la ligne
+   (le nom long "Remorque F-CDVN" poussait le compteur hors de la carte) */
+@media (pointer: coarse) and (min-width: 601px) {
+    .ap-signalement-row { flex-wrap: wrap; min-width: 0; }
+    .ap-signalement-machine { min-width: 0; white-space: normal; }
+    .ap-signalement-count { white-space: normal; text-align: right; }
+}
