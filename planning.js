@@ -3,7 +3,6 @@
    ========================================================================== */
 
 // Les variables globales sont définies dans app.js
-console.log('%c[planning.js] version 179 chargée', 'color:#7c3aed;font-weight:bold');
 
 function afficherChargementGlobal() {
     const o = document.getElementById('saving-overlay');
