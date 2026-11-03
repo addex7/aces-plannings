@@ -963,15 +963,17 @@ function mettreAJourHorametreArrivee() {
     let minutes = (hA * 60 + mA) - (hD * 60 + mD);
     if (minutes < 0) minutes += 24 * 60;
     let val;
+    // input[type=number] : toujours le point decimal — une virgule serait
+    // rejetee par le navigateur (champ vide, calcul invisible).
     if (machine === 'F-JVIO') {
         const depMin = horametreVersMinutes(hDep);
         if (depMin === null) return;
         const tot = depMin + minutes;
-        val = `${Math.floor(tot / 60)},${String(tot % 60).padStart(2, '0')}`;
+        val = `${Math.floor(tot / 60)}.${String(tot % 60).padStart(2, '0')}`;
     } else {
         const dep = parseFloat(String(hDep).replace(',', '.'));
         if (isNaN(dep)) return;
-        val = (dep + minutes / 60).toFixed(2).replace('.', ',');
+        val = (dep + minutes / 60).toFixed(2);
     }
     if (input.value !== val) {
         input.value = val;
