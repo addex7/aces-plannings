@@ -6483,14 +6483,14 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 }
 
 /* Edge : l'icone calendrier elargit les champs datetime — on la masque */
-#reservation-modal input[type="datetime-local"]::-webkit-calendar-picker-indicator,
-#reservation-modal input[type="date"]::-webkit-calendar-picker-indicator,
-#reservation-modal input[type="time"]::-webkit-calendar-picker-indicator {
+.nav-edge #reservation-modal input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.nav-edge #reservation-modal input[type="date"]::-webkit-calendar-picker-indicator,
+.nav-edge #reservation-modal input[type="time"]::-webkit-calendar-picker-indicator {
     display: none;
 }
 
 /* Edge : texte date/heure tronque — police et padding reduits */
-#reservation-modal .nr-datetime input {
+.nav-edge #reservation-modal .nr-datetime input {
     font-size: 12px !important; padding: 8px 6px !important;
     letter-spacing: 0;
 }
