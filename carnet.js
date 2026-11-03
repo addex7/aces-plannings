@@ -1118,6 +1118,7 @@ function peuplerOptionsMachineCarnet(extraMachine = null) {
                 adapterFormulaireCarnet(rb.value);
                 const instSel = document.getElementById('carnet-instructeur');
                 await peuplerCarnetInstructeurs(instSel ? instSel.value : '', rb.value);
+                mettreAJourDonneesDepartDefaut(rb.value);
                 mettreAJourStyleChampsAuto(rb.value);
                 mettreAJourHeureArrivee();
                 mettreAJourActiviteParticuliere();
