@@ -6515,3 +6515,92 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 #mobile-unsupported .mu-card h1 { margin: 0 0 10px; color: #1e3d59; font-size: 20px; }
 #mobile-unsupported .mu-card p { color: #475569; font-size: 14px; line-height: 1.6; margin: 0 0 18px; }
 #mobile-unsupported .mu-card a { font-size: 13px; color: #94a3b8; }
+
+/* ==========================================================================
+   TABLETTE (tactile, ecran > 600 px) — correctifs cibles, desktop inchange
+   ========================================================================== */
+@media (pointer: coarse) and (min-width: 601px) {
+
+    /* Dispos instructeur : peindre au doigt ne fait plus defiler la page —
+       un appui sur une cellule = intention de peindre, le scroll est bloque
+       pendant le geste (les cellules non editables gardent le scroll). */
+    .dispo-slot { touch-action: none; }
+
+    /* Champs date/heure natifs iPad : intrinsequement larges -> reduction */
+    .nr-datetime input[type="datetime-local"],
+    #modale-evenement input[type="date"],
+    #modale-evenement input[type="time"],
+    #carnet-form input[type="date"],
+    #carnet-form input[type="time"] {
+        font-size: 12px;
+        padding: 8px 6px;
+        min-width: 0;
+    }
+    /* La grille de la modale evenement est en 1fr 1fr : le min-content des
+       champs date iOS force la colonne a deborder -> minmax(0,1fr). */
+    #modale-evenement .form-row {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    }
+    #modale-evenement .form-group { min-width: 0; }
+
+    /* Modale « Saisir un vol » : 2 colonnes nettes, rien ne se chevauche */
+    #carnet-form,
+    #carnet-form.carnet-form-jvio {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #carnet-form .form-group,
+    #carnet-form .form-col { min-width: 0; }
+    #carnet-form.carnet-form-jvio .form-group { max-width: none; }
+    #carnet-form .form-group input:not([type="checkbox"]):not(#carnet-decol-atterr),
+    #carnet-form .form-group select,
+    #carnet-form .form-group textarea {
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    #carnet-form .select-recherche { min-width: 0 !important; width: 100%; }
+    #carnet-form .select-recherche > button { width: 100%; }
+    #carnet-form.carnet-form-jvio .form-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* En-tetes : boutons et widgets a la meme hauteur (38 px) */
+    #view-carnet .carnet-header-controls .btn-primary,
+    #view-carnet .carnet-header-controls .select-recherche > button,
+    #view-aeronefs .header .aeronef-ctl,
+    #view-aeronefs .header .select-recherche > button,
+    #view-comptes .comptes-actions .btn-primary,
+    #view-comptes .comptes-actions .comptes-import-btn,
+    #view-comptes .comptes-actions .select-recherche > button,
+    #view-carnet-vol .carnet-header-controls .btn-primary,
+    #view-carnet-vol .carnet-header-controls .select-recherche > button {
+        height: 38px !important;
+        box-sizing: border-box;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+    /* Selects natifs et champs date : meme hauteur, rendu natif conserve */
+    #view-carnet .carnet-header-controls select,
+    #view-aeronefs .header select,
+    #view-comptes .comptes-actions select,
+    #view-carnet-vol .carnet-header-controls .cv-date-filtre {
+        height: 38px !important;
+        box-sizing: border-box;
+    }
+
+    /* Carnet de vol : les filtres date navy sont illisibles sur iOS (vide,
+       un input date n'affiche rien -> « bouton » sans texte) -> style clair */
+    #view-carnet-vol .carnet-header-controls .cv-date-filtre {
+        background: #fff;
+        color: #1e3d59;
+        border: 1px solid #cbd5e1;
+        color-scheme: light;
+        font-size: 13px;
+        padding: 0 8px !important;
+        width: auto;
+    }
+}
