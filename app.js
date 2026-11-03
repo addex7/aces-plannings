@@ -649,3 +649,14 @@ document.addEventListener('click', e => {
     }
     modalDownTarget = null;
 }, true);
+// Un clic qui DEBUTE et se TERMINE sur le fond d'une modale la ferme, comme
+// la croix. Le handler capture ci-dessus a deja neutralise les clics qui
+// terminent une selection de texte commencee dans la modale. Les modales
+// ayant leur propre fermeture au clic exterieur sont deja masquees quand ce
+// handler s'execute : le check display === 'none' evite tout double effet.
+document.addEventListener('click', e => {
+    const t = e.target;
+    if (!t || !t.classList || !t.classList.contains('modal')) return;
+    if (getComputedStyle(t).display === 'none') return;
+    t.style.display = 'none';
+});
