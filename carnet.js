@@ -1968,12 +1968,14 @@ async function soumettreCarnetRoute(event) {
             await synchroniserVolMaintenance(machine, date, pilote, fields['Horamètre arrivée']);
             fermerModaleCarnet();
             // Afficher le carnet de la machine du vol qui vient d'etre enregistre
-            if (machine) {
-                machineCarnetSelectionnee = machine;
-                const filtre = document.getElementById('carnet-machine-filtre');
-                if (filtre && filtre.querySelector(`option[value="${machine}"]`)) filtre.value = machine;
+            const filtre = document.getElementById('carnet-machine-filtre');
+            if (machine && filtre && filtre.querySelector(`option[value="${machine}"]`)) {
+                filtre.value = machine;
+                filtre.dispatchEvent(new Event('change')); // resync widget + recharge
+            } else {
+                if (machine) machineCarnetSelectionnee = machine;
+                chargerCarnetRoute();
             }
-            chargerCarnetRoute();
         } else {
             console.error(result);
             const msg = result && result.error && result.error.message ? result.error.message : 'Vérifiez la console pour le détail.';
