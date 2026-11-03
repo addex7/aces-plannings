@@ -6516,7 +6516,9 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
 #mobile-unsupported .mu-card p { color: #475569; font-size: 14px; line-height: 1.6; margin: 0 0 18px; }
 #mobile-unsupported .mu-card a { font-size: 13px; color: #94a3b8; }
 
-/* Etiquettes Du/Au des filtres date du carnet de vol : masquees hors tablette */
+/* Etiquettes Du/Au des filtres date du carnet de vol : masquees hors tablette —
+   les deux champs voyagent ensemble quand l'en-tete passe a la ligne */
+.cv-dates-group { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 .cv-date-wrap { display: inline-flex; align-items: center; gap: 5px; }
 .cv-date-tag { display: none; }
 
@@ -6618,5 +6620,21 @@ button, input[type="checkbox"], input[type="radio"], select, label, summary {
         font-size: 13px;
         padding: 0 8px !important;
         width: auto;
+    }
+
+    /* Modale « Saisir un vol » : pleine largeur — le decalage reserve a la
+       sidebar s'appliquait encore au-dela de 1024 px (paysage tablette). */
+    #carnet-modal { left: 0 !important; width: 100% !important; }
+    /* La barre Safari masque le bas du contenu : marge de scroll en plus
+       pour que les boutons Annuler/Enregistrer soient visibles. */
+    #carnet-modal .modal-content { padding-bottom: 100px; }
+    /* Champs heure iOS plus larges que leur cellule : on rogne le depassement
+       pour que le bord droit s'aligne sur les autres lignes du formulaire. */
+    #carnet-form .form-group { overflow: hidden; }
+    #carnet-form input[type="time"] {
+        max-width: 100% !important;
+        background: #fff;
+        color: #1e3d59;
+        text-align: right;
     }
 }
