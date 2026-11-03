@@ -265,6 +265,18 @@ async function chargerAccueilPilote() {
     if (sigList && sigToggle && sigPop && sigList.scrollHeight > sigList.clientHeight + 2) {
         sigToggle.style.display = 'flex';
         const setSigOpen = (open) => {
+            if (open) {
+                // Position fixed, detachee de la carte : le popup ne partage
+                // plus aucun contexte d'empilement avec la carte Messages
+                // club situee en dessous (fin du scintillement a la jonction).
+                const card = sigPop.closest('.ap-card-signalements');
+                const r = card.getBoundingClientRect();
+                sigPop.style.position = 'fixed';
+                sigPop.style.top = `${r.top - 1}px`;
+                sigPop.style.left = `${r.left - 1}px`;
+                sigPop.style.right = 'auto';
+                sigPop.style.width = `${r.width + 2}px`;
+            }
             sigPop.hidden = !open;
             sigToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         };
