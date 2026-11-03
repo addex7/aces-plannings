@@ -266,6 +266,11 @@ async function chargerAccueilPilote() {
         sigToggle.style.display = 'flex';
         const setSigOpen = (open) => {
             sigPop.hidden = !open;
+            // Inhibe le soulevement au hover des cartes tant que le popup
+            // est ouvert : la carte Messages club sous le bord bougeait ->
+            // perte/reprise du hover en boucle (scintillement).
+            const grid = container.querySelector('.accueil-pilote-grid');
+            if (grid) grid.classList.toggle('sig-pop-ouverte', open);
             sigToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         };
         sigToggle.addEventListener('click', () => setSigOpen(sigPop.hidden));
