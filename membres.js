@@ -113,6 +113,7 @@ function initAuth() {
             if (parsed && parsed.id) {
                 headers.Authorization = `Bearer ${session}`;
                 setCurrentUser(parsed);
+                rafraichirUtilisateurCourant();
                 showApp();
                 if (typeof appliquerAccesDocumentaire === 'function') appliquerAccesDocumentaire();
                 return;
@@ -219,6 +220,30 @@ function setupError(msg) {
     if (setup) {
         setup.innerHTML = `<div style="padding:30px; text-align:center;"><p style="color:#dc2626;">${escapeHtml(msg)}</p><button onclick="location.href=location.pathname" class="btn-primary" style="margin-top:10px;">Retour</button></div>`;
     }
+}
+
+// Relit la fiche de l'utilisateur connecte : les roles modifies par un admin
+// ne sont pas visibles dans le localStorage (fige au login). Au chargement,
+// au retour sur l'onglet et toutes les 2 min -> les acces se mettent a jour.
+async function rafraichirUtilisateurCourant() {
+    if (!currentUser || !currentUser.id) return;
+    try {
+        const res = await apiFetch(`${API_BASE}/${encodeURIComponent(TABLE_UTILISATEURS)}/${currentUser.id}`, { headers });
+        if (!res.ok) return;
+        const rec = await res.json();
+        const f = rec.fields || {};
+        const frais = {
+            prenom: f['Prénom'], nom: f['Nom'], mail: f['Mail'],
+            telephone: f['Téléphone'], identifiant: f['Identifiant'],
+            roles: Array.isArray(f['Rôles']) ? f['Rôles'] : [f['Rôles']].filter(Boolean),
+            compteGvv: f['Compte GVV'] || ''
+        };
+        const a = { ...currentUser }; delete a.id;
+        if (JSON.stringify(a) !== JSON.stringify(frais)) {
+            setCurrentUser({ ...currentUser, ...frais });
+            if (typeof chargerBandeauSgs === 'function') chargerBandeauSgs();
+        }
+    } catch (e) {}
 }
 
 function showApp() {
@@ -928,4 +953,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initialiserCheckboxesRoles();
     initMembres();
     initAuth();
+});
+
+// Rafraichissement periodique des acces : roles modifies par un admin
+setInterval(rafraichirUtilisateurCourant, 120000);
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) rafraichirUtilisateurCourant();
 });
