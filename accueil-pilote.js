@@ -265,11 +265,7 @@ async function chargerAccueilPilote() {
     if (sigList && sigToggle && sigPop && sigList.scrollHeight > sigList.clientHeight + 2) {
         sigToggle.style.display = 'flex';
         const setSigOpen = (open) => {
-            // Deroule la liste en place (la carte grandit) plutot qu'un popup
-            // en superposition : aucun conflit de rendu possible avec la
-            // carte Messages club en dessous.
-            sigList.classList.toggle('ouverte', open);
-            sigPop.hidden = true;
+            sigPop.hidden = !open;
             sigToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         };
         sigToggle.addEventListener('click', () => setSigOpen(sigPop.hidden));
