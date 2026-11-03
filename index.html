@@ -555,8 +555,8 @@
                         <select id="carnet-vol-machine-select"><option value="">Toutes les machines</option></select>
                         <select id="carnet-vol-annee-select"><option value="">Toutes les années</option></select>
                         <select id="carnet-vol-fonction-select" title="Filtrer par fonction"><option value="">Toutes fonctions</option><option value="cdb">CDB</option><option value="dc">Double commande</option><option value="instr">Instruction (instructeur)</option></select>
-                        <input type="date" id="carnet-vol-date-debut" class="cv-date-filtre" title="Du — filtre par date de début">
-                        <input type="date" id="carnet-vol-date-fin" class="cv-date-filtre" title="Au — filtre par date de fin">
+                        <label class="cv-date-wrap"><span class="cv-date-tag">Du</span><input type="date" id="carnet-vol-date-debut" class="cv-date-filtre" title="Du — filtre par date de début"></label>
+                        <label class="cv-date-wrap"><span class="cv-date-tag">Au</span><input type="date" id="carnet-vol-date-fin" class="cv-date-filtre" title="Au — filtre par date de fin"></label>
                         <button id="btn-export-carnet-vol" class="btn-primary" title="Télécharger le carnet de vol en PDF">📄 Extraire en PDF</button>
                         <button id="btn-ajouter-vol-manuel" class="btn-primary" style="display:none;">+ Ajouter un vol</button>
                     </div>
@@ -1886,7 +1886,7 @@
     <!-- Chargement des Scripts Applicatifs -->
     <script src="evenements.js?v=6b1e69b5e8"></script>
     <script src="formation.js?v=e64c4b474a"></script>
-    <script src="version.js?v=20261103104144"></script>
+    <script src="version.js?v=20261103105041"></script>
     <script src="app.js?v=098bcf69df"></script>
     <script src="utils.js?v=9754589c25"></script>
     <script src="presences.js?v=9d4a8243b1"></script>
