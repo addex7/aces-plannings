@@ -19,6 +19,12 @@ const headers = {
     'Content-Type': 'application/json'
 };
 
+// Requetes retenues jusqu'a la decision d'authentification (showApp/showLogin
+// appellent authPrete — voir attendreAuthPret dans utils.js). Securite :
+// ne jamais bloquer indefiniment.
+window._authPret = false;
+setTimeout(() => { if (typeof authPrete === 'function') authPrete(); }, 30000);
+
 // Bascule l'app sur le jeton de session personnel (ou retour au jeton public).
 function definirTokenSession(token) {
     headers.Authorization = token ? `Bearer ${token}` : `Bearer ${API_TOKEN}`;

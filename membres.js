@@ -127,6 +127,7 @@ function initAuth() {
 }
 
 function showLogin() {
+    if (typeof authPrete === 'function') authPrete();
     const overlay = document.getElementById('login-overlay');
     const setup = document.getElementById('setup-overlay');
     const forgot = document.getElementById('forgot-overlay');
@@ -221,6 +222,7 @@ function setupError(msg) {
 }
 
 function showApp() {
+    if (typeof authPrete === 'function') authPrete();
     const overlay = document.getElementById('login-overlay');
     const setup = document.getElementById('setup-overlay');
     const layout = document.querySelector('.app-layout');

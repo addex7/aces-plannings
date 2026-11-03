@@ -690,20 +690,40 @@ async function _apiExecuterAvecRetry(url, options, maxEssais) {
     }
 }
 
+// Les modules lancent leurs requetes au DOMContentLoaded, avant que la session
+// soit restauree : elles partaient avec le jeton public et se prenaient des
+// 403 « Lecture reservee aux membres ». On les retient jusqu'a la decision
+// d'authentification (showApp ou showLogin), puis elles partent avec le bon
+// jeton. _authPret est positionne a false dans app.js (appli membre
+// uniquement — les pages publiques sans app.js ne sont pas bloquees).
+let _authPretResolve = null;
+function attendreAuthPret() {
+    if (window._authPret !== false) return Promise.resolve();
+    if (!window._authPretPromise) window._authPretPromise = new Promise(r => { _authPretResolve = r; });
+    return window._authPretPromise;
+}
+function authPrete() {
+    window._authPret = true;
+    if (_authPretResolve) { _authPretResolve(); _authPretResolve = null; }
+}
+
 function apiFetch(url, options = {}, maxEssais = 3) {
     const method = (options.method || 'GET').toUpperCase();
     const cle = `${method} ${url}`;
-    // Ajoute le nom de l'utilisateur courant pour le journal d'audit cote serveur
-    const opts = { ...options, headers: { ...(options.headers || {}) } };
-    if (typeof nomPiloteCourant === 'function' && !opts.headers['X-User-Name']) {
-        opts.headers['X-User-Name'] = nomPiloteCourant();
-    }
+    const lancer = () => {
+        // Ajoute le nom de l'utilisateur courant pour le journal d'audit cote serveur
+        const opts = { ...options, headers: { ...(options.headers || {}) } };
+        if (typeof nomPiloteCourant === 'function' && !opts.headers['X-User-Name']) {
+            opts.headers['X-User-Name'] = nomPiloteCourant();
+        }
+        return _apiExecuterAvecRetry(url, opts, maxEssais);
+    };
     // Une ecriture invalide les GET deja en vol : ils repondraient avec
     // des donnees d'avant l'ecriture.
     if (method !== 'GET') _apiEnVol.clear();
     // Dedoublonne les GET identiques deja en vol (clone pour ne pas consommer le body partage).
     if (method === 'GET' && _apiEnVol.has(cle)) return _apiEnVol.get(cle).then(r => r.clone());
-    const promesse = _apiExecuterAvecRetry(url, opts, maxEssais);
+    const promesse = attendreAuthPret().then(lancer);
     // Session expirée ou révoquée : purge et retour à l'écran de connexion.
     promesse.then(r => {
         if (r && r.status === 401 && localStorage.getItem('acesSession')) {
