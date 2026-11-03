@@ -14,6 +14,9 @@ let derniersRecordsCarnet = [];
 
 // Nombre de lignes par page du carnet : adapte a la hauteur reelle de l'ecran
 function lignesParPageCarnet() {
+    // F-JVIO (ULM) : nombre de lignes FIXE impose par le carnet (9) — la mesure
+    // dynamique faisait deriver la pagination a chaque changement de page.
+    if (machineCarnetSelectionnee === 'F-JVIO') return 9;
     const container = document.querySelector('.carnet-table-container');
     if (!container) return 12;
     const tbody = container.querySelector('tbody');
