@@ -1926,6 +1926,13 @@ async function soumettreCarnetRoute(event) {
                 apiFetch(`${API_BASE}/vol-facturation-tempo`, {
                     method: 'POST', headers, body: JSON.stringify({ recordId: volId })
                 }).catch(() => {});
+                // Met a jour le cache immediatement : sinon la modale rouverte
+                // avant la fin de chargerCarnetRoute() voyait l'ancien dernier
+                // vol (mauvais horametre/terrain de depart pre-remplis).
+                const idx = listeVolsCarnetCache.findIndex(r => r.id === volId);
+                const rec = { id: volId, fields: { ...fields } };
+                if (idx >= 0) listeVolsCarnetCache[idx] = rec;
+                else listeVolsCarnetCache.push(rec);
             }
             if (idCarnetEnEdition && ancienRecord && ancienRecord.fields) {
                 const af = ancienRecord.fields;
