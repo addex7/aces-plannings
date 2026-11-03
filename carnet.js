@@ -115,6 +115,29 @@ function calculerTempsDeVol(horametreDepart, horametreArrivee, heureDepart, heur
     return formaterDureeMinutes(minutes);
 }
 
+// Avertit inline si l'horametre d'arrivee est incoherent (inferieur au depart
+// ou non numerique) — sinon le calcul d'heure echouait silencieusement.
+function verifierCoherenceHorametre() {
+    const input = document.getElementById('carnet-horametre-arrivee');
+    const machine = document.getElementById('carnet-machine')?.value;
+    if (!input || !machine || MACHINES_PLANEUR_REMOQUE.includes(machine)) return;
+    const hDep = document.getElementById('carnet-horametre-depart').value;
+    const invalide = hDep && input.value && dureeHorametreMinutes(machine, hDep, input.value) === null;
+    const msg = invalide ? "L'horamètre d'arrivée doit être supérieur ou égal à celui du départ." : '';
+    let err = document.getElementById('carnet-err-horametre');
+    if (msg && !err) {
+        err = document.createElement('div');
+        err.id = 'carnet-err-horametre';
+        err.style.cssText = 'color:#dc2626; font-size:12px; margin-top:3px;';
+        input.insertAdjacentElement('afterend', err);
+    }
+    if (err) {
+        if (msg) err.textContent = msg;
+        else err.remove();
+    }
+    input.style.borderColor = msg ? '#dc2626' : '';
+}
+
 // Cle de tri carnet : date + heure de decollage (les lignes de
 // maintenance n'ont pas de "Heure départ" : leur Date est un datetime ISO).
 function ouvrirLegendeCodeJVIO(type) {
@@ -2262,6 +2285,7 @@ function initCarnetRoute() {
     const calculArrivee = () => {
         mettreAJourHeureArrivee();
         mettreAJourHorametreArrivee();
+        verifierCoherenceHorametre();
         mettreAJourPrixDuVol();
     };
     ['carnet-machine', 'carnet-horametre-depart', 'carnet-heure-depart'].forEach(id => {
@@ -2274,6 +2298,7 @@ function initCarnetRoute() {
     const elHorametreArr = document.getElementById('carnet-horametre-arrivee');
     if (elHorametreArr) elHorametreArr.addEventListener('input', () => {
         mettreAJourHeureArrivee();
+        verifierCoherenceHorametre();
         mettreAJourPrixDuVol();
     });
     const elHeureArrivee = document.getElementById('carnet-heure-arrivee');
