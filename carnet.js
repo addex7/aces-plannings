@@ -1199,6 +1199,9 @@ function peuplerOptionsMachineCarnet(extraMachine = null) {
             rb.addEventListener('change', async () => {
                 select.value = rb.value;
                 adapterFormulaireCarnet(rb.value);
+                // Les cases fonction viennent d'etre regenerees : recocher P
+                // (creation seulement — ne pas ecraser les fonctions d'un vol edite).
+                if (!document.getElementById('carnet-id')?.value) cocherFonctionParDefaut();
                 const instSel = document.getElementById('carnet-instructeur');
                 await peuplerCarnetInstructeurs(instSel ? instSel.value : '', rb.value);
                 mettreAJourDonneesDepartDefaut(rb.value);
@@ -2402,6 +2405,7 @@ function initCarnetRoute() {
     if (selectMachine) {
         selectMachine.addEventListener('change', async () => {
             adapterFormulaireCarnet(selectMachine.value);
+            if (!document.getElementById('carnet-id')?.value) cocherFonctionParDefaut();
             const instSel = document.getElementById('carnet-instructeur');
             await peuplerCarnetInstructeurs(instSel ? instSel.value : '', selectMachine.value);
             if (!document.getElementById('carnet-id')?.value) mettreAJourDonneesDepartDefaut(selectMachine.value, true);
