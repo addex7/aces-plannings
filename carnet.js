@@ -768,7 +768,9 @@ function mettreAJourDonneesDepartDefaut(machine, forcer = false) {
     const tInput = document.getElementById('carnet-depart');
     const jour = (document.getElementById('carnet-date')?.value || '').slice(0, 10);
     const heureVal = document.getElementById('carnet-heure-depart')?.value || '';
-    const heure = /^\d{1,2}:\d{2}/.test(heureVal) ? heureVal.slice(0, 5) : '00:00';
+    // Heure depart vide -> fin de journee : les vols deja saisis aujourd'hui
+    // comptent comme precedents (minuit excluait le vol qu'on vient d'ajouter).
+    const heure = /^\d{1,2}:\d{2}/.test(heureVal) ? heureVal.slice(0, 5) : '23:59';
     const cleRef = jour ? new Date(`${jour}T${heure}`).getTime() : Infinity;
     const precedent = (listeVolsCarnetCache || [])
         .filter(r => (r.fields || {})['Machine'] === machine && !r._estMaintenance)
