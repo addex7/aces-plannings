@@ -151,7 +151,7 @@ async function chargerAccueilPilote() {
     if (btnCarnetRetour) btnCarnetRetour.addEventListener('click', () => {
         const t = document.getElementById('tab-carnet');
         if (t) t.click();
-        if (typeof ouvrirModaleNouveauCarnet === 'function') ouvrirModaleNouveauCarnet();
+        if (typeof ouvrirModaleCarnet === 'function') ouvrirModaleCarnet();
     });
 
     const btnCompte = document.getElementById('accueil-btn-compte');
